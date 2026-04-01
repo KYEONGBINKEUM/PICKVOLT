@@ -19,7 +19,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Nav
     'nav.compare': 'compare',
     'nav.history': 'history',
-    'nav.pro': 'pro',
+    'nav.pro': 'pricing',
     // Home
     'home.heading': 'what are we comparing?',
     'home.placeholder': 'search for devices, laptops, or specs...',
@@ -77,7 +77,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   es: {
     'nav.compare': 'comparar',
     'nav.history': 'historial',
-    'nav.pro': 'pro',
+    'nav.pro': 'precios',
     'home.heading': '¿qué estamos comparando?',
     'home.placeholder': 'busca dispositivos, laptops o especificaciones...',
     'home.popular': 'comparaciones populares',
@@ -128,7 +128,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   pt: {
     'nav.compare': 'comparar',
     'nav.history': 'histórico',
-    'nav.pro': 'pro',
+    'nav.pro': 'preços',
     'home.heading': 'o que estamos comparando?',
     'home.placeholder': 'buscar dispositivos, laptops ou especificações...',
     'home.popular': 'comparações populares',
@@ -179,7 +179,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   fr: {
     'nav.compare': 'comparer',
     'nav.history': 'historique',
-    'nav.pro': 'pro',
+    'nav.pro': 'tarifs',
     'home.heading': 'que comparons-nous ?',
     'home.placeholder': 'rechercher des appareils, laptops ou specs...',
     'home.popular': 'comparaisons populaires',
@@ -230,7 +230,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   de: {
     'nav.compare': 'vergleichen',
     'nav.history': 'verlauf',
-    'nav.pro': 'pro',
+    'nav.pro': 'preise',
     'home.heading': 'was vergleichen wir?',
     'home.placeholder': 'geräte, laptops oder specs suchen...',
     'home.popular': 'beliebte vergleiche',
@@ -281,7 +281,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   ja: {
     'nav.compare': '比較',
     'nav.history': '履歴',
-    'nav.pro': 'pro',
+    'nav.pro': '料金',
     'home.heading': '何を比較しますか？',
     'home.placeholder': 'デバイス、ラップトップ、スペックを検索...',
     'home.popular': '人気の比較',
@@ -332,7 +332,7 @@ export const translations: Record<Locale, Record<string, string>> = {
   ko: {
     'nav.compare': '비교',
     'nav.history': '기록',
-    'nav.pro': 'pro',
+    'nav.pro': '요금제',
     'home.heading': '무엇을 비교할까요?',
     'home.placeholder': '기기, 노트북, 스펙 검색...',
     'home.popular': '인기 비교',

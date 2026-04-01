@@ -1,66 +1,45 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Download, Share2, ChevronRight, RotateCcw } from 'lucide-react'
+import { Download, Share2, ChevronRight, RotateCcw, Loader2 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 
-/* ---------- Mock data (replace with real API calls) ---------- */
+interface ProductSpecs {
+  cpu?: string | null
+  cpuSpeedMHz?: number | null
+  performanceScore?: number | null
+  ram?: string | null
+  storage?: string | null
+  display?: string | null
+  camera?: string | null
+  batteryCapacity?: string | null
+  batteryLife?: string | null
+  os?: string | null
+  weight?: string | null
+  weightG?: number | null
+  ipRating?: string | null
+}
+
 interface Product {
   id: string
   name: string
-  price: string
-  image: string
-  performance: number
-  battery: number
-  batteryLabel: string
-  optics: number
-  opticsLabel: string
+  brand: string
+  category: string
+  specs: ProductSpecs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw: Record<string, any>
 }
 
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: 'iphone-15-pro',
-    name: 'iphone 15 pro',
-    price: '$999.00',
-    image: '',
-    performance: 98,
-    battery: 22,
-    batteryLabel: 'mixed usage',
-    optics: 48,
-    opticsLabel: 'megapixels',
-  },
-  {
-    id: 'pixel-8-pro',
-    name: 'pixel 8 pro',
-    price: '$899.00',
-    image: '',
-    performance: 92,
-    battery: 20,
-    batteryLabel: 'mixed usage',
-    optics: 50,
-    opticsLabel: 'megapixels',
-  },
-  {
-    id: 's24-ultra',
-    name: 's24 ultra',
-    price: '$1,199.00',
-    image: '',
-    performance: 96,
-    battery: 24,
-    batteryLabel: 'mixed usage',
-    optics: 200,
-    opticsLabel: 'megapixels',
-  },
-]
-
-const MOCK_HISTORY = [
-  { id: 1, date: 'march 12, 2024', title: 'macbook pro m3 vs dell xps 14', count: 3 },
-  { id: 2, date: 'march 10, 2024', title: 'sony wh-1000xm5 vs bose qc ultra', count: 2 },
-]
+interface AiResult {
+  winner: string
+  summary: string
+  reasoning: string
+  scores?: Record<string, { value: number; reason: string }>
+}
 
 /* ---------- AI Pick Banner ---------- */
 function AIPickBanner({
@@ -79,7 +58,6 @@ function AIPickBanner({
           AI PICK
         </span>
       </div>
-
       <div className="max-w-lg">
         <h2 className="text-3xl md:text-4xl font-black text-black leading-tight mb-3">
           the {winner} is your winner.
@@ -101,14 +79,11 @@ function AIPickBanner({
 function ProductCard({ product }: { product: Product }) {
   return (
     <div className="flex flex-col">
-      {/* Image */}
       <div className="aspect-[4/3] rounded-xl bg-surface-2 border border-border mb-4 overflow-hidden flex items-center justify-center">
-        {product.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-16 h-16 rounded-full bg-white/5" />
-        )}
+        <div className="text-center p-4">
+          <p className="text-xs text-white/30 mb-1">{product.brand}</p>
+          <p className="text-xs text-white/20">{product.category}</p>
+        </div>
       </div>
       <Link
         href={`/product/${product.id}`}
@@ -116,7 +91,9 @@ function ProductCard({ product }: { product: Product }) {
       >
         {product.name}
       </Link>
-      <p className="text-accent font-semibold text-sm mt-1">{product.price}</p>
+      {product.specs.os && (
+        <p className="text-white/40 text-xs mt-1">{product.specs.os}</p>
+      )}
     </div>
   )
 }
@@ -132,19 +109,18 @@ function SpecRow({
   values: { primary: string | number; secondary?: string; bar?: number }[]
 }) {
   return (
-    <div className="grid grid-cols-[160px_1fr_1fr_1fr] border-t border-border">
-      {/* Label col */}
+    <div
+      className="grid border-t border-border"
+      style={{ gridTemplateColumns: `160px repeat(${values.length}, 1fr)` }}
+    >
       <div className="p-4 flex flex-col gap-0.5">
         <span className="text-xs text-white/40">{sublabel}</span>
         <span className="text-sm font-semibold text-white">{label}</span>
       </div>
-
       {values.map((v, i) => (
         <div key={i} className="p-4 border-l border-border">
-          <span className="text-3xl font-black text-white">{v.primary}</span>
-          {v.secondary && (
-            <p className="text-xs text-white/40 mt-1">{v.secondary}</p>
-          )}
+          <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
+          {v.secondary && <p className="text-xs text-white/40 mt-1">{v.secondary}</p>}
           {v.bar !== undefined && <PerformanceBar score={v.bar} />}
         </div>
       ))}
@@ -153,14 +129,22 @@ function SpecRow({
 }
 
 /* ---------- Reasoning Modal ---------- */
-function ReasoningModal({ onClose }: { onClose: () => void }) {
+function ReasoningModal({
+  aiResult,
+  products,
+  onClose,
+}: {
+  aiResult: AiResult
+  products: Product[]
+  onClose: () => void
+}) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-surface-2 border border-border rounded-card p-8 max-w-lg w-full animate-slide-up"
+        className="bg-surface-2 border border-border rounded-card p-8 max-w-lg w-full animate-slide-up overflow-y-auto max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -171,24 +155,33 @@ function ReasoningModal({ onClose }: { onClose: () => void }) {
             ✕
           </button>
         </div>
-        <h3 className="text-xl font-black text-white mb-4">why pixel 8 pro wins</h3>
-        <div className="space-y-4 text-sm text-white/60 leading-relaxed">
-          <p>
-            <span className="text-white font-semibold">photography priority:</span> based on your
-            stated preference for photography, the pixel 8 pro&apos;s computational photography
-            pipeline outperforms both competitors. natural skin tones and faster shutter speeds make
-            it the clear choice.
-          </p>
-          <p>
-            <span className="text-white font-semibold">clean software:</span> pure android with
-            guaranteed 7 years of updates means your device stays fast and secure longer than
-            alternatives.
-          </p>
-          <p>
-            <span className="text-white font-semibold">value:</span> at $899, it saves $300 vs the
-            s24 ultra while matching or exceeding it in your priority categories.
-          </p>
-        </div>
+        <h3 className="text-xl font-black text-white mb-4">
+          why {aiResult.winner} wins
+        </h3>
+        <p className="text-sm text-white/60 leading-relaxed mb-6">{aiResult.reasoning}</p>
+
+        {aiResult.scores && (
+          <div className="space-y-3">
+            {products.map((p) => {
+              const scoreKey = Object.keys(aiResult.scores!).find(
+                (k) => k.toLowerCase().includes(p.name.split(' ').slice(-1)[0].toLowerCase())
+              ) ?? p.name
+              const score = aiResult.scores![scoreKey]
+              if (!score) return null
+              return (
+                <div key={p.id} className="bg-surface rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-white">{p.name}</span>
+                    <span className="text-accent font-bold">{score.value}</span>
+                  </div>
+                  <p className="text-xs text-white/40">{score.reason}</p>
+                  <PerformanceBar score={score.value} />
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <button
           onClick={onClose}
           className="mt-6 w-full bg-accent hover:bg-accent-light text-white font-semibold py-3 rounded-full transition-colors text-sm"
@@ -200,7 +193,17 @@ function ReasoningModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-/* ---------- Sidebar: side-by-side toggle ---------- */
+/* ---------- Loading State ---------- */
+function LoadingState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-32 gap-4">
+      <Loader2 className="w-8 h-8 text-accent animate-spin" />
+      <p className="text-white/40 text-sm">{message}</p>
+    </div>
+  )
+}
+
+/* ---------- Sidebar Toggle ---------- */
 function SidebarToggle() {
   return (
     <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20">
@@ -216,12 +219,156 @@ function SidebarToggle() {
 /* ---------- Main ---------- */
 export default function CompareClient() {
   const searchParams = useSearchParams()
-  const query = searchParams.get('q') ?? ''
   const router = useRouter()
-  const [navSearch, setNavSearch] = useState(query)
+  const query = searchParams.get('q') ?? ''
 
-  const products = MOCK_PRODUCTS
-  const winner = products[1] // pixel 8 pro
+  const [navSearch, setNavSearch] = useState(query)
+  const [products, setProducts] = useState<Product[]>([])
+  const [aiResult, setAiResult] = useState<AiResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [loadingMsg, setLoadingMsg] = useState('searching products...')
+  const [error, setError] = useState<string | null>(null)
+  const [showReasoning, setShowReasoning] = useState(false)
+
+  const runComparison = useCallback(async (q: string) => {
+    if (!q.trim()) return
+
+    // "vs" 구분자로 제품 이름 분리
+    const names = q.split(/\s+vs\.?\s+/i).map((s) => s.trim()).filter(Boolean)
+    if (names.length < 2) {
+      setError('제품을 두 개 이상 입력해주세요. 예: "iphone 15 pro vs s24 ultra"')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setProducts([])
+    setAiResult(null)
+
+    try {
+      // 1. 각 제품명으로 검색
+      setLoadingMsg('searching products...')
+      const searches = await Promise.all(
+        names.map((name) =>
+          fetch(`/api/products/search?q=${encodeURIComponent(name)}&limit=1`)
+            .then((r) => r.json())
+        )
+      )
+
+      const ids = searches.map((s) => s.results?.[0]?.id).filter(Boolean) as string[]
+      if (ids.length < 2) {
+        setError('검색 결과가 부족합니다. 다른 제품명으로 시도해보세요.')
+        setLoading(false)
+        return
+      }
+
+      // 2. 상세 스펙 가져오기
+      setLoadingMsg('fetching specs...')
+      const details = await Promise.all(
+        ids.map((id) => fetch(`/api/products/${id}`).then((r) => r.json()))
+      )
+
+      const validProducts = details.filter((d) => d.id && !d.error)
+      if (validProducts.length < 2) {
+        setError('제품 스펙을 불러오지 못했습니다.')
+        setLoading(false)
+        return
+      }
+
+      setProducts(validProducts)
+
+      // 3. AI 비교 실행
+      setLoadingMsg('running AI comparison...')
+      const compareRes = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          products: validProducts.map((p) => ({
+            name: p.name,
+            specs: {
+              cpu: p.specs.cpu,
+              ram: p.specs.ram,
+              storage: p.specs.storage,
+              display: p.specs.display,
+              camera: p.specs.camera,
+              battery: p.specs.batteryCapacity,
+              batteryLife: p.specs.batteryLife,
+              os: p.specs.os,
+              weight: p.specs.weight,
+              ipRating: p.specs.ipRating,
+            },
+          })),
+        }),
+      })
+
+      const compareData = await compareRes.json()
+      if (compareData.error) {
+        setError(compareData.error)
+      } else {
+        setAiResult(compareData)
+      }
+    } catch {
+      setError('비교에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (query) {
+      runComparison(query)
+    }
+  }, [query, runComparison])
+
+  const handleNavSearch = (v: string) => {
+    if (v.trim()) {
+      router.push(`/compare?q=${encodeURIComponent(v.trim())}`)
+    }
+  }
+
+  // 스펙 로우 데이터 생성
+  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number }[] }
+  const specRows: SpecRowData[] = products.length > 0
+    ? ([
+        products[0].specs.performanceScore !== null && {
+          label: 'performance',
+          sublabel: 'benchmark score',
+          values: products.map((p) => ({
+            primary: p.specs.performanceScore ?? '—',
+            secondary: p.specs.cpu ?? undefined,
+            bar: p.specs.performanceScore ?? undefined,
+          })),
+        },
+        products[0].specs.ram !== null && {
+          label: 'RAM',
+          sublabel: 'memory',
+          values: products.map((p) => ({ primary: p.specs.ram ?? '—' })),
+        },
+        products[0].specs.storage !== null && {
+          label: 'storage',
+          sublabel: 'internal',
+          values: products.map((p) => ({ primary: p.specs.storage ?? '—' })),
+        },
+        products[0].specs.batteryCapacity !== null && {
+          label: 'battery',
+          sublabel: 'capacity',
+          values: products.map((p) => ({
+            primary: p.specs.batteryCapacity ?? '—',
+            secondary: p.specs.batteryLife ?? undefined,
+          })),
+        },
+        products[0].specs.camera !== null && {
+          label: 'camera',
+          sublabel: 'main sensor',
+          values: products.map((p) => ({ primary: p.specs.camera ?? '—' })),
+        },
+        products[0].specs.display !== null && {
+          label: 'display',
+          sublabel: 'screen',
+          values: products.map((p) => ({ primary: p.specs.display ?? '—' })),
+        },
+      ] as (SpecRowData | false)[]).filter((r): r is SpecRowData => !!r)
+    : []
 
   return (
     <>
@@ -229,103 +376,128 @@ export default function CompareClient() {
         showSearch
         searchValue={navSearch}
         onSearchChange={setNavSearch}
+        onSearchSubmit={handleNavSearch}
+        searchPlaceholder='e.g. "iphone 15 pro vs s24 ultra"'
       />
 
       <main className="min-h-screen bg-background pt-20 pb-20 px-4 md:px-6 max-w-inner mx-auto">
-        {/* AI Pick Banner */}
-        <div className="mt-8">
-          <AIPickBanner
-            winner={winner.name}
-            reasoning={`based on your priority for photography and clean software, the ai recommends the pixel over the s24 ultra for natural skin tones and faster shutter speeds.`}
-            onViewReasoning={() => router.push('/reasoning')}
-          />
-        </div>
 
-        {/* Comparison overview table */}
-        <div className="bg-surface border border-border rounded-card overflow-hidden mb-8">
-          {/* Header row */}
-          <div className="grid grid-cols-[160px_1fr_1fr_1fr] border-b border-border">
-            <div className="p-4">
-              <p className="text-xs text-white/40 mb-1">comparison overview</p>
-              <p className="text-sm font-bold text-white">top choices</p>
-            </div>
-            {products.map((p) => (
-              <div key={p.id} className="p-4 border-l border-border">
-                <ProductCard product={p} />
-              </div>
-            ))}
+        {/* 검색 힌트 (쿼리 없을 때) */}
+        {!query && !loading && (
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <p className="text-white/40 text-sm">
+              상단 검색창에 제품을 입력하세요
+            </p>
+            <p className="text-white/20 text-xs">예: iphone 15 pro vs samsung s24 ultra</p>
           </div>
+        )}
 
-          {/* Spec rows */}
-          <SpecRow
-            label="performance"
-            sublabel="benchmark score"
-            values={products.map((p) => ({
-              primary: p.performance,
-              bar: p.performance,
-            }))}
-          />
-          <SpecRow
-            label="battery life"
-            sublabel="estimated hours"
-            values={products.map((p) => ({
-              primary: p.battery,
-              secondary: p.batteryLabel,
-            }))}
-          />
-          <SpecRow
-            label="optics"
-            sublabel="sensor rating"
-            values={products.map((p) => ({
-              primary: p.optics,
-              secondary: p.opticsLabel,
-            }))}
-          />
-        </div>
+        {/* 로딩 */}
+        {loading && <LoadingState message={loadingMsg} />}
 
-        {/* Action buttons */}
-        <div className="flex items-center justify-end gap-3 mb-12">
-          <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
-            <Download className="w-4 h-4" />
-            export as pdf
-          </button>
-          <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
-            <Share2 className="w-4 h-4" />
-            share comparison
-          </button>
-        </div>
-
-        {/* History section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <h3 className="text-xl font-black text-white">comparison history</h3>
-            <span className="text-xs text-white/30">last 30 days</span>
+        {/* 에러 */}
+        {error && !loading && (
+          <div className="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-card text-center">
+            <p className="text-red-400 text-sm">{error}</p>
           </div>
-          <div className="space-y-3">
-            {MOCK_HISTORY.map((item) => (
+        )}
+
+        {/* 결과 */}
+        {!loading && products.length >= 2 && (
+          <div className="mt-8">
+            {/* AI Pick Banner */}
+            {aiResult && (
+              <AIPickBanner
+                winner={aiResult.winner}
+                reasoning={aiResult.summary}
+                onViewReasoning={() => setShowReasoning(true)}
+              />
+            )}
+
+            {/* 비교 테이블 */}
+            <div className="bg-surface border border-border rounded-card overflow-hidden mb-8">
+              {/* 헤더 */}
               <div
-                key={item.id}
-                className="flex items-center justify-between p-4 bg-surface border border-border rounded-card hover:border-border/60 transition-colors"
+                className="grid border-b border-border"
+                style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
               >
-                <div>
-                  <p className="text-xs text-white/30 mb-1">{item.date}</p>
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                <div className="p-4">
+                  <p className="text-xs text-white/40 mb-1">comparison overview</p>
+                  <p className="text-sm font-bold text-white">top choices</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-white/30">{item.count} products compared</span>
-                  <button className="flex items-center gap-1.5 bg-surface-2 border border-border text-white/70 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:border-white/20">
-                    <RotateCcw className="w-3 h-3" />
-                    restore
-                  </button>
-                </div>
+                {products.map((p) => (
+                  <div key={p.id} className="p-4 border-l border-border">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* 스펙 로우 */}
+              {specRows.map((row) => (
+                <SpecRow
+                  key={row.label}
+                  label={row.label}
+                  sublabel={row.sublabel}
+                  values={row.values}
+                />
+              ))}
+            </div>
+
+            {/* 액션 버튼 */}
+            <div className="flex items-center justify-end gap-3 mb-12">
+              <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
+                <Download className="w-4 h-4" />
+                export as pdf
+              </button>
+              <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
+                <Share2 className="w-4 h-4" />
+                share comparison
+              </button>
+            </div>
+
+            {/* 히스토리 섹션 (placeholder) */}
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-xl font-black text-white">comparison history</h3>
+                <span className="text-xs text-white/30">last 30 days</span>
+              </div>
+              <div className="p-6 bg-surface border border-border rounded-card text-center">
+                <p className="text-white/20 text-sm">sign in to save your comparison history</p>
+                <Link
+                  href="/login"
+                  className="mt-3 inline-block text-xs font-semibold text-accent hover:text-accent-light transition-colors"
+                >
+                  sign in →
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
-      <SidebarToggle />
+      {/* 리즈닝 모달 */}
+      {showReasoning && aiResult && (
+        <ReasoningModal
+          aiResult={aiResult}
+          products={products}
+          onClose={() => setShowReasoning(false)}
+        />
+      )}
 
+      {/* 재비교 버튼 */}
+      {!loading && products.length >= 2 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
+          <button
+            onClick={() => router.push('/')}
+            className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 shadow-lg"
+          >
+            <RotateCcw className="w-4 h-4" />
+            new comparison
+          </button>
+        </div>
+      )}
+
+      <SidebarToggle />
     </>
   )
 }
