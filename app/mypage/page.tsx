@@ -1,0 +1,204 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { LogOut, ChevronRight, Zap, BarChart2, Calendar, Globe, DollarSign } from 'lucide-react'
+import Navbar from '@/components/Navbar'
+import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
+import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
+import { supabase } from '@/lib/supabase'
+
+export default function MyPage() {
+  const { t, locale, setLocale } = useI18n()
+  const { currency, setCurrency } = useCurrency()
+  const router = useRouter()
+
+  const [user, setUser] = useState<{ email: string; name: string; avatar: string; created_at: string } | null>(null)
+  const [isPro] = useState(false)
+  const [showLangMenu, setShowLangMenu] = useState(false)
+  const [showCurrMenu, setShowCurrMenu] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser({
+          email: data.user.email ?? '',
+          name: data.user.user_metadata?.full_name ?? data.user.email ?? 'user',
+          avatar: data.user.user_metadata?.avatar_url ?? '',
+          created_at: new Date(data.user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        })
+      }
+    })
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
+
+  const currentLang = LANGUAGES.find((l) => l.code === locale)
+  const currentCurrency = CURRENCIES.find((c) => c.code === currency)
+
+  return (
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
+
+        <div className="max-w-xl mx-auto">
+          <h1 className="text-4xl font-black text-white mb-8">{t('mypage.title')}</h1>
+
+          {/* Profile card */}
+          <div className="bg-surface border border-border rounded-card p-6 mb-4">
+            <div className="flex items-center gap-4">
+              {user?.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center">
+                  <span className="text-accent font-bold text-lg">
+                    {(user?.name?.[0] ?? 'U').toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div>
+                <p className="font-bold text-white">{user?.name ?? '...'}</p>
+                <p className="text-xs text-white/40">{user?.email ?? '...'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-surface border border-border rounded-card p-4 flex items-center gap-3">
+              <BarChart2 className="w-4 h-4 text-accent flex-shrink-0" />
+              <div>
+                <p className="text-xs text-white/40">{t('mypage.comparisons')}</p>
+                <p className="text-xl font-black text-white">12</p>
+              </div>
+            </div>
+            <div className="bg-surface border border-border rounded-card p-4 flex items-center gap-3">
+              <Calendar className="w-4 h-4 text-white/40 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-white/40">{t('mypage.joined')}</p>
+                <p className="text-sm font-bold text-white">{user?.created_at ?? '...'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Plan */}
+          <div className={`rounded-card p-5 mb-4 flex items-center justify-between ${
+            isPro
+              ? 'bg-gradient-to-r from-accent/20 to-transparent border border-accent/30'
+              : 'bg-surface border border-border'
+          }`}>
+            <div>
+              <p className="text-xs text-white/40 mb-1">{t('mypage.plan')}</p>
+              <p className="text-lg font-black text-white flex items-center gap-2">
+                {isPro ? (
+                  <><Zap className="w-4 h-4 text-accent" /> {t('mypage.pro')}</>
+                ) : (
+                  t('mypage.free')
+                )}
+              </p>
+            </div>
+            {!isPro && (
+              <Link
+                href="/pricing"
+                className="flex items-center gap-1.5 bg-accent hover:bg-accent-light text-white text-xs font-bold px-4 py-2 rounded-full transition-colors"
+              >
+                <Zap className="w-3 h-3" />
+                {t('mypage.upgrade')}
+              </Link>
+            )}
+          </div>
+
+          {/* Preferences */}
+          <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
+            <div className="px-5 py-3 border-b border-border">
+              <p className="text-xs text-white/40 uppercase tracking-widest">{t('mypage.preferences')}</p>
+            </div>
+
+            {/* Language */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowLangMenu(!showLangMenu); setShowCurrMenu(false) }}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-2 transition-colors border-b border-border"
+              >
+                <div className="flex items-center gap-3">
+                  <Globe className="w-4 h-4 text-white/40" />
+                  <span className="text-sm text-white">{t('mypage.language')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white/50">{currentLang?.flag} {currentLang?.label}</span>
+                  <ChevronRight className={`w-3.5 h-3.5 text-white/30 transition-transform ${showLangMenu ? 'rotate-90' : ''}`} />
+                </div>
+              </button>
+              {showLangMenu && (
+                <div className="border-b border-border bg-surface-2">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => { setLocale(lang.code as Locale); setShowLangMenu(false) }}
+                      className={`w-full flex items-center gap-3 px-8 py-3 text-sm transition-colors hover:bg-surface ${
+                        locale === lang.code ? 'text-accent' : 'text-white/60'
+                      }`}
+                    >
+                      <span>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                      <span className="ml-auto text-xs text-white/30">{lang.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Currency */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowCurrMenu(!showCurrMenu); setShowLangMenu(false) }}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-2 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-4 h-4 text-white/40" />
+                  <span className="text-sm text-white">{t('mypage.currency')}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white/50">{currentCurrency?.flag} {currentCurrency?.code} {currentCurrency?.symbol}</span>
+                  <ChevronRight className={`w-3.5 h-3.5 text-white/30 transition-transform ${showCurrMenu ? 'rotate-90' : ''}`} />
+                </div>
+              </button>
+              {showCurrMenu && (
+                <div className="bg-surface-2">
+                  {CURRENCIES.map((c) => (
+                    <button
+                      key={c.code}
+                      onClick={() => { setCurrency(c.code as CurrencyCode); setShowCurrMenu(false) }}
+                      className={`w-full flex items-center gap-3 px-8 py-3 text-sm transition-colors hover:bg-surface ${
+                        currency === c.code ? 'text-accent' : 'text-white/60'
+                      }`}
+                    >
+                      <span>{c.flag}</span>
+                      <span className="font-semibold">{c.symbol}</span>
+                      <span>{c.code}</span>
+                      <span className="ml-auto text-xs text-white/30">{c.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sign out */}
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 border border-border text-white/50 hover:text-white hover:border-white/20 font-semibold py-3 rounded-full transition-all text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            {t('mypage.signout')}
+          </button>
+        </div>
+      </main>
+    </>
+  )
+}

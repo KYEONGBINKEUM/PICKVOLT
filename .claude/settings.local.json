@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx next:*)",
+      "Bash(npm run:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(vercel --prod)",
+      "Bash(taskkill //F //IM git.exe)",
+      "Bash(rmdir /s /q .git)"
+    ]
+  }
+}
