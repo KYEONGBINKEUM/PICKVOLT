@@ -3,7 +3,9 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { I18nProvider } from '@/lib/i18n'
 import { CurrencyProvider } from '@/lib/currency'
+import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
+import CompareTray from '@/components/CompareTray'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,8 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-background text-white antialiased">
         <I18nProvider>
           <CurrencyProvider>
-            {children}
-            <CookieBanner />
+            <CompareCartProvider>
+              {children}
+              <CookieBanner />
+              <CompareTray />
+            </CompareCartProvider>
           </CurrencyProvider>
         </I18nProvider>
       </body>

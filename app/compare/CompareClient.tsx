@@ -220,9 +220,9 @@ function SidebarToggle() {
 export default function CompareClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const query = searchParams.get('q') ?? ''
+  const idsParam = searchParams.get('ids') ?? ''
 
-  const [navSearch, setNavSearch] = useState(query)
+  const [navSearch, setNavSearch] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [aiResult, setAiResult] = useState<AiResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -230,15 +230,8 @@ export default function CompareClient() {
   const [error, setError] = useState<string | null>(null)
   const [showReasoning, setShowReasoning] = useState(false)
 
-  const runComparison = useCallback(async (q: string) => {
-    if (!q.trim()) return
-
-    // "vs" 구분자로 제품 이름 분리
-    const names = q.split(/\s+vs\.?\s+/i).map((s) => s.trim()).filter(Boolean)
-    if (names.length < 2) {
-      setError('제품을 두 개 이상 입력해주세요. 예: "iphone 15 pro vs s24 ultra"')
-      return
-    }
+  const runComparison = useCallback(async (ids: string[]) => {
+    if (ids.length < 2) return
 
     setLoading(true)
     setError(null)
@@ -246,23 +239,7 @@ export default function CompareClient() {
     setAiResult(null)
 
     try {
-      // 1. 각 제품명으로 검색
-      setLoadingMsg('searching products...')
-      const searches = await Promise.all(
-        names.map((name) =>
-          fetch(`/api/products/search?q=${encodeURIComponent(name)}&limit=1`)
-            .then((r) => r.json())
-        )
-      )
-
-      const ids = searches.map((s) => s.results?.[0]?.id).filter(Boolean) as string[]
-      if (ids.length < 2) {
-        setError('검색 결과가 부족합니다. 다른 제품명으로 시도해보세요.')
-        setLoading(false)
-        return
-      }
-
-      // 2. 상세 스펙 가져오기
+      // 1. 각 ID로 상세 스펙 가져오기
       setLoadingMsg('fetching specs...')
       const details = await Promise.all(
         ids.map((id) => fetch(`/api/products/${id}`).then((r) => r.json()))
@@ -277,7 +254,7 @@ export default function CompareClient() {
 
       setProducts(validProducts)
 
-      // 3. AI 비교 실행
+      // 2. AI 비교 실행
       setLoadingMsg('running AI comparison...')
       const compareRes = await fetch('/api/compare', {
         method: 'POST',
@@ -315,10 +292,11 @@ export default function CompareClient() {
   }, [])
 
   useEffect(() => {
-    if (query) {
-      runComparison(query)
+    const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
+    if (ids.length >= 2) {
+      runComparison(ids)
     }
-  }, [query, runComparison])
+  }, [idsParam, runComparison])
 
   const handleNavSearch = (v: string) => {
     if (v.trim()) {
@@ -382,13 +360,11 @@ export default function CompareClient() {
 
       <main className="min-h-screen bg-background pt-20 pb-20 px-4 md:px-6 max-w-inner mx-auto">
 
-        {/* 검색 힌트 (쿼리 없을 때) */}
-        {!query && !loading && (
+        {/* 검색 힌트 (제품 없을 때) */}
+        {!idsParam && !loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <p className="text-white/40 text-sm">
-              상단 검색창에 제품을 입력하세요
-            </p>
-            <p className="text-white/20 text-xs">예: iphone 15 pro vs samsung s24 ultra</p>
+            <p className="text-white/40 text-sm">비교할 제품을 검색해서 트레이에 담아주세요</p>
+            <p className="text-white/20 text-xs">우측 하단 트레이에 2개 이상 담으면 비교가 시작됩니다</p>
           </div>
         )}
 
