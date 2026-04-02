@@ -3,14 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { id } = params
+  const { id } = await params
 
   const { data: product, error } = await supabase
     .from('products')

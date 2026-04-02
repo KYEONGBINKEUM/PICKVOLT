@@ -182,9 +182,10 @@ function BenchmarkCard({
 export default async function ProductPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const product = await getProduct(params.id)
+  const { id } = await params
+  const product = await getProduct(id)
   if (!product) notFound()
 
   const categoryLabel: Record<string, string> = {

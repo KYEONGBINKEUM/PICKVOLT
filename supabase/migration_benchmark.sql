@@ -145,16 +145,16 @@ create trigger trg_gpu_score_recalc
 --   (데이터 시딩 후 실행 — 아래 DROP 은 시딩 확인 뒤 따로 실행 권장)
 -- ============================================================
 alter table cpus
-  drop column if exists passmark_score,
-  drop column if exists passmark_rank,
-  drop column if exists performance_score,
-  drop column if exists tier;
+  drop column if exists passmark_score cascade,
+  drop column if exists passmark_rank cascade,
+  drop column if exists performance_score cascade,
+  drop column if exists tier cascade;
 
 alter table gpus
-  drop column if exists passmark_score,
-  drop column if exists passmark_rank,
-  drop column if exists performance_score,
-  drop column if exists tier;
+  drop column if exists passmark_score cascade,
+  drop column if exists passmark_rank cascade,
+  drop column if exists performance_score cascade,
+  drop column if exists tier cascade;
 
 
 -- ============================================================

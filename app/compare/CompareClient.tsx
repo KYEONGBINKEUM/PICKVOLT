@@ -428,7 +428,7 @@ export default function CompareClient() {
           sublabel: t('spec.benchmark'),
           barMax: 1000,
           values: products.map((p) => ({
-            primary: p.specs.performanceScore !== null
+            primary: p.specs.performanceScore != null
               ? Math.round(p.specs.performanceScore)
               : '—',
             secondary: p.specs.cpu ?? undefined,
