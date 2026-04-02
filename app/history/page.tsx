@@ -1,55 +1,71 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
-import { Pin, Trash2, ChevronRight } from 'lucide-react'
+import { Pin, Trash2, Loader2 } from 'lucide-react'
+import { supabase, getUserHistory, togglePin, deleteComparison } from '@/lib/supabase'
+import type { ComparisonHistory } from '@/lib/supabase'
+import { useI18n } from '@/lib/i18n'
 
-interface HistoryItem {
-  id: number
-  date: string
-  title: string
-  count: number
-  pinned: boolean
-  category: string
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffHours = diffMs / (1000 * 60 * 60)
+  const diffDays = diffMs / (1000 * 60 * 60 * 24)
+
+  if (diffHours < 1) return 'just now'
+  if (diffHours < 24) return `${Math.floor(diffHours)}h ago`
+  if (diffDays < 2) return 'yesterday'
+  if (diffDays < 7) return `${Math.floor(diffDays)} days ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const INITIAL_HISTORY: HistoryItem[] = [
-  { id: 1, date: 'march 12, 2024', title: 'pixel 8 pro vs s24 ultra vs iphone 15 pro', count: 3, pinned: true, category: 'smartphones' },
-  { id: 2, date: 'today, 2:15 pm', title: 'macbook pro m3 vs dell xps 14', count: 2, pinned: false, category: 'laptops' },
-  { id: 3, date: 'yesterday', title: 'sony wh-1000xm5 vs bose qc ultra vs airpods max', count: 3, pinned: false, category: 'audio' },
-  { id: 4, date: 'march 10, 2024', title: 'ipad pro 12.9 vs galaxy tab s9 ultra', count: 2, pinned: false, category: 'smartphones' },
-  { id: 5, date: 'february 24, 2024', title: 'fujifilm x100vi vs ricoh gr iii', count: 2, pinned: false, category: 'cameras' },
-]
+function isRecent(dateStr: string): boolean {
+  const diffDays = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24)
+  return diffDays <= 7
+}
 
-const FILTERS = ['all picks', 'pinned', 'smartphones', 'laptops', 'audio', 'cameras']
-
-function HistoryCard({ item, onPin, onDelete }: {
-  item: HistoryItem
-  onPin: (id: number) => void
-  onDelete: (id: number) => void
+function HistoryCard({
+  item,
+  onPin,
+  onDelete,
+}: {
+  item: ComparisonHistory
+  onPin: (id: string, pinned: boolean) => void
+  onDelete: (id: string) => void
 }) {
+  const { t } = useI18n()
+
   return (
-    <div className={`group relative flex items-center justify-between px-5 py-4 bg-surface rounded-card border border-border hover:border-white/10 transition-all ${item.pinned ? 'border-l-2 border-l-accent' : ''}`}>
+    <div className={`group relative flex items-center justify-between px-5 py-4 bg-surface rounded-card border transition-all hover:border-white/10 ${item.pinned ? 'border-l-2 border-l-accent border-border' : 'border-border'}`}>
       <div className="flex-1 min-w-0">
         {item.pinned && (
           <span className="inline-block text-[10px] font-black tracking-widest bg-accent text-white px-2 py-0.5 rounded-full uppercase mb-2">
-            pinned
+            {t('history.pinned')}
           </span>
         )}
-        <p className="text-xs text-white/30 mb-1">{item.date}</p>
-        <p className="text-sm font-bold text-white">{item.title}</p>
+        <p className="text-xs text-white/30 mb-1">{formatDate(item.created_at)}</p>
+        <p className="text-sm font-bold text-white truncate pr-4">{item.title}</p>
+        {item.result?.winner && (
+          <p className="text-xs text-accent/70 mt-1">
+            {t('compare.aipick')}: {item.result.winner}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-3 ml-6 flex-shrink-0">
-        <span className="text-xs text-white/30 hidden md:block">{item.count} products</span>
+        <span className="text-xs text-white/30 hidden md:block">
+          {item.products.length} {t('history.products')}
+        </span>
         <Link
-          href="/compare"
+          href={`/compare?ids=${item.products.join(',')}`}
           className="text-xs font-semibold text-white/70 hover:text-white border border-border hover:border-white/20 px-4 py-1.5 rounded-full transition-all"
         >
-          view summary
+          {t('history.view')}
         </Link>
         <button
-          onClick={() => onPin(item.id)}
+          onClick={() => onPin(item.id, !item.pinned)}
           className={`p-2 rounded-full transition-all ${
             item.pinned
               ? 'text-accent bg-accent/10'
@@ -70,137 +86,153 @@ function HistoryCard({ item, onPin, onDelete }: {
 }
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState(INITIAL_HISTORY)
-  const [activeFilter, setActiveFilter] = useState('all picks')
+  const { t } = useI18n()
+  const [history, setHistory] = useState<ComparisonHistory[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<'all' | 'pinned'>('all')
 
-  const togglePin = (id: number) =>
-    setHistory((h) => h.map((item) => (item.id === id ? { ...item, pinned: !item.pinned } : item)))
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) {
+        setLoading(false)
+        return
+      }
+      setUserId(data.user.id)
+      const items = await getUserHistory(data.user.id)
+      setHistory(items)
+      setLoading(false)
+    })
+  }, [])
 
-  const deleteItem = (id: number) =>
+  const handlePin = async (id: string, pinned: boolean) => {
+    setHistory((h) => h.map((item) => (item.id === id ? { ...item, pinned } : item)))
+    await togglePin(id, pinned)
+  }
+
+  const handleDelete = async (id: string) => {
     setHistory((h) => h.filter((item) => item.id !== id))
+    await deleteComparison(id)
+  }
 
-  const filtered =
-    activeFilter === 'all picks'
-      ? history
-      : activeFilter === 'pinned'
-      ? history.filter((h) => h.pinned)
-      : history.filter((h) => h.category === activeFilter)
-
+  const filtered = filter === 'pinned' ? history.filter((h) => h.pinned) : history
   const pinned = filtered.filter((h) => h.pinned)
-  const thisWeek = filtered.filter((h) => !h.pinned && (h.date.includes('today') || h.date.includes('yesterday') || h.date.includes('march 1')))
-  const older = filtered.filter((h) => !h.pinned && h.date.includes('february'))
+  const recent = filtered.filter((h) => !h.pinned && isRecent(h.created_at))
+  const older = filtered.filter((h) => !h.pinned && !isRecent(h.created_at))
 
   return (
     <>
-      <Navbar showSearch searchValue="" onSearchChange={() => {}} searchPlaceholder="search through your past picks..." />
+      <Navbar />
       <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <p className="text-xs text-white/30 mb-2 uppercase tracking-widest">library</p>
-            <h1 className="text-4xl font-black text-white">comparison history</h1>
+            <p className="text-xs text-white/30 mb-2 uppercase tracking-widest">{t('history.library')}</p>
+            <h1 className="text-4xl font-black text-white">{t('compare.history')}</h1>
           </div>
-          <p className="text-xs text-white/30 mt-4">showing {history.length} total sessions</p>
+          {!loading && userId && (
+            <p className="text-xs text-white/30 mt-4">
+              {history.length} {t('history.total')}
+            </p>
+          )}
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex flex-wrap gap-2 mb-10">
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                activeFilter === f
-                  ? 'bg-white text-black'
-                  : 'border border-border text-white/50 hover:text-white hover:border-white/20'
-              }`}
+        {/* 로딩 */}
+        {loading && (
+          <div className="flex justify-center py-32">
+            <Loader2 className="w-6 h-6 text-accent animate-spin" />
+          </div>
+        )}
+
+        {/* 비로그인 */}
+        {!loading && !userId && (
+          <div className="text-center py-32">
+            <p className="text-white/30 text-sm mb-4">{t('compare.signin_history')}</p>
+            <Link
+              href="/login"
+              className="inline-block bg-accent hover:bg-accent/90 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
             >
-              {f}
-            </button>
-          ))}
-        </div>
-
-        {/* Pinned */}
-        {pinned.length > 0 && (
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-lg font-black text-white">pinned</h2>
-              <span className="text-xs text-white/30">priority access</span>
-            </div>
-            <div className="space-y-3">
-              {pinned.map((item) => (
-                <HistoryCard key={item.id} item={item} onPin={togglePin} onDelete={deleteItem} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* This week */}
-        {thisWeek.length > 0 && (
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-lg font-black text-white">this week</h2>
-              <span className="text-xs text-white/30">last 7 days</span>
-            </div>
-            <div className="space-y-3">
-              {thisWeek.map((item) => (
-                <HistoryCard key={item.id} item={item} onPin={togglePin} onDelete={deleteItem} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Older */}
-        {older.length > 0 && (
-          <section className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-lg font-black text-white">older</h2>
-              <span className="text-xs text-white/30">february 2024</span>
-            </div>
-            <div className="space-y-3">
-              {older.map((item) => (
-                <HistoryCard key={item.id} item={item} onPin={togglePin} onDelete={deleteItem} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {filtered.length === 0 && (
-          <div className="text-center py-24">
-            <p className="text-white/30 text-sm">no comparisons here.</p>
-            <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
-              start comparing →
+              {t('auth.signin')}
             </Link>
           </div>
         )}
+
+        {/* 데이터 있음 */}
+        {!loading && userId && (
+          <>
+            {/* Filter tabs */}
+            <div className="flex gap-2 mb-10">
+              {(['all', 'pinned'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                    filter === f
+                      ? 'bg-white text-black'
+                      : 'border border-border text-white/50 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  {f === 'all' ? t('history.filter_all') : t('history.pinned')}
+                </button>
+              ))}
+            </div>
+
+            {/* Pinned */}
+            {pinned.length > 0 && (
+              <section className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-black text-white">{t('history.pinned')}</h2>
+                </div>
+                <div className="space-y-3">
+                  {pinned.map((item) => (
+                    <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Recent */}
+            {recent.length > 0 && (
+              <section className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-black text-white">{t('history.recent')}</h2>
+                  <span className="text-xs text-white/30">{t('compare.last30').replace('30', '7')}</span>
+                </div>
+                <div className="space-y-3">
+                  {recent.map((item) => (
+                    <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Older */}
+            {older.length > 0 && (
+              <section className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-black text-white">{t('history.older')}</h2>
+                </div>
+                <div className="space-y-3">
+                  {older.map((item) => (
+                    <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 빈 상태 */}
+            {filtered.length === 0 && (
+              <div className="text-center py-24">
+                <p className="text-white/30 text-sm">{t('history.empty')}</p>
+                <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
+                  {t('history.start')}
+                </Link>
+              </div>
+            )}
+          </>
+        )}
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-10">
-        <div className="max-w-inner mx-auto px-6 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-accent" />
-            <span className="font-bold text-white">pickvolt</span>
-          </div>
-          <div className="flex gap-6 text-xs text-white/30">
-            <a href="#" className="hover:text-white transition-colors">privacy</a>
-            <a href="#" className="hover:text-white transition-colors">terms</a>
-            <a href="#" className="hover:text-white transition-colors">api</a>
-            <a href="#" className="hover:text-white transition-colors">contact</a>
-          </div>
-          <p className="text-xs text-white/20">© 2024 pickvolt. every decision is a new data point.</p>
-        </div>
-      </footer>
-
-      {/* Right sidebar */}
-      <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20">
-        <div className="bg-surface-2 border border-border rounded-l-xl px-2 py-4 cursor-pointer hover:bg-surface transition-colors">
-          <p className="text-[10px] text-white/20 uppercase tracking-widest" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-            full technical specifications
-          </p>
-        </div>
-      </div>
     </>
   )
 }
