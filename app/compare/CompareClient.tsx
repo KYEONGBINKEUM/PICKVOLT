@@ -323,12 +323,6 @@ export default function CompareClient() {
   const runComparison = useCallback(async (ids: string[]) => {
     if (ids.length < 2) return
 
-    // 로그인 필수
-    if (!session) {
-      setError('login_required')
-      return
-    }
-
     setLoading(true)
     setError(null)
     setProducts([])
@@ -348,6 +342,12 @@ export default function CompareClient() {
       }
 
       setProducts(validProducts)
+
+      // AI 비교는 로그인한 유저만
+      if (!session) {
+        setLoading(false)
+        return
+      }
 
       setLoadingMsg(t('compare.loading_ai'))
       const compareRes = await fetch('/api/compare', {
