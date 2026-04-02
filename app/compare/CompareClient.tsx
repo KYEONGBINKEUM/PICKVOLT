@@ -8,6 +8,7 @@ import { Download, Share2, ChevronRight, RotateCcw, Loader2 } from 'lucide-react
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n } from '@/lib/i18n'
+import { supabase, saveComparison } from '@/lib/supabase'
 
 interface ProductSpecs {
   cpu?: string | null
@@ -287,6 +288,17 @@ export default function CompareClient() {
         setError(compareData.error)
       } else {
         setAiResult(compareData)
+
+        // 로그인 유저면 히스토리 저장
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const title = validProducts.map((p) => p.name).join(' vs ')
+          saveComparison(user.id, title, ids, {
+            winner: compareData.winner,
+            summary: compareData.summary,
+            reasoning: compareData.reasoning,
+          }).catch(() => {/* 저장 실패해도 UI에 영향 없음 */})
+        }
       }
     } catch {
       setError(t('compare.error_compare'))
