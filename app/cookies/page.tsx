@@ -1,5 +1,4 @@
 import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 
 export default function CookiesPage() {
   return (
@@ -49,7 +48,6 @@ export default function CookiesPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   )
 }

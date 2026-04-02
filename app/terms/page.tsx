@@ -1,5 +1,4 @@
 import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 
 export default function TermsPage() {
   return (
@@ -35,7 +34,6 @@ export default function TermsPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </>
   )
 }

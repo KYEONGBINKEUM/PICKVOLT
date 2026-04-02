@@ -6,6 +6,7 @@ import { CurrencyProvider } from '@/lib/currency'
 import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
 import CompareTray from '@/components/CompareTray'
+import Footer from '@/components/Footer'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CurrencyProvider>
             <CompareCartProvider>
               {children}
+              <Footer />
               <CookieBanner />
               <CompareTray />
             </CompareCartProvider>

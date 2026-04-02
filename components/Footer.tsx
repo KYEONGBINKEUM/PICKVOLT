@@ -20,12 +20,12 @@ export default function Footer() {
           <Link href="/privacy" className="hover:text-white transition-colors">{t('footer.privacy')}</Link>
           <Link href="/terms"   className="hover:text-white transition-colors">{t('footer.terms')}</Link>
           <Link href="/cookies" className="hover:text-white transition-colors">{t('footer.cookies')}</Link>
-          <Link href="#"        className="hover:text-white transition-colors">{t('footer.api')}</Link>
-          <Link href="#"        className="hover:text-white transition-colors">{t('footer.contact')}</Link>
         </div>
 
         {/* Copyright */}
-        <p className="text-xs text-white/20 text-center">{t('footer.copy')}</p>
+        <p className="text-xs text-white/20 text-center">
+          © 2026 Pickvolt, Inc. All rights reserved.
+        </p>
       </div>
     </footer>
   )
