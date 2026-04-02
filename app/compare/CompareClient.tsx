@@ -9,6 +9,7 @@ import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import { shortenCompareTitle } from '@/lib/utils'
 
 interface ProductSpecs {
   cpu?: string | null
@@ -270,7 +271,7 @@ function PopularComparisons({ items }: { items: PopularItem[] }) {
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xs text-white/20 font-bold w-4 flex-shrink-0">{i + 1}</span>
-              <p className="text-sm text-white/70 group-hover:text-white transition-colors truncate">{item.title}</p>
+              <p className="text-sm text-white/70 group-hover:text-white transition-colors truncate">{shortenCompareTitle(item.title)}</p>
             </div>
             {item.cnt > 1 && (
               <span className="flex-shrink-0 ml-3 text-xs text-white/20">{item.cnt}×</span>

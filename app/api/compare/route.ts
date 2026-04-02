@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { shortenProductName } from '@/lib/utils'
 
 const DAILY_LIMIT = 5
 
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 히스토리 서버사이드 저장
-    const title = products.map((p: { name: string }) => p.name).join(' vs ')
+    const title = products.map((p: { name: string }) => shortenProductName(p.name)).join(' vs ')
     await supabase.from('comparison_history').insert({
       user_id: user.id,
       title,

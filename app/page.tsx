@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import ComparisonPill from '@/components/ComparisonPill'
 import { useI18n } from '@/lib/i18n'
+import { shortenCompareTitle } from '@/lib/utils'
 
 const FALLBACK_POPULAR = [
   { label: 'iphone 15 vs s24', href: '/compare?q=iphone+15+vs+s24' },
@@ -31,7 +32,7 @@ export default function HomePage() {
         if (d.items && d.items.length >= 2) {
           setPopular(
             d.items.map((item) => ({
-              label: item.title.toLowerCase(),
+              label: shortenCompareTitle(item.title).toLowerCase(),
               href: `/compare?ids=${item.products.join(',')}`,
             }))
           )

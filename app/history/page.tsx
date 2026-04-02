@@ -7,6 +7,7 @@ import { Pin, Trash2, Loader2 } from 'lucide-react'
 import { supabase, getUserHistory, togglePin, deleteComparison } from '@/lib/supabase'
 import type { ComparisonHistory } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
+import { shortenCompareTitle } from '@/lib/utils'
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -47,7 +48,7 @@ function HistoryCard({
           </span>
         )}
         <p className="text-xs text-white/30 mb-1">{formatDate(item.created_at)}</p>
-        <p className="text-sm font-bold text-white truncate pr-4">{item.title}</p>
+        <p className="text-sm font-bold text-white truncate pr-4">{shortenCompareTitle(item.title)}</p>
         {item.result?.winner && (
           <p className="text-xs text-accent/70 mt-1">
             {t('compare.aipick')}: {item.result.winner}
