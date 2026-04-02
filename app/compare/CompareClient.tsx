@@ -290,14 +290,16 @@ export default function CompareClient() {
         setAiResult(compareData)
 
         // 로그인 유저면 히스토리 저장
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
           const title = validProducts.map((p) => p.name).join(' vs ')
-          saveComparison(user.id, title, ids, {
+          saveComparison(session.user.id, title, ids, {
             winner: compareData.winner,
             summary: compareData.summary,
             reasoning: compareData.reasoning,
-          }).catch(() => {/* 저장 실패해도 UI에 영향 없음 */})
+          }).catch((err) => console.error('[history save error]', err))
+        } else {
+          console.log('[history] no session, skip save')
         }
       }
     } catch {
