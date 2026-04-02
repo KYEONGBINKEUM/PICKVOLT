@@ -145,22 +145,21 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* 비로그인 */}
-        {!loading && !userId && (
-          <div className="text-center py-32">
-            <p className="text-white/30 text-sm mb-4">{t('compare.signin_history')}</p>
-            <Link
-              href="/login"
-              className="inline-block bg-accent hover:bg-accent/90 text-white text-sm font-semibold px-6 py-2.5 rounded-full transition-colors"
-            >
-              {t('auth.signin')}
-            </Link>
-          </div>
-        )}
-
-        {/* 데이터 있음 */}
-        {!loading && userId && (
+        {!loading && (
           <>
+            {/* 비로그인 배너 */}
+            {!userId && (
+              <div className="flex items-center justify-between bg-surface border border-border rounded-card px-5 py-4 mb-8">
+                <p className="text-sm text-white/50">{t('compare.signin_history')}</p>
+                <Link
+                  href="/login"
+                  className="flex-shrink-0 ml-4 bg-accent hover:bg-accent/90 text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors"
+                >
+                  {t('auth.signin')}
+                </Link>
+              </div>
+            )}
+
             {/* Filter tabs */}
             <div className="flex gap-2 mb-10">
               {(['all', 'pinned'] as const).map((f) => (
@@ -221,8 +220,8 @@ export default function HistoryPage() {
               </section>
             )}
 
-            {/* 빈 상태 */}
-            {filtered.length === 0 && (
+            {/* 빈 상태 (로그인 유저에게만) */}
+            {userId && filtered.length === 0 && (
               <div className="text-center py-24">
                 <p className="text-white/30 text-sm">{t('history.empty')}</p>
                 <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
