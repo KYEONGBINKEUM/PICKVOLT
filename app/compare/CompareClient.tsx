@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Download, Share2, ChevronRight, RotateCcw, Loader2 } from 'lucide-react'
+import { Download, Share2, ChevronRight, RotateCcw, Loader2, TrendingUp, Lock, Zap } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n } from '@/lib/i18n'
-import { supabase, saveComparison } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 interface ProductSpecs {
   cpu?: string | null
@@ -40,7 +40,15 @@ interface AiResult {
   winner: string
   summary: string
   reasoning: string
+  remaining: number | null
+  isPro: boolean
   scores?: Record<string, { value: number; reason: string }>
+}
+
+interface PopularItem {
+  title: string
+  products: string[]
+  cnt: number
 }
 
 /* ---------- AI Pick Banner ---------- */
@@ -75,6 +83,27 @@ function AIPickBanner({
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
+    </div>
+  )
+}
+
+/* ---------- Login Gate Banner (AI Pick locked) ---------- */
+function AIPickLocked({ t }: { t: (k: string) => string }) {
+  return (
+    <div className="relative rounded-card overflow-hidden border border-border bg-surface p-8 mb-8 flex items-center gap-6">
+      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
+        <Lock className="w-5 h-5 text-white/30" />
+      </div>
+      <div className="flex-1">
+        <p className="text-white font-bold mb-1">AI Pick is available for members</p>
+        <p className="text-white/40 text-sm">Sign in to see which product wins and why.</p>
+      </div>
+      <Link
+        href="/login"
+        className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors"
+      >
+        {t('auth.signin')}
+      </Link>
     </div>
   )
 }
@@ -157,43 +186,43 @@ function ReasoningModal({
           <span className="text-xs font-bold tracking-widest bg-accent/20 text-accent rounded-full px-3 py-1 uppercase">
             {t('compare.ai_reasoning')}
           </span>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
-            ✕
-          </button>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors text-lg">✕</button>
         </div>
-        <h3 className="text-xl font-black text-white mb-4">
-          {t('compare.why_wins').replace('{winner}', aiResult.winner)}
+
+        <h3 className="text-2xl font-black text-white mb-2">
+          {aiResult.winner} {t('compare.wins')}
         </h3>
-        <p className="text-sm text-white/60 leading-relaxed mb-6">{aiResult.reasoning}</p>
+        <p className="text-white/50 text-sm mb-6 leading-relaxed">{aiResult.reasoning}</p>
 
         {aiResult.scores && (
-          <div className="space-y-3">
-            {products.map((p) => {
-              const scoreKey = Object.keys(aiResult.scores!).find(
-                (k) => k.toLowerCase().includes(p.name.split(' ').slice(-1)[0].toLowerCase())
-              ) ?? p.name
-              const score = aiResult.scores![scoreKey]
-              if (!score) return null
-              return (
-                <div key={p.id} className="bg-surface rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-white">{p.name}</span>
-                    <span className="text-accent font-bold">{score.value}</span>
-                  </div>
-                  <p className="text-xs text-white/40">{score.reason}</p>
-                  <PerformanceBar score={score.value} />
+          <div className="space-y-4">
+            {Object.entries(aiResult.scores).map(([name, s]) => (
+              <div key={name}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-white/60 truncate">{name}</span>
+                  <span className="text-sm font-bold text-white ml-2">{s.value}</span>
                 </div>
-              )
-            })}
+                <PerformanceBar score={s.value} />
+                <p className="text-xs text-white/30 mt-1">{s.reason}</p>
+              </div>
+            ))}
           </div>
         )}
 
-        <button
-          onClick={onClose}
-          className="mt-6 w-full bg-accent hover:bg-accent-light text-white font-semibold py-3 rounded-full transition-colors text-sm"
-        >
-          {t('compare.got_it')}
-        </button>
+        <div className="mt-8 pt-6 border-t border-border">
+          <p className="text-xs text-white/20 text-center">{t('compare.disclaimer')}</p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {products.map((p) => (
+              <Link
+                key={p.id}
+                href={`/product/${p.id}`}
+                className="text-xs text-accent/70 hover:text-accent border border-accent/20 hover:border-accent/40 px-3 py-1.5 rounded-full transition-all"
+              >
+                {p.name} specs →
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -222,6 +251,37 @@ function SidebarToggle({ label }: { label: string }) {
   )
 }
 
+/* ---------- Popular Comparisons ---------- */
+function PopularComparisons({ items }: { items: PopularItem[] }) {
+  if (!items.length) return null
+  return (
+    <div className="mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp className="w-4 h-4 text-accent" />
+        <h3 className="text-lg font-black text-white">Trending Comparisons</h3>
+        <span className="text-xs text-white/30 ml-1">this week</span>
+      </div>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <Link
+            key={i}
+            href={`/compare?ids=${item.products.join(',')}`}
+            className="flex items-center justify-between px-5 py-3.5 bg-surface border border-border rounded-xl hover:border-white/15 transition-colors group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xs text-white/20 font-bold w-4 flex-shrink-0">{i + 1}</span>
+              <p className="text-sm text-white/70 group-hover:text-white transition-colors truncate">{item.title}</p>
+            </div>
+            {item.cnt > 1 && (
+              <span className="flex-shrink-0 ml-3 text-xs text-white/20">{item.cnt}×</span>
+            )}
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ---------- Main ---------- */
 export default function CompareClient() {
   const searchParams = useSearchParams()
@@ -236,9 +296,37 @@ export default function CompareClient() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showReasoning, setShowReasoning] = useState(false)
+  const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
+  const [remaining, setRemaining] = useState<number | null>(null)
+  const [popularItems, setPopularItems] = useState<PopularItem[]>([])
+
+  // 세션 확인
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session as typeof session)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s as typeof session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // 인기 비교 로드
+  useEffect(() => {
+    fetch('/api/compare/popular')
+      .then((r) => r.json())
+      .then((d) => setPopularItems(d.items ?? []))
+      .catch(() => {})
+  }, [])
 
   const runComparison = useCallback(async (ids: string[]) => {
     if (ids.length < 2) return
+
+    // 로그인 필수
+    if (!session) {
+      setError('login_required')
+      return
+    }
 
     setLoading(true)
     setError(null)
@@ -277,37 +365,44 @@ export default function CompareClient() {
               batteryLife: p.specs.batteryLife,
               os: p.specs.os,
               weight: p.specs.weight,
-              ipRating: p.specs.ipRating,
             },
           })),
+          productIds: ids,
+          accessToken: session.access_token,
         }),
       })
 
-      const compareData = await compareRes.json()
-      if (compareData.error) {
-        setError(compareData.error)
-      } else {
-        setAiResult(compareData)
+      if (compareRes.status === 401) {
+        setError('login_required')
+        setLoading(false)
+        return
+      }
 
-        // 로그인 유저면 히스토리 저장
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const title = validProducts.map((p) => p.name).join(' vs ')
-          saveComparison(session.user.id, title, ids, {
-            winner: compareData.winner,
-            summary: compareData.summary,
-            reasoning: compareData.reasoning,
-          }).catch((err) => console.error('[history save error]', err))
-        } else {
-          console.log('[history] no session, skip save')
-        }
+      if (compareRes.status === 429) {
+        setError('daily_limit')
+        setRemaining(0)
+        setLoading(false)
+        return
+      }
+
+      const compareData = await compareRes.json()
+      if (compareData.error && compareData.error !== 'login_required' && compareData.error !== 'daily_limit') {
+        setError(t('compare.error_compare'))
+      } else if (!compareData.error) {
+        setAiResult(compareData)
+        if (compareData.remaining !== null) setRemaining(compareData.remaining)
+        // 인기 비교 갱신
+        fetch('/api/compare/popular')
+          .then((r) => r.json())
+          .then((d) => setPopularItems(d.items ?? []))
+          .catch(() => {})
       }
     } catch {
       setError(t('compare.error_compare'))
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [t, session])
 
   useEffect(() => {
     const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
@@ -379,9 +474,14 @@ export default function CompareClient() {
 
         {/* 검색 힌트 */}
         {!idsParam && !loading && (
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
             <p className="text-white/40 text-sm">{t('compare.search_hint')}</p>
             <p className="text-white/20 text-xs">{t('compare.search_sub')}</p>
+            {popularItems.length > 0 && (
+              <div className="w-full max-w-lg mt-8">
+                <PopularComparisons items={popularItems} />
+              </div>
+            )}
           </div>
         )}
 
@@ -389,7 +489,33 @@ export default function CompareClient() {
         {loading && <LoadingState message={loadingMsg} />}
 
         {/* 에러 */}
-        {error && !loading && (
+        {error === 'login_required' && !loading && (
+          <div className="mt-8 p-6 bg-surface border border-border rounded-card flex items-center gap-4">
+            <Lock className="w-5 h-5 text-white/30 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-white font-bold text-sm mb-1">Sign in to compare</p>
+              <p className="text-white/40 text-xs">AI-powered comparison is available for members only.</p>
+            </div>
+            <Link href="/login" className="flex-shrink-0 bg-accent text-white text-sm font-bold px-4 py-2 rounded-full">
+              {t('auth.signin')}
+            </Link>
+          </div>
+        )}
+
+        {error === 'daily_limit' && !loading && (
+          <div className="mt-8 p-6 bg-surface border border-amber-500/20 rounded-card flex items-center gap-4">
+            <Zap className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-white font-bold text-sm mb-1">Daily limit reached (5/5)</p>
+              <p className="text-white/40 text-xs">Upgrade to Pro for unlimited comparisons.</p>
+            </div>
+            <Link href="/pricing" className="flex-shrink-0 bg-amber-500 text-black text-sm font-bold px-4 py-2 rounded-full">
+              Go Pro
+            </Link>
+          </div>
+        )}
+
+        {error && error !== 'login_required' && error !== 'daily_limit' && !loading && (
           <div className="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-card text-center">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
@@ -398,13 +524,27 @@ export default function CompareClient() {
         {/* 결과 */}
         {!loading && products.length >= 2 && (
           <div className="mt-8">
-            {aiResult && (
+            {/* AI Pick — 로그인 유저만, 에러 없을 때 */}
+            {session && aiResult && (
               <AIPickBanner
                 winner={aiResult.winner}
                 reasoning={aiResult.summary}
                 onViewReasoning={() => setShowReasoning(true)}
                 t={t}
               />
+            )}
+            {!session && (
+              <AIPickLocked t={t} />
+            )}
+
+            {/* 남은 사용량 (무료 유저) */}
+            {session && aiResult && aiResult.remaining !== null && (
+              <div className="flex items-center justify-end gap-2 mb-4 -mt-4">
+                <span className="text-xs text-white/30">
+                  {aiResult.remaining} comparison{aiResult.remaining !== 1 ? 's' : ''} left today
+                </span>
+                <Link href="/pricing" className="text-xs text-accent hover:underline">Go Pro →</Link>
+              </div>
             )}
 
             {/* 비교 테이블 */}
@@ -446,22 +586,8 @@ export default function CompareClient() {
               </button>
             </div>
 
-            {/* 히스토리 섹션 */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-black text-white">{t('compare.history')}</h3>
-                <span className="text-xs text-white/30">{t('compare.last30')}</span>
-              </div>
-              <div className="p-6 bg-surface border border-border rounded-card text-center">
-                <p className="text-white/20 text-sm">{t('compare.signin_history')}</p>
-                <Link
-                  href="/login"
-                  className="mt-3 inline-block text-xs font-semibold text-accent hover:text-accent-light transition-colors"
-                >
-                  {t('auth.signin')} →
-                </Link>
-              </div>
-            </div>
+            {/* 인기 비교 */}
+            <PopularComparisons items={popularItems} />
           </div>
         )}
       </main>
