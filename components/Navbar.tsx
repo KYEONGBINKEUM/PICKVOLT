@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { User } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
-import { LanguageSwitcher, CurrencySwitcher } from '@/components/LocaleSwitcher'
+import { LocalePopup } from '@/components/LocaleSwitcher'
 
 interface NavbarProps {
   showSearch?: boolean
@@ -97,18 +97,7 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
         )}
 
         {/* Language & Currency */}
-        <div className="hidden md:flex items-center gap-3 border-l border-border pl-4">
-          <LanguageSwitcher />
-          <CurrencySwitcher />
-        </div>
-
-        {/* Status dots */}
-        <div className="flex items-center gap-1 ml-1">
-          <span className="w-2 h-2 rounded-full bg-accent" />
-          <span className="w-2 h-2 rounded-full bg-white/20" />
-          <span className="w-2 h-2 rounded-full bg-white/20" />
-          <span className="w-2 h-2 rounded-full bg-white/20" />
-        </div>
+        <LocalePopup />
       </div>
     </nav>
   )
