@@ -1,6 +1,10 @@
+'use client'
+
+import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import ComparisonPill from '@/components/ComparisonPill'
+import { useI18n } from '@/lib/i18n'
 
 const POPULAR = [
   { label: 'iphone 15 vs s24', href: '/compare?q=iphone+15+vs+s24' },
@@ -10,6 +14,8 @@ const POPULAR = [
 ]
 
 export default function HomePage() {
+  const { t } = useI18n()
+
   return (
     <main className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -19,7 +25,7 @@ export default function HomePage() {
         <div className="w-full max-w-3xl flex flex-col items-center gap-10 animate-slide-up">
           {/* Heading */}
           <h1 className="text-5xl md:text-7xl font-black text-white text-center leading-[1.05] tracking-tight">
-            what are we comparing?
+            {t('home.heading')}
           </h1>
 
           {/* Search */}
@@ -27,7 +33,7 @@ export default function HomePage() {
 
           {/* Popular pills */}
           <div className="flex flex-col items-center gap-3">
-            <p className="text-xs text-white/30 tracking-widest uppercase">popular comparisons</p>
+            <p className="text-xs text-white/30 tracking-widest uppercase">{t('home.popular')}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {POPULAR.map((p) => (
                 <ComparisonPill key={p.href} label={p.label} href={p.href} />
@@ -40,7 +46,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-6 text-center">
         <p className="text-xs text-white/20">
-          © 2024 pickvolt. search for two or more items to get an ai-powered verdict.
+          {t('home.footer')}
         </p>
       </footer>
     </main>

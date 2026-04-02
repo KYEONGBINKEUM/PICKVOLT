@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Download, Share2, ChevronRight, RotateCcw, Loader2 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
+import { useI18n } from '@/lib/i18n'
 
 interface ProductSpecs {
   cpu?: string | null
@@ -46,28 +47,30 @@ function AIPickBanner({
   winner,
   reasoning,
   onViewReasoning,
+  t,
 }: {
   winner: string
   reasoning: string
   onViewReasoning: () => void
+  t: (k: string) => string
 }) {
   return (
     <div className="relative rounded-card overflow-hidden bg-gradient-to-br from-[#FF6B2B] via-accent to-[#cc3300] p-8 mb-8">
       <div className="absolute top-4 right-4">
         <span className="text-xs font-bold tracking-widest bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-white uppercase">
-          AI PICK
+          {t('compare.aipick')}
         </span>
       </div>
       <div className="max-w-lg">
         <h2 className="text-3xl md:text-4xl font-black text-black leading-tight mb-3">
-          the {winner} is your winner.
+          the {winner} {t('compare.winner')}
         </h2>
         <p className="text-black/70 text-sm leading-relaxed mb-6">{reasoning}</p>
         <button
           onClick={onViewReasoning}
           className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-white/90 transition-colors"
         >
-          view reasoning
+          {t('compare.view_reasoning')}
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -133,10 +136,12 @@ function ReasoningModal({
   aiResult,
   products,
   onClose,
+  t,
 }: {
   aiResult: AiResult
   products: Product[]
   onClose: () => void
+  t: (k: string) => string
 }) {
   return (
     <div
@@ -149,14 +154,14 @@ function ReasoningModal({
       >
         <div className="flex items-center justify-between mb-6">
           <span className="text-xs font-bold tracking-widest bg-accent/20 text-accent rounded-full px-3 py-1 uppercase">
-            AI Reasoning
+            {t('compare.ai_reasoning')}
           </span>
           <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
             ✕
           </button>
         </div>
         <h3 className="text-xl font-black text-white mb-4">
-          why {aiResult.winner} wins
+          {t('compare.why_wins').replace('{winner}', aiResult.winner)}
         </h3>
         <p className="text-sm text-white/60 leading-relaxed mb-6">{aiResult.reasoning}</p>
 
@@ -186,7 +191,7 @@ function ReasoningModal({
           onClick={onClose}
           className="mt-6 w-full bg-accent hover:bg-accent-light text-white font-semibold py-3 rounded-full transition-colors text-sm"
         >
-          got it
+          {t('compare.got_it')}
         </button>
       </div>
     </div>
@@ -204,12 +209,12 @@ function LoadingState({ message }: { message: string }) {
 }
 
 /* ---------- Sidebar Toggle ---------- */
-function SidebarToggle() {
+function SidebarToggle({ label }: { label: string }) {
   return (
     <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20">
       <div className="bg-surface-2 border border-border rounded-l-xl p-3 cursor-pointer hover:bg-surface transition-colors">
-        <p className="text-xs text-white/40 writing-vertical" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-          compare specs side by side
+        <p className="text-xs text-white/40" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+          {label}
         </p>
       </div>
     </div>
@@ -221,12 +226,13 @@ export default function CompareClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const idsParam = searchParams.get('ids') ?? ''
+  const { t } = useI18n()
 
   const [navSearch, setNavSearch] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [aiResult, setAiResult] = useState<AiResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [loadingMsg, setLoadingMsg] = useState('searching products...')
+  const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showReasoning, setShowReasoning] = useState(false)
 
@@ -239,23 +245,21 @@ export default function CompareClient() {
     setAiResult(null)
 
     try {
-      // 1. 각 ID로 상세 스펙 가져오기
-      setLoadingMsg('fetching specs...')
+      setLoadingMsg(t('compare.loading_specs'))
       const details = await Promise.all(
         ids.map((id) => fetch(`/api/products/${id}`).then((r) => r.json()))
       )
 
       const validProducts = details.filter((d) => d.id && !d.error)
       if (validProducts.length < 2) {
-        setError('제품 스펙을 불러오지 못했습니다.')
+        setError(t('compare.error_specs'))
         setLoading(false)
         return
       }
 
       setProducts(validProducts)
 
-      // 2. AI 비교 실행
-      setLoadingMsg('running AI comparison...')
+      setLoadingMsg(t('compare.loading_ai'))
       const compareRes = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,11 +289,11 @@ export default function CompareClient() {
         setAiResult(compareData)
       }
     } catch {
-      setError('비교에 실패했습니다. 다시 시도해주세요.')
+      setError(t('compare.error_compare'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
@@ -304,13 +308,12 @@ export default function CompareClient() {
     }
   }
 
-  // 스펙 로우 데이터 생성
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number }[] }
   const specRows: SpecRowData[] = products.length > 0
     ? ([
         products[0].specs.performanceScore !== null && {
-          label: 'performance',
-          sublabel: 'benchmark score',
+          label: t('spec.performance'),
+          sublabel: t('spec.benchmark'),
           values: products.map((p) => ({
             primary: p.specs.performanceScore ?? '—',
             secondary: p.specs.cpu ?? undefined,
@@ -318,31 +321,31 @@ export default function CompareClient() {
           })),
         },
         products[0].specs.ram !== null && {
-          label: 'RAM',
-          sublabel: 'memory',
+          label: t('spec.ram'),
+          sublabel: t('spec.memory'),
           values: products.map((p) => ({ primary: p.specs.ram ?? '—' })),
         },
         products[0].specs.storage !== null && {
-          label: 'storage',
-          sublabel: 'internal',
+          label: t('spec.storage'),
+          sublabel: t('spec.internal'),
           values: products.map((p) => ({ primary: p.specs.storage ?? '—' })),
         },
         products[0].specs.batteryCapacity !== null && {
-          label: 'battery',
-          sublabel: 'capacity',
+          label: t('spec.battery'),
+          sublabel: t('spec.capacity'),
           values: products.map((p) => ({
             primary: p.specs.batteryCapacity ?? '—',
             secondary: p.specs.batteryLife ?? undefined,
           })),
         },
         products[0].specs.camera !== null && {
-          label: 'camera',
-          sublabel: 'main sensor',
+          label: t('spec.camera'),
+          sublabel: t('spec.main_sensor'),
           values: products.map((p) => ({ primary: p.specs.camera ?? '—' })),
         },
         products[0].specs.display !== null && {
-          label: 'display',
-          sublabel: 'screen',
+          label: t('spec.display'),
+          sublabel: t('spec.screen'),
           values: products.map((p) => ({ primary: p.specs.display ?? '—' })),
         },
       ] as (SpecRowData | false)[]).filter((r): r is SpecRowData => !!r)
@@ -360,11 +363,11 @@ export default function CompareClient() {
 
       <main className="min-h-screen bg-background pt-20 pb-20 px-4 md:px-6 max-w-inner mx-auto">
 
-        {/* 검색 힌트 (제품 없을 때) */}
+        {/* 검색 힌트 */}
         {!idsParam && !loading && (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
-            <p className="text-white/40 text-sm">비교할 제품을 검색해서 트레이에 담아주세요</p>
-            <p className="text-white/20 text-xs">우측 하단 트레이에 2개 이상 담으면 비교가 시작됩니다</p>
+            <p className="text-white/40 text-sm">{t('compare.search_hint')}</p>
+            <p className="text-white/20 text-xs">{t('compare.search_sub')}</p>
           </div>
         )}
 
@@ -381,25 +384,24 @@ export default function CompareClient() {
         {/* 결과 */}
         {!loading && products.length >= 2 && (
           <div className="mt-8">
-            {/* AI Pick Banner */}
             {aiResult && (
               <AIPickBanner
                 winner={aiResult.winner}
                 reasoning={aiResult.summary}
                 onViewReasoning={() => setShowReasoning(true)}
+                t={t}
               />
             )}
 
             {/* 비교 테이블 */}
             <div className="bg-surface border border-border rounded-card overflow-hidden mb-8">
-              {/* 헤더 */}
               <div
                 className="grid border-b border-border"
                 style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
               >
                 <div className="p-4">
-                  <p className="text-xs text-white/40 mb-1">comparison overview</p>
-                  <p className="text-sm font-bold text-white">top choices</p>
+                  <p className="text-xs text-white/40 mb-1">{t('compare.overview')}</p>
+                  <p className="text-sm font-bold text-white">{t('compare.top_choices')}</p>
                 </div>
                 {products.map((p) => (
                   <div key={p.id} className="p-4 border-l border-border">
@@ -408,7 +410,6 @@ export default function CompareClient() {
                 ))}
               </div>
 
-              {/* 스펙 로우 */}
               {specRows.map((row) => (
                 <SpecRow
                   key={row.label}
@@ -423,27 +424,27 @@ export default function CompareClient() {
             <div className="flex items-center justify-end gap-3 mb-12">
               <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
                 <Download className="w-4 h-4" />
-                export as pdf
+                {t('compare.export_pdf')}
               </button>
               <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
                 <Share2 className="w-4 h-4" />
-                share comparison
+                {t('compare.share')}
               </button>
             </div>
 
-            {/* 히스토리 섹션 (placeholder) */}
+            {/* 히스토리 섹션 */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-black text-white">comparison history</h3>
-                <span className="text-xs text-white/30">last 30 days</span>
+                <h3 className="text-xl font-black text-white">{t('compare.history')}</h3>
+                <span className="text-xs text-white/30">{t('compare.last30')}</span>
               </div>
               <div className="p-6 bg-surface border border-border rounded-card text-center">
-                <p className="text-white/20 text-sm">sign in to save your comparison history</p>
+                <p className="text-white/20 text-sm">{t('compare.signin_history')}</p>
                 <Link
                   href="/login"
                   className="mt-3 inline-block text-xs font-semibold text-accent hover:text-accent-light transition-colors"
                 >
-                  sign in →
+                  {t('auth.signin')} →
                 </Link>
               </div>
             </div>
@@ -451,16 +452,15 @@ export default function CompareClient() {
         )}
       </main>
 
-      {/* 리즈닝 모달 */}
       {showReasoning && aiResult && (
         <ReasoningModal
           aiResult={aiResult}
           products={products}
           onClose={() => setShowReasoning(false)}
+          t={t}
         />
       )}
 
-      {/* 재비교 버튼 */}
       {!loading && products.length >= 2 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
           <button
@@ -468,12 +468,12 @@ export default function CompareClient() {
             className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 shadow-lg"
           >
             <RotateCcw className="w-4 h-4" />
-            new comparison
+            {t('compare.new_comparison')}
           </button>
         </div>
       )}
 
-      <SidebarToggle />
+      <SidebarToggle label={t('compare.specs_side_by_side')} />
     </>
   )
 }

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Plus, Check, Loader2 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
+import { useI18n } from '@/lib/i18n'
 
 interface SearchResult {
   id: string
@@ -21,6 +22,7 @@ export default function SearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { add, has, cart } = useCompareCart()
+  const { t } = useI18n()
 
   useEffect(() => {
     if (query.length < 2) {
@@ -45,10 +47,7 @@ export default function SearchBar() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (results.length === 1) {
-      router.push(`/product/${results[0].id}`)
-    } else if (results.length > 1 && query.trim()) {
-      // 첫 번째 결과 상세 페이지로
+    if (results.length >= 1 && query.trim()) {
       router.push(`/product/${results[0].id}`)
     }
   }
@@ -82,7 +81,7 @@ export default function SearchBar() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder="search for devices, laptops, or specs..."
+          placeholder={t('search.placeholder')}
           className="flex-1 bg-transparent text-white placeholder:text-white/30 text-base focus:outline-none"
           autoComplete="off"
         />
@@ -119,12 +118,11 @@ export default function SearchBar() {
                   </div>
                 </div>
 
-                {/* + 버튼 */}
                 <button
                   type="button"
                   onClick={(e) => handleAddToCompare(e, result)}
                   disabled={inCart || cartFull}
-                  title={inCart ? '이미 추가됨' : cartFull ? '최대 4개' : '비교에 추가'}
+                  title={inCart ? t('search.added') : cartFull ? t('search.max') : t('search.add_compare')}
                   className={`flex-shrink-0 ml-3 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                     inCart
                       ? 'bg-accent/20 text-accent'

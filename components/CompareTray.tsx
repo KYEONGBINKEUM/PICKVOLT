@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, ChevronUp, ChevronDown, GitCompare } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
+import { useI18n } from '@/lib/i18n'
 
 export default function CompareTray() {
   const { cart, remove, clear } = useCompareCart()
   const [expanded, setExpanded] = useState(true)
   const router = useRouter()
+  const { t } = useI18n()
 
   if (cart.length === 0) return null
 
@@ -29,13 +31,15 @@ export default function CompareTray() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <GitCompare className="w-3.5 h-3.5 text-accent" />
-              <span className="text-xs font-bold text-white">comparing {cart.length} / 4</span>
+              <span className="text-xs font-bold text-white">
+                {t('tray.comparing').replace('{n}', String(cart.length))}
+              </span>
             </div>
             <button
               onClick={clear}
               className="text-xs text-white/30 hover:text-white/60 transition-colors"
             >
-              clear all
+              {t('tray.clear_all')}
             </button>
           </div>
 
@@ -46,7 +50,6 @@ export default function CompareTray() {
                 key={product.id}
                 className="flex items-center gap-3 bg-surface rounded-xl px-3 py-2.5"
               >
-                {/* 컬러 도트 */}
                 <div className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-white truncate">{product.name}</p>
@@ -61,14 +64,14 @@ export default function CompareTray() {
               </div>
             ))}
 
-            {/* 빈 슬롯 표시 */}
+            {/* 빈 슬롯 */}
             {cart.length < 4 && Array.from({ length: Math.min(4 - cart.length, 2) }).map((_, i) => (
               <div
                 key={i}
                 className="flex items-center gap-3 border border-dashed border-border rounded-xl px-3 py-2.5"
               >
                 <div className="w-2 h-2 rounded-full bg-white/10 flex-shrink-0" />
-                <p className="text-xs text-white/20">add a product...</p>
+                <p className="text-xs text-white/20">{t('tray.add_product')}</p>
               </div>
             ))}
           </div>
@@ -84,7 +87,9 @@ export default function CompareTray() {
                   : 'bg-white/5 text-white/20 cursor-not-allowed'
               }`}
             >
-              {canCompare ? `compare ${cart.length} products →` : 'add 1 more to compare'}
+              {canCompare
+                ? t('tray.compare_n').replace('{n}', String(cart.length))
+                : t('tray.add_more')}
             </button>
           </div>
         </div>
@@ -97,7 +102,7 @@ export default function CompareTray() {
       >
         <GitCompare className="w-4 h-4 text-accent" />
         <span className="text-sm font-bold text-white">{cart.length}</span>
-        <span className="text-xs text-white/40">in tray</span>
+        <span className="text-xs text-white/40">{t('tray.in_tray')}</span>
         {expanded
           ? <ChevronDown className="w-3.5 h-3.5 text-white/40" />
           : <ChevronUp className="w-3.5 h-3.5 text-white/40" />
