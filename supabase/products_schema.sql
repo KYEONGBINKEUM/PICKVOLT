@@ -2,6 +2,30 @@
 -- Product DB schema — run this in Supabase SQL Editor
 -- ============================================================
 
+-- CPU reference table
+-- gb6_single / gb6_multi : Geekbench 6 싱글/멀티코어 (참고값)
+-- relative_score         : (gb6_multi / DB 최고값) × 1000, 트리거로 자동 재계산
+create table if not exists cpus (
+  id             uuid    primary key default uuid_generate_v4(),
+  name           text    not null unique,
+  brand          text    not null,
+  gb6_single     integer,
+  gb6_multi      integer,
+  score_source   text    default 'geekbench6',
+  relative_score numeric
+);
+
+-- GPU reference table (same score schema as cpus)
+create table if not exists gpus (
+  id             uuid    primary key default uuid_generate_v4(),
+  name           text    not null unique,
+  brand          text    not null,
+  gb6_single     integer,
+  gb6_multi      integer,
+  score_source   text    default 'geekbench6',
+  relative_score numeric
+);
+
 -- Products (all categories)
 create table if not exists products (
   id uuid primary key default uuid_generate_v4(),

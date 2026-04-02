@@ -137,10 +137,12 @@ function SpecRow({
   label,
   sublabel,
   values,
+  barMax = 100,
 }: {
   label: string
   sublabel: string
   values: { primary: string | number; secondary?: string; bar?: number }[]
+  barMax?: number
 }) {
   return (
     <div
@@ -155,7 +157,7 @@ function SpecRow({
         <div key={i} className="p-4 border-l border-border">
           <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
           {v.secondary && <p className="text-xs text-white/40 mt-1">{v.secondary}</p>}
-          {v.bar !== undefined && <PerformanceBar score={v.bar} />}
+          {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} />}
         </div>
       ))}
     </div>
@@ -418,14 +420,17 @@ export default function CompareClient() {
     }
   }
 
-  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number }[] }
+  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number }[]; barMax?: number }
   const specRows: SpecRowData[] = products.length > 0
     ? ([
         products[0].specs.performanceScore !== null && {
           label: t('spec.performance'),
           sublabel: t('spec.benchmark'),
+          barMax: 1000,
           values: products.map((p) => ({
-            primary: p.specs.performanceScore ?? '—',
+            primary: p.specs.performanceScore !== null
+              ? Math.round(p.specs.performanceScore)
+              : '—',
             secondary: p.specs.cpu ?? undefined,
             bar: p.specs.performanceScore ?? undefined,
           })),
@@ -571,6 +576,7 @@ export default function CompareClient() {
                   label={row.label}
                   sublabel={row.sublabel}
                   values={row.values}
+                  barMax={row.barMax}
                 />
               ))}
             </div>
