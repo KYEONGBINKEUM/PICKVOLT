@@ -77,7 +77,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ...result, provider: process.env.GEMINI_API_KEY ? 'gemini' : 'claude' })
   } catch (error) {
-    console.error('compare api error:', error)
-    return NextResponse.json({ error: '비교 분석에 실패했습니다.' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('compare api error:', msg)
+    return NextResponse.json({ error: '비교 분석에 실패했습니다.', detail: msg }, { status: 500 })
   }
 }
