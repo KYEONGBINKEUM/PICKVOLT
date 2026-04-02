@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   const { id } = params
 
-  // 1. Product + all spec tables
   const { data: product, error } = await supabase
     .from('products')
     .select(`
@@ -26,10 +25,10 @@ export async function GET(
     .single()
 
   if (error || !product) {
+    console.error('[product/id] supabase error:', error)
     return NextResponse.json({ error: 'product not found' }, { status: 404 })
   }
 
-  // 2. CPU performance score (if linked)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const common = product.specs_common as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,7 +48,6 @@ export async function GET(
     performanceScore = cpu?.performance_score ?? null
   }
 
-  // 3. Map to ProductSpecs shape
   const specSrc = laptop ?? smartphone ?? tablet ?? {}
 
   const displayParts = [
@@ -63,24 +61,6 @@ export async function GET(
     ? `${common.storage_gb >= 1024 ? `${common.storage_gb / 1024}TB` : `${common.storage_gb}GB`}${common.storage_type ? ` ${common.storage_type}` : ''}`
     : null
 
-  const cameraLabel = smartphone?.camera_main_mp
-    ? `${smartphone.camera_main_mp}MP + ${smartphone.camera_front_mp ?? '?'}MP front`
-    : null
-
-  const batteryCapacity = smartphone?.battery_mah
-    ? `${smartphone.battery_mah} mAh`
-    : tablet?.battery_mah
-    ? `${tablet.battery_mah} mAh`
-    : laptop?.battery_wh
-    ? `${laptop.battery_wh} Wh`
-    : null
-
-  const weightLabel = laptop?.weight_kg
-    ? `${laptop.weight_kg} kg`
-    : (smartphone ?? tablet)?.weight_g
-    ? `${(smartphone ?? tablet).weight_g} g`
-    : null
-
   const specs = {
     cpu: common?.cpu_name ?? null,
     cpuSpeedMHz: null,
@@ -88,11 +68,23 @@ export async function GET(
     ram: common?.ram_gb ? `${common.ram_gb}GB` : null,
     storage: storageLabel,
     display: displayParts.length ? displayParts.join(' ') : null,
-    camera: cameraLabel,
-    batteryCapacity,
+    camera: smartphone?.camera_main_mp
+      ? `${smartphone.camera_main_mp}MP + ${smartphone.camera_front_mp ?? '?'}MP front`
+      : null,
+    batteryCapacity: smartphone?.battery_mah
+      ? `${smartphone.battery_mah} mAh`
+      : tablet?.battery_mah
+      ? `${tablet.battery_mah} mAh`
+      : laptop?.battery_wh
+      ? `${laptop.battery_wh} Wh`
+      : null,
     batteryLife: laptop?.battery_hours ? `${laptop.battery_hours} hours` : null,
     os: common?.os ?? null,
-    weight: weightLabel,
+    weight: laptop?.weight_kg
+      ? `${laptop.weight_kg} kg`
+      : (smartphone ?? tablet)?.weight_g
+      ? `${(smartphone ?? tablet).weight_g} g`
+      : null,
     weightG: (smartphone ?? tablet)?.weight_g ?? null,
     ipRating: null,
   }
