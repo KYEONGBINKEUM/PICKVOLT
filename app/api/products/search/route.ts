@@ -19,13 +19,11 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get('q') ?? ''
     const category = searchParams.get('category') ?? ''
     const brand = searchParams.get('brand') ?? ''
-    const limit = Math.min(parseInt(searchParams.get('limit') ?? '10'), 50)
-
     let query = supabase
       .from('products')
       .select('id, name, brand, category')
       .eq('scrape_status', 'ok')
-      .limit(limit)
+      .order('created_at', { ascending: false })
 
     if (q) query = query.ilike('name', `%${q}%`)
     if (category) query = query.eq('category', category)

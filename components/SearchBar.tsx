@@ -33,7 +33,7 @@ export default function SearchBar() {
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       try {
-        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=20`)
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`)
         const data = await res.json()
         setResults(data.results ?? [])
       } catch {
