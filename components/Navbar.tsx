@@ -31,7 +31,7 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
   }, [])
 
   const navLinks = [
-    { href: '/compare', label: t('nav.compare') },
+    { href: '/', label: t('nav.compare') },
     { href: '/history', label: t('nav.history') },
     { href: '/pricing', label: t('nav.pro') },
   ]

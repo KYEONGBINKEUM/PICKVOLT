@@ -33,7 +33,7 @@ export default function SearchBar() {
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       try {
-        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=6`)
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=20`)
         const data = await res.json()
         setResults(data.results ?? [])
       } catch {
@@ -98,7 +98,10 @@ export default function SearchBar() {
 
       {/* 검색 결과 드롭다운 */}
       {focused && (results.length > 0 || searching) && (
-        <div className="absolute top-full mt-2 w-full bg-surface-2 border border-border rounded-2xl overflow-hidden z-50 shadow-2xl">
+        <div
+          className="absolute top-full mt-2 w-full bg-surface-2 border border-border rounded-2xl overflow-hidden z-50 shadow-2xl"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {results.map((result) => {
             const inCart = has(result.id)
             const cartFull = cart.length >= 4
