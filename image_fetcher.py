@@ -2,8 +2,10 @@
 """
 image_fetcher.py — 공식 홈페이지 og:image 수집기
 ==================================================
-products 테이블의 source_url 에서 og:image 메타태그를 읽어
-image_url 컬럼을 업데이트합니다.
+브랜드별 전략:
+  - ASUS   : source_url 의 /techspec/ 제거 후 제품 메인 페이지에서 og:image
+  - Samsung: Icecat API Gallery 이미지 (source_url 이 목록 페이지라 직접 접근 불가)
+  - 기타   : source_url 에서 og:image → twitter:image 순으로 추출
 
 사용법:
   python3 image_fetcher.py          # image_url 이 없는 제품만
@@ -27,6 +29,9 @@ SUPABASE_KEY = (
 )
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+ICECAT_USER = "OpenIcecat-live"
+ICECAT_BASE = "https://live.icecat.biz/api"
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -37,17 +42,11 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-# 브랜드별 공식 이미지 도메인 화이트리스트 (이 도메인 이미지만 신뢰)
-TRUSTED_DOMAINS = [
-    "apple.com", "samsung.com", "asus.com", "dell.com", "hp.com",
-    "lenovo.com", "lg.com", "microsoft.com", "sony.com",
-]
-
 DELAY = 1.2  # 요청 간격 (초)
 
 
-def fetch_og_image(url: str) -> str | None:
-    """source_url 에서 og:image URL 추출"""
+def fetch_og_image(url: str):
+    """URL 에서 og:image → twitter:image 순으로 추출"""
     if not url:
         return None
     try:
@@ -58,29 +57,13 @@ def fetch_og_image(url: str) -> str | None:
 
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # 1순위: og:image
         og = soup.find("meta", property="og:image")
         if og and og.get("content"):
             return og["content"].strip()
 
-        # 2순위: twitter:image
         tw = soup.find("meta", attrs={"name": "twitter:image"})
         if tw and tw.get("content"):
             return tw["content"].strip()
-
-        # 3순위: 첫 번째 큰 <img> (최소 300×300 이상인 것만)
-        for img in soup.find_all("img"):
-            src = img.get("src") or img.get("data-src") or ""
-            w = int(img.get("width") or 0)
-            h = int(img.get("height") or 0)
-            if src and w >= 300 and h >= 300:
-                if src.startswith("//"):
-                    src = "https:" + src
-                elif src.startswith("/"):
-                    from urllib.parse import urlparse
-                    base = urlparse(url)
-                    src = f"{base.scheme}://{base.netloc}{src}"
-                return src
 
         return None
     except Exception as e:
@@ -88,8 +71,47 @@ def fetch_og_image(url: str) -> str | None:
         return None
 
 
+def fetch_icecat_image(brand: str, product_code: str):
+    """Icecat API Gallery 에서 첫 번째 이미지 URL 반환"""
+    try:
+        url = (
+            f"{ICECAT_BASE}?UserName={ICECAT_USER}"
+            f"&Language=en&Brand={brand}&ProductCode={product_code}"
+        )
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        imgs = data.get("Gallery", [])
+        return imgs[0].get("Pic") if imgs else None
+    except Exception as e:
+        print(f"  Icecat 오류: {e}")
+        return None
+
+
+def get_image_for_product(brand: str, name: str, source_url: str):
+    """브랜드별 이미지 수집 전략"""
+    b = brand.lower()
+
+    # ── ASUS: /techspec/ 제거 후 제품 메인 페이지 ──
+    if b == "asus" and source_url:
+        url = source_url.rstrip("/")
+        if url.endswith("/techspec"):
+            url = url[: -len("/techspec")]
+        return fetch_og_image(url + "/"), url + "/"
+
+    # ── Samsung: Icecat Gallery ──
+    if b == "samsung":
+        # 제품명에서 브랜드 이름 제거 → 모델 코드 추출
+        model_code = name.replace("Samsung", "").strip()
+        img = fetch_icecat_image("Samsung", model_code)
+        return img, f"samsung.com"
+
+    # ── 기타 브랜드: source_url og:image ──
+    return fetch_og_image(source_url), source_url
+
+
 def run(refetch_all: bool = False, dry: bool = False):
-    # 대상 제품 조회
     q = supabase.table("products").select("id, name, brand, source_url, image_url")
     if not refetch_all:
         q = q.or_("image_url.is.null,image_url.eq.")
@@ -99,27 +121,27 @@ def run(refetch_all: bool = False, dry: bool = False):
     ok, skip, fail = 0, 0, 0
 
     for p in products:
-        pid   = p["id"]
-        name  = p["name"]
-        url   = p.get("source_url") or ""
+        pid        = p["id"]
+        name       = p["name"]
+        brand      = p.get("brand") or ""
+        source_url = p.get("source_url") or ""
 
-        if not url:
+        if not source_url and brand.lower() not in ("samsung",):
             print(f"[SKIP] {name} — source_url 없음")
             skip += 1
             continue
 
         print(f"[→] {name}")
-        print(f"    {url}")
 
-        img = fetch_og_image(url)
+        img, used_url = get_image_for_product(brand, name, source_url)
 
         if img:
-            print(f"    ✓ {img[:80]}")
+            print(f"    ✓ {img[:90]}")
             if not dry:
                 supabase.table("products").update({"image_url": img}).eq("id", pid).execute()
             ok += 1
         else:
-            print(f"    ✗ 이미지 없음")
+            print(f"    ✗ 이미지 없음  ({used_url[:60] if used_url else '-'})")
             fail += 1
 
         time.sleep(DELAY)

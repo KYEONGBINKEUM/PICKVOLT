@@ -32,6 +32,8 @@ interface Product {
   name: string
   brand: string
   category: string
+  image_url?: string | null
+  source_url?: string | null
   specs: ProductSpecs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw: Record<string, any>
@@ -111,13 +113,32 @@ function AIPickLocked({ t }: { t: (k: string) => string }) {
 
 /* ---------- Product Card ---------- */
 function ProductCard({ product }: { product: Product }) {
+  const imgSrc = product.image_url ?? null
+  const sourceDomain = product.source_url
+    ? new URL(product.source_url).hostname.replace('www.', '')
+    : product.brand.toLowerCase() + '.com'
+
   return (
     <div className="flex flex-col">
-      <div className="aspect-[4/3] rounded-xl bg-surface-2 border border-border mb-4 overflow-hidden flex items-center justify-center">
-        <div className="text-center p-4">
-          <p className="text-xs text-white/30 mb-1">{product.brand}</p>
-          <p className="text-xs text-white/20">{product.category}</p>
-        </div>
+      <div className="relative aspect-[4/3] rounded-xl bg-surface-2 border border-border mb-4 overflow-hidden flex items-center justify-center">
+        {imgSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imgSrc}
+              alt={product.name}
+              className="w-full h-full object-contain p-4"
+            />
+            <span className="absolute bottom-1.5 right-2 text-[9px] text-white/20 leading-none">
+              © {sourceDomain}
+            </span>
+          </>
+        ) : (
+          <div className="text-center p-4">
+            <p className="text-xs text-white/30 mb-1">{product.brand}</p>
+            <p className="text-xs text-white/20">{product.category}</p>
+          </div>
+        )}
       </div>
       <Link
         href={`/product/${product.id}`}
