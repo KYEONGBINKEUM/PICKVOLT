@@ -421,50 +421,193 @@ export default function CompareClient() {
   }
 
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number }[]; barMax?: number }
-  const specRows: SpecRowData[] = products.length > 0
-    ? ([
-        products[0].specs.performanceScore !== null && {
-          label: t('spec.performance'),
-          sublabel: t('spec.benchmark'),
-          barMax: 1000,
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fmtDisplay = (raw: Record<string, any>) => {
+    const parts = [
+      raw.display_inch ? `${raw.display_inch}"` : null,
+      raw.display_type ?? null,
+    ].filter(Boolean)
+    return parts.length ? parts.join(' ') : '—'
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fmtDisplaySub = (raw: Record<string, any>) => {
+    const parts = [
+      raw.display_resolution ?? null,
+      raw.display_hz ? `${raw.display_hz}Hz` : null,
+    ].filter(Boolean)
+    return parts.length ? parts.join(' · ') : undefined
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fmtStorage = (raw: Record<string, any>) => {
+    if (!raw.storage_gb) return '—'
+    const gb = raw.storage_gb as number
+    const size = gb >= 1024 ? `${gb / 1024}TB` : `${gb}GB`
+    return raw.storage_type ? `${size} ${raw.storage_type}` : size
+  }
+
+  const category = products.length > 0 ? products[0].category.toLowerCase() : ''
+
+  const buildSpecRows = (): SpecRowData[] => {
+    if (products.length === 0) return []
+
+    const performanceRow: SpecRowData = {
+      label: t('spec.performance'),
+      sublabel: t('spec.benchmark'),
+      barMax: 1000,
+      values: products.map((p) => ({
+        primary: p.specs.performanceScore != null ? Math.round(p.specs.performanceScore) : '—',
+        secondary: p.specs.cpu ?? undefined,
+        bar: p.specs.performanceScore ?? undefined,
+      })),
+    }
+    const ramRow: SpecRowData = {
+      label: t('spec.ram'),
+      sublabel: t('spec.memory'),
+      values: products.map((p) => ({ primary: p.raw.ram_gb ? `${p.raw.ram_gb}GB` : '—' })),
+    }
+    const storageRow: SpecRowData = {
+      label: t('spec.storage'),
+      sublabel: t('spec.internal'),
+      values: products.map((p) => ({ primary: fmtStorage(p.raw) })),
+    }
+    const displayRow: SpecRowData = {
+      label: t('spec.display'),
+      sublabel: t('spec.screen'),
+      values: products.map((p) => ({ primary: fmtDisplay(p.raw), secondary: fmtDisplaySub(p.raw) })),
+    }
+    const osRow: SpecRowData = {
+      label: t('spec.os_label'),
+      sublabel: t('spec.operating_system'),
+      values: products.map((p) => ({ primary: p.raw.os ?? p.specs.os ?? '—' })),
+    }
+
+    if (category === 'smartphone') {
+      return [
+        performanceRow,
+        ramRow,
+        storageRow,
+        displayRow,
+        {
+          label: t('spec.camera'),
+          sublabel: t('spec.main_sensor'),
           values: products.map((p) => ({
-            primary: p.specs.performanceScore != null
-              ? Math.round(p.specs.performanceScore)
-              : '—',
-            secondary: p.specs.cpu ?? undefined,
-            bar: p.specs.performanceScore ?? undefined,
+            primary: p.raw.camera_main_mp ? `${p.raw.camera_main_mp}MP` : '—',
+            secondary: p.raw.camera_front_mp ? `${p.raw.camera_front_mp}MP front` : undefined,
           })),
         },
-        products[0].specs.ram !== null && {
-          label: t('spec.ram'),
-          sublabel: t('spec.memory'),
-          values: products.map((p) => ({ primary: p.specs.ram ?? '—' })),
-        },
-        products[0].specs.storage !== null && {
-          label: t('spec.storage'),
-          sublabel: t('spec.internal'),
-          values: products.map((p) => ({ primary: p.specs.storage ?? '—' })),
-        },
-        products[0].specs.batteryCapacity !== null && {
+        {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
           values: products.map((p) => ({
-            primary: p.specs.batteryCapacity ?? '—',
-            secondary: p.specs.batteryLife ?? undefined,
+            primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
           })),
         },
-        products[0].specs.camera !== null && {
+        osRow,
+        {
+          label: t('spec.weight'),
+          sublabel: t('spec.weight_body'),
+          values: products.map((p) => ({
+            primary: p.raw.weight_g ? `${p.raw.weight_g}g` : '—',
+          })),
+        },
+      ]
+    }
+
+    if (category === 'laptop') {
+      return [
+        performanceRow,
+        ramRow,
+        storageRow,
+        displayRow,
+        {
+          label: t('spec.battery'),
+          sublabel: t('spec.capacity'),
+          values: products.map((p) => ({
+            primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
+          })),
+        },
+        {
+          label: t('spec.battery_life'),
+          sublabel: t('spec.battery_est'),
+          values: products.map((p) => ({
+            primary: p.raw.battery_hours ? `${p.raw.battery_hours} hrs` : '—',
+          })),
+        },
+        osRow,
+        {
+          label: t('spec.weight'),
+          sublabel: t('spec.weight_body'),
+          values: products.map((p) => ({
+            primary: p.raw.weight_kg ? `${p.raw.weight_kg} kg` : '—',
+          })),
+        },
+      ]
+    }
+
+    if (category === 'tablet') {
+      return [
+        performanceRow,
+        ramRow,
+        storageRow,
+        displayRow,
+        {
           label: t('spec.camera'),
           sublabel: t('spec.main_sensor'),
-          values: products.map((p) => ({ primary: p.specs.camera ?? '—' })),
+          values: products.map((p) => ({
+            primary: p.raw.camera_main_mp ? `${p.raw.camera_main_mp}MP` : '—',
+            secondary: p.raw.camera_front_mp ? `${p.raw.camera_front_mp}MP front` : undefined,
+          })),
         },
-        products[0].specs.display !== null && {
-          label: t('spec.display'),
-          sublabel: t('spec.screen'),
-          values: products.map((p) => ({ primary: p.specs.display ?? '—' })),
+        {
+          label: t('spec.battery'),
+          sublabel: t('spec.capacity'),
+          values: products.map((p) => ({
+            primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
+          })),
         },
-      ] as (SpecRowData | false)[]).filter((r): r is SpecRowData => !!r)
-    : []
+        {
+          label: t('spec.stylus'),
+          sublabel: t('spec.stylus_support'),
+          values: products.map((p) => ({
+            primary: p.raw.stylus_support === true ? 'Yes' : p.raw.stylus_support === false ? 'No' : '—',
+          })),
+        },
+        {
+          label: t('spec.cellular'),
+          sublabel: t('spec.connectivity'),
+          values: products.map((p) => ({
+            primary: p.raw.cellular === true ? 'Yes' : p.raw.cellular === false ? 'No' : '—',
+          })),
+        },
+        osRow,
+      ]
+    }
+
+    // fallback (monitor 등 기타 카테고리)
+    return [
+      performanceRow,
+      ramRow,
+      storageRow,
+      displayRow,
+      {
+        label: t('spec.battery'),
+        sublabel: t('spec.capacity'),
+        values: products.map((p) => ({
+          primary: p.specs.batteryCapacity ?? '—',
+          secondary: p.specs.batteryLife ?? undefined,
+        })),
+      },
+      {
+        label: t('spec.camera'),
+        sublabel: t('spec.main_sensor'),
+        values: products.map((p) => ({ primary: p.specs.camera ?? '—' })),
+      },
+      osRow,
+    ]
+  }
+
+  const specRows = buildSpecRows()
 
   return (
     <>
