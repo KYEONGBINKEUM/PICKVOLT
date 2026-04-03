@@ -21,9 +21,8 @@ export async function GET(req: NextRequest) {
     const brand = searchParams.get('brand') ?? ''
     let query = supabase
       .from('products')
-      .select('id, name, brand, category')
+      .select('id, name, brand, category, specs_common(launch_year, cpus(relative_score))')
       .eq('scrape_status', 'ok')
-      .order('created_at', { ascending: false })
 
     if (q) query = query.ilike('name', `%${q}%`)
     if (category) query = query.eq('category', category)
@@ -35,7 +34,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message, results: [] }, { status: 500 })
     }
 
-    return NextResponse.json({ results: data ?? [], total: data?.length ?? 0 })
+    // 성능 점수 1순위, 출시연도 2순위 정렬
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sorted = (data ?? []).sort((a: any, b: any) => {
+      const aScore = a.specs_common?.cpus?.relative_score ?? 0
+      const bScore = b.specs_common?.cpus?.relative_score ?? 0
+      if (bScore !== aScore) return bScore - aScore
+      const aYear = a.specs_common?.launch_year ?? 0
+      const bYear = b.specs_common?.launch_year ?? 0
+      return bYear - aYear
+    })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const results = sorted.map(({ specs_common: _sc, ...rest }: any) => rest)
+
+    return NextResponse.json({ results, total: results.length })
   } catch (e) {
     return NextResponse.json({ error: String(e), results: [] }, { status: 500 })
   }

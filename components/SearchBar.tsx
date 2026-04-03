@@ -99,7 +99,7 @@ export default function SearchBar() {
       {/* 검색 결과 드롭다운 */}
       {focused && (results.length > 0 || searching) && (
         <div
-          className="absolute top-full mt-2 w-full bg-surface-2 border border-border rounded-2xl overflow-hidden z-50 shadow-2xl"
+          className="absolute top-full mt-2 w-full bg-surface-2 border border-border rounded-2xl overflow-hidden z-50 shadow-2xl max-h-[264px] overflow-y-auto"
           onMouseDown={(e) => e.preventDefault()}
         >
           {results.map((result) => {
