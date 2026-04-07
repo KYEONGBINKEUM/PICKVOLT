@@ -405,8 +405,8 @@ export default function ProductEditPage() {
               <Field label="주사율 (Hz)">
                 <NumberInput value={gn(categorySpecs, 'display_hz')} onChange={(v) => patchCat('display_hz', v)} />
               </Field>
-              <Field label="패널 타입">
-                <SelectInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} options={DISPLAY_TYPES} />
+              <Field label="패널 타입 (쉼표로 여러 개 가능)">
+                <TextInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} placeholder="IPS, Mini-LED" />
               </Field>
               <Field label="밝기 (nits)">
                 <NumberInput value={gn(categorySpecs, 'display_nits')} onChange={(v) => patchCat('display_nits', v)} />
@@ -458,8 +458,8 @@ export default function ProductEditPage() {
               <Field label="주사율 (Hz)">
                 <NumberInput value={gn(categorySpecs, 'display_hz')} onChange={(v) => patchCat('display_hz', v)} />
               </Field>
-              <Field label="패널 타입">
-                <SelectInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} options={DISPLAY_TYPES} />
+              <Field label="패널 타입 (쉼표로 여러 개 가능)">
+                <TextInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} placeholder="OLED, AMOLED" />
               </Field>
               <Field label="밝기 (nits)">
                 <NumberInput value={gn(categorySpecs, 'display_nits')} onChange={(v) => patchCat('display_nits', v)} />
@@ -523,8 +523,8 @@ export default function ProductEditPage() {
               <Field label="주사율 (Hz)">
                 <NumberInput value={gn(categorySpecs, 'display_hz')} onChange={(v) => patchCat('display_hz', v)} />
               </Field>
-              <Field label="패널 타입">
-                <SelectInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} options={DISPLAY_TYPES} />
+              <Field label="패널 타입 (쉼표로 여러 개 가능)">
+                <TextInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} placeholder="OLED, AMOLED" />
               </Field>
               <Field label="밝기 (nits)">
                 <NumberInput value={gn(categorySpecs, 'display_nits')} onChange={(v) => patchCat('display_nits', v)} />
@@ -569,8 +569,8 @@ export default function ProductEditPage() {
               <Field label="디스플레이 크기 (인치)">
                 <NumberInput value={gn(categorySpecs, 'display_inch')} onChange={(v) => patchCat('display_inch', v)} />
               </Field>
-              <Field label="패널 타입">
-                <SelectInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} options={DISPLAY_TYPES} />
+              <Field label="패널 타입 (쉼표로 여러 개 가능)">
+                <TextInput value={g(categorySpecs, 'display_type')} onChange={(v) => patchCat('display_type', v)} placeholder="OLED, AMOLED" />
               </Field>
               <Field label="칩 이름">
                 <TextInput value={g(categorySpecs, 'chip_name')} onChange={(v) => patchCat('chip_name', v)} placeholder="S10, Exynos W1000..." />
