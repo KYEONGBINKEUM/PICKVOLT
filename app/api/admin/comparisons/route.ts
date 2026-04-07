@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Resolve user emails for unique user_ids
-  const uniqueUserIds = [...new Set((data ?? []).map((c) => c.user_id).filter(Boolean))]
+  const uniqueUserIds = Array.from(new Set((data ?? []).map((c) => c.user_id).filter(Boolean)))
   const emailMap: Record<string, string> = {}
 
   await Promise.all(
