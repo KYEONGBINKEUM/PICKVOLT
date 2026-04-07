@@ -357,14 +357,14 @@ export default function ProductEditPage() {
             <Field label="GPU 코어 수">
               <NumberInput value={gn(commonSpecs, 'gpu_cores')} onChange={(v) => patchCommon('gpu_cores', v)} />
             </Field>
-            <Field label="RAM (GB)">
-              <NumberInput value={gn(commonSpecs, 'ram_gb')} onChange={(v) => patchCommon('ram_gb', v)} />
+            <Field label="RAM 용량 (쉼표로 여러 옵션 가능)">
+              <TextInput value={g(commonSpecs, 'ram_gb')} onChange={(v) => patchCommon('ram_gb', v)} placeholder="8, 16, 32" />
             </Field>
-            <Field label="RAM 타입">
-              <TextInput value={g(commonSpecs, 'ram_type')} onChange={(v) => patchCommon('ram_type', v)} placeholder="LPDDR5X, Unified Memory..." />
+            <Field label="RAM 타입 (쉼표로 여러 개 가능)">
+              <TextInput value={g(commonSpecs, 'ram_type')} onChange={(v) => patchCommon('ram_type', v)} placeholder="LPDDR5X, Unified Memory" />
             </Field>
-            <Field label="스토리지 (GB)">
-              <NumberInput value={gn(commonSpecs, 'storage_gb')} onChange={(v) => patchCommon('storage_gb', v)} />
+            <Field label="스토리지 용량 (쉼표로 여러 옵션 가능)">
+              <TextInput value={g(commonSpecs, 'storage_gb')} onChange={(v) => patchCommon('storage_gb', v)} placeholder="256, 512, 1024" />
             </Field>
             <Field label="스토리지 타입 (쉼표로 여러 개 가능)">
               <TextInput value={g(commonSpecs, 'storage_type')} onChange={(v) => patchCommon('storage_type', v)} placeholder="SSD, HDD" />

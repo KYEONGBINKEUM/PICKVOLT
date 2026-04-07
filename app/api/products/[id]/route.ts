@@ -68,8 +68,24 @@ export async function GET(
     specSrc.display_type       ?? null,
   ].filter(Boolean)
 
+  // storage_gb / ram_gb는 text 타입 — "256, 512, 1024" 형태로 저장됨
+  // 각 값을 GB/TB 단위로 변환해서 표시
+  function formatStorageValue(val: string): string {
+    const n = parseFloat(val.trim())
+    if (isNaN(n)) return val.trim()
+    return n >= 1024 ? `${n / 1024}TB` : `${n}GB`
+  }
+
   const storageLabel = common?.storage_gb
-    ? `${common.storage_gb >= 1024 ? `${common.storage_gb / 1024}TB` : `${common.storage_gb}GB`}${common.storage_type ? ` ${common.storage_type}` : ''}`
+    ? String(common.storage_gb).split(',').map(formatStorageValue).join(' / ') +
+      (common.storage_type ? ` ${common.storage_type}` : '')
+    : null
+
+  const ramLabel = common?.ram_gb
+    ? String(common.ram_gb).split(',').map((v) => {
+        const n = parseFloat(v.trim())
+        return isNaN(n) ? v.trim() : `${n}GB`
+      }).join(' / ')
     : null
 
   const specs = {
@@ -80,7 +96,7 @@ export async function GET(
     gb6Single,
     gb6Multi,
     scoreSource,
-    ram:             common?.ram_gb   ? `${common.ram_gb}GB` : null,
+    ram:             ramLabel,
     storage:         storageLabel,
     display:         displayParts.length ? displayParts.join(' ') : null,
     camera:          smartphone?.camera_main_mp
