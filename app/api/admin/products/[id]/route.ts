@@ -30,84 +30,99 @@ async function verifyAdmin(req: NextRequest): Promise<string | null> {
   return email
 }
 
+// PATCH: 기본 정보 + 스펙 upsert
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await verifyAdmin(req)
-  if (!admin) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const { id } = await params
   const body = await req.json()
 
-  const allowed = ['name', 'brand', 'category', 'image_url', 'price_usd', 'source_url', 'scrape_status']
-  const updates: Record<string, unknown> = {}
-  for (const key of allowed) {
-    if (key in body) updates[key] = body[key]
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: 'no fields to update' }, { status: 400 })
+  // Basic product fields
+  const allowedProduct = ['name', 'brand', 'category', 'image_url', 'price_usd', 'source_url', 'scrape_status']
+  const productUpdates: Record<string, unknown> = {}
+  for (const key of allowedProduct) {
+    if (key in body) productUpdates[key] = body[key]
   }
 
   const supabase = makeServiceClient()
-  const { data, error } = await supabase
-    .from('products')
-    .update(updates)
-    .eq('id', id)
-    .select('id, name, brand, image_url')
-    .single()
+  const errors: string[] = []
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (Object.keys(productUpdates).length > 0) {
+    const { error } = await supabase
+      .from('products')
+      .update(productUpdates)
+      .eq('id', id)
+    if (error) errors.push(`products: ${error.message}`)
   }
-  return NextResponse.json({ ok: true, product: data })
+
+  // Spec tables upsert
+  const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch'] as const
+  for (const tableName of specTables) {
+    const specData = body[tableName]
+    if (specData && typeof specData === 'object' && Object.keys(specData).length > 0) {
+      const { error } = await supabase
+        .from(tableName)
+        .upsert({ product_id: id, ...specData }, { onConflict: 'product_id' })
+      if (error) errors.push(`${tableName}: ${error.message}`)
+    }
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
 }
 
-// 이미지 파일 직접 업로드 → Supabase Storage
+// PUT: 이미지 파일 직접 업로드 → Supabase Storage
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await verifyAdmin(req)
-  if (!admin) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const { id } = await params
   const formData = await req.formData()
   const file = formData.get('file') as File | null
-  if (!file) {
-    return NextResponse.json({ error: 'no file' }, { status: 400 })
-  }
+  if (!file) return NextResponse.json({ error: 'no file' }, { status: 400 })
 
   const supabase = makeServiceClient()
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `products/${id}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
 
-  // 기존 파일 삭제 시도 (오류 무시)
   await supabase.storage.from('product-images').remove([path])
 
   const { error: uploadError } = await supabase.storage
     .from('product-images')
-    .upload(path, arrayBuffer, {
-      contentType: file.type,
-      upsert: true,
-    })
+    .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
 
-  if (uploadError) {
-    return NextResponse.json({ error: uploadError.message }, { status: 500 })
-  }
+  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('product-images')
-    .getPublicUrl(path)
-
-  // products 테이블 image_url 업데이트
+  const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
   await supabase.from('products').update({ image_url: publicUrl }).eq('id', id)
 
   return NextResponse.json({ ok: true, image_url: publicUrl })
+}
+
+// DELETE: 제품 삭제
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await verifyAdmin(req)
+  if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const supabase = makeServiceClient()
+
+  const { error } = await supabase.from('products').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
 }
