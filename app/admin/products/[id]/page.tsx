@@ -366,8 +366,8 @@ export default function ProductEditPage() {
             <Field label="스토리지 (GB)">
               <NumberInput value={gn(commonSpecs, 'storage_gb')} onChange={(v) => patchCommon('storage_gb', v)} />
             </Field>
-            <Field label="스토리지 타입">
-              <SelectInput value={g(commonSpecs, 'storage_type')} onChange={(v) => patchCommon('storage_type', v)} options={STORAGE_TYPES} />
+            <Field label="스토리지 타입 (쉼표로 여러 개 가능)">
+              <TextInput value={g(commonSpecs, 'storage_type')} onChange={(v) => patchCommon('storage_type', v)} placeholder="SSD, HDD" />
             </Field>
             <Field label="OS">
               <TextInput value={g(commonSpecs, 'os')} onChange={(v) => patchCommon('os', v)} placeholder="macOS 15, Android 15..." />
