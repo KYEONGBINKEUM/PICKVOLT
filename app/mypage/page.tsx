@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, ChevronRight, Zap, BarChart2, Calendar, Globe, DollarSign } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -14,10 +14,13 @@ export default function MyPage() {
   const { currency, setCurrency } = useCurrency()
   const router = useRouter()
 
-  const [user, setUser] = useState<{ email: string; name: string; avatar: string; created_at: string } | null>(null)
+  const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null)
+  const [compareCount, setCompareCount] = useState<number | null>(null)
   const [isPro] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showCurrMenu, setShowCurrMenu] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -26,8 +29,14 @@ export default function MyPage() {
           email: data.user.email ?? '',
           name: data.user.user_metadata?.full_name ?? data.user.email ?? 'user',
           avatar: data.user.user_metadata?.avatar_url ?? '',
-          created_at: new Date(data.user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         })
+
+        // 실제 비교 횟수 조회
+        supabase
+          .from('comparison_history')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', data.user.id)
+          .then(({ count }) => setCompareCount(count ?? 0))
       }
     })
   }, [])
@@ -35,6 +44,24 @@ export default function MyPage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/user/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: session?.access_token }),
+      })
+      if (!res.ok) throw new Error('delete failed')
+      await supabase.auth.signOut()
+      router.push('/')
+    } catch {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   const currentLang = LANGUAGES.find((l) => l.code === locale)
@@ -69,19 +96,14 @@ export default function MyPage() {
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="mb-4">
             <div className="bg-surface border border-border rounded-card p-4 flex items-center gap-3">
               <BarChart2 className="w-4 h-4 text-accent flex-shrink-0" />
               <div>
                 <p className="text-xs text-white/40">{t('mypage.comparisons')}</p>
-                <p className="text-xl font-black text-white">12</p>
-              </div>
-            </div>
-            <div className="bg-surface border border-border rounded-card p-4 flex items-center gap-3">
-              <Calendar className="w-4 h-4 text-white/40 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-white/40">{t('mypage.joined')}</p>
-                <p className="text-sm font-bold text-white">{user?.created_at ?? '...'}</p>
+                <p className="text-xl font-black text-white">
+                  {compareCount === null ? '...' : compareCount}
+                </p>
               </div>
             </div>
           </div>
@@ -192,12 +214,54 @@ export default function MyPage() {
           {/* Sign out */}
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 border border-border text-white/50 hover:text-white hover:border-white/20 font-semibold py-3 rounded-full transition-all text-sm"
+            className="w-full flex items-center justify-center gap-2 border border-border text-white/50 hover:text-white hover:border-white/20 font-semibold py-3 rounded-full transition-all text-sm mb-3"
           >
             <LogOut className="w-4 h-4" />
             {t('mypage.signout')}
           </button>
+
+          {/* Delete account */}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 text-red-500/60 hover:text-red-400 font-semibold py-3 rounded-full transition-all text-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+            {t('mypage.delete_account')}
+          </button>
         </div>
+
+        {/* Delete confirm modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
+            <div className="bg-surface border border-border rounded-card p-6 max-w-sm w-full">
+              <div className="flex items-center gap-3 mb-4">
+                <Trash2 className="w-5 h-5 text-red-400 flex-shrink-0" />
+                <h2 className="text-lg font-black text-white">{t('mypage.delete_account')}</h2>
+              </div>
+              <p className="text-sm text-white/60 mb-6 leading-relaxed">
+                {t('mypage.delete_confirm')}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-2.5 rounded-full border border-border text-white/60 hover:text-white text-sm font-semibold transition-colors"
+                  disabled={isDeleting}
+                >
+                  {locale === 'ko' ? '취소' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  className="flex-1 py-2.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                  disabled={isDeleting}
+                >
+                  {isDeleting
+                    ? (locale === 'ko' ? '삭제 중...' : 'Deleting...')
+                    : (locale === 'ko' ? '탈퇴하기' : 'Delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   )
