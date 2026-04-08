@@ -672,10 +672,8 @@ export default function CompareClient() {
         {
           label: t('spec.battery_life'),
           sublabel: t('spec.battery_est'),
-          higherIsBetter: true,
           values: products.map((p) => ({
             primary: p.raw.battery_hours ? `${p.raw.battery_hours} hrs` : '—',
-            numericVal: p.raw.battery_hours ?? undefined,
           })),
         },
         osRow,

@@ -202,9 +202,7 @@ export function computeRelativeScores(
   }
 
   if (category === 'laptop') {
-    const bat = input.battery_hours
-      ? relHigh(input.battery_hours ?? null, stats.batteryHours)
-      : relHigh(input.battery_wh    ?? null, stats.batteryWh)
+    const bat = relHigh(input.battery_wh ?? null, stats.batteryWh)
 
     const overall = Math.round(
       perf * 0.50 + ram * 0.30 + bat * 0.20
@@ -329,9 +327,7 @@ export function computeScores(input: ScoringInput): ScoreBreakdown {
   }
 
   if (category === 'laptop') {
-    const bat    = input.battery_hours
-      ? scoreBatteryHours(input.battery_hours)
-      : scoreBatteryWh(input.battery_wh ?? null)
+    const bat    = scoreBatteryWh(input.battery_wh ?? null)
     const weight = scoreWeightLaptop(input.weight_kg ?? null)
 
     const overall = Math.round(
