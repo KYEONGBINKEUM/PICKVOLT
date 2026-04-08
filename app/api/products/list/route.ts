@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       .from('products')
       .select(`
         id, name, brand, category, price_usd, image_url,
-        specs_common ( ram_gb, cpu_id, os, launch_year ),
+        specs_common ( ram_gb, cpu_id, cpu_name, os, launch_year ),
         specs_smartphone ( display_inch, display_resolution, battery_mah, weight_g ),
         specs_laptop ( display_inch, display_resolution, weight_kg, battery_wh, battery_hours ),
         specs_tablet ( display_inch, display_resolution, battery_mah, stylus_support )
@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
         price_usd:        p.price_usd,
         image_url:        p.image_url,
         performance_score: performanceScore,
+        cpu_name:         common?.cpu_name  ?? null,
         ram_gb:           common?.ram_gb    ?? null,
         os:               common?.os        ?? null,
         launch_year:      common?.launch_year ?? null,

@@ -27,6 +27,7 @@ interface Product {
   price_usd: number | null
   image_url: string | null
   performance_score: number
+  cpu_name: string | null
   ram_gb: number | null
   os: string | null
   display_inch: number | null
@@ -100,11 +101,15 @@ function ProductCard({ product }: { product: Product }) {
     else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
   }
 
-  // 2-column grid: [display, ppi] / [battery, weight]
+  // 2-column grid rows
   const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] = [
     [
+      { label: 'CPU', value: product.cpu_name ?? null },
+      { label: t('spec.ram'), value: product.ram_gb ? `${product.ram_gb}GB` : null },
+    ],
+    [
       { label: t('cat.spec_display'), value: product.display_inch ? `${product.display_inch}"` : null },
-      { label: t('spec.ram'),         value: product.ram_gb       ? `${product.ram_gb}GB`      : null },
+      { label: t('cat.spec_ppi'),     value: product.ppi           ? `${product.ppi} ppi`       : null },
     ],
     [
       {
@@ -123,10 +128,6 @@ function ProductCard({ product }: { product: Product }) {
           ? `${product.weight_g} g`
           : null,
       },
-    ],
-    [
-      { label: t('cat.spec_ppi'), value: product.ppi ? `${product.ppi} ppi` : null },
-      { label: '',                value: null },
     ],
   ]
 
