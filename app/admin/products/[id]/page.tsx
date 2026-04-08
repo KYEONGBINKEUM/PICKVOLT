@@ -144,7 +144,7 @@ export default function ProductEditPage() {
     supabase
       .from('products')
       .select(`
-        id, name, brand, category, image_url, price_usd, source_url, scrape_status, name_translations,
+        id, name, brand, category, image_url, price_usd, source_url, scrape_status, name_translations, is_visible,
         specs_common(*),
         specs_laptop(*),
         specs_smartphone(*),
@@ -164,6 +164,7 @@ export default function ProductEditPage() {
           price_usd: data.price_usd,
           source_url: data.source_url,
           scrape_status: data.scrape_status,
+          is_visible: data.is_visible !== false,
         })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (data.name_translations && typeof data.name_translations === 'object') {
@@ -473,6 +474,13 @@ export default function ProductEditPage() {
             </Field>
             <Field label="스크랩 상태">
               <SelectInput value={g(form, 'scrape_status')} onChange={(v) => patchForm('scrape_status', v)} options={SCRAPE_STATUSES} />
+            </Field>
+            <Field label="노출 여부">
+              <Toggle
+                value={form.is_visible !== false}
+                onChange={(v) => patchForm('is_visible', v)}
+                label={form.is_visible !== false ? '공개' : '비공개'}
+              />
             </Field>
             <div className="md:col-span-2">
               <Field label="소스 URL">

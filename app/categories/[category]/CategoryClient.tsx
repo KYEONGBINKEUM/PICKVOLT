@@ -384,6 +384,7 @@ function FilterSidebar({
   availableBrands,
   availableOsList,
   filters,
+  dataRanges,
   onChange,
 }: {
   category: string
@@ -391,6 +392,7 @@ function FilterSidebar({
   availableBrands: string[]
   availableOsList: string[]
   filters: Filters
+  dataRanges: { priceMax: number; ramMax: number; displayMax: number; batteryMax: number }
   onChange: (f: Filters) => void
 }) {
   const { t } = useI18n()
@@ -456,7 +458,7 @@ function FilterSidebar({
       {/* Price */}
       <RangeFilter
         title={t('cat.filter_price')}
-        absMin={0} absMax={5000}
+        absMin={0} absMax={dataRanges.priceMax}
         valueMin={filters.priceMin} valueMax={filters.priceMax}
         step={50}
         format={(v) => `$${v.toLocaleString()}`}
@@ -495,7 +497,7 @@ function FilterSidebar({
       {/* RAM */}
       <RangeFilter
         title={t('cat.filter_min_ram')}
-        absMin={0} absMax={64}
+        absMin={0} absMax={dataRanges.ramMax}
         valueMin={filters.ramMin} valueMax={filters.ramMax}
         step={2}
         format={(v) => `${v}GB`}
@@ -505,7 +507,7 @@ function FilterSidebar({
       {/* Display size */}
       <RangeFilter
         title={t('cat.filter_display')}
-        absMin={0} absMax={20}
+        absMin={0} absMax={dataRanges.displayMax}
         valueMin={filters.displayMin} valueMax={filters.displayMax}
         step={0.1}
         format={(v) => `${v.toFixed(1)}"`}
@@ -538,7 +540,7 @@ function FilterSidebar({
       {(category === 'smartphone' || category === 'tablet') && (
         <RangeFilter
           title={t('cat.filter_battery')}
-          absMin={0} absMax={10000}
+          absMin={0} absMax={dataRanges.batteryMax}
           valueMin={filters.batteryMin} valueMax={filters.batteryMax}
           step={100}
           format={(v) => `${v.toLocaleString()} mAh`}
@@ -610,6 +612,12 @@ export default function CategoryClient({ category }: { category: string }) {
   const [loading,         setLoading]         = useState(true)
   const [page,            setPage]            = useState(1)
   const [mobileFilters,   setMobileFilters]   = useState(false)
+  const [dataRanges, setDataRanges] = useState({
+    priceMax: DEFAULT_FILTERS.priceMax,
+    ramMax: DEFAULT_FILTERS.ramMax,
+    displayMax: DEFAULT_FILTERS.displayMax,
+    batteryMax: DEFAULT_FILTERS.batteryMax,
+  })
 
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
 
@@ -626,14 +634,31 @@ export default function CategoryClient({ category }: { category: string }) {
       const res  = await fetch(`/api/products/list?${params}`)
       const json: ApiResponse = await res.json()
 
-      setAllProducts(json.results ?? [])
+      const results: Product[] = json.results ?? []
+      setAllProducts(results)
       setAvailableBrands(json.brands ?? [])
 
       // Extract unique OS values
       const osValues = Array.from(new Set(
-        (json.results ?? []).map((p) => p.os).filter(Boolean) as string[]
+        results.map((p) => p.os).filter(Boolean) as string[]
       )).sort()
       setAvailableOsList(osValues)
+
+      // Compute actual max values from DB products
+      const maxPrice   = Math.ceil(Math.max(0, ...results.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
+      const maxRam     = Math.ceil(Math.max(0, ...results.map((p) => p.ram_gb       ?? 0)) / 2)   * 2   || DEFAULT_FILTERS.ramMax
+      const maxDisplay = Math.ceil(Math.max(0, ...results.map((p) => p.display_inch ?? 0)) * 10)  / 10  || DEFAULT_FILTERS.displayMax
+      const maxBattery = Math.ceil(Math.max(0, ...results.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
+
+      setDataRanges({ priceMax: maxPrice, ramMax: maxRam, displayMax: maxDisplay, batteryMax: maxBattery })
+      // Reset filter maxes to match new data range on first load
+      setFilters((prev) => ({
+        ...prev,
+        priceMax:   prev.priceMax   === DEFAULT_FILTERS.priceMax   ? maxPrice   : prev.priceMax,
+        ramMax:     prev.ramMax     === DEFAULT_FILTERS.ramMax     ? maxRam     : prev.ramMax,
+        displayMax: prev.displayMax === DEFAULT_FILTERS.displayMax ? maxDisplay : prev.displayMax,
+        batteryMax: prev.batteryMax === DEFAULT_FILTERS.batteryMax ? maxBattery : prev.batteryMax,
+      }))
     } finally {
       setLoading(false)
     }
@@ -703,6 +728,7 @@ export default function CategoryClient({ category }: { category: string }) {
             availableBrands={availableBrands}
             availableOsList={availableOsList}
             filters={filters}
+            dataRanges={dataRanges}
             onChange={(f) => { setFilters(f); setPage(1) }}
           />
         </div>

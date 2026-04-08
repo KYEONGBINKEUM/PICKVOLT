@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
         specs_tablet ( display_inch, display_resolution, battery_mah, stylus_support )
       `)
       .eq('scrape_status', 'ok')
+      .eq('is_visible', true)
 
     if (category) query = query.eq('category', category)
     if (brand)    query = query.eq('brand', brand)

@@ -42,7 +42,7 @@ export async function PATCH(
   const body = await req.json()
 
   // Basic product fields
-  const allowedProduct = ['name', 'brand', 'category', 'image_url', 'price_usd', 'source_url', 'scrape_status', 'name_translations']
+  const allowedProduct = ['name', 'brand', 'category', 'image_url', 'price_usd', 'source_url', 'scrape_status', 'name_translations', 'is_visible']
   const productUpdates: Record<string, unknown> = {}
   for (const key of allowedProduct) {
     if (key in body) productUpdates[key] = body[key]
