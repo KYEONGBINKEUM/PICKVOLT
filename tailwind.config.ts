@@ -17,7 +17,7 @@ const config: Config = {
         border: '#2a2a2a',
       },
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-geist-sans)', 'Inter', 'Pretendard Variable', 'Pretendard', 'system-ui', 'sans-serif'],
       },
       maxWidth: {
         inner: '1440px',
