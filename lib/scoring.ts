@@ -166,60 +166,55 @@ export interface RelativeScoreBreakdown {
   details: { label: string; score: number; weight: number }[]
 }
 
-/** DB 전체 min/max 기준 상대 점수 산출 — 신제품 추가 시 기존 제품 점수 자동 하락 */
+/**
+ * DB 전체 min/max 기준 상대 점수 산출 — 신제품 추가 시 기존 제품 점수 자동 하락
+ *
+ * 점수 반영 기준:
+ *  - CPU relative_score (0–1000, DB 자체 기준) 만 사용 — Geekbench 등 상업 벤치마크 미사용
+ *  - 무게 / 스토리지 / 디스플레이는 개인 취향 차이가 크고 스펙 분기가 많아 overall에서 제외
+ *  - 반영 항목: Performance · RAM · Battery · Camera (스마트폰·태블릿)
+ */
 export function computeRelativeScores(
   input: ScoringInput,
   stats: CategoryStats,
 ): RelativeScoreBreakdown {
   const { category } = input
 
-  const perf    = relHigh(input.relativeScore ?? null, stats.relativeScore)
-  const ram     = relHigh(firstNum(input.ram_gb),      stats.ram)
-  const stor    = relHigh(firstNum(input.storage_gb),  stats.storage)
-
-  // PPI
-  const ppiVal  = computePPI(input.display_resolution, input.display_inch)
-  const disp    = relHigh(ppiVal, stats.ppi)
+  const perf = relHigh(input.relativeScore ?? null, stats.relativeScore)
+  const ram  = relHigh(firstNum(input.ram_gb), stats.ram)
 
   if (category === 'smartphone') {
-    const cam    = relHigh(input.camera_main_mp ?? null, stats.cameraMP)
-    const bat    = relHigh(input.battery_mah    ?? null, stats.batteryMah)
-    const weight = relLow(input.weight_g        ?? null, stats.weightG)
+    const cam = relHigh(input.camera_main_mp ?? null, stats.cameraMP)
+    const bat = relHigh(input.battery_mah    ?? null, stats.batteryMah)
 
     const overall = Math.round(
-      perf * 0.30 + cam * 0.20 + ram * 0.15 + bat * 0.15 + disp * 0.15 + weight * 0.05
+      perf * 0.40 + cam * 0.25 + ram * 0.20 + bat * 0.15
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf,   weight: 30 },
-        { label: 'Camera',      score: cam,    weight: 20 },
-        { label: 'RAM',         score: ram,    weight: 15 },
-        { label: 'Battery',     score: bat,    weight: 15 },
-        { label: 'Display',     score: disp,   weight: 15 },
-        { label: 'Weight',      score: weight, weight:  5 },
+        { label: 'Performance', score: perf, weight: 40 },
+        { label: 'Camera',      score: cam,  weight: 25 },
+        { label: 'RAM',         score: ram,  weight: 20 },
+        { label: 'Battery',     score: bat,  weight: 15 },
       ],
     }
   }
 
   if (category === 'laptop') {
-    const bat    = input.battery_hours
+    const bat = input.battery_hours
       ? relHigh(input.battery_hours ?? null, stats.batteryHours)
       : relHigh(input.battery_wh    ?? null, stats.batteryWh)
-    const weight = relLow(input.weight_kg ?? null, stats.weightKg)
 
     const overall = Math.round(
-      perf * 0.35 + ram * 0.20 + bat * 0.15 + stor * 0.15 + disp * 0.10 + weight * 0.05
+      perf * 0.50 + ram * 0.30 + bat * 0.20
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf,   weight: 35 },
-        { label: 'RAM',         score: ram,    weight: 20 },
-        { label: 'Battery',     score: bat,    weight: 15 },
-        { label: 'Storage',     score: stor,   weight: 15 },
-        { label: 'Display',     score: disp,   weight: 10 },
-        { label: 'Weight',      score: weight, weight:  5 },
+        { label: 'Performance', score: perf, weight: 50 },
+        { label: 'RAM',         score: ram,  weight: 30 },
+        { label: 'Battery',     score: bat,  weight: 20 },
       ],
     }
   }
@@ -229,28 +224,26 @@ export function computeRelativeScores(
     const bat = relHigh(input.battery_mah    ?? null, stats.batteryMah)
 
     const overall = Math.round(
-      perf * 0.30 + ram * 0.20 + bat * 0.20 + disp * 0.15 + cam * 0.15
+      perf * 0.40 + ram * 0.25 + bat * 0.25 + cam * 0.10
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf, weight: 30 },
-        { label: 'RAM',         score: ram,  weight: 20 },
-        { label: 'Battery',     score: bat,  weight: 20 },
-        { label: 'Display',     score: disp, weight: 15 },
-        { label: 'Camera',      score: cam,  weight: 15 },
+        { label: 'Performance', score: perf, weight: 40 },
+        { label: 'RAM',         score: ram,  weight: 25 },
+        { label: 'Battery',     score: bat,  weight: 25 },
+        { label: 'Camera',      score: cam,  weight: 10 },
       ],
     }
   }
 
   // Generic fallback
-  const overall = Math.round(perf * 0.50 + ram * 0.30 + stor * 0.20)
+  const overall = Math.round(perf * 0.60 + ram * 0.40)
   return {
     overall,
     details: [
-      { label: 'Performance', score: perf, weight: 50 },
-      { label: 'RAM',         score: ram,  weight: 30 },
-      { label: 'Storage',     score: stor, weight: 20 },
+      { label: 'Performance', score: perf, weight: 60 },
+      { label: 'RAM',         score: ram,  weight: 40 },
     ],
   }
 }

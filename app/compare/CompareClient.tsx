@@ -17,8 +17,6 @@ interface ProductSpecs {
   cpu?: string | null
   cpuSpeedMHz?: number | null
   performanceScore?: number | null
-  gb6Single?: number | null
-  gb6Multi?: number | null
   ram?: string | null
   storage?: string | null
   display?: string | null
@@ -493,20 +491,16 @@ export default function CompareClient() {
   const category = products.length > 0 ? products[0].category.toLowerCase() : ''
 
   // 제품별 종합 점수 계산 (DB 전체 대비 상대 점수 — stats 로드 전엔 null)
+  // 반영 항목: Performance · RAM · Battery · Camera (무게/스토리지/디스플레이 제외)
   const productScores = categoryStats
     ? products.map((p) => computeRelativeScores({
         category,
-        relativeScore:      p.specs.performanceScore,
-        ram_gb:             p.raw.ram_gb,
-        storage_gb:         p.raw.storage_gb,
-        battery_mah:        p.raw.battery_mah,
-        battery_wh:         p.raw.battery_wh,
-        battery_hours:      p.raw.battery_hours,
-        camera_main_mp:     p.raw.camera_main_mp,
-        weight_g:           p.raw.weight_g,
-        weight_kg:          p.raw.weight_kg,
-        display_inch:       p.raw.display_inch,
-        display_resolution: p.raw.display_resolution,
+        relativeScore:  p.specs.performanceScore,
+        ram_gb:         p.raw.ram_gb,
+        battery_mah:    p.raw.battery_mah,
+        battery_wh:     p.raw.battery_wh,
+        battery_hours:  p.raw.battery_hours,
+        camera_main_mp: p.raw.camera_main_mp,
       }, categoryStats))
     : null
 
