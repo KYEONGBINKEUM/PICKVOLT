@@ -139,8 +139,10 @@ export default function ProductEditPage() {
     })
   }, [router])
 
+  const isNew = id === 'new'
+
   useEffect(() => {
-    if (!authed) return
+    if (!authed || isNew) return
     supabase
       .from('products')
       .select(`
@@ -209,7 +211,7 @@ export default function ProductEditPage() {
             })
         }
       })
-  }, [authed, id])
+  }, [authed, id, isNew])
 
   // CPU 검색 (디바운스 300ms)
   const searchCpus = useCallback((q: string) => {
@@ -282,6 +284,29 @@ export default function ProductEditPage() {
     setSaving(true)
     setMessage(null)
     try {
+      if (isNew) {
+        // Create new product
+        const name = (form.name as string ?? '').trim()
+        const brand = (form.brand as string ?? '').trim()
+        const category = (form.category as string ?? '').trim()
+        if (!name || !brand || !category) {
+          setMessage({ type: 'err', text: '이름, 브랜드, 카테고리를 입력하세요' })
+          return
+        }
+        const res = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name, brand, category }),
+        })
+        const json = await res.json()
+        if (res.ok) {
+          router.replace(`/admin/products/${json.id}`)
+        } else {
+          setMessage({ type: 'err', text: json.error ?? '생성 오류' })
+        }
+        return
+      }
+
       const category = (form.category as string) ?? ''
       const body: Record<string, unknown> = {
         ...form,
@@ -339,7 +364,7 @@ export default function ProductEditPage() {
   const gn = (obj: Record<string, unknown>, k: string) => (obj[k] ?? null) as number | null
   const gb = (obj: Record<string, unknown>, k: string) => Boolean(obj[k])
 
-  if (!authed || !product) {
+  if (!authed || (!isNew && !product)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex gap-1.5">
@@ -361,7 +386,7 @@ export default function ProductEditPage() {
             관리자
           </Link>
           <span className="text-white/20">/</span>
-          <span className="text-sm text-white/60 truncate max-w-xs">{product.name as string}</span>
+          <span className="text-sm text-white/60 truncate max-w-xs">{isNew ? '새 제품 추가' : (product?.name as string)}</span>
         </div>
         <div className="flex items-center gap-3">
           {(form.source_url as string) && (

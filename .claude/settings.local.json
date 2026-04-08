@@ -10,7 +10,8 @@
       "Bash(taskkill //F //IM git.exe)",
       "Bash(rmdir /s /q .git)",
       "Bash(npx tsc:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(python3)"
     ]
   }
 }

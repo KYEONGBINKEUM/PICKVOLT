@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Pin, Trash2, Loader2 } from 'lucide-react'
 import { supabase, getUserHistory, togglePin, deleteComparison } from '@/lib/supabase'
 import type { ComparisonHistory } from '@/lib/supabase'
+import { getLocalHistory, deleteLocalHistory, type LocalHistory } from '@/lib/localHistory'
 import { useI18n } from '@/lib/i18n'
 import { shortenCompareTitle } from '@/lib/utils'
 
@@ -89,6 +90,7 @@ function HistoryCard({
 export default function HistoryPage() {
   const { t } = useI18n()
   const [history, setHistory] = useState<ComparisonHistory[]>([])
+  const [localHistory, setLocalHistory] = useState<LocalHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'pinned'>('all')
@@ -96,6 +98,7 @@ export default function HistoryPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
+        setLocalHistory(getLocalHistory())
         setLoading(false)
         return
       }
@@ -112,14 +115,22 @@ export default function HistoryPage() {
   }
 
   const handleDelete = async (id: string) => {
-    setHistory((h) => h.filter((item) => item.id !== id))
-    await deleteComparison(id)
+    if (userId) {
+      setHistory((h) => h.filter((item) => item.id !== id))
+      await deleteComparison(id)
+    } else {
+      deleteLocalHistory(id)
+      setLocalHistory((h) => h.filter((item) => item.id !== id))
+    }
   }
 
   const filtered = filter === 'pinned' ? history.filter((h) => h.pinned) : history
   const pinned = filtered.filter((h) => h.pinned)
   const recent = filtered.filter((h) => !h.pinned && isRecent(h.created_at))
   const older = filtered.filter((h) => !h.pinned && !isRecent(h.created_at))
+
+  const localRecent = localHistory.filter((h) => isRecent(h.created_at))
+  const localOlder = localHistory.filter((h) => !isRecent(h.created_at))
 
   return (
     <>
@@ -161,74 +172,124 @@ export default function HistoryPage() {
               </div>
             )}
 
-            {/* Filter tabs */}
-            <div className="flex gap-2 mb-10">
-              {(['all', 'pinned'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    filter === f
-                      ? 'bg-white text-black'
-                      : 'border border-border text-white/50 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {f === 'all' ? t('history.filter_all') : t('history.pinned')}
-                </button>
-              ))}
-            </div>
-
-            {/* Pinned */}
-            {pinned.length > 0 && (
-              <section className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="text-lg font-black text-white">{t('history.pinned')}</h2>
-                </div>
-                <div className="space-y-3">
-                  {pinned.map((item) => (
-                    <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+            {/* 로그인 유저: Filter tabs + history */}
+            {userId && (
+              <>
+                <div className="flex gap-2 mb-10">
+                  {(['all', 'pinned'] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                        filter === f
+                          ? 'bg-white text-black'
+                          : 'border border-border text-white/50 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      {f === 'all' ? t('history.filter_all') : t('history.pinned')}
+                    </button>
                   ))}
                 </div>
-              </section>
+
+                {pinned.length > 0 && (
+                  <section className="mb-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-lg font-black text-white">{t('history.pinned')}</h2>
+                    </div>
+                    <div className="space-y-3">
+                      {pinned.map((item) => (
+                        <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {recent.length > 0 && (
+                  <section className="mb-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-lg font-black text-white">{t('history.recent')}</h2>
+                      <span className="text-xs text-white/30">{t('compare.last30').replace('30', '7')}</span>
+                    </div>
+                    <div className="space-y-3">
+                      {recent.map((item) => (
+                        <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {older.length > 0 && (
+                  <section className="mb-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-lg font-black text-white">{t('history.older')}</h2>
+                    </div>
+                    <div className="space-y-3">
+                      {older.map((item) => (
+                        <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {filtered.length === 0 && (
+                  <div className="text-center py-24">
+                    <p className="text-white/30 text-sm">{t('history.empty')}</p>
+                    <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
+                      {t('history.start')}
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Recent */}
-            {recent.length > 0 && (
-              <section className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="text-lg font-black text-white">{t('history.recent')}</h2>
-                  <span className="text-xs text-white/30">{t('compare.last30').replace('30', '7')}</span>
-                </div>
-                <div className="space-y-3">
-                  {recent.map((item) => (
-                    <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* 비로그인 유저: localStorage 기록 */}
+            {!userId && (
+              <>
+                {localRecent.length > 0 && (
+                  <section className="mb-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-lg font-black text-white">{t('history.recent')}</h2>
+                    </div>
+                    <div className="space-y-3">
+                      {localRecent.map((item) => (
+                        <HistoryCard
+                          key={item.id}
+                          item={{ ...item, user_id: '', pinned: false }}
+                          onPin={() => {}}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-            {/* Older */}
-            {older.length > 0 && (
-              <section className="mb-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="text-lg font-black text-white">{t('history.older')}</h2>
-                </div>
-                <div className="space-y-3">
-                  {older.map((item) => (
-                    <HistoryCard key={item.id} item={item} onPin={handlePin} onDelete={handleDelete} />
-                  ))}
-                </div>
-              </section>
-            )}
+                {localOlder.length > 0 && (
+                  <section className="mb-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h2 className="text-lg font-black text-white">{t('history.older')}</h2>
+                    </div>
+                    <div className="space-y-3">
+                      {localOlder.map((item) => (
+                        <HistoryCard
+                          key={item.id}
+                          item={{ ...item, user_id: '', pinned: false }}
+                          onPin={() => {}}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
 
-            {/* 빈 상태 (로그인 유저에게만) */}
-            {userId && filtered.length === 0 && (
-              <div className="text-center py-24">
-                <p className="text-white/30 text-sm">{t('history.empty')}</p>
-                <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
-                  {t('history.start')}
-                </Link>
-              </div>
+                {localHistory.length === 0 && (
+                  <div className="text-center py-24">
+                    <p className="text-white/30 text-sm">{t('history.empty')}</p>
+                    <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
+                      {t('history.start')}
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

@@ -9,7 +9,8 @@ import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
-import { shortenCompareTitle } from '@/lib/utils'
+import { shortenCompareTitle, shortenProductName } from '@/lib/utils'
+import { saveLocalHistory } from '@/lib/localHistory'
 import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 
@@ -45,8 +46,6 @@ interface AiResult {
   winner: string
   summary: string
   reasoning: string
-  remaining: number | null
-  isPro: boolean
   scores?: Record<string, { value: number; reason: string }>
 }
 
@@ -452,6 +451,23 @@ export default function CompareClient() {
         setError(t('compare.error_compare'))
       } else {
         setAiResult(compareData)
+
+        // 비로그인 사용자: localStorage에 기록 저장
+        if (!session) {
+          const title = validProducts.map((p) => shortenProductName(p.name)).join(' vs ')
+          saveLocalHistory({
+            id: `local_${Date.now()}`,
+            title,
+            products: ids,
+            result: {
+              winner: compareData.winner,
+              summary: compareData.summary,
+              reasoning: compareData.reasoning,
+            },
+            created_at: new Date().toISOString(),
+          })
+        }
+
         fetch('/api/compare/popular')
           .then((r) => r.json())
           .then((d) => setPopularItems(d.items ?? []))

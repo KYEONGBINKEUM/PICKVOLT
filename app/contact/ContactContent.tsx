@@ -12,7 +12,7 @@ export default function ContactContent() {
       <p className="text-sm text-white/40 mb-10">{t('contact.subtitle')}</p>
 
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div>
           <a
             href="mailto:vandalroof@gmail.com"
             className="group flex flex-col gap-1.5 rounded-xl border border-border p-5 hover:border-white/20 transition-colors"
@@ -20,15 +20,6 @@ export default function ContactContent() {
             <span className="text-xs text-white/30 uppercase tracking-widest">{t('contact.general_label')}</span>
             <span className="text-sm font-medium text-white group-hover:text-accent transition-colors">vandalroof@gmail.com</span>
             <span className="text-xs text-white/40">{t('contact.general_desc')}</span>
-          </a>
-
-          <a
-            href="mailto:vandalroof@gmail.com"
-            className="group flex flex-col gap-1.5 rounded-xl border border-border p-5 hover:border-white/20 transition-colors"
-          >
-            <span className="text-xs text-white/30 uppercase tracking-widest">{t('contact.privacy_label')}</span>
-            <span className="text-sm font-medium text-white group-hover:text-accent transition-colors">vandalroof@gmail.com</span>
-            <span className="text-xs text-white/40">{t('contact.privacy_desc')}</span>
           </a>
         </div>
 

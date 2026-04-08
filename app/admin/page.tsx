@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
-  Package, LayoutDashboard, Clock, Zap, ImageOff,
+  Package, LayoutDashboard, Clock, Zap, ImageOff, Plus, Cpu,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -17,7 +17,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +88,19 @@ export default function AdminPage() {
   const [compPage, setCompPage] = useState(0)
   const [compTotal, setCompTotal] = useState(0)
 
+  // CPUs
+  const [cpus, setCpus] = useState<{ id: string; name: string; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpusLoading, setCpusLoading] = useState(false)
+  const [cpuSearch, setCpuSearch] = useState('')
+  const [cpuError, setCpuError] = useState<string | null>(null)
+  const [newCpuName, setNewCpuName] = useState('')
+  const [newCpuScore, setNewCpuScore] = useState('')
+  const [addingCpu, setAddingCpu] = useState(false)
+
+  // Errors
+  const [usersError, setUsersError] = useState<string | null>(null)
+  const [compError, setCompError] = useState<string | null>(null)
+
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -126,25 +139,62 @@ export default function AdminPage() {
 
   const fetchUsers = useCallback(async (tok: string, pg: number) => {
     setUsersLoading(true)
+    setUsersError(null)
     const res = await fetch(`/api/admin/users?page=${pg}`, { headers: { Authorization: `Bearer ${tok}` } })
     if (res.ok) {
       const json = await res.json()
       setUsers(json.users ?? [])
       setUsersTotal(json.total ?? 0)
+    } else {
+      const json = await res.json().catch(() => ({}))
+      setUsersError(json.error ?? `HTTP ${res.status}`)
     }
     setUsersLoading(false)
   }, [])
 
   const fetchComparisons = useCallback(async (tok: string, pg: number) => {
     setCompLoading(true)
+    setCompError(null)
     const res = await fetch(`/api/admin/comparisons?page=${pg}`, { headers: { Authorization: `Bearer ${tok}` } })
     if (res.ok) {
       const json = await res.json()
       setComparisons(json.comparisons ?? [])
       setCompTotal(json.total ?? 0)
+    } else {
+      const json = await res.json().catch(() => ({}))
+      setCompError(json.error ?? `HTTP ${res.status}`)
     }
     setCompLoading(false)
   }, [])
+
+  const fetchCpus = useCallback(async (q: string) => {
+    setCpusLoading(true)
+    setCpuError(null)
+    const res = await fetch(`/api/admin/cpus?q=${encodeURIComponent(q)}`)
+    if (res.ok) {
+      const json = await res.json()
+      setCpus(json.cpus ?? [])
+    } else {
+      setCpuError('CPU 목록을 불러올 수 없습니다')
+    }
+    setCpusLoading(false)
+  }, [])
+
+  const handleAddCpu = async () => {
+    if (!newCpuName.trim()) return
+    setAddingCpu(true)
+    const res = await fetch('/api/admin/cpus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: newCpuName.trim(), relative_score: newCpuScore ? Number(newCpuScore) : null }),
+    })
+    if (res.ok) {
+      setNewCpuName('')
+      setNewCpuScore('')
+      fetchCpus(cpuSearch)
+    }
+    setAddingCpu(false)
+  }
 
   // ── Effects by tab ────────────────────────────────────────────────────────
 
@@ -167,6 +217,12 @@ export default function AdminPage() {
     if (!authed || !token) return
     if (tab === 'comparisons') fetchComparisons(token, compPage)
   }, [authed, token, tab, compPage, fetchComparisons])
+
+  useEffect(() => {
+    if (!authed) return
+    if (tab === 'cpus') fetchCpus(cpuSearch)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, tab])
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -206,6 +262,7 @@ export default function AdminPage() {
     { key: 'products', label: '제품 관리', icon: <Package size={15} /> },
     { key: 'users', label: '유저 관리', icon: <Users size={15} /> },
     { key: 'comparisons', label: '비교 이력', icon: <BarChart2 size={15} /> },
+    { key: 'cpus', label: 'CPU 관리', icon: <Cpu size={15} /> },
   ]
 
   return (
@@ -308,7 +365,16 @@ export default function AdminPage() {
         {/* ── PRODUCTS ── */}
         {tab === 'products' && (
           <div>
-            <h1 className="text-2xl font-black mb-6">제품 관리</h1>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">제품 관리</h1>
+              <Link
+                href="/admin/products/new"
+                className="flex items-center gap-1.5 text-sm bg-accent hover:bg-accent/90 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                <Plus size={14} />
+                새 제품 추가
+              </Link>
+            </div>
 
             {/* Filters */}
             <div className="flex flex-wrap gap-3 mb-5">
@@ -427,6 +493,15 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {usersError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-4 text-sm text-red-400">
+                오류: {usersError}
+                {usersError.includes('unauthorized') || usersError.includes('500') ? (
+                  <span className="text-white/30 ml-2">— SUPABASE_SERVICE_ROLE_KEY 환경변수를 확인하세요</span>
+                ) : null}
+              </div>
+            )}
+
             {usersLoading && users.length === 0 ? (
               <div className="flex gap-1.5 py-12 justify-center">
                 {[0, 1, 2].map((i) => (
@@ -502,6 +577,12 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {compError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-4 text-sm text-red-400">
+                오류: {compError}
+              </div>
+            )}
+
             {compLoading && comparisons.length === 0 ? (
               <div className="flex gap-1.5 py-12 justify-center">
                 {[0, 1, 2].map((i) => (
@@ -547,6 +628,100 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── CPUS ── */}
+        {tab === 'cpus' && (
+          <div>
+            <h1 className="text-2xl font-black mb-6">CPU 관리</h1>
+
+            {/* Add CPU form */}
+            <div className="bg-surface border border-border rounded-card p-5 mb-6">
+              <p className="text-sm font-semibold text-white mb-3">새 CPU 추가</p>
+              <div className="flex flex-wrap gap-3">
+                <input
+                  type="text"
+                  placeholder="CPU 이름 (예: Snapdragon 8 Gen 3)"
+                  value={newCpuName}
+                  onChange={(e) => setNewCpuName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCpu()}
+                  className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  placeholder="상대 점수 (0–100)"
+                  value={newCpuScore}
+                  onChange={(e) => setNewCpuScore(e.target.value)}
+                  className="w-40 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <button
+                  onClick={handleAddCpu}
+                  disabled={addingCpu || !newCpuName.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40"
+                >
+                  {addingCpu ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                  추가
+                </button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <input
+                type="text"
+                placeholder="CPU 검색..."
+                value={cpuSearch}
+                onChange={(e) => { setCpuSearch(e.target.value); fetchCpus(e.target.value) }}
+                className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            {cpuError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-4 text-sm text-red-400">
+                {cpuError}
+              </div>
+            )}
+
+            <div className="bg-surface border border-border rounded-card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium">상대 점수</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">출처</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cpusLoading && cpus.length === 0 ? (
+                    <tr><td colSpan={3} className="px-4 py-8 text-center">
+                      <div className="flex gap-1.5 justify-center">
+                        {[0, 1, 2].map((i) => (
+                          <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                      </div>
+                    </td></tr>
+                  ) : cpus.map((c, i) => (
+                    <tr key={c.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                      <td className="px-4 py-3 text-white/80 max-w-xs truncate">{c.name}</td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        {c.relative_score !== null ? (
+                          <span className={c.relative_score >= 80 ? 'text-emerald-400' : c.relative_score >= 50 ? 'text-amber-400' : 'text-white/50'}>
+                            {c.relative_score}
+                          </span>
+                        ) : <span className="text-white/20">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-white/30 text-xs hidden md:table-cell">{c.score_source ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {!cpusLoading && cpus.length === 0 && (
+                    <tr><td colSpan={3} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다. 최대 10개 표시.</p>
           </div>
         )}
 
