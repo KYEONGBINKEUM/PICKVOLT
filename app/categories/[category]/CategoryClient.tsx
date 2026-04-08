@@ -60,9 +60,33 @@ const CATEGORY_SUBLABEL: Record<string, string> = {
   tablet:     'Tablets',
 }
 
-const RAM_OPTIONS = [0, 4, 8, 12, 16, 32]
+const RAM_OPTIONS   = [0, 4, 8, 12, 16, 32]
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
+// ─── Filters interface ────────────────────────────────────────────────────────
+
+interface Filters {
+  brands: string[]
+  minRam: number
+  sort: string
+  q: string
+  priceRange: string   // 'any' | 'under500' | '500_1000' | '1000_1500' | 'over1500'
+  os: string           // '' = any
+  displayRange: string // 'any' | 'small' | 'mid' | 'large'
+  batteryMin: number   // 0 = any
+}
+
+const DEFAULT_FILTERS: Filters = {
+  brands: [],
+  minRam: 0,
+  sort: 'performance',
+  q: '',
+  priceRange: 'any',
+  os: '',
+  displayRange: 'any',
+  batteryMin: 0,
+}
+
+// ─── Product Card (horizontal layout) ────────────────────────────────────────
 
 function ProductCard({ product }: { product: Product }) {
   const { t } = useI18n()
@@ -79,7 +103,7 @@ function ProductCard({ product }: { product: Product }) {
   const specs: { label: string; value: string }[] = []
   if (product.display_inch) specs.push({ label: t('cat.spec_display'), value: `${product.display_inch}"` })
   if (product.ram_gb)        specs.push({ label: t('spec.ram'),          value: `${product.ram_gb}GB` })
-  if (product.ppi)           specs.push({ label: t('cat.spec_ppi'),      value: `${product.ppi}` })
+  if (product.ppi)           specs.push({ label: t('cat.spec_ppi'),      value: `${product.ppi} ppi` })
   if (product.battery_mah)   specs.push({ label: t('cat.spec_battery'),  value: `${product.battery_mah.toLocaleString()} mAh` })
   if (product.battery_wh)    specs.push({ label: t('cat.spec_battery'),  value: `${product.battery_wh} Wh` })
   if (product.weight_kg)     specs.push({ label: t('cat.spec_weight'),   value: `${product.weight_kg} kg` })
@@ -90,66 +114,62 @@ function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/product/${product.id}`} className="group block">
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-xl hover:shadow-black/30 flex flex-col h-full">
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-row">
 
-        {/* Image */}
-        <div className="relative aspect-square bg-surface-2 flex items-center justify-center overflow-hidden">
+        {/* Image — left */}
+        <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden">
           {product.image_url ? (
             <Image
               src={product.image_url}
               alt={product.name}
               fill
-              className="object-contain p-6 group-hover:scale-105 transition-transform duration-300"
-              sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+              sizes="144px"
               unoptimized
             />
           ) : (
-            <div className="flex flex-col items-center gap-2 opacity-20">
-              <span className="text-5xl font-black text-white">{product.brand?.[0] ?? '?'}</span>
-            </div>
+            <span className="text-3xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
           )}
-
           {/* Score badge */}
           {score > 0 && (
-            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm border border-white/10 rounded-full px-2.5 py-1 flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-[11px] font-bold text-white tabular-nums">{Math.round(score)}</span>
-              <span className="text-[9px] text-white/40 uppercase">pts</span>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
+              <div className="w-1 h-1 rounded-full bg-accent" />
+              <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
             </div>
           )}
         </div>
 
-        {/* Content */}
-        <div className="flex flex-col gap-3 p-4 flex-1">
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{product.brand}</p>
-          <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
-            {product.name}
-          </h3>
-          {product.price_usd && (
-            <p className="text-base font-black text-accent">
-              ${Number(product.price_usd).toLocaleString()}
-            </p>
-          )}
+        {/* Content — right */}
+        <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2">
+          <div>
+            <p className="text-[9px] text-white/30 uppercase tracking-widest font-semibold mb-0.5">{product.brand}</p>
+            <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+              {product.name}
+            </h3>
+            {product.price_usd && (
+              <p className="text-sm font-black text-accent mt-1">
+                ${Number(product.price_usd).toLocaleString()}
+              </p>
+            )}
+          </div>
 
-          {/* Specs grid */}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-auto">
-            {specs.slice(0, 4).map((s) => (
-              <div key={s.label} className="min-w-0">
-                <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                <p className="text-xs font-semibold text-white/80 truncate">{s.value}</p>
+          {/* Specs row */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {specs.slice(0, 5).map((s) => (
+              <div key={s.label} className="flex items-center gap-1">
+                <span className="text-[9px] text-white/25 uppercase tracking-widest">{s.label}</span>
+                <span className="text-[11px] font-semibold text-white/70">{s.value}</span>
               </div>
             ))}
           </div>
 
           {/* Performance bar */}
           {score > 0 && (
-            <div className="mt-1">
-              <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-accent rounded-full transition-all duration-500"
-                  style={{ width: `${scorePercent}%` }}
-                />
-              </div>
+            <div className="h-0.5 bg-surface-2 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-accent rounded-full"
+                style={{ width: `${scorePercent}%` }}
+              />
             </div>
           )}
 
@@ -157,7 +177,7 @@ function ProductCard({ product }: { product: Product }) {
           <button
             onClick={toggleCart}
             disabled={!inCart && cartFull}
-            className={`mt-1 w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
               inCart
                 ? 'bg-accent/15 border border-accent/40 text-accent'
                 : cartFull
@@ -166,11 +186,11 @@ function ProductCard({ product }: { product: Product }) {
             }`}
           >
             {inCart ? (
-              <><Check className="w-3.5 h-3.5" />{t('cat.in_compare')}</>
+              <><Check className="w-3 h-3" />{t('cat.in_compare')}</>
             ) : cartFull ? (
               <>{t('cat.compare_full')}</>
             ) : (
-              <><Plus className="w-3.5 h-3.5" />{t('cat.add_compare')}</>
+              <><Plus className="w-3 h-3" />{t('cat.add_compare')}</>
             )}
           </button>
         </div>
@@ -179,29 +199,68 @@ function ProductCard({ product }: { product: Product }) {
   )
 }
 
-// ─── Filter Sidebar ───────────────────────────────────────────────────────────
+// ─── Filter Section ───────────────────────────────────────────────────────────
 
-interface Filters {
-  brands: string[]
-  minRam: number
-  sort: string
-  q: string
+function FilterSection({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="bg-surface border border-border rounded-2xl p-4">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between mb-3">
+        <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{title}</p>
+        <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+      </button>
+      {open && children}
+    </div>
+  )
 }
 
+function OptionRow({
+  label,
+  active,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+        active ? 'bg-accent/15 text-accent font-semibold' : 'text-white/50 hover:text-white hover:bg-surface-2'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+// ─── Filter Sidebar ───────────────────────────────────────────────────────────
+
 function FilterSidebar({
+  category,
   categoryLabel,
   availableBrands,
+  availableOsList,
   filters,
   onChange,
 }: {
+  category: string
   categoryLabel: string
   availableBrands: string[]
+  availableOsList: string[]
   filters: Filters
   onChange: (f: Filters) => void
 }) {
   const { t } = useI18n()
-  const [brandsOpen, setBrandsOpen] = useState(true)
-  const [ramOpen,    setRamOpen]    = useState(true)
 
   const SORT_OPTIONS = [
     { value: 'performance', label: t('cat.sort_performance') },
@@ -209,6 +268,37 @@ function FilterSidebar({
     { value: 'price_asc',   label: t('cat.sort_price_asc')   },
     { value: 'price_desc',  label: t('cat.sort_price_desc')  },
   ]
+
+  const PRICE_OPTIONS = [
+    { value: 'any',        label: t('cat.filter_price_any')       },
+    { value: 'under500',   label: t('cat.filter_price_under500')  },
+    { value: '500_1000',   label: t('cat.filter_price_500_1000')  },
+    { value: '1000_1500',  label: t('cat.filter_price_1000_1500') },
+    { value: 'over1500',   label: t('cat.filter_price_over1500')  },
+  ]
+
+  const DISPLAY_OPTIONS = [
+    { value: 'any',   label: t('cat.filter_display_any')   },
+    { value: 'small', label: t('cat.filter_display_small') },
+    { value: 'mid',   label: t('cat.filter_display_mid')   },
+    { value: 'large', label: t('cat.filter_display_large') },
+  ]
+
+  const BATTERY_OPTIONS = [
+    { value: 0,    label: t('cat.filter_battery_any')  },
+    { value: 4000, label: t('cat.filter_battery_4000') },
+    { value: 5000, label: t('cat.filter_battery_5000') },
+    { value: 6000, label: t('cat.filter_battery_6000') },
+  ]
+
+  const hasFilters =
+    filters.brands.length > 0 ||
+    filters.minRam > 0 ||
+    filters.q ||
+    filters.priceRange !== 'any' ||
+    filters.os ||
+    filters.displayRange !== 'any' ||
+    filters.batteryMin > 0
 
   const toggleBrand = (brand: string) => {
     const next = filters.brands.includes(brand)
@@ -218,9 +308,9 @@ function FilterSidebar({
   }
 
   return (
-    <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 space-y-1">
+    <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 space-y-1.5">
 
-      {/* Search — top of sidebar */}
+      {/* Search */}
       <div className="bg-surface border border-border rounded-2xl p-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
@@ -240,95 +330,136 @@ function FilterSidebar({
       </div>
 
       {/* Sort */}
-      <div className="bg-surface border border-border rounded-2xl p-4">
-        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-3 font-semibold">{t('cat.filter_sort')}</p>
-        <div className="space-y-1">
+      <FilterSection title={t('cat.filter_sort')}>
+        <div className="space-y-0.5">
           {SORT_OPTIONS.map((opt) => (
-            <button
+            <OptionRow
               key={opt.value}
+              label={opt.label}
+              active={filters.sort === opt.value}
               onClick={() => onChange({ ...filters, sort: opt.value })}
-              className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
-                filters.sort === opt.value
-                  ? 'bg-accent/15 text-accent font-semibold'
-                  : 'text-white/50 hover:text-white hover:bg-surface-2'
-              }`}
-            >
-              {opt.label}
-            </button>
+            />
           ))}
         </div>
-      </div>
+      </FilterSection>
+
+      {/* Price */}
+      <FilterSection title={t('cat.filter_price')}>
+        <div className="space-y-0.5">
+          {PRICE_OPTIONS.map((opt) => (
+            <OptionRow
+              key={opt.value}
+              label={opt.label}
+              active={filters.priceRange === opt.value}
+              onClick={() => onChange({ ...filters, priceRange: opt.value })}
+            />
+          ))}
+        </div>
+      </FilterSection>
 
       {/* Brand */}
       {availableBrands.length > 0 && (
-        <div className="bg-surface border border-border rounded-2xl p-4">
-          <button
-            onClick={() => setBrandsOpen(!brandsOpen)}
-            className="w-full flex items-center justify-between mb-3"
-          >
-            <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{t('cat.filter_brand')}</p>
-            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${brandsOpen ? '' : '-rotate-90'}`} />
-          </button>
-          {brandsOpen && (
-            <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
-              {availableBrands.map((brand) => {
-                const checked = filters.brands.includes(brand)
-                return (
-                  <button
-                    key={brand}
-                    onClick={() => toggleBrand(brand)}
-                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors ${
-                      checked ? 'text-white' : 'text-white/50 hover:text-white'
+        <FilterSection title={t('cat.filter_brand')}>
+          <div className="space-y-0.5 max-h-52 overflow-y-auto pr-1">
+            {availableBrands.map((brand) => {
+              const checked = filters.brands.includes(brand)
+              return (
+                <button
+                  key={brand}
+                  onClick={() => toggleBrand(brand)}
+                  className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm transition-colors ${
+                    checked ? 'text-white' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  <span
+                    className={`w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${
+                      checked ? 'bg-accent border-accent' : 'border-border'
                     }`}
                   >
-                    <span
-                      className={`w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-colors ${
-                        checked ? 'bg-accent border-accent' : 'border-border'
-                      }`}
-                    >
-                      {checked && <Check className="w-2.5 h-2.5 text-black" />}
-                    </span>
-                    <span className="truncate">{brand}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                    {checked && <Check className="w-2.5 h-2.5 text-black" />}
+                  </span>
+                  <span className="truncate">{brand}</span>
+                </button>
+              )
+            })}
+          </div>
+        </FilterSection>
       )}
 
       {/* RAM */}
-      <div className="bg-surface border border-border rounded-2xl p-4">
-        <button
-          onClick={() => setRamOpen(!ramOpen)}
-          className="w-full flex items-center justify-between mb-3"
-        >
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{t('cat.filter_min_ram')}</p>
-          <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${ramOpen ? '' : '-rotate-90'}`} />
-        </button>
-        {ramOpen && (
-          <div className="grid grid-cols-3 gap-1.5">
-            {RAM_OPTIONS.map((gb) => (
-              <button
-                key={gb}
-                onClick={() => onChange({ ...filters, minRam: gb })}
-                className={`py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  filters.minRam === gb
-                    ? 'bg-accent/15 border border-accent/40 text-accent'
-                    : 'bg-surface-2 border border-border text-white/40 hover:text-white hover:border-white/20'
-                }`}
-              >
-                {gb === 0 ? t('cat.filter_all_ram') : `${gb}GB+`}
-              </button>
+      <FilterSection title={t('cat.filter_min_ram')}>
+        <div className="grid grid-cols-3 gap-1.5">
+          {RAM_OPTIONS.map((gb) => (
+            <button
+              key={gb}
+              onClick={() => onChange({ ...filters, minRam: gb })}
+              className={`py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                filters.minRam === gb
+                  ? 'bg-accent/15 border border-accent/40 text-accent'
+                  : 'bg-surface-2 border border-border text-white/40 hover:text-white hover:border-white/20'
+              }`}
+            >
+              {gb === 0 ? t('cat.filter_all_ram') : `${gb}GB+`}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
+
+      {/* Display size */}
+      <FilterSection title={t('cat.filter_display')} defaultOpen={false}>
+        <div className="space-y-0.5">
+          {DISPLAY_OPTIONS.map((opt) => (
+            <OptionRow
+              key={opt.value}
+              label={opt.label}
+              active={filters.displayRange === opt.value}
+              onClick={() => onChange({ ...filters, displayRange: opt.value })}
+            />
+          ))}
+        </div>
+      </FilterSection>
+
+      {/* OS */}
+      {availableOsList.length > 0 && (
+        <FilterSection title={t('cat.filter_os')} defaultOpen={false}>
+          <div className="space-y-0.5">
+            <OptionRow
+              label={t('cat.filter_os_any')}
+              active={filters.os === ''}
+              onClick={() => onChange({ ...filters, os: '' })}
+            />
+            {availableOsList.map((os) => (
+              <OptionRow
+                key={os}
+                label={os}
+                active={filters.os === os}
+                onClick={() => onChange({ ...filters, os })}
+              />
             ))}
           </div>
-        )}
-      </div>
+        </FilterSection>
+      )}
+
+      {/* Battery (smartphone & tablet only) */}
+      {(category === 'smartphone' || category === 'tablet') && (
+        <FilterSection title={t('cat.filter_battery')} defaultOpen={false}>
+          <div className="space-y-0.5">
+            {BATTERY_OPTIONS.map((opt) => (
+              <OptionRow
+                key={opt.value}
+                label={opt.label}
+                active={filters.batteryMin === opt.value}
+                onClick={() => onChange({ ...filters, batteryMin: opt.value })}
+              />
+            ))}
+          </div>
+        </FilterSection>
+      )}
 
       {/* Reset */}
-      {(filters.brands.length > 0 || filters.minRam > 0 || filters.q) && (
+      {hasFilters && (
         <button
-          onClick={() => onChange({ brands: [], minRam: 0, sort: filters.sort, q: '' })}
+          onClick={() => onChange({ ...DEFAULT_FILTERS, sort: filters.sort })}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-white/40 hover:text-white transition-colors border border-border hover:border-white/20"
         >
           <X className="w-3.5 h-3.5" />
@@ -339,6 +470,40 @@ function FilterSidebar({
   )
 }
 
+// ─── Client-side filter logic ─────────────────────────────────────────────────
+
+function applyClientFilters(products: Product[], filters: Filters): Product[] {
+  return products.filter((p) => {
+    // Brand
+    if (filters.brands.length > 1 && !filters.brands.includes(p.brand)) return false
+
+    // Price
+    if (filters.priceRange !== 'any') {
+      const price = p.price_usd ?? 0
+      if (filters.priceRange === 'under500'  && price >= 500)   return false
+      if (filters.priceRange === '500_1000'  && (price < 500  || price >= 1000)) return false
+      if (filters.priceRange === '1000_1500' && (price < 1000 || price >= 1500)) return false
+      if (filters.priceRange === 'over1500'  && price < 1500)  return false
+    }
+
+    // OS
+    if (filters.os && p.os !== filters.os) return false
+
+    // Display size
+    if (filters.displayRange !== 'any') {
+      const d = p.display_inch ?? 0
+      if (filters.displayRange === 'small' && d >= 6)   return false
+      if (filters.displayRange === 'mid'   && (d < 6 || d >= 6.7)) return false
+      if (filters.displayRange === 'large' && d < 6.7)  return false
+    }
+
+    // Battery
+    if (filters.batteryMin > 0 && (p.battery_mah ?? 0) < filters.batteryMin) return false
+
+    return true
+  })
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CategoryClient({ category }: { category: string }) {
@@ -346,51 +511,60 @@ export default function CategoryClient({ category }: { category: string }) {
   const Icon = CATEGORY_ICON[category]
   const categoryLabel = t(`cat.${category}` as Parameters<typeof t>[0])
 
-  const [products,        setProducts]        = useState<Product[]>([])
+  const [allProducts,     setAllProducts]     = useState<Product[]>([])
   const [availableBrands, setAvailableBrands] = useState<string[]>([])
-  const [total,           setTotal]           = useState(0)
+  const [availableOsList, setAvailableOsList] = useState<string[]>([])
   const [loading,         setLoading]         = useState(true)
   const [page,            setPage]            = useState(1)
   const [mobileFilters,   setMobileFilters]   = useState(false)
 
-  const [filters, setFilters] = useState<Filters>({
-    brands: [],
-    minRam: 0,
-    sort:   'performance',
-    q:      '',
-  })
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
 
-  const fetchProducts = useCallback(async (f: Filters, p: number) => {
+  const PAGE_SIZE = 30
+
+  const fetchProducts = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ category, sort: f.sort, page: String(p) })
-      if (f.brands.length === 1) params.set('brand', f.brands[0])
-      if (f.minRam > 0)          params.set('minRam', String(f.minRam))
-      if (f.q)                   params.set('q', f.q)
+      // Fetch all (large limit) for client-side filtering
+      const params = new URLSearchParams({ category, sort: filters.sort, page: '1', limit: '999' })
+      if (filters.brands.length === 1) params.set('brand', filters.brands[0])
+      if (filters.minRam > 0)          params.set('minRam', String(filters.minRam))
+      if (filters.q)                   params.set('q', filters.q)
 
       const res  = await fetch(`/api/products/list?${params}`)
       const json: ApiResponse = await res.json()
 
-      const results = f.brands.length > 1
-        ? json.results.filter((p) => f.brands.includes(p.brand))
-        : json.results
+      setAllProducts(json.results ?? [])
+      setAvailableBrands(json.brands ?? [])
 
-      setProducts(results)
-      setTotal(f.brands.length > 1 ? results.length : json.total)
-      if (p === 1) setAvailableBrands(json.brands)
+      // Extract unique OS values
+      const osValues = Array.from(new Set(
+        (json.results ?? []).map((p) => p.os).filter(Boolean) as string[]
+      )).sort()
+      setAvailableOsList(osValues)
     } finally {
       setLoading(false)
     }
-  }, [category])
+  }, [category, filters.sort, filters.brands, filters.minRam, filters.q])
 
   useEffect(() => {
     setPage(1)
-    fetchProducts(filters, 1)
-  }, [filters, fetchProducts])
+    fetchProducts()
+  }, [fetchProducts])
 
-  useEffect(() => {
-    if (page > 1) fetchProducts(filters, page)
-  }, [page, filters, fetchProducts])
+  const filtered = applyClientFilters(allProducts, filters)
+  const total     = filtered.length
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const products   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const hasFilters =
+    filters.brands.length > 0 ||
+    filters.minRam > 0 ||
+    filters.q ||
+    filters.priceRange !== 'any' ||
+    filters.os ||
+    filters.displayRange !== 'any' ||
+    filters.batteryMin > 0
 
   if (!Icon) {
     return (
@@ -400,13 +574,11 @@ export default function CategoryClient({ category }: { category: string }) {
     )
   }
 
-  const totalPages = Math.ceil(total / 24)
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center">
             <Icon className="w-5 h-5 text-white/60" />
           </div>
@@ -419,17 +591,14 @@ export default function CategoryClient({ category }: { category: string }) {
           <span className="text-sm text-white/30 tabular-nums">
             {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())}
           </span>
-          {/* Mobile filter toggle */}
           <button
             onClick={() => setMobileFilters(!mobileFilters)}
             className="lg:hidden flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-border text-xs text-white/60 hover:text-white transition-colors"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             {t('cat.filter_toggle')}
-            {(filters.brands.length > 0 || filters.minRam > 0 || filters.q) && (
-              <span className="bg-accent text-black text-[10px] font-black rounded-full px-1.5 py-0.5">
-                {filters.brands.length + (filters.minRam > 0 ? 1 : 0) + (filters.q ? 1 : 0)}
-              </span>
+            {hasFilters && (
+              <span className="bg-accent text-black text-[10px] font-black rounded-full px-1.5 py-0.5">!</span>
             )}
           </button>
         </div>
@@ -438,29 +607,32 @@ export default function CategoryClient({ category }: { category: string }) {
       {/* Body */}
       <div className="flex gap-5 items-start">
         {/* Sidebar */}
-        <div className={`${mobileFilters ? 'block' : 'hidden'} lg:block`}>
+        <div className={`${mobileFilters ? 'block' : 'hidden'} lg:block sticky top-24`}>
           <FilterSidebar
+            category={category}
             categoryLabel={categoryLabel}
             availableBrands={availableBrands}
+            availableOsList={availableOsList}
             filters={filters}
             onChange={(f) => { setFilters(f); setPage(1) }}
           />
         </div>
 
-        {/* Product grid */}
+        {/* Product list */}
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse">
-                  <div className="aspect-square bg-surface-2" />
-                  <div className="p-4 space-y-3">
+            <div className="space-y-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse flex h-28">
+                  <div className="w-28 bg-surface-2 flex-shrink-0" />
+                  <div className="flex-1 p-4 space-y-2">
+                    <div className="h-2 bg-surface-2 rounded w-1/4" />
+                    <div className="h-3 bg-surface-2 rounded w-3/4" />
                     <div className="h-2 bg-surface-2 rounded w-1/3" />
-                    <div className="h-3 bg-surface-2 rounded w-4/5" />
-                    <div className="h-3 bg-surface-2 rounded w-2/3" />
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <div className="h-8 bg-surface-2 rounded" />
-                      <div className="h-8 bg-surface-2 rounded" />
+                    <div className="flex gap-2 mt-2">
+                      <div className="h-6 bg-surface-2 rounded w-16" />
+                      <div className="h-6 bg-surface-2 rounded w-16" />
+                      <div className="h-6 bg-surface-2 rounded w-16" />
                     </div>
                   </div>
                 </div>
@@ -470,13 +642,11 @@ export default function CategoryClient({ category }: { category: string }) {
             <div className="flex flex-col items-center justify-center py-32 text-center">
               <Icon className="w-12 h-12 text-white/10 mb-4" />
               <p className="text-white/30 text-sm">
-                {filters.brands.length > 0 || filters.minRam > 0 || filters.q
-                  ? t('cat.empty_filter')
-                  : t('cat.empty')}
+                {hasFilters ? t('cat.empty_filter') : t('cat.empty')}
               </p>
-              {(filters.brands.length > 0 || filters.minRam > 0 || filters.q) && (
+              {hasFilters && (
                 <button
-                  onClick={() => setFilters({ brands: [], minRam: 0, sort: filters.sort, q: '' })}
+                  onClick={() => setFilters({ ...DEFAULT_FILTERS, sort: filters.sort })}
                   className="mt-4 text-xs text-accent hover:underline"
                 >
                   {t('cat.reset_filters')}
@@ -485,7 +655,7 @@ export default function CategoryClient({ category }: { category: string }) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="space-y-3">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -496,17 +666,15 @@ export default function CategoryClient({ category }: { category: string }) {
                 <div className="flex items-center justify-center gap-3 mt-10">
                   <button
                     disabled={page <= 1}
-                    onClick={() => setPage(page - 1)}
+                    onClick={() => { setPage(page - 1); window.scrollTo({ top: 0 }) }}
                     className="px-4 py-2 rounded-xl bg-surface border border-border text-sm text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('cat.prev')}
                   </button>
-                  <span className="text-sm text-white/30 tabular-nums">
-                    {page} / {totalPages}
-                  </span>
+                  <span className="text-sm text-white/30 tabular-nums">{page} / {totalPages}</span>
                   <button
                     disabled={page >= totalPages}
-                    onClick={() => setPage(page + 1)}
+                    onClick={() => { setPage(page + 1); window.scrollTo({ top: 0 }) }}
                     className="px-4 py-2 rounded-xl bg-surface border border-border text-sm text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('cat.next')}
