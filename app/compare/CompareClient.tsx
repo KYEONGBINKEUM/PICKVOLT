@@ -591,7 +591,7 @@ export default function CompareClient() {
       higherIsBetter: true,
       values: products.map((p) => {
         const sel = selectedVariants[p.id]?.ram_gb
-        const n = sel ?? parseOptions(p.raw.ram_gb).reduce((a, b) => Math.max(a, b), 0) || null
+        const n = (sel ?? parseOptions(p.raw.ram_gb).reduce((a, b) => Math.max(a, b), 0)) || null
         return { primary: sel != null ? fmtGB(sel) : (p.raw.ram_gb ? `${p.raw.ram_gb}GB` : '—'), numericVal: n ?? undefined }
       }),
     }
