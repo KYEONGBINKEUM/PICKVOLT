@@ -180,8 +180,8 @@ function ProductCard({ product }: { product: Product }) {
             {specGrid.map((row, ri) =>
               row.map((s, ci) => (
                 <div key={`${ri}-${ci}`}>
-                  <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                  <p className={`text-xs font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                  <p className="text-xs text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                  <p className={`text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                     {s.value ?? '–'}
                   </p>
                 </div>
