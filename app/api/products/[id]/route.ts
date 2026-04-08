@@ -109,7 +109,6 @@ export async function GET(
                        : laptop?.battery_wh
                        ? `${laptop.battery_wh} Wh`
                        : null,
-    batteryLife:     laptop?.battery_hours ? `${laptop.battery_hours} hours` : null,
     os:              common?.os ?? null,
     weight:          laptop?.weight_kg
                        ? `${laptop.weight_kg} kg`

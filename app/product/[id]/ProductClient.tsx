@@ -210,7 +210,6 @@ export default function ProductClient({ product }: { product: Product }) {
             <SpecRow label={t('product.spec_storage')}      value={product.specs.storage} />
             <SpecRow label={t('product.spec_display')}      value={product.specs.display} />
             <SpecRow label={t('product.spec_battery')}      value={product.specs.batteryCapacity} />
-            <SpecRow label={t('product.spec_battery_life')} value={product.specs.batteryLife} />
             <SpecRow label={t('product.spec_camera')}       value={product.specs.camera} />
             <SpecRow label={t('product.spec_os')}           value={product.specs.os} />
             <SpecRow label={t('product.spec_weight')}       value={product.specs.weight} />

@@ -37,16 +37,11 @@ function extractJSON(text: string) {
 }
 
 async function runWithGemini(prompt: string) {
-  const { GoogleGenAI, ThinkingLevel } = await import('@google/genai')
+  const { GoogleGenAI } = await import('@google/genai')
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
   const response = await ai.models.generateContent({
     model: 'gemma-4-31b-it',
     contents: prompt,
-    config: {
-      thinkingConfig: {
-        thinkingLevel: ThinkingLevel.LOW,
-      },
-    },
   })
   return extractJSON(response.text ?? '')
 }
