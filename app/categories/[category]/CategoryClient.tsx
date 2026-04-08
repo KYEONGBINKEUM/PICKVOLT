@@ -584,7 +584,6 @@ export default function CategoryClient({ category }: { category: string }) {
           </div>
           <div>
             <h1 className="text-2xl font-black text-white">{categoryLabel}</h1>
-            <p className="text-xs text-white/30 uppercase tracking-widest">{CATEGORY_SUBLABEL[category]}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
