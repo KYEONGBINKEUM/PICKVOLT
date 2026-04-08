@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -324,6 +324,9 @@ export default function CompareClient() {
   const [remaining, setRemaining] = useState<number | null>(null)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
 
+  // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
+  const ranKeyRef = useRef<string>('')
+
   // 세션 확인
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -430,10 +433,15 @@ export default function CompareClient() {
 
   useEffect(() => {
     const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
-    if (ids.length >= 2) {
-      runComparison(ids)
-    }
-  }, [idsParam, runComparison])
+    if (ids.length < 2) return
+
+    // 동일한 ids + user 조합이면 탭 전환 등으로 재실행되지 않도록 방지
+    const key = `${idsParam}:${session?.user?.id ?? 'anon'}`
+    if (ranKeyRef.current === key) return
+
+    ranKeyRef.current = key
+    runComparison(ids)
+  }, [idsParam, runComparison, session])
 
   const handleNavSearch = (v: string) => {
     if (v.trim()) {

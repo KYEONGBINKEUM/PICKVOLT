@@ -1,11 +1,33 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Check, X, Zap } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n } from '@/lib/i18n'
+import { supabase } from '@/lib/supabase'
 
 export default function PricingPage() {
   const { t } = useI18n()
+  const [isPro, setIsPro] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return
+      const email = data.user.email ?? ''
+      const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+        .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+      if (adminEmails.includes(email.toLowerCase())) {
+        setIsPro(true)
+        return
+      }
+      supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+        .then(({ data: sub }) => setIsPro(sub?.status === 'pro'))
+    })
+  }, [])
 
   const FREE_FEATURES = [
     t('pricing.free_feat1'),
@@ -73,14 +95,16 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <button className="w-full border border-border text-white/50 font-semibold py-3 rounded-full text-sm">
-              {t('pricing.free_cta')}
+            <button
+              disabled
+              className="w-full border border-border text-white/30 font-semibold py-3 rounded-full text-sm cursor-default"
+            >
+              {!isPro ? t('pricing.free_cta') : t('pricing.free_name')}
             </button>
           </div>
 
           {/* Pro */}
           <div className="relative bg-surface border-2 border-accent/40 rounded-card p-7 flex flex-col overflow-hidden">
-            {/* Subtle glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent pointer-events-none" />
 
             <div className="relative mb-6">
@@ -109,57 +133,47 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <button className="relative w-full bg-accent hover:bg-accent-light text-white font-bold py-3 rounded-full text-sm transition-colors shadow-lg shadow-accent/20">
-              {t('pricing.pro_cta')}
-            </button>
+            {isPro ? (
+              <button
+                disabled
+                className="relative w-full border border-accent/40 text-accent font-bold py-3 rounded-full text-sm cursor-default"
+              >
+                {t('pricing.free_cta')}
+              </button>
+            ) : (
+              <button className="relative w-full bg-accent hover:bg-accent-light text-white font-bold py-3 rounded-full text-sm transition-colors shadow-lg shadow-accent/20">
+                {t('pricing.pro_cta')}
+              </button>
+            )}
           </div>
         </div>
 
         {/* Feature table */}
         <div>
           <div className="mb-5">
-            <h2 className="text-sm font-black text-white">{t('pricing.table_title')}</h2>
-            <p className="text-xs text-white/30">{t('pricing.table_sub')}</p>
+            <p className="text-xs text-white/30 uppercase tracking-widest">{t('pricing.table_title')}</p>
+            <p className="text-white/20 text-xs mt-0.5">{t('pricing.table_sub')}</p>
           </div>
-
           <div className="bg-surface border border-border rounded-card overflow-hidden">
-            {/* Header */}
-            <div className="grid grid-cols-[1fr_120px_120px] px-6 py-3 border-b border-border">
-              <span className="text-xs text-white/40 font-semibold uppercase tracking-widest">{t('pricing.col_feature')}</span>
-              <span className="text-xs text-white/40 font-semibold uppercase tracking-widest text-center">{t('pricing.col_free')}</span>
-              <span className="text-xs text-accent font-semibold uppercase tracking-widest text-center">{t('pricing.col_pro')}</span>
+            <div className="grid grid-cols-3 text-xs text-white/30 uppercase tracking-widest px-6 py-3 border-b border-border">
+              <span>{t('pricing.col_feature')}</span>
+              <span className="text-center">{t('pricing.col_free')}</span>
+              <span className="text-center">{t('pricing.col_pro')}</span>
             </div>
-
-            {TABLE_ROWS.map((row, i) => (
-              <div
-                key={row.label}
-                className={`grid grid-cols-[1fr_120px_120px] px-6 py-4 items-center ${
-                  i !== TABLE_ROWS.length - 1 ? 'border-b border-border' : ''
-                }`}
-              >
-                <span className="text-sm text-white/60">{row.label}</span>
-                <span className="text-sm text-white/40 text-center">{row.free}</span>
-                <span className={`text-sm text-center font-semibold ${row.proHighlight ? 'text-accent' : 'text-white/70'}`}>
+            {TABLE_ROWS.map((row) => (
+              <div key={row.label} className="grid grid-cols-3 items-center px-6 py-4 border-b border-border last:border-0 hover:bg-surface-2/50 transition-colors">
+                <span className="text-sm text-white/70">{row.label}</span>
+                <span className="text-center text-sm text-white/40">{row.free}</span>
+                <span className={`text-center text-sm font-semibold ${row.proHighlight ? 'text-accent' : 'text-white/70'}`}>
                   {row.pro}
                 </span>
               </div>
             ))}
           </div>
+          <p className="text-center text-xs text-white/20 mt-4">{t('pricing.powered')}</p>
         </div>
 
-        <p className="text-center text-xs text-white/20 mt-10">
-          {t('pricing.powered')}
-        </p>
       </main>
-
-      {/* Right sidebar */}
-      <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20">
-        <div className="bg-surface-2 border border-border rounded-l-xl px-2 py-4">
-          <p className="text-[10px] text-white/20 uppercase tracking-widest" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-            {t('pricing.sidebar')}
-          </p>
-        </div>
-      </div>
     </>
   )
 }
