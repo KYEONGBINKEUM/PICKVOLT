@@ -30,13 +30,29 @@ function extractJSON(text: string) {
 }
 
 async function runWithGemini(prompt: string) {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai')
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
-  return extractJSON(text)
+  const { GoogleGenAI, ThinkingLevel } = await import('@google/genai')
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+  const response = await ai.models.generateContent({
+    model: 'gemma-4-31b-it',
+    contents: prompt,
+    config: {
+      thinkingConfig: {
+        thinkingLevel: ThinkingLevel.HIGH,
+      },
+    },
+  })
+  return extractJSON(response.text ?? '')
 }
+
+// ── 구버전 (gemini-2.5-flash-lite) ──────────────────────────────────────────
+// async function runWithGemini(prompt: string) {
+//   const { GoogleGenerativeAI } = await import('@google/generative-ai')
+//   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+//   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
+//   const result = await model.generateContent(prompt)
+//   const text = result.response.text()
+//   return extractJSON(text)
+// }
 
 async function runWithClaude(prompt: string) {
   const Anthropic = (await import('@anthropic-ai/sdk')).default
