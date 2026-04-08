@@ -19,13 +19,16 @@ async function verifyAdmin(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  try {
   const admin = await verifyAdmin(req)
   if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const svc = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) {
+    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY not set' }, { status: 500 })
+  }
+
+  const svc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey)
 
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
@@ -71,4 +74,9 @@ export async function GET(req: NextRequest) {
     totalUsers,
     recentComparisons: recent ?? [],
   })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('admin/stats error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }

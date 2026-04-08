@@ -19,17 +19,20 @@ async function verifyAdmin(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  try {
   const admin = await verifyAdmin(req)
   if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) {
+    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY not set' }, { status: 500 })
+  }
 
   const { searchParams } = new URL(req.url)
   const page = Math.max(0, Number(searchParams.get('page') ?? '0'))
   const perPage = 50
 
-  const svc = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const svc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey)
 
   const { data, count, error } = await svc
     .from('comparison_history')
@@ -56,4 +59,9 @@ export async function GET(req: NextRequest) {
   }))
 
   return NextResponse.json({ comparisons: enriched, total: count ?? 0, page })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('admin/comparisons error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
