@@ -6,20 +6,27 @@ const DAILY_LIMIT = 5
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-const PROMPT_TEMPLATE = (productList: string, prefText: string) => `You are a tech product comparison expert. Compare the following products and pick a winner.
+const LOCALE_LANG: Record<string, string> = {
+  en: 'English', ko: '한국어', ja: '日本語', es: 'Español', pt: 'Português', fr: 'Français', de: 'Deutsch',
+}
+
+const PROMPT_TEMPLATE = (productList: string, prefText: string, lang: string) =>
+`You are a tech product comparison expert. Compare the following products and pick a winner.
 
 Products:
 ${productList}
 
 ${prefText}
 
+IMPORTANT: Write the "summary" and "reasoning" fields in ${lang}. Keep "winner" as the exact product name.
+
 Respond with JSON only:
 {
   "winner": "product name",
-  "summary": "one sentence why this product wins (lowercase, conversational)",
-  "reasoning": "2-3 sentences of detailed reasoning (lowercase)",
+  "summary": "one sentence why this product wins (conversational tone, in ${lang})",
+  "reasoning": "2-3 sentences of detailed reasoning (in ${lang})",
   "scores": {
-    "product_name": { "value": 0-100, "reason": "brief reason" }
+    "product_name": { "value": 0-100, "reason": "brief reason in ${lang}" }
   }
 }`
 
@@ -68,7 +75,8 @@ async function runWithClaude(prompt: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { products, preferences, accessToken, productIds } = await req.json()
+    const { products, preferences, accessToken, productIds, locale } = await req.json()
+    const lang = LOCALE_LANG[locale] ?? 'English'
 
     if (!products || products.length < 2) {
       return NextResponse.json({ error: '제품을 2개 이상 선택해주세요.' }, { status: 400 })
@@ -131,7 +139,7 @@ export async function POST(req: NextRequest) {
       ? `User priorities: budget sensitivity ${preferences.budget}/5, photography ${preferences.photography}/5, performance ${preferences.performance}/5, battery life ${preferences.battery}/5.`
       : ''
 
-    const prompt = PROMPT_TEMPLATE(productList, prefText)
+    const prompt = PROMPT_TEMPLATE(productList, prefText, lang)
 
     let result
     if (process.env.GEMINI_API_KEY) {

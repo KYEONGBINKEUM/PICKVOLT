@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Download, Share2, ChevronRight, RotateCcw, Loader2, TrendingUp, Lock, Zap } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
-import { useI18n } from '@/lib/i18n'
+import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle } from '@/lib/utils'
 import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
@@ -264,6 +264,36 @@ function LoadingState({ message }: { message: string }) {
   )
 }
 
+/* ---------- AI Pick Loading ---------- */
+function AIPickLoading({ t }: { t: (k: string) => string }) {
+  return (
+    <div className="relative rounded-card overflow-hidden bg-gradient-to-br from-[#FF6B2B]/30 via-accent/20 to-[#cc3300]/20 border border-accent/20 p-8 mb-8">
+      {/* Shimmer overlay */}
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
+
+      <div className="flex items-center gap-3 mb-5">
+        <div className="flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce"
+              style={{ animationDelay: `${i * 0.18}s` }} />
+          ))}
+        </div>
+        <span className="text-sm text-accent/80 font-semibold tracking-wide">
+          {t('compare.loading_ai')}
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        <div className="h-8 w-2/3 bg-white/10 rounded-lg animate-pulse" />
+        <div className="h-4 w-full bg-white/6 rounded animate-pulse" />
+        <div className="h-4 w-4/5 bg-white/6 rounded animate-pulse" />
+        <div className="mt-5 h-9 w-36 bg-white/10 rounded-full animate-pulse" />
+      </div>
+    </div>
+  )
+}
+
 /* ---------- Sidebar Toggle ---------- */
 function SidebarToggle({ label }: { label: string }) {
   return (
@@ -322,7 +352,7 @@ export default function CompareClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const idsParam = searchParams.get('ids') ?? ''
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [navSearch, setNavSearch] = useState('')
   const [products, setProducts] = useState<Product[]>([])
@@ -335,6 +365,7 @@ export default function CompareClient() {
   const [remaining, setRemaining] = useState<number | null>(null)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
+  const [loadingAI, setLoadingAI] = useState(false)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, { ram_gb: number | null; storage_gb: number | null }>>({})
 
 
@@ -364,11 +395,13 @@ export default function CompareClient() {
     if (ids.length < 2) return
 
     setLoading(true)
+    setLoadingAI(false)
     setError(null)
     setProducts([])
     setAiResult(null)
 
     try {
+      // ── 1단계: 스펙 로드 ──────────────────────────────────────────────────
       setLoadingMsg(t('compare.loading_specs'))
       const details = await Promise.all(
         ids.map((id) => fetch(`/api/products/${id}`).then((r) => r.json()))
@@ -382,14 +415,12 @@ export default function CompareClient() {
       }
 
       setProducts(validProducts)
+      setLoading(false) // 스펙 완료 → 테이블 즉시 표시
 
-      // AI 비교는 로그인한 유저만
-      if (!session) {
-        setLoading(false)
-        return
-      }
+      // ── 2단계: AI 비교 (로그인 유저만) ───────────────────────────────────
+      if (!session) return
 
-      setLoadingMsg(t('compare.loading_ai'))
+      setLoadingAI(true)
       const compareRes = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -410,21 +441,12 @@ export default function CompareClient() {
           })),
           productIds: ids,
           accessToken: session.access_token,
+          locale: locale as Locale,
         }),
       })
 
-      if (compareRes.status === 401) {
-        setError('login_required')
-        setLoading(false)
-        return
-      }
-
-      if (compareRes.status === 429) {
-        setError('daily_limit')
-        setRemaining(0)
-        setLoading(false)
-        return
-      }
+      if (compareRes.status === 401) { setError('login_required'); return }
+      if (compareRes.status === 429) { setError('daily_limit'); setRemaining(0); return }
 
       const compareData = await compareRes.json()
       if (compareData.error && compareData.error !== 'login_required' && compareData.error !== 'daily_limit') {
@@ -432,7 +454,6 @@ export default function CompareClient() {
       } else if (!compareData.error) {
         setAiResult(compareData)
         if (compareData.remaining !== null) setRemaining(compareData.remaining)
-        // 인기 비교 갱신
         fetch('/api/compare/popular')
           .then((r) => r.json())
           .then((d) => setPopularItems(d.items ?? []))
@@ -442,8 +463,9 @@ export default function CompareClient() {
       setError(t('compare.error_compare'))
     } finally {
       setLoading(false)
+      setLoadingAI(false)
     }
-  }, [t, session])
+  }, [t, session, locale])
 
   useEffect(() => {
     const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
@@ -778,8 +800,9 @@ export default function CompareClient() {
         {/* 결과 */}
         {!loading && products.length >= 2 && (
           <div className="mt-8">
-            {/* AI Pick — 로그인 유저만, 에러 없을 때 */}
-            {session && aiResult && (
+            {/* AI Pick 영역 */}
+            {session && loadingAI && <AIPickLoading t={t} />}
+            {session && !loadingAI && aiResult && (
               <AIPickBanner
                 winner={aiResult.winner}
                 reasoning={aiResult.summary}
@@ -787,9 +810,7 @@ export default function CompareClient() {
                 t={t}
               />
             )}
-            {!session && (
-              <AIPickLocked t={t} />
-            )}
+            {!session && <AIPickLocked t={t} />}
 
             {/* 남은 사용량 (무료 유저) */}
             {session && aiResult && aiResult.remaining !== null && (
@@ -898,25 +919,11 @@ export default function CompareClient() {
                               <span className="ml-1 text-[9px] font-black tracking-widest bg-accent text-white rounded-full px-2 py-0.5 uppercase">Best</span>
                             )}
                           </div>
-                          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mb-2">
+                          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-700"
                               style={{ width: `${s.overall}%`, backgroundColor: color }}
                             />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            {s.details.map((d) => (
-                              <div key={d.label} className="flex items-center gap-2">
-                                <span className="text-[10px] text-white/30 w-16 flex-shrink-0">{d.label}</span>
-                                <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full"
-                                    style={{ width: `${d.score}%`, backgroundColor: color, opacity: 0.6 }}
-                                  />
-                                </div>
-                                <span className="text-[10px] text-white/40 w-6 text-right">{d.score}</span>
-                              </div>
-                            ))}
                           </div>
                         </div>
                       )
