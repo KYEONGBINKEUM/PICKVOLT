@@ -106,6 +106,9 @@ export default function ProductEditPage() {
   const [form, setForm] = useState<Record<string, unknown>>({})
   const [commonSpecs, setCommonSpecs] = useState<Record<string, unknown>>({})
   const [categorySpecs, setCategorySpecs] = useState<Record<string, unknown>>({})
+  const [cpuScores, setCpuScores] = useState<{ relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; score_source: string }>({
+    relative_score: null, gb6_single: null, gb6_multi: null, score_source: '',
+  })
   const [imagePreview, setImagePreview] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -163,6 +166,27 @@ export default function ProductEditPage() {
           void _id; void _pid; void _ca
           setCategorySpecs(rest ?? {})
         }
+
+        // CPU 벤치마크 점수 로드
+        const cpuId = common?.cpu_id
+        if (cpuId) {
+          supabase
+            .from('cpus')
+            .select('relative_score, gb6_single, gb6_multi, score_source')
+            .eq('id', cpuId)
+            .single()
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .then(({ data: cpu }: { data: any }) => {
+              if (cpu) {
+                setCpuScores({
+                  relative_score: cpu.relative_score ?? null,
+                  gb6_single:     cpu.gb6_single     ?? null,
+                  gb6_multi:      cpu.gb6_multi       ?? null,
+                  score_source:   cpu.score_source    ?? '',
+                })
+              }
+            })
+        }
       })
   }, [authed, id])
 
@@ -183,6 +207,8 @@ export default function ProductEditPage() {
         ...form,
         specs_common: commonSpecs,
         [`specs_${category}`]: categorySpecs,
+        cpu_id: commonSpecs.cpu_id,
+        cpu_scores: cpuScores,
       }
       const res = await fetch(`/api/admin/products/${id}`, {
         method: 'PATCH',
@@ -390,6 +416,49 @@ export default function ProductEditPage() {
               </Field>
             </div>
           </div>
+        </SectionCard>
+
+        {/* ── 벤치마크 점수 ── */}
+        <SectionCard title="벤치마크 점수 (cpus 테이블)" defaultOpen={false}>
+          {!commonSpecs.cpu_id ? (
+            <p className="text-xs text-white/30 py-2">
+              공통 스펙에서 <code className="text-accent/70">cpu_id</code>가 설정되어야 편집 가능합니다.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-white/30 pb-1">
+                CPU ID: <span className="text-white/60 font-mono">{commonSpecs.cpu_id as string}</span>
+                &nbsp;·&nbsp;이 값들은 상대 점수 산출 및 레이더 차트의 Performance 축에 직접 반영됩니다.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Relative Score (0 – 1000, 카테고리 내 비교 기준)">
+                  <NumberInput
+                    value={cpuScores.relative_score}
+                    onChange={(v) => setCpuScores((p) => ({ ...p, relative_score: v }))}
+                  />
+                </Field>
+                <Field label="점수 출처 (Geekbench6 / AnTuTu / Passmark 등)">
+                  <TextInput
+                    value={cpuScores.score_source}
+                    onChange={(v) => setCpuScores((p) => ({ ...p, score_source: v }))}
+                    placeholder="geekbench6"
+                  />
+                </Field>
+                <Field label="GB6 Single-Core">
+                  <NumberInput
+                    value={cpuScores.gb6_single}
+                    onChange={(v) => setCpuScores((p) => ({ ...p, gb6_single: v }))}
+                  />
+                </Field>
+                <Field label="GB6 Multi-Core">
+                  <NumberInput
+                    value={cpuScores.gb6_multi}
+                    onChange={(v) => setCpuScores((p) => ({ ...p, gb6_multi: v }))}
+                  />
+                </Field>
+              </div>
+            </div>
+          )}
         </SectionCard>
 
         {/* ── 카테고리 스펙 ── */}

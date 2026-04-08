@@ -71,6 +71,25 @@ export async function PATCH(
     }
   }
 
+  // CPU 벤치마크 점수 업데이트 (cpus 테이블)
+  if (body.cpu_scores && typeof body.cpu_scores === 'object') {
+    const cpuId = body.specs_common?.cpu_id ?? body.cpu_id
+    if (cpuId) {
+      const allowed = ['relative_score', 'gb6_single', 'gb6_multi', 'score_source']
+      const cpuUpdates: Record<string, unknown> = {}
+      for (const key of allowed) {
+        if (key in body.cpu_scores) cpuUpdates[key] = body.cpu_scores[key]
+      }
+      if (Object.keys(cpuUpdates).length > 0) {
+        const { error } = await supabase
+          .from('cpus')
+          .update(cpuUpdates)
+          .eq('id', cpuId)
+        if (error) errors.push(`cpus: ${error.message}`)
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
   }
