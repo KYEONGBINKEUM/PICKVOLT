@@ -21,11 +21,16 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
   const pathname = usePathname()
   const { t } = useI18n()
   const [loggedIn, setLoggedIn] = useState(false)
+  const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user))
+    supabase.auth.getUser().then(({ data }) => {
+      setLoggedIn(!!data.user)
+      setAuthReady(true)
+    })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setLoggedIn(!!session)
+      setAuthReady(true)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -72,9 +77,9 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
             key={link.href}
             href={link.href}
             className={clsx(
-              'text-sm transition-colors hidden md:block',
-              pathname === link.href
-                ? 'text-white font-semibold'
+              'text-sm font-semibold capitalize transition-colors hidden md:block',
+              pathname === link.href || pathname.startsWith(link.href + '/')
+                ? 'text-white'
                 : 'text-white/50 hover:text-white/80'
             )}
           >
@@ -82,21 +87,23 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
           </Link>
         ))}
 
-        {/* Auth */}
-        {loggedIn ? (
-          <Link
-            href="/mypage"
-            className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
-          >
-            <User className="w-4 h-4" />
-          </Link>
-        ) : (
-          <Link
-            href="/login"
-            className="text-xs font-semibold bg-surface-2 border border-border text-white/70 hover:text-white hover:border-white/20 px-4 py-1.5 rounded-full transition-all"
-          >
-            {t('auth.signin')}
-          </Link>
+        {/* Auth — authReady 전에는 아무것도 렌더링하지 않아 flash 방지 */}
+        {authReady && (
+          loggedIn ? (
+            <Link
+              href="/mypage"
+              className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
+            >
+              <User className="w-4 h-4" />
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="text-xs font-semibold bg-surface-2 border border-border text-white/70 hover:text-white hover:border-white/20 px-4 py-1.5 rounded-full transition-all"
+            >
+              {t('auth.signin')}
+            </Link>
+          )
         )}
 
         {/* Language & Currency */}
