@@ -10,11 +10,14 @@ import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle } from '@/lib/utils'
+import { computeScores } from '@/lib/scoring'
 
 interface ProductSpecs {
   cpu?: string | null
   cpuSpeedMHz?: number | null
   performanceScore?: number | null
+  gb6Single?: number | null
+  gb6Multi?: number | null
   ram?: string | null
   storage?: string | null
   display?: string | null
@@ -477,17 +480,35 @@ export default function CompareClient() {
 
   const category = products.length > 0 ? products[0].category.toLowerCase() : ''
 
+  // 제품별 종합 점수 계산
+  const productScores = products.map((p) => computeScores({
+    category,
+    gb6Single:         p.specs.gb6Single,
+    gb6Multi:          p.specs.gb6Multi,
+    relativeScore:     p.specs.performanceScore,
+    ram_gb:            p.raw.ram_gb,
+    storage_gb:        p.raw.storage_gb,
+    battery_mah:       p.raw.battery_mah,
+    battery_wh:        p.raw.battery_wh,
+    battery_hours:     p.raw.battery_hours,
+    camera_main_mp:    p.raw.camera_main_mp,
+    weight_g:          p.raw.weight_g,
+    weight_kg:         p.raw.weight_kg,
+    display_inch:      p.raw.display_inch,
+    display_resolution: p.raw.display_resolution,
+  }))
+
   const buildSpecRows = (): SpecRowData[] => {
     if (products.length === 0) return []
 
     const performanceRow: SpecRowData = {
       label: t('spec.performance'),
       sublabel: t('spec.benchmark'),
-      barMax: 1000,
-      values: products.map((p) => ({
-        primary: p.specs.performanceScore != null ? Math.round(p.specs.performanceScore) : '—',
+      barMax: 100,
+      values: products.map((p, i) => ({
+        primary: productScores[i].performance,
         secondary: p.specs.cpu ?? undefined,
-        bar: p.specs.performanceScore ?? undefined,
+        bar: productScores[i].performance,
       })),
     }
     const ramRow: SpecRowData = {
@@ -741,6 +762,55 @@ export default function CompareClient() {
                   </div>
                 ))}
               </div>
+
+              {/* Overall Score row */}
+              {productScores.length >= 2 && (() => {
+                const maxScore = Math.max(...productScores.map((s) => s.overall))
+                return (
+                  <div
+                    className="grid border-t border-border bg-surface-2/40"
+                    style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
+                  >
+                    <div className="p-4 flex flex-col gap-0.5 justify-center">
+                      <span className="text-xs text-white/40">Pickvolt</span>
+                      <span className="text-sm font-semibold text-white">Overall Score</span>
+                    </div>
+                    {productScores.map((s, i) => {
+                      const isWinner = s.overall === maxScore
+                      const scoreColor = s.overall >= 75 ? '#22c55e' : s.overall >= 50 ? '#f59e0b' : '#ef4444'
+                      return (
+                        <div key={i} className="p-4 border-l border-border">
+                          <div className="flex items-baseline gap-1.5 mb-2">
+                            <span
+                              className="text-3xl font-black leading-none"
+                              style={{ color: scoreColor }}
+                            >
+                              {s.overall}
+                            </span>
+                            <span className="text-xs text-white/30 font-semibold">/ 100</span>
+                            {isWinner && (
+                              <span className="ml-1 text-[9px] font-black tracking-widest bg-accent text-white rounded-full px-2 py-0.5 uppercase">Best</span>
+                            )}
+                          </div>
+                          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{ width: `${s.overall}%`, backgroundColor: scoreColor }}
+                            />
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {s.details.map((d) => (
+                              <span key={d.label} className="text-[10px] text-white/30">
+                                {d.label} <span className="text-white/50">{d.score}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
 
               {specRows.map((row) => (
                 <SpecRow
