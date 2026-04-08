@@ -41,7 +41,6 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
     { href: '/categories/laptop',     label: t('cat.laptop')     },
     { href: '/categories/tablet',     label: t('cat.tablet')     },
     { href: '/history', label: t('nav.history') },
-    { href: '/pricing', label: t('nav.pro') },
   ]
 
   return (

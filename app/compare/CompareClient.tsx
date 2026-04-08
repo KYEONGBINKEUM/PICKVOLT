@@ -367,7 +367,6 @@ export default function CompareClient() {
   const [error, setError] = useState<string | null>(null)
   const [showReasoning, setShowReasoning] = useState(false)
   const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
-  const [remaining, setRemaining] = useState<number | null>(null)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
@@ -422,9 +421,7 @@ export default function CompareClient() {
       setProducts(validProducts)
       setLoading(false) // 스펙 완료 → 테이블 즉시 표시
 
-      // ── 2단계: AI 비교 (로그인 유저만) ───────────────────────────────────
-      if (!session) return
-
+      // ── 2단계: AI 비교 (로그인 불필요, 무제한) ──────────────────────────
       setLoadingAI(true)
       const compareRes = await fetch('/api/compare', {
         method: 'POST',
@@ -445,20 +442,16 @@ export default function CompareClient() {
             },
           })),
           productIds: ids,
-          accessToken: session.access_token,
+          accessToken: session?.access_token ?? null,
           locale: locale as Locale,
         }),
       })
 
-      if (compareRes.status === 401) { setError('login_required'); return }
-      if (compareRes.status === 429) { setError('daily_limit'); setRemaining(0); return }
-
       const compareData = await compareRes.json()
-      if (compareData.error && compareData.error !== 'login_required' && compareData.error !== 'daily_limit') {
+      if (compareData.error) {
         setError(t('compare.error_compare'))
-      } else if (!compareData.error) {
+      } else {
         setAiResult(compareData)
-        if (compareData.remaining !== null) setRemaining(compareData.remaining)
         fetch('/api/compare/popular')
           .then((r) => r.json())
           .then((d) => setPopularItems(d.items ?? []))
@@ -777,33 +770,7 @@ export default function CompareClient() {
         {loading && <LoadingState message={loadingMsg} />}
 
         {/* 에러 */}
-        {error === 'login_required' && !loading && (
-          <div className="mt-8 p-6 bg-surface border border-border rounded-card flex items-center gap-4">
-            <Lock className="w-5 h-5 text-white/30 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-white font-bold text-sm mb-1">Sign in to compare</p>
-              <p className="text-white/40 text-xs">AI-powered comparison is available for members only.</p>
-            </div>
-            <Link href="/login" className="flex-shrink-0 bg-accent text-white text-sm font-bold px-4 py-2 rounded-full">
-              {t('auth.signin')}
-            </Link>
-          </div>
-        )}
-
-        {error === 'daily_limit' && !loading && (
-          <div className="mt-8 p-6 bg-surface border border-amber-500/20 rounded-card flex items-center gap-4">
-            <Zap className="w-5 h-5 text-amber-400 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-white font-bold text-sm mb-1">Daily limit reached (5/5)</p>
-              <p className="text-white/40 text-xs">Upgrade to Pro for unlimited comparisons.</p>
-            </div>
-            <Link href="/pricing" className="flex-shrink-0 bg-amber-500 text-black text-sm font-bold px-4 py-2 rounded-full">
-              Go Pro
-            </Link>
-          </div>
-        )}
-
-        {error && error !== 'login_required' && error !== 'daily_limit' && !loading && (
+        {error && !loading && (
           <div className="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-card text-center">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
@@ -813,25 +780,14 @@ export default function CompareClient() {
         {!loading && products.length >= 2 && (
           <div className="mt-8">
             {/* AI Pick 영역 */}
-            {session && loadingAI && <AIPickLoading t={t} />}
-            {session && !loadingAI && aiResult && (
+            {loadingAI && <AIPickLoading t={t} />}
+            {!loadingAI && aiResult && (
               <AIPickBanner
                 winner={aiResult.winner}
                 reasoning={aiResult.summary}
                 onViewReasoning={() => setShowReasoning(true)}
                 t={t}
               />
-            )}
-            {!session && <AIPickLocked t={t} />}
-
-            {/* 남은 사용량 (무료 유저) */}
-            {session && aiResult && aiResult.remaining !== null && (
-              <div className="flex items-center justify-end gap-2 mb-4 -mt-4">
-                <span className="text-xs text-white/30">
-                  {aiResult.remaining} comparison{aiResult.remaining !== 1 ? 's' : ''} left today
-                </span>
-                <Link href="/pricing" className="text-xs text-accent hover:underline">Go Pro →</Link>
-              </div>
             )}
 
             {/* 비교 테이블 */}

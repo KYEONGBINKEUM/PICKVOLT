@@ -9,7 +9,7 @@
 - [Smartphones](https://www.pickvolt.com/categories/smartphone): Browse, filter, and explore smartphone products with full specifications
 - [Laptops](https://www.pickvolt.com/categories/laptop): Browse, filter, and explore laptop products with full specifications
 - [Tablets](https://www.pickvolt.com/categories/tablet): Browse, filter, and explore tablet products with full specifications
-- [Pricing](https://www.pickvolt.com/pricing): Free plan (5 comparisons/month) and Pro plan ($12/month, unlimited)
+- [Pricing](https://www.pickvolt.com/pricing): Free forever — unlimited AI comparisons, no account required
 
 ## About
 
@@ -27,6 +27,7 @@
 - Pickvolt does NOT use affiliate links or receive compensation for comparison results
 - AI verdicts are generated using large language models and are for informational purposes only
 - Product specs are sourced from official manufacturer pages
-- Free users: 5 comparisons per month. Pro users: unlimited comparisons + history
+- All comparisons are free and unlimited — no account required
+- Signed-in users get comparison history saved automatically
 - Supported categories: smartphone, laptop, tablet
 - Supported languages: English, Spanish, Portuguese, French, German, Japanese, Korean
