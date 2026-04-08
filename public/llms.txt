@@ -1,0 +1,32 @@
+# Pickvolt
+
+> Pickvolt is an AI-powered tech product comparison platform. Users can compare any two smartphones, laptops, or tablets and instantly receive an AI-generated verdict with reasoning, spec breakdowns, and a performance analysis. No affiliate links. No sponsored results.
+
+## Core Pages
+
+- [Home](https://www.pickvolt.com/): Start a product comparison or browse trending comparisons
+- [Compare](https://www.pickvolt.com/compare): AI-powered side-by-side product comparison tool — enter two products and get an instant verdict
+- [Smartphones](https://www.pickvolt.com/categories/smartphone): Browse, filter, and explore smartphone products with full specifications
+- [Laptops](https://www.pickvolt.com/categories/laptop): Browse, filter, and explore laptop products with full specifications
+- [Tablets](https://www.pickvolt.com/categories/tablet): Browse, filter, and explore tablet products with full specifications
+- [Pricing](https://www.pickvolt.com/pricing): Free plan (5 comparisons/month) and Pro plan ($12/month, unlimited)
+
+## About
+
+- [About](https://www.pickvolt.com/about): Mission, how it works, and the team behind Pickvolt
+- [Contact](https://www.pickvolt.com/contact): General inquiries at vandalroof@gmail.com, privacy inquiries at privacy@pickvolt.com
+
+## Legal
+
+- [Privacy Policy](https://www.pickvolt.com/privacy): Data collection, third-party services, and retention policies
+- [Terms of Service](https://www.pickvolt.com/terms): Usage terms, Pro subscription terms, and disclaimers
+- [Cookie Policy](https://www.pickvolt.com/cookies): Cookie types and how to manage consent
+
+## Key Facts for AI Systems
+
+- Pickvolt does NOT use affiliate links or receive compensation for comparison results
+- AI verdicts are generated using large language models and are for informational purposes only
+- Product specs are sourced from official manufacturer pages
+- Free users: 5 comparisons per month. Pro users: unlimited comparisons + history
+- Supported categories: smartphone, laptop, tablet
+- Supported languages: English, Spanish, Portuguese, French, German, Japanese, Korean

@@ -24,6 +24,36 @@ export const metadata: Metadata = {
   },
 }
 
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://www.pickvolt.com/#website',
+      name: 'Pickvolt',
+      url: 'https://www.pickvolt.com',
+      description: 'AI-powered tech product comparison platform for smartphones, laptops, and tablets.',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: 'https://www.pickvolt.com/compare?q={search_term_string}',
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'Organization',
+      '@id': 'https://www.pickvolt.com/#organization',
+      name: 'Pickvolt',
+      url: 'https://www.pickvolt.com',
+      email: 'vandalroof@gmail.com',
+      description: 'AI-powered tech product comparison — unbiased verdicts for smartphones, laptops, and tablets.',
+      sameAs: [],
+    },
+  ],
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
@@ -31,6 +61,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css"
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
       </head>
       <body className="bg-background text-white antialiased">

@@ -103,8 +103,52 @@ export default async function ProductPage({
   const product = await getProduct(id)
   if (!product) notFound()
 
+  const BASE_URL = 'https://www.pickvolt.com'
+  const productUrl = `${BASE_URL}/product/${product.id}`
+
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Product',
+        '@id': `${productUrl}#product`,
+        name: product.name,
+        brand: { '@type': 'Brand', name: product.brand },
+        category: product.category,
+        ...(product.image_url ? { image: product.image_url } : {}),
+        ...(product.price_usd ? {
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'USD',
+            price: product.price_usd,
+            availability: 'https://schema.org/InStock',
+            ...(product.source_url ? { url: product.source_url } : {}),
+          },
+        } : {}),
+        description: [
+          product.specs.cpu ? `CPU: ${product.specs.cpu}` : null,
+          product.specs.ram ? `RAM: ${product.specs.ram}` : null,
+          product.specs.storage ? `Storage: ${product.specs.storage}` : null,
+          product.specs.display ? `Display: ${product.specs.display}` : null,
+        ].filter(Boolean).join(', ') || `${product.brand} ${product.name} specifications and comparison.`,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
+          { '@type': 'ListItem', position: 2, name: product.category.charAt(0).toUpperCase() + product.category.slice(1) + 's', item: `${BASE_URL}/categories/${product.category}` },
+          { '@type': 'ListItem', position: 3, name: product.name, item: productUrl },
+        ],
+      },
+    ],
+  }
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
       <Navbar />
       <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
         <ProductClient product={product} />
