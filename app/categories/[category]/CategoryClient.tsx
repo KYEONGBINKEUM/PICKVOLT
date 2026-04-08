@@ -178,16 +178,14 @@ function ProductCard({ product }: { product: Product }) {
           {/* Specs grid — 2 cols */}
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             {specGrid.map((row, ri) =>
-              row.map((s, ci) =>
-                s.value ? (
-                  <div key={`${ri}-${ci}`}>
-                    <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                    <p className="text-[11px] font-semibold text-white/75">{s.value}</p>
-                  </div>
-                ) : (
-                  <div key={`${ri}-${ci}`} />
-                )
-              )
+              row.map((s, ci) => (
+                <div key={`${ri}-${ci}`}>
+                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                  <p className={`text-[11px] font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                    {s.value ?? '–'}
+                  </p>
+                </div>
+              ))
             )}
           </div>
 
