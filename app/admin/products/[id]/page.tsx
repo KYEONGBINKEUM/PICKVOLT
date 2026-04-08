@@ -13,6 +13,12 @@ const CATEGORIES = ['laptop', 'smartphone', 'tablet', 'smartwatch']
 const SCRAPE_STATUSES = ['ok', 'pending', 'failed', 'partial']
 const STORAGE_TYPES = ['SSD', 'HDD', 'eMMC', 'UFS']
 const DISPLAY_TYPES = ['IPS', 'OLED', 'AMOLED', 'LTPO OLED', 'VA', 'TN', 'Mini-LED', 'Liquid Retina']
+const BRANDS = [
+  // 스마트폰/태블릿
+  'Apple', 'Samsung', 'Xiaomi', 'OPPO', 'Vivo', 'Huawei', 'Motorola', 'OnePlus', 'Google', 'Realme', 'Sony', 'Nokia',
+  // 노트북
+  'Dell', 'HP', 'Lenovo', 'ASUS', 'Acer', 'Microsoft', 'LG', 'Razer', 'MSI', 'Toshiba',
+]
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
 
@@ -390,7 +396,16 @@ export default function ProductEditPage() {
               </Field>
             </div>
             <Field label="브랜드">
-              <TextInput value={g(form, 'brand')} onChange={(v) => patchForm('brand', v)} />
+              <input
+                type="text"
+                list="brand-list"
+                value={g(form, 'brand')}
+                onChange={(e) => patchForm('brand', e.target.value)}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+              />
+              <datalist id="brand-list">
+                {BRANDS.map((b) => <option key={b} value={b} />)}
+              </datalist>
             </Field>
             <Field label="카테고리">
               <SelectInput value={g(form, 'category')} onChange={(v) => patchForm('category', v)} options={CATEGORIES} />
@@ -560,6 +575,54 @@ export default function ProductEditPage() {
                 CPU ID: <span className="text-white/60 font-mono">{commonSpecs.cpu_id as string}</span>
                 &nbsp;·&nbsp;이 값들은 상대 점수 산출 및 레이더 차트의 Performance 축에 직접 반영됩니다.
               </p>
+              {/* 점수 참고 링크 */}
+              {linkedCpuName && (
+                <div className="flex flex-wrap gap-2 pb-2">
+                  <span className="text-xs text-white/30 self-center">점수 참고:</span>
+                  {(category === 'smartphone' || category === 'tablet') ? (
+                    <>
+                      <a
+                        href={`https://nanoreview.net/en/search?q=${encodeURIComponent(linkedCpuName)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
+                      >
+                        <ExternalLink size={11} /> NanoReview
+                      </a>
+                      <a
+                        href={`https://antutu.com/en/search.htm?q=${encodeURIComponent(linkedCpuName)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
+                      >
+                        <ExternalLink size={11} /> AnTuTu
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <a
+                        href={`https://www.cpu-monkey.com/en/search/?q=${encodeURIComponent(linkedCpuName)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
+                      >
+                        <ExternalLink size={11} /> CPU-Monkey
+                      </a>
+                      <a
+                        href={`https://www.cpubenchmark.net/cpu.php?cpu=${encodeURIComponent(linkedCpuName)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
+                      >
+                        <ExternalLink size={11} /> Passmark CPU
+                      </a>
+                      <a
+                        href={`https://www.videocardbenchmark.net/gpu.php?gpu=${encodeURIComponent(linkedCpuName)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
+                      >
+                        <ExternalLink size={11} /> Passmark GPU
+                      </a>
+                    </>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Relative Score (0 – 1000, 카테고리 내 비교 기준)">
                   <NumberInput

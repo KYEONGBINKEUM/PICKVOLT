@@ -164,7 +164,7 @@ function ProductCard({ product }: { product: Product }) {
         {/* Content — right */}
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2">
           <div>
-            <p className="text-[9px] text-white/30 uppercase tracking-widest font-semibold mb-0.5">{product.brand}</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-0.5">{product.brand}</p>
             <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
               {product.name}
             </h3>
@@ -180,8 +180,8 @@ function ProductCard({ product }: { product: Product }) {
             {specGrid.map((row, ri) =>
               row.map((s, ci) => (
                 <div key={`${ri}-${ci}`}>
-                  <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                  <p className={`text-[11px] font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                  <p className={`text-xs font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                     {s.value ?? '–'}
                   </p>
                 </div>

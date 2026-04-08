@@ -44,7 +44,7 @@ async function runWithGemini(prompt: string) {
     contents: prompt,
     config: {
       thinkingConfig: {
-        thinkingLevel: ThinkingLevel.HIGH,
+        thinkingLevel: ThinkingLevel.LOW,
       },
     },
   })

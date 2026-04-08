@@ -161,11 +161,15 @@ function SpecRow({
   sublabel,
   values,
   barMax = 100,
+  winnerIndex = -1,
+  winnerColor = '#FF6B2B',
 }: {
   label: string
   sublabel: string
   values: { primary: string | number; secondary?: string; bar?: number }[]
   barMax?: number
+  winnerIndex?: number
+  winnerColor?: string
 }) {
   return (
     <div
@@ -177,7 +181,8 @@ function SpecRow({
         <span className="text-sm font-semibold text-white">{label}</span>
       </div>
       {values.map((v, i) => (
-        <div key={i} className="p-4 border-l border-border">
+        <div key={i} className="p-4 border-l border-border transition-colors"
+          style={i === winnerIndex ? { backgroundColor: `${winnerColor}12` } : {}}>
           <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
           {v.secondary && <p className="text-xs text-white/40 mt-1">{v.secondary}</p>}
           {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} />}
@@ -507,7 +512,7 @@ export default function CompareClient() {
     }
   }
 
-  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number }[]; barMax?: number }
+  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fmtDisplay = (raw: Record<string, any>) => {
@@ -569,21 +574,25 @@ export default function CompareClient() {
       label: t('spec.performance'),
       sublabel: t('spec.benchmark'),
       barMax: 100,
+      higherIsBetter: true,
       values: products.map((p, i) => {
         const score = productScores ? productScores[i].details.find((d) => d.label === 'Performance')?.score : null
         return {
           primary: score != null ? score : '—',
           secondary: p.specs.cpu ?? undefined,
           bar: score ?? undefined,
+          numericVal: score ?? undefined,
         }
       }),
     }
     const ramRow: SpecRowData = {
       label: t('spec.ram'),
       sublabel: t('spec.memory'),
+      higherIsBetter: true,
       values: products.map((p) => {
         const sel = selectedVariants[p.id]?.ram_gb
-        return { primary: sel != null ? fmtGB(sel) : (p.raw.ram_gb ? `${p.raw.ram_gb}GB` : '—') }
+        const n = sel ?? parseOptions(p.raw.ram_gb).reduce((a, b) => Math.max(a, b), 0) || null
+        return { primary: sel != null ? fmtGB(sel) : (p.raw.ram_gb ? `${p.raw.ram_gb}GB` : '—'), numericVal: n ?? undefined }
       }),
     }
     const storageRow: SpecRowData = {
@@ -626,16 +635,20 @@ export default function CompareClient() {
         {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
+          higherIsBetter: true,
           values: products.map((p) => ({
             primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
+            numericVal: p.raw.battery_mah ?? undefined,
           })),
         },
         osRow,
         {
           label: t('spec.weight'),
           sublabel: t('spec.weight_body'),
+          higherIsBetter: false,
           values: products.map((p) => ({
             primary: p.raw.weight_g ? `${p.raw.weight_g}g` : '—',
+            numericVal: p.raw.weight_g ?? undefined,
           })),
         },
       ]
@@ -650,23 +663,29 @@ export default function CompareClient() {
         {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
+          higherIsBetter: true,
           values: products.map((p) => ({
             primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
+            numericVal: p.raw.battery_wh ?? undefined,
           })),
         },
         {
           label: t('spec.battery_life'),
           sublabel: t('spec.battery_est'),
+          higherIsBetter: true,
           values: products.map((p) => ({
             primary: p.raw.battery_hours ? `${p.raw.battery_hours} hrs` : '—',
+            numericVal: p.raw.battery_hours ?? undefined,
           })),
         },
         osRow,
         {
           label: t('spec.weight'),
           sublabel: t('spec.weight_body'),
+          higherIsBetter: false,
           values: products.map((p) => ({
             primary: p.raw.weight_kg ? `${p.raw.weight_kg} kg` : '—',
+            numericVal: p.raw.weight_kg ?? undefined,
           })),
         },
       ]
@@ -689,8 +708,10 @@ export default function CompareClient() {
         {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
+          higherIsBetter: true,
           values: products.map((p) => ({
             primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
+            numericVal: p.raw.battery_mah ?? undefined,
           })),
         },
         {
@@ -905,15 +926,13 @@ export default function CompareClient() {
                       const isWinner = s.overall === maxScore
                       const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
                       return (
-                        <div key={i} className="p-4 border-l border-border">
+                        <div key={i} className="p-4 border-l border-border transition-colors"
+                          style={isWinner ? { backgroundColor: `${color}12` } : {}}>
                           <div className="flex items-baseline gap-1.5 mb-2">
                             <span className="text-3xl font-black leading-none" style={{ color }}>
                               {s.overall}
                             </span>
                             <span className="text-xs text-white/30 font-semibold">/ 100</span>
-                            {isWinner && (
-                              <span className="ml-1 text-[9px] font-black tracking-widest bg-accent text-white rounded-full px-2 py-0.5 uppercase">Best</span>
-                            )}
                           </div>
                           <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                             <div
@@ -928,15 +947,31 @@ export default function CompareClient() {
                 )
               })()}
 
-              {specRows.map((row) => (
-                <SpecRow
-                  key={row.label}
-                  label={row.label}
-                  sublabel={row.sublabel}
-                  values={row.values}
-                  barMax={row.barMax}
-                />
-              ))}
+              {specRows.map((row, ri) => {
+                // 숫자 값이 있는 행에서 winner 셀 계산
+                let winnerIndex = -1
+                if (row.higherIsBetter !== undefined) {
+                  const nums = row.values.map((v) => v.numericVal ?? null)
+                  const valid = nums.filter((n) => n != null) as number[]
+                  if (valid.length > 1) {
+                    const best = row.higherIsBetter ? Math.max(...valid) : Math.min(...valid)
+                    const idx = nums.indexOf(best)
+                    if (idx !== -1 && nums.filter((n) => n === best).length === 1) winnerIndex = idx
+                  }
+                }
+                const winnerColor = winnerIndex >= 0 ? PRODUCT_COLORS[winnerIndex % PRODUCT_COLORS.length] : '#FF6B2B'
+                return (
+                  <SpecRow
+                    key={`${row.label}-${ri}`}
+                    label={row.label}
+                    sublabel={row.sublabel}
+                    values={row.values}
+                    barMax={row.barMax}
+                    winnerIndex={winnerIndex}
+                    winnerColor={winnerColor}
+                  />
+                )
+              })}
             </div>
 
             {/* 레이더 차트 */}
