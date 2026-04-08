@@ -164,8 +164,8 @@ function ProductCard({ product }: { product: Product }) {
         {/* Content — right */}
         <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2">
           <div>
-            <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold mb-0.5">{product.brand}</p>
-            <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+            <p className="text-xs text-white/30 uppercase tracking-widest font-semibold mb-0.5">{product.brand}</p>
+            <h3 className="text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
               {product.name}
             </h3>
             {product.price_usd && (
