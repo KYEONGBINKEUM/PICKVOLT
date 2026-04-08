@@ -65,6 +65,8 @@ export default function AdminPage() {
   // Products
   const [products, setProducts] = useState<{
     id: string; name: string; brand: string; category: string; image_url: string | null; scrape_status: string | null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    specs_common: any
   }[]>([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -112,7 +114,7 @@ export default function AdminPage() {
     if (!authed) return
     let q = supabase
       .from('products')
-      .select('id, name, brand, category, image_url, scrape_status')
+      .select('id, name, brand, category, image_url, scrape_status, specs_common(cpu_id)')
       .order('brand').order('name')
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
     if (search) q = q.ilike('name', `%${search}%`)
@@ -345,6 +347,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">카테고리</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8">이미지</th>
+                    <th className="px-4 py-3 text-white/40 font-medium w-8 hidden md:table-cell" title="CPU 연결 여부">CPU</th>
                     <th className="w-20 px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -367,6 +370,11 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-2">
                         <ImageStatus url={p.image_url} />
+                      </td>
+                      <td className="px-4 py-2 hidden md:table-cell">
+                        {p.specs_common?.cpu_id
+                          ? <CheckCircle size={14} className="text-emerald-400" />
+                          : <AlertCircle size={14} className="text-amber-400" />}
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1">

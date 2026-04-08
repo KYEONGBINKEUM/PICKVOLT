@@ -51,6 +51,16 @@ export async function POST(req: NextRequest) {
 
   const supabase = makeServiceClient()
 
+  // 동일 이름(대소문자 무시) 중복 방지
+  const { data: existing } = await supabase
+    .from('cpus')
+    .select('id, name, relative_score, score_source')
+    .ilike('name', name)
+    .limit(1)
+    .single()
+
+  if (existing) return NextResponse.json({ ...existing, duplicate: true })
+
   const { data, error } = await supabase
     .from('cpus')
     .insert({

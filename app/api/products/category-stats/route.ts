@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const revalidate = 3600 // 1시간 캐시 — 신제품 추가 시 자동 갱신
+
 function firstNum(val: string | number | null | undefined): number | null {
   if (val == null) return null
   const n = parseFloat(String(val).split(',')[0].trim())
