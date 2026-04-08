@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
@@ -109,6 +109,13 @@ export default function ProductEditPage() {
   const [cpuScores, setCpuScores] = useState<{ relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; score_source: string }>({
     relative_score: null, gb6_single: null, gb6_multi: null, score_source: '',
   })
+  // CPU 검색 & 연결
+  const [cpuQuery, setCpuQuery]       = useState('')
+  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpuSearchOpen, setCpuSearchOpen] = useState(false)
+  const [cpuCreating, setCpuCreating] = useState(false)
+  const [linkedCpuName, setLinkedCpuName] = useState('')
+  const cpuSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [imagePreview, setImagePreview] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -184,11 +191,48 @@ export default function ProductEditPage() {
                   gb6_multi:      cpu.gb6_multi       ?? null,
                   score_source:   cpu.score_source    ?? '',
                 })
+                setLinkedCpuName(cpu.name ?? '')
               }
             })
         }
       })
   }, [authed, id])
+
+  // CPU 검색 (디바운스 300ms)
+  const searchCpus = useCallback((q: string) => {
+    if (cpuSearchRef.current) clearTimeout(cpuSearchRef.current)
+    if (!q.trim()) { setCpuResults([]); return }
+    cpuSearchRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/admin/cpus?q=${encodeURIComponent(q)}`)
+      const json = await res.json()
+      setCpuResults(json.cpus ?? [])
+    }, 300)
+  }, [])
+
+  const selectCpu = (cpu: { id: string; name: string; relative_score: number | null; score_source: string | null }) => {
+    setCommonSpecs((p) => ({ ...p, cpu_id: cpu.id }))
+    setLinkedCpuName(cpu.name)
+    setCpuScores((p) => ({ ...p, relative_score: cpu.relative_score ?? null, score_source: cpu.score_source ?? '' }))
+    setCpuSearchOpen(false)
+    setCpuQuery('')
+    setCpuResults([])
+  }
+
+  const createCpu = async () => {
+    if (!cpuQuery.trim()) return
+    setCpuCreating(true)
+    try {
+      const res = await fetch('/api/admin/cpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: cpuQuery.trim() }),
+      })
+      const json = await res.json()
+      if (json.id) selectCpu(json)
+    } finally {
+      setCpuCreating(false)
+    }
+  }
 
   const patchForm = (field: string, value: unknown) => {
     setForm((p) => ({ ...p, [field]: value }))
@@ -368,6 +412,92 @@ export default function ProductEditPage() {
         {/* ── 공통 스펙 ── */}
         <SectionCard title="공통 스펙 (specs_common)">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* CPU 검색 & 연결 */}
+            <div className="md:col-span-2">
+              <label className="block text-xs text-white/40 mb-1.5">CPU 연결 (벤치마크 점수용)</label>
+
+              {/* 현재 연결된 CPU */}
+              <div className="flex items-center gap-2 mb-2">
+                {commonSpecs.cpu_id ? (
+                  <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 rounded-lg px-3 py-2 flex-1">
+                    <Link2 size={13} className="text-accent flex-shrink-0" />
+                    <span className="text-sm text-white font-semibold truncate">{linkedCpuName || (commonSpecs.cpu_id as string)}</span>
+                    {cpuScores.relative_score != null && (
+                      <span className="ml-auto text-xs text-accent/70 flex-shrink-0">score {cpuScores.relative_score}</span>
+                    )}
+                    <button onClick={() => { setCommonSpecs((p) => ({ ...p, cpu_id: undefined })); setLinkedCpuName(''); setCpuScores({ relative_score: null, gb6_single: null, gb6_multi: null, score_source: '' }) }}
+                      className="ml-1 text-white/30 hover:text-red-400 transition-colors flex-shrink-0">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 bg-white/5 border border-border rounded-lg px-3 py-2 flex-1">
+                    <Link2 size={13} className="text-white/20 flex-shrink-0" />
+                    <span className="text-sm text-white/30">연결된 CPU 없음</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => { setCpuSearchOpen(!cpuSearchOpen); setCpuQuery(''); setCpuResults([]) }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-border rounded-lg text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors"
+                >
+                  <Search size={13} />
+                  {cpuSearchOpen ? '닫기' : 'CPU 검색'}
+                </button>
+              </div>
+
+              {/* 검색 패널 */}
+              {cpuSearchOpen && (
+                <div className="bg-background border border-border rounded-xl p-3">
+                  <input
+                    type="text"
+                    value={cpuQuery}
+                    placeholder="CPU 이름 검색 (예: Snapdragon 8 Gen 3, Apple M4...)"
+                    onChange={(e) => { setCpuQuery(e.target.value); searchCpus(e.target.value) }}
+                    autoFocus
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent mb-2"
+                  />
+
+                  {/* 검색 결과 */}
+                  {cpuResults.length > 0 && (
+                    <div className="space-y-1 mb-2">
+                      {cpuResults.map((cpu) => (
+                        <button
+                          key={cpu.id}
+                          onClick={() => selectCpu(cpu)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-accent/30 transition-all text-left"
+                        >
+                          <div>
+                            <p className="text-sm text-white font-semibold">{cpu.name}</p>
+                            {cpu.score_source && <p className="text-xs text-white/30">{cpu.score_source}</p>}
+                          </div>
+                          {cpu.relative_score != null && (
+                            <span className="text-xs font-bold text-accent ml-3 flex-shrink-0">score {cpu.relative_score}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 결과 없을 때 새 CPU 생성 */}
+                  {cpuQuery.trim() && cpuResults.length === 0 && (
+                    <button
+                      onClick={createCpu}
+                      disabled={cpuCreating}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-accent/40 text-accent hover:bg-accent/10 transition-colors text-sm disabled:opacity-50"
+                    >
+                      {cpuCreating ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                      &quot;{cpuQuery.trim()}&quot; 으로 새 CPU 생성
+                    </button>
+                  )}
+
+                  {!cpuQuery.trim() && (
+                    <p className="text-xs text-white/20 text-center py-1">CPU 이름을 입력하면 검색됩니다</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Field label="CPU 이름">
               <TextInput value={g(commonSpecs, 'cpu_name')} onChange={(v) => patchCommon('cpu_name', v)} placeholder="Apple M4 Pro" />
             </Field>
