@@ -20,7 +20,7 @@ export default async function CategoryPage({
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-background pt-20">
+      <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
         <CategoryClient category={category} />
       </main>
     </>
