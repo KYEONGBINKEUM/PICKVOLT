@@ -129,6 +129,132 @@ export function scoreWeightLaptop(kg: number | null): number {
   return 28
 }
 
+// ─── 상대 점수 (DB 전체 기준 백분위) ─────────────────────────────────────────
+
+/** 카테고리 전체 min/max 범위 (category-stats API 응답) */
+export interface CategoryStats {
+  relativeScore: { min: number; max: number }
+  ram:           { min: number; max: number }
+  storage:       { min: number; max: number }
+  batteryMah:    { min: number; max: number }
+  batteryWh:     { min: number; max: number }
+  batteryHours:  { min: number; max: number }
+  cameraMP:      { min: number; max: number }
+  ppi:           { min: number; max: number }
+  weightG:       { min: number; max: number }
+  weightKg:      { min: number; max: number }
+}
+
+/** 높을수록 좋은 스펙: (value - min) / (max - min) * 100 */
+function relHigh(value: number | null, range: { min: number; max: number }): number {
+  if (value == null) return 0
+  const { min, max } = range
+  if (max === min) return 50
+  return Math.min(100, Math.max(0, Math.round((value - min) / (max - min) * 100)))
+}
+
+/** 낮을수록 좋은 스펙 (무게): (max - value) / (max - min) * 100 */
+function relLow(value: number | null, range: { min: number; max: number }): number {
+  if (value == null) return 0
+  const { min, max } = range
+  if (max === min) return 50
+  return Math.min(100, Math.max(0, Math.round((max - value) / (max - min) * 100)))
+}
+
+export interface RelativeScoreBreakdown {
+  overall: number
+  details: { label: string; score: number; weight: number }[]
+}
+
+/** DB 전체 min/max 기준 상대 점수 산출 — 신제품 추가 시 기존 제품 점수 자동 하락 */
+export function computeRelativeScores(
+  input: ScoringInput,
+  stats: CategoryStats,
+): RelativeScoreBreakdown {
+  const { category } = input
+
+  const perf    = relHigh(input.relativeScore ?? null, stats.relativeScore)
+  const ram     = relHigh(firstNum(input.ram_gb),      stats.ram)
+  const stor    = relHigh(firstNum(input.storage_gb),  stats.storage)
+
+  // PPI
+  const ppiVal  = computePPI(input.display_resolution, input.display_inch)
+  const disp    = relHigh(ppiVal, stats.ppi)
+
+  if (category === 'smartphone') {
+    const cam    = relHigh(input.camera_main_mp ?? null, stats.cameraMP)
+    const bat    = relHigh(input.battery_mah    ?? null, stats.batteryMah)
+    const weight = relLow(input.weight_g        ?? null, stats.weightG)
+
+    const overall = Math.round(
+      perf * 0.30 + cam * 0.20 + ram * 0.15 + bat * 0.15 + disp * 0.15 + weight * 0.05
+    )
+    return {
+      overall,
+      details: [
+        { label: 'Performance', score: perf,   weight: 30 },
+        { label: 'Camera',      score: cam,    weight: 20 },
+        { label: 'RAM',         score: ram,    weight: 15 },
+        { label: 'Battery',     score: bat,    weight: 15 },
+        { label: 'Display',     score: disp,   weight: 15 },
+        { label: 'Weight',      score: weight, weight:  5 },
+      ],
+    }
+  }
+
+  if (category === 'laptop') {
+    const bat    = input.battery_hours
+      ? relHigh(input.battery_hours ?? null, stats.batteryHours)
+      : relHigh(input.battery_wh    ?? null, stats.batteryWh)
+    const weight = relLow(input.weight_kg ?? null, stats.weightKg)
+
+    const overall = Math.round(
+      perf * 0.35 + ram * 0.20 + bat * 0.15 + stor * 0.15 + disp * 0.10 + weight * 0.05
+    )
+    return {
+      overall,
+      details: [
+        { label: 'Performance', score: perf,   weight: 35 },
+        { label: 'RAM',         score: ram,    weight: 20 },
+        { label: 'Battery',     score: bat,    weight: 15 },
+        { label: 'Storage',     score: stor,   weight: 15 },
+        { label: 'Display',     score: disp,   weight: 10 },
+        { label: 'Weight',      score: weight, weight:  5 },
+      ],
+    }
+  }
+
+  if (category === 'tablet') {
+    const cam = relHigh(input.camera_main_mp ?? null, stats.cameraMP)
+    const bat = relHigh(input.battery_mah    ?? null, stats.batteryMah)
+
+    const overall = Math.round(
+      perf * 0.30 + ram * 0.20 + bat * 0.20 + disp * 0.15 + cam * 0.15
+    )
+    return {
+      overall,
+      details: [
+        { label: 'Performance', score: perf, weight: 30 },
+        { label: 'RAM',         score: ram,  weight: 20 },
+        { label: 'Battery',     score: bat,  weight: 20 },
+        { label: 'Display',     score: disp, weight: 15 },
+        { label: 'Camera',      score: cam,  weight: 15 },
+      ],
+    }
+  }
+
+  // Generic fallback
+  const overall = Math.round(perf * 0.50 + ram * 0.30 + stor * 0.20)
+  return {
+    overall,
+    details: [
+      { label: 'Performance', score: perf, weight: 50 },
+      { label: 'RAM',         score: ram,  weight: 30 },
+      { label: 'Storage',     score: stor, weight: 20 },
+    ],
+  }
+}
+
 // ─── PPI 계산 헬퍼 ────────────────────────────────────────────────────────────
 
 /** "2596x1224" 같은 해상도 문자열과 인치 값으로 PPI 계산 */

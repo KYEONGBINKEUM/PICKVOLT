@@ -10,7 +10,8 @@ import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle } from '@/lib/utils'
-import { computeScores } from '@/lib/scoring'
+import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
+import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 
 interface ProductSpecs {
   cpu?: string | null
@@ -326,6 +327,7 @@ export default function CompareClient() {
   const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
+  const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
 
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
   const ranKeyRef = useRef<string>('')
@@ -446,6 +448,16 @@ export default function CompareClient() {
     runComparison(ids)
   }, [idsParam, runComparison, session])
 
+  // 카테고리 결정 후 DB 전체 min/max 범위 조회
+  useEffect(() => {
+    if (products.length === 0) return
+    const cat = products[0].category.toLowerCase()
+    fetch(`/api/products/category-stats?category=${cat}`)
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setCategoryStats(d) })
+      .catch(() => {})
+  }, [products])
+
   const handleNavSearch = (v: string) => {
     if (v.trim()) {
       router.push(`/compare?q=${encodeURIComponent(v.trim())}`)
@@ -480,23 +492,33 @@ export default function CompareClient() {
 
   const category = products.length > 0 ? products[0].category.toLowerCase() : ''
 
-  // 제품별 종합 점수 계산
-  const productScores = products.map((p) => computeScores({
-    category,
-    gb6Single:         p.specs.gb6Single,
-    gb6Multi:          p.specs.gb6Multi,
-    relativeScore:     p.specs.performanceScore,
-    ram_gb:            p.raw.ram_gb,
-    storage_gb:        p.raw.storage_gb,
-    battery_mah:       p.raw.battery_mah,
-    battery_wh:        p.raw.battery_wh,
-    battery_hours:     p.raw.battery_hours,
-    camera_main_mp:    p.raw.camera_main_mp,
-    weight_g:          p.raw.weight_g,
-    weight_kg:         p.raw.weight_kg,
-    display_inch:      p.raw.display_inch,
-    display_resolution: p.raw.display_resolution,
-  }))
+  // 제품별 종합 점수 계산 (DB 전체 대비 상대 점수 — stats 로드 전엔 null)
+  const productScores = categoryStats
+    ? products.map((p) => computeRelativeScores({
+        category,
+        relativeScore:      p.specs.performanceScore,
+        ram_gb:             p.raw.ram_gb,
+        storage_gb:         p.raw.storage_gb,
+        battery_mah:        p.raw.battery_mah,
+        battery_wh:         p.raw.battery_wh,
+        battery_hours:      p.raw.battery_hours,
+        camera_main_mp:     p.raw.camera_main_mp,
+        weight_g:           p.raw.weight_g,
+        weight_kg:          p.raw.weight_kg,
+        display_inch:       p.raw.display_inch,
+        display_resolution: p.raw.display_resolution,
+      }, categoryStats))
+    : null
+
+  // 레이더 차트용 데이터
+  const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
+  const radarProducts: RadarProduct[] | null = productScores
+    ? products.map((p, i) => ({
+        name: p.name,
+        color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
+        dimensions: productScores[i].details.map((d) => ({ label: d.label, score: d.score })),
+      }))
+    : null
 
   const buildSpecRows = (): SpecRowData[] => {
     if (products.length === 0) return []
@@ -505,11 +527,14 @@ export default function CompareClient() {
       label: t('spec.performance'),
       sublabel: t('spec.benchmark'),
       barMax: 100,
-      values: products.map((p, i) => ({
-        primary: productScores[i].performance,
-        secondary: p.specs.cpu ?? undefined,
-        bar: productScores[i].performance,
-      })),
+      values: products.map((p, i) => {
+        const score = productScores ? productScores[i].details.find((d) => d.label === 'Performance')?.score : null
+        return {
+          primary: score != null ? score : '—',
+          secondary: p.specs.cpu ?? undefined,
+          bar: score ?? undefined,
+        }
+      }),
     }
     const ramRow: SpecRowData = {
       label: t('spec.ram'),
@@ -763,8 +788,8 @@ export default function CompareClient() {
                 ))}
               </div>
 
-              {/* Overall Score row */}
-              {productScores.length >= 2 && (() => {
+              {/* Overall Score row — DB 전체 상대 점수 */}
+              {productScores && productScores.length >= 2 && (() => {
                 const maxScore = Math.max(...productScores.map((s) => s.overall))
                 return (
                   <div
@@ -772,19 +797,19 @@ export default function CompareClient() {
                     style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
                   >
                     <div className="p-4 flex flex-col gap-0.5 justify-center">
-                      <span className="text-xs text-white/40">Pickvolt</span>
+                      <span className="text-xs text-accent/70 uppercase tracking-widest font-bold">Pickvolt</span>
                       <span className="text-sm font-semibold text-white">Overall Score</span>
+                      <span className="text-[10px] text-white/30 mt-1 leading-snug">
+                        Relative to all<br />{category}s in DB
+                      </span>
                     </div>
                     {productScores.map((s, i) => {
                       const isWinner = s.overall === maxScore
-                      const scoreColor = s.overall >= 75 ? '#22c55e' : s.overall >= 50 ? '#f59e0b' : '#ef4444'
+                      const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
                       return (
                         <div key={i} className="p-4 border-l border-border">
                           <div className="flex items-baseline gap-1.5 mb-2">
-                            <span
-                              className="text-3xl font-black leading-none"
-                              style={{ color: scoreColor }}
-                            >
+                            <span className="text-3xl font-black leading-none" style={{ color }}>
                               {s.overall}
                             </span>
                             <span className="text-xs text-white/30 font-semibold">/ 100</span>
@@ -792,17 +817,24 @@ export default function CompareClient() {
                               <span className="ml-1 text-[9px] font-black tracking-widest bg-accent text-white rounded-full px-2 py-0.5 uppercase">Best</span>
                             )}
                           </div>
-                          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mb-2">
                             <div
                               className="h-full rounded-full transition-all duration-700"
-                              style={{ width: `${s.overall}%`, backgroundColor: scoreColor }}
+                              style={{ width: `${s.overall}%`, backgroundColor: color }}
                             />
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+                          <div className="flex flex-col gap-1">
                             {s.details.map((d) => (
-                              <span key={d.label} className="text-[10px] text-white/30">
-                                {d.label} <span className="text-white/50">{d.score}</span>
-                              </span>
+                              <div key={d.label} className="flex items-center gap-2">
+                                <span className="text-[10px] text-white/30 w-16 flex-shrink-0">{d.label}</span>
+                                <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{ width: `${d.score}%`, backgroundColor: color, opacity: 0.6 }}
+                                  />
+                                </div>
+                                <span className="text-[10px] text-white/40 w-6 text-right">{d.score}</span>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -822,6 +854,51 @@ export default function CompareClient() {
                 />
               ))}
             </div>
+
+            {/* 레이더 차트 */}
+            {radarProducts && (
+              <div className="bg-surface border border-border rounded-card p-6 mb-6">
+                <div className="mb-4">
+                  <p className="text-xs text-accent/70 uppercase tracking-widest font-bold mb-0.5">Pickvolt Score</p>
+                  <p className="text-sm font-bold text-white">Spec Radar</p>
+                  <p className="text-xs text-white/30 mt-0.5">Relative to all {category}s in DB — updates automatically as new products are added</p>
+                </div>
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex-shrink-0">
+                    <RadarChart products={radarProducts} size={260} />
+                  </div>
+                  <div className="flex-1 w-full space-y-4">
+                    {radarProducts.map((rp, i) => (
+                      <div key={i}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: rp.color }} />
+                          <span className="text-xs font-bold text-white truncate">{rp.name}</span>
+                          {productScores && (
+                            <span className="ml-auto text-xs font-black" style={{ color: rp.color }}>
+                              {productScores[i].overall}<span className="text-white/30 font-normal">/100</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-1.5">
+                          {rp.dimensions.map((dim) => (
+                            <div key={dim.label} className="flex items-center gap-2">
+                              <span className="text-[10px] text-white/30 w-16 flex-shrink-0">{dim.label}</span>
+                              <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-700"
+                                  style={{ width: `${dim.score}%`, backgroundColor: rp.color }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-white/50 w-7 text-right">{dim.score}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 액션 버튼 */}
             <div className="flex items-center justify-end gap-3 mb-12">
