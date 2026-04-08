@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
-  Package, LayoutDashboard, Clock, Zap, ImageOff, Plus, Cpu,
+  Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -517,7 +517,6 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">가입일</th>
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">마지막 로그인</th>
                       <th className="text-right px-4 py-3 text-white/40 font-medium">비교수</th>
-                      <th className="text-center px-4 py-3 text-white/40 font-medium">플랜</th>
                       <th className="text-center px-4 py-3 text-white/40 font-medium hidden md:table-cell">로그인</th>
                     </tr>
                   </thead>
@@ -528,22 +527,13 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.last_sign_in_at)}</td>
                         <td className="px-4 py-3 text-white/70 text-right font-mono">{u.comparisons}</td>
-                        <td className="px-4 py-3 text-center">
-                          {u.plan === 'pro' ? (
-                            <span className="flex items-center justify-center gap-1 text-xs text-accent font-bold">
-                              <Zap size={11} />pro
-                            </span>
-                          ) : (
-                            <span className="text-xs text-white/30">free</span>
-                          )}
-                        </td>
                         <td className="px-4 py-3 text-center hidden md:table-cell">
                           <span className="text-xs text-white/30">{u.provider}</span>
                         </td>
                       </tr>
                     ))}
                     {users.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
                     )}
                   </tbody>
                 </table>
