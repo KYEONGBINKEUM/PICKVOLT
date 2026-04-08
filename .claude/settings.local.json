@@ -8,7 +8,9 @@
       "Bash(taskkill //F //IM node.exe)",
       "Bash(vercel --prod)",
       "Bash(taskkill //F //IM git.exe)",
-      "Bash(rmdir /s /q .git)"
+      "Bash(rmdir /s /q .git)",
+      "Bash(npx tsc:*)",
+      "WebSearch"
     ]
   }
 }

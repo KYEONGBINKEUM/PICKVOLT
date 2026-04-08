@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X } from 'lucide-react'
+import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
@@ -126,6 +126,8 @@ export default function ProductEditPage() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [nameTranslations, setNameTranslations] = useState<Record<string, string>>({ en: '', ko: '', ja: '', es: '', pt: '', fr: '', de: '' })
+  const [translating, setTranslating] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -142,7 +144,7 @@ export default function ProductEditPage() {
     supabase
       .from('products')
       .select(`
-        id, name, brand, category, image_url, price_usd, source_url, scrape_status,
+        id, name, brand, category, image_url, price_usd, source_url, scrape_status, name_translations,
         specs_common(*),
         specs_laptop(*),
         specs_smartphone(*),
@@ -163,6 +165,10 @@ export default function ProductEditPage() {
           source_url: data.source_url,
           scrape_status: data.scrape_status,
         })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (data.name_translations && typeof data.name_translations === 'object') {
+          setNameTranslations({ en: '', ko: '', ja: '', es: '', pt: '', fr: '', de: '', ...(data.name_translations as Record<string, string>) })
+        }
         setImagePreview((data.image_url as string) ?? '')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const common = data.specs_common as any
@@ -248,6 +254,29 @@ export default function ProductEditPage() {
   const patchCommon = (field: string, value: unknown) => setCommonSpecs((p) => ({ ...p, [field]: value }))
   const patchCat = (field: string, value: unknown) => setCategorySpecs((p) => ({ ...p, [field]: value }))
 
+  const handleTranslate = async () => {
+    const name = (form.name as string)?.trim()
+    if (!name) return
+    setTranslating(true)
+    try {
+      const res = await fetch('/api/admin/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name }),
+      })
+      const json = await res.json()
+      if (res.ok && json.translations) {
+        setNameTranslations(json.translations)
+      } else {
+        setMessage({ type: 'err', text: json.error ?? '번역 실패' })
+      }
+    } catch (e) {
+      setMessage({ type: 'err', text: String(e) })
+    } finally {
+      setTranslating(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     setMessage(null)
@@ -255,6 +284,7 @@ export default function ProductEditPage() {
       const category = (form.category as string) ?? ''
       const body: Record<string, unknown> = {
         ...form,
+        name_translations: nameTranslations,
         specs_common: commonSpecs,
         [`specs_${category}`]: categorySpecs,
         cpu_id: commonSpecs.cpu_id,
@@ -394,6 +424,34 @@ export default function ProductEditPage() {
               <Field label="제품명">
                 <TextInput value={g(form, 'name')} onChange={(v) => patchForm('name', v)} />
               </Field>
+            </div>
+            {/* 다국어 제품명 */}
+            <div className="md:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-white/40">다국어 제품명 (SEO)</label>
+                <button
+                  type="button"
+                  onClick={handleTranslate}
+                  disabled={translating || !g(form, 'name')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {translating ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />}
+                  {translating ? 'AI 번역 중...' : 'AI 자동 번역'}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {(['en', 'ko', 'ja', 'es', 'pt', 'fr', 'de'] as const).map((lang) => (
+                  <div key={lang}>
+                    <label className="block text-[10px] text-white/30 uppercase tracking-widest mb-1">{lang}</label>
+                    <input
+                      type="text"
+                      value={nameTranslations[lang] ?? ''}
+                      onChange={(e) => setNameTranslations((p) => ({ ...p, [lang]: e.target.value }))}
+                      className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent/50"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
             <Field label="브랜드">
               <input

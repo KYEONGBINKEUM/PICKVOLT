@@ -240,7 +240,7 @@ function FilterSection({
   return (
     <div className="bg-surface border border-border rounded-2xl p-4">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between mb-3">
-        <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{title}</p>
+        <p className="text-xs text-white/40 uppercase tracking-widest font-semibold">{title}</p>
         <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
       </button>
       {open && children}
