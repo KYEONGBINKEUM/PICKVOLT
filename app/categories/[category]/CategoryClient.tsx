@@ -621,7 +621,7 @@ export default function CategoryClient({ category }: { category: string }) {
         {/* Product list */}
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse flex h-28">
                   <div className="w-28 bg-surface-2 flex-shrink-0" />
@@ -655,7 +655,7 @@ export default function CategoryClient({ category }: { category: string }) {
             </div>
           ) : (
             <>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
