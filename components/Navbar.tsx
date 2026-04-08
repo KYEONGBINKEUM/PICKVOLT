@@ -32,7 +32,9 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
 
   const navLinks = [
     { href: '/', label: t('nav.compare') },
-    { href: '/categories', label: '카테고리' },
+    { href: '/categories/smartphone', label: t('cat.smartphone') },
+    { href: '/categories/laptop',     label: t('cat.laptop')     },
+    { href: '/categories/tablet',     label: t('cat.tablet')     },
     { href: '/history', label: t('nav.history') },
     { href: '/pricing', label: t('nav.pro') },
   ]

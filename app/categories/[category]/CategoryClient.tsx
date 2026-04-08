@@ -15,8 +15,9 @@ import {
   X,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
+import { useI18n } from '@/lib/i18n'
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Product {
   id: string
@@ -47,26 +48,26 @@ interface ApiResponse {
   limit: number
 }
 
-const SORT_OPTIONS = [
-  { value: 'performance', label: '성능순' },
-  { value: 'newest',      label: '최신순' },
-  { value: 'price_asc',   label: '가격 낮은순' },
-  { value: 'price_desc',  label: '가격 높은순' },
-]
+const CATEGORY_ICON: Record<string, typeof Smartphone> = {
+  smartphone: Smartphone,
+  laptop:     Laptop,
+  tablet:     Tablet,
+}
+
+const CATEGORY_SUBLABEL: Record<string, string> = {
+  smartphone: 'Smartphones',
+  laptop:     'Laptops',
+  tablet:     'Tablets',
+}
 
 const RAM_OPTIONS = [0, 4, 8, 12, 16, 32]
 
-const CATEGORY_META: Record<string, { label: string; sublabel: string; icon: typeof Smartphone }> = {
-  smartphone: { label: '스마트폰',  sublabel: 'Smartphones', icon: Smartphone },
-  laptop:     { label: '노트북',    sublabel: 'Laptops',     icon: Laptop     },
-  tablet:     { label: '태블릿',    sublabel: 'Tablets',     icon: Tablet     },
-}
-
-// ─── Product Card ────────────────────────────────────────────────────────────
+// ─── Product Card ─────────────────────────────────────────────────────────────
 
 function ProductCard({ product }: { product: Product }) {
+  const { t } = useI18n()
   const { cart, add, remove } = useCompareCart()
-  const inCart  = cart.some((i) => i.id === product.id)
+  const inCart   = cart.some((i) => i.id === product.id)
   const cartFull = cart.length >= 4
 
   const toggleCart = (e: React.MouseEvent) => {
@@ -75,17 +76,14 @@ function ProductCard({ product }: { product: Product }) {
     else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
   }
 
-  // Key specs per category
   const specs: { label: string; value: string }[] = []
-
-  if (product.display_inch) specs.push({ label: '화면', value: `${product.display_inch}"` })
-  if (product.ram_gb)        specs.push({ label: 'RAM',  value: `${product.ram_gb}GB` })
-
-  if (product.ppi)           specs.push({ label: 'PPI',     value: `${product.ppi}` })
-  if (product.battery_mah)   specs.push({ label: '배터리',   value: `${product.battery_mah.toLocaleString()} mAh` })
-  if (product.battery_wh)    specs.push({ label: '배터리',   value: `${product.battery_wh} Wh` })
-  if (product.weight_kg)     specs.push({ label: '무게',     value: `${product.weight_kg} kg` })
-  if (product.weight_g)      specs.push({ label: '무게',     value: `${product.weight_g} g` })
+  if (product.display_inch) specs.push({ label: t('cat.spec_display'), value: `${product.display_inch}"` })
+  if (product.ram_gb)        specs.push({ label: t('spec.ram'),          value: `${product.ram_gb}GB` })
+  if (product.ppi)           specs.push({ label: t('cat.spec_ppi'),      value: `${product.ppi}` })
+  if (product.battery_mah)   specs.push({ label: t('cat.spec_battery'),  value: `${product.battery_mah.toLocaleString()} mAh` })
+  if (product.battery_wh)    specs.push({ label: t('cat.spec_battery'),  value: `${product.battery_wh} Wh` })
+  if (product.weight_kg)     specs.push({ label: t('cat.spec_weight'),   value: `${product.weight_kg} kg` })
+  if (product.weight_g)      specs.push({ label: t('cat.spec_weight'),   value: `${product.weight_g} g` })
 
   const score = product.performance_score
   const scorePercent = Math.min(100, Math.round((score / 1000) * 100))
@@ -123,15 +121,10 @@ function ProductCard({ product }: { product: Product }) {
 
         {/* Content */}
         <div className="flex flex-col gap-3 p-4 flex-1">
-          {/* Brand */}
           <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{product.brand}</p>
-
-          {/* Name */}
           <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
             {product.name}
           </h3>
-
-          {/* Price */}
           {product.price_usd && (
             <p className="text-base font-black text-accent">
               ${Number(product.price_usd).toLocaleString()}
@@ -173,11 +166,11 @@ function ProductCard({ product }: { product: Product }) {
             }`}
           >
             {inCart ? (
-              <><Check className="w-3.5 h-3.5" />비교 중</>
+              <><Check className="w-3.5 h-3.5" />{t('cat.in_compare')}</>
             ) : cartFull ? (
-              <>비교 최대 4개</>
+              <>{t('cat.compare_full')}</>
             ) : (
-              <><Plus className="w-3.5 h-3.5" />비교에 추가</>
+              <><Plus className="w-3.5 h-3.5" />{t('cat.add_compare')}</>
             )}
           </button>
         </div>
@@ -186,7 +179,7 @@ function ProductCard({ product }: { product: Product }) {
   )
 }
 
-// ─── Filter Sidebar ──────────────────────────────────────────────────────────
+// ─── Filter Sidebar ───────────────────────────────────────────────────────────
 
 interface Filters {
   brands: string[]
@@ -196,16 +189,26 @@ interface Filters {
 }
 
 function FilterSidebar({
+  categoryLabel,
   availableBrands,
   filters,
   onChange,
 }: {
+  categoryLabel: string
   availableBrands: string[]
   filters: Filters
   onChange: (f: Filters) => void
 }) {
+  const { t } = useI18n()
   const [brandsOpen, setBrandsOpen] = useState(true)
   const [ramOpen,    setRamOpen]    = useState(true)
+
+  const SORT_OPTIONS = [
+    { value: 'performance', label: t('cat.sort_performance') },
+    { value: 'newest',      label: t('cat.sort_newest')      },
+    { value: 'price_asc',   label: t('cat.sort_price_asc')   },
+    { value: 'price_desc',  label: t('cat.sort_price_desc')  },
+  ]
 
   const toggleBrand = (brand: string) => {
     const next = filters.brands.includes(brand)
@@ -216,9 +219,29 @@ function FilterSidebar({
 
   return (
     <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 space-y-1">
+
+      {/* Search — top of sidebar */}
+      <div className="bg-surface border border-border rounded-2xl p-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+          <input
+            type="text"
+            placeholder={t('cat.search_placeholder').replace('{label}', categoryLabel)}
+            value={filters.q}
+            onChange={(e) => onChange({ ...filters, q: e.target.value })}
+            className="w-full bg-surface-2 border border-border rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-accent/50 transition-colors"
+          />
+          {filters.q && (
+            <button onClick={() => onChange({ ...filters, q: '' })} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <X className="w-3 h-3 text-white/30 hover:text-white/60" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Sort */}
       <div className="bg-surface border border-border rounded-2xl p-4">
-        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-3 font-semibold">정렬</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-3 font-semibold">{t('cat.filter_sort')}</p>
         <div className="space-y-1">
           {SORT_OPTIONS.map((opt) => (
             <button
@@ -243,7 +266,7 @@ function FilterSidebar({
             onClick={() => setBrandsOpen(!brandsOpen)}
             className="w-full flex items-center justify-between mb-3"
           >
-            <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">브랜드</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{t('cat.filter_brand')}</p>
             <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${brandsOpen ? '' : '-rotate-90'}`} />
           </button>
           {brandsOpen && (
@@ -280,7 +303,7 @@ function FilterSidebar({
           onClick={() => setRamOpen(!ramOpen)}
           className="w-full flex items-center justify-between mb-3"
         >
-          <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">최소 RAM</p>
+          <p className="text-[10px] text-white/30 uppercase tracking-widest font-semibold">{t('cat.filter_min_ram')}</p>
           <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${ramOpen ? '' : '-rotate-90'}`} />
         </button>
         {ramOpen && (
@@ -295,7 +318,7 @@ function FilterSidebar({
                     : 'bg-surface-2 border border-border text-white/40 hover:text-white hover:border-white/20'
                 }`}
               >
-                {gb === 0 ? '전체' : `${gb}GB+`}
+                {gb === 0 ? t('cat.filter_all_ram') : `${gb}GB+`}
               </button>
             ))}
           </div>
@@ -303,23 +326,25 @@ function FilterSidebar({
       </div>
 
       {/* Reset */}
-      {(filters.brands.length > 0 || filters.minRam > 0) && (
+      {(filters.brands.length > 0 || filters.minRam > 0 || filters.q) && (
         <button
-          onClick={() => onChange({ ...filters, brands: [], minRam: 0 })}
+          onClick={() => onChange({ brands: [], minRam: 0, sort: filters.sort, q: '' })}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-white/40 hover:text-white transition-colors border border-border hover:border-white/20"
         >
           <X className="w-3.5 h-3.5" />
-          필터 초기화
+          {t('cat.filter_reset')}
         </button>
       )}
     </aside>
   )
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CategoryClient({ category }: { category: string }) {
-  const meta = CATEGORY_META[category]
+  const { t } = useI18n()
+  const Icon = CATEGORY_ICON[category]
+  const categoryLabel = t(`cat.${category}` as Parameters<typeof t>[0])
 
   const [products,        setProducts]        = useState<Product[]>([])
   const [availableBrands, setAvailableBrands] = useState<string[]>([])
@@ -343,10 +368,9 @@ export default function CategoryClient({ category }: { category: string }) {
       if (f.minRam > 0)          params.set('minRam', String(f.minRam))
       if (f.q)                   params.set('q', f.q)
 
-      const res = await fetch(`/api/products/list?${params}`)
+      const res  = await fetch(`/api/products/list?${params}`)
       const json: ApiResponse = await res.json()
 
-      // Client-side multi-brand filter (API only supports single brand)
       const results = f.brands.length > 1
         ? json.results.filter((p) => f.brands.includes(p.brand))
         : json.results
@@ -368,70 +392,55 @@ export default function CategoryClient({ category }: { category: string }) {
     if (page > 1) fetchProducts(filters, page)
   }, [page, filters, fetchProducts])
 
-  if (!meta) {
+  if (!Icon) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-white/30">알 수 없는 카테고리입니다.</p>
+        <p className="text-white/30">{t('cat.empty')}</p>
       </div>
     )
   }
 
-  const Icon = meta.icon
+  const totalPages = Math.ceil(total / 24)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-24">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center">
             <Icon className="w-5 h-5 text-white/60" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white">{meta.label}</h1>
-            <p className="text-xs text-white/30 uppercase tracking-widest">{meta.sublabel}</p>
+            <h1 className="text-2xl font-black text-white">{categoryLabel}</h1>
+            <p className="text-xs text-white/30 uppercase tracking-widest">{CATEGORY_SUBLABEL[category]}</p>
           </div>
         </div>
-        <span className="text-sm text-white/30 tabular-nums">
-          {loading ? '–' : `${total.toLocaleString()}개`}
-        </span>
-      </div>
-
-      {/* Search bar */}
-      <div className="relative mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
-        <input
-          type="text"
-          placeholder={`${meta.label} 검색...`}
-          value={filters.q}
-          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="w-full bg-surface border border-border rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-accent/50 transition-colors"
-        />
-        {filters.q && (
-          <button onClick={() => setFilters({ ...filters, q: '' })} className="absolute right-4 top-1/2 -translate-y-1/2">
-            <X className="w-4 h-4 text-white/30 hover:text-white/60" />
-          </button>
-        )}
-      </div>
-
-      {/* Mobile filter toggle */}
-      <button
-        onClick={() => setMobileFilters(!mobileFilters)}
-        className="lg:hidden flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl bg-surface border border-border text-sm text-white/60 hover:text-white transition-colors"
-      >
-        <SlidersHorizontal className="w-4 h-4" />
-        필터
-        {(filters.brands.length > 0 || filters.minRam > 0) && (
-          <span className="ml-1 bg-accent text-black text-[10px] font-black rounded-full px-1.5 py-0.5">
-            {filters.brands.length + (filters.minRam > 0 ? 1 : 0)}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-white/30 tabular-nums">
+            {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())}
           </span>
-        )}
-      </button>
+          {/* Mobile filter toggle */}
+          <button
+            onClick={() => setMobileFilters(!mobileFilters)}
+            className="lg:hidden flex items-center gap-2 px-3 py-2 rounded-xl bg-surface border border-border text-xs text-white/60 hover:text-white transition-colors"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            {t('cat.filter_toggle')}
+            {(filters.brands.length > 0 || filters.minRam > 0 || filters.q) && (
+              <span className="bg-accent text-black text-[10px] font-black rounded-full px-1.5 py-0.5">
+                {filters.brands.length + (filters.minRam > 0 ? 1 : 0) + (filters.q ? 1 : 0)}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
 
       {/* Body */}
-      <div className="flex gap-6 items-start">
-        {/* Sidebar — desktop always, mobile conditional */}
+      <div className="flex gap-5 items-start">
+        {/* Sidebar */}
         <div className={`${mobileFilters ? 'block' : 'hidden'} lg:block`}>
           <FilterSidebar
+            categoryLabel={categoryLabel}
             availableBrands={availableBrands}
             filters={filters}
             onChange={(f) => { setFilters(f); setPage(1) }}
@@ -441,7 +450,7 @@ export default function CategoryClient({ category }: { category: string }) {
         {/* Product grid */}
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse">
                   <div className="aspect-square bg-surface-2" />
@@ -462,45 +471,45 @@ export default function CategoryClient({ category }: { category: string }) {
               <Icon className="w-12 h-12 text-white/10 mb-4" />
               <p className="text-white/30 text-sm">
                 {filters.brands.length > 0 || filters.minRam > 0 || filters.q
-                  ? '필터 조건에 맞는 제품이 없습니다.'
-                  : '등록된 제품이 없습니다.'}
+                  ? t('cat.empty_filter')
+                  : t('cat.empty')}
               </p>
               {(filters.brands.length > 0 || filters.minRam > 0 || filters.q) && (
                 <button
                   onClick={() => setFilters({ brands: [], minRam: 0, sort: filters.sort, q: '' })}
                   className="mt-4 text-xs text-accent hover:underline"
                 >
-                  필터 초기화
+                  {t('cat.reset_filters')}
                 </button>
               )}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
               {/* Pagination */}
-              {total > 24 && (
+              {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-3 mt-10">
                   <button
                     disabled={page <= 1}
                     onClick={() => setPage(page - 1)}
                     className="px-4 py-2 rounded-xl bg-surface border border-border text-sm text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
-                    이전
+                    {t('cat.prev')}
                   </button>
                   <span className="text-sm text-white/30 tabular-nums">
-                    {page} / {Math.ceil(total / 24)}
+                    {page} / {totalPages}
                   </span>
                   <button
-                    disabled={page >= Math.ceil(total / 24)}
+                    disabled={page >= totalPages}
                     onClick={() => setPage(page + 1)}
                     className="px-4 py-2 rounded-xl bg-surface border border-border text-sm text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                   >
-                    다음
+                    {t('cat.next')}
                   </button>
                 </div>
               )}
