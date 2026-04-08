@@ -100,14 +100,35 @@ function ProductCard({ product }: { product: Product }) {
     else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
   }
 
-  const specs: { label: string; value: string }[] = []
-  if (product.display_inch) specs.push({ label: t('cat.spec_display'), value: `${product.display_inch}"` })
-  if (product.ram_gb)        specs.push({ label: t('spec.ram'),          value: `${product.ram_gb}GB` })
-  if (product.ppi)           specs.push({ label: t('cat.spec_ppi'),      value: `${product.ppi} ppi` })
-  if (product.battery_mah)   specs.push({ label: t('cat.spec_battery'),  value: `${product.battery_mah.toLocaleString()} mAh` })
-  if (product.battery_wh)    specs.push({ label: t('cat.spec_battery'),  value: `${product.battery_wh} Wh` })
-  if (product.weight_kg)     specs.push({ label: t('cat.spec_weight'),   value: `${product.weight_kg} kg` })
-  if (product.weight_g)      specs.push({ label: t('cat.spec_weight'),   value: `${product.weight_g} g` })
+  // 2-column grid: [display, ppi] / [battery, weight]
+  const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] = [
+    [
+      { label: t('cat.spec_display'), value: product.display_inch ? `${product.display_inch}"` : null },
+      { label: t('spec.ram'),         value: product.ram_gb       ? `${product.ram_gb}GB`      : null },
+    ],
+    [
+      {
+        label: t('cat.spec_battery'),
+        value: product.battery_mah
+          ? `${product.battery_mah.toLocaleString()} mAh`
+          : product.battery_wh
+          ? `${product.battery_wh} Wh`
+          : null,
+      },
+      {
+        label: t('cat.spec_weight'),
+        value: product.weight_kg
+          ? `${product.weight_kg} kg`
+          : product.weight_g
+          ? `${product.weight_g} g`
+          : null,
+      },
+    ],
+    [
+      { label: t('cat.spec_ppi'), value: product.ppi ? `${product.ppi} ppi` : null },
+      { label: '',                value: null },
+    ],
+  ]
 
   const score = product.performance_score
   const scorePercent = Math.min(100, Math.round((score / 1000) * 100))
@@ -153,14 +174,20 @@ function ProductCard({ product }: { product: Product }) {
             )}
           </div>
 
-          {/* Specs row */}
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {specs.slice(0, 5).map((s) => (
-              <div key={s.label} className="flex items-center gap-1">
-                <span className="text-[9px] text-white/25 uppercase tracking-widest">{s.label}</span>
-                <span className="text-[11px] font-semibold text-white/70">{s.value}</span>
-              </div>
-            ))}
+          {/* Specs grid — 2 cols */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            {specGrid.map((row, ri) =>
+              row.map((s, ci) =>
+                s.value ? (
+                  <div key={`${ri}-${ci}`}>
+                    <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                    <p className="text-[11px] font-semibold text-white/75">{s.value}</p>
+                  </div>
+                ) : (
+                  <div key={`${ri}-${ci}`} />
+                )
+              )
+            )}
           </div>
 
           {/* Performance bar */}
