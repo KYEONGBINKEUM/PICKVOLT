@@ -308,14 +308,14 @@ function SidebarToggle({ label }: { label: string }) {
 }
 
 /* ---------- Popular Comparisons ---------- */
-function PopularComparisons({ items }: { items: PopularItem[] }) {
+function PopularComparisons({ items, t }: { items: PopularItem[]; t: (k: string) => string }) {
   if (!items.length) return null
   return (
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-accent" />
-        <h3 className="text-lg font-black text-white">Trending Comparisons</h3>
-        <span className="text-xs text-white/30 ml-1">this week</span>
+        <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
+        <span className="text-xs text-white/30 ml-1">{t('compare.trending_sub')}</span>
       </div>
       <div className="space-y-2">
         {items.map((item, i) => (
@@ -755,7 +755,7 @@ export default function CompareClient() {
             <p className="text-white/20 text-xs">{t('compare.search_sub')}</p>
             {popularItems.length > 0 && (
               <div className="w-full max-w-lg mt-8">
-                <PopularComparisons items={popularItems} />
+                <PopularComparisons items={popularItems} t={t} />
               </div>
             )}
           </div>
@@ -899,11 +899,7 @@ export default function CompareClient() {
                     style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
                   >
                     <div className="p-4 flex flex-col gap-0.5 justify-center">
-                      <span className="text-xs text-accent/70 uppercase tracking-widest font-bold">Pickvolt</span>
-                      <span className="text-sm font-semibold text-white">Overall Score</span>
-                      <span className="text-[10px] text-white/30 mt-1 leading-snug">
-                        Relative to all<br />{category}s in DB
-                      </span>
+                      <span className="text-sm font-semibold text-white">{t('compare.overall_score')}</span>
                     </div>
                     {productScores.map((s, i) => {
                       const isWinner = s.overall === maxScore
@@ -947,9 +943,7 @@ export default function CompareClient() {
             {radarProducts && (
               <div className="bg-surface border border-border rounded-card p-6 mb-6">
                 <div className="mb-4">
-                  <p className="text-xs text-accent/70 uppercase tracking-widest font-bold mb-0.5">Pickvolt Score</p>
-                  <p className="text-sm font-bold text-white">Spec Radar</p>
-                  <p className="text-xs text-white/30 mt-0.5">Relative to all {category}s in DB — updates automatically as new products are added</p>
+                  <p className="text-sm font-bold text-white">{t('compare.spec_radar')}</p>
                 </div>
                 <div className="flex flex-col md:flex-row items-center gap-8">
                   <div className="flex-shrink-0">
@@ -1001,7 +995,7 @@ export default function CompareClient() {
             </div>
 
             {/* 인기 비교 */}
-            <PopularComparisons items={popularItems} />
+            <PopularComparisons items={popularItems} t={t} />
           </div>
         )}
       </main>
