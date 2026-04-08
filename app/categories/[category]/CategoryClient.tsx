@@ -61,30 +61,36 @@ const CATEGORY_SUBLABEL: Record<string, string> = {
   tablet:     'Tablets',
 }
 
-const RAM_OPTIONS   = [0, 4, 8, 12, 16, 32]
-
 // ─── Filters interface ────────────────────────────────────────────────────────
 
 interface Filters {
   brands: string[]
-  minRam: number
   sort: string
   q: string
-  priceRange: string   // 'any' | 'under500' | '500_1000' | '1000_1500' | 'over1500'
-  os: string           // '' = any
-  displayRange: string // 'any' | 'small' | 'mid' | 'large'
-  batteryMin: number   // 0 = any
+  os: string
+  priceMin: number
+  priceMax: number
+  ramMin: number
+  ramMax: number
+  displayMin: number
+  displayMax: number
+  batteryMin: number
+  batteryMax: number
 }
 
 const DEFAULT_FILTERS: Filters = {
   brands: [],
-  minRam: 0,
   sort: 'performance',
   q: '',
-  priceRange: 'any',
   os: '',
-  displayRange: 'any',
+  priceMin: 0,
+  priceMax: 5000,
+  ramMin: 0,
+  ramMax: 64,
+  displayMin: 0,
+  displayMax: 20,
   batteryMin: 0,
+  batteryMax: 10000,
 }
 
 // ─── Product Card (horizontal layout) ────────────────────────────────────────
@@ -248,6 +254,107 @@ function FilterSection({
   )
 }
 
+// ─── Range Filter ─────────────────────────────────────────────────────────────
+
+function RangeFilter({
+  title,
+  absMin,
+  absMax,
+  valueMin,
+  valueMax,
+  onChange,
+  step = 1,
+  format = (v: number) => String(v),
+  defaultOpen = true,
+}: {
+  title: string
+  absMin: number
+  absMax: number
+  valueMin: number
+  valueMax: number
+  onChange: (min: number, max: number) => void
+  step?: number
+  format?: (v: number) => string
+  defaultOpen?: boolean
+}) {
+  const pct = (v: number) => ((v - absMin) / (absMax - absMin)) * 100
+
+  return (
+    <FilterSection title={title} defaultOpen={defaultOpen}>
+      <div className="px-1 pb-1">
+        {/* Dual range slider track */}
+        <div className="relative h-1 bg-surface-2 rounded-full mt-1 mb-5 mx-1">
+          <div
+            className="absolute h-full bg-accent rounded-full"
+            style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }}
+          />
+          {/* Min thumb */}
+          <input
+            type="range"
+            min={absMin} max={absMax} step={step}
+            value={valueMin}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              onChange(Math.min(v, valueMax - step), valueMax)
+            }}
+            className="absolute w-full h-full opacity-0 cursor-pointer"
+            style={{ zIndex: valueMin > absMax - (absMax - absMin) * 0.1 ? 5 : 3 }}
+          />
+          {/* Max thumb */}
+          <input
+            type="range"
+            min={absMin} max={absMax} step={step}
+            value={valueMax}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              onChange(valueMin, Math.max(v, valueMin + step))
+            }}
+            className="absolute w-full h-full opacity-0 cursor-pointer"
+            style={{ zIndex: 4 }}
+          />
+          {/* Thumb dots */}
+          <div
+            className="absolute w-4 h-4 bg-white rounded-full border-2 border-accent -top-1.5 -translate-x-1/2 pointer-events-none shadow-md"
+            style={{ left: `${pct(valueMin)}%` }}
+          />
+          <div
+            className="absolute w-4 h-4 bg-white rounded-full border-2 border-accent -top-1.5 -translate-x-1/2 pointer-events-none shadow-md"
+            style={{ left: `${pct(valueMax)}%` }}
+          />
+        </div>
+
+        {/* Min / Max inputs */}
+        <div className="flex items-center gap-2 mt-3">
+          <input
+            type="number"
+            value={valueMin}
+            min={absMin} max={valueMax - step} step={step}
+            onChange={(e) => {
+              const v = Math.max(absMin, Math.min(Number(e.target.value), valueMax - step))
+              onChange(v, valueMax)
+            }}
+            className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-accent/50"
+          />
+          <span className="text-white/30 text-xs flex-shrink-0">–</span>
+          <input
+            type="number"
+            value={valueMax}
+            min={valueMin + step} max={absMax} step={step}
+            onChange={(e) => {
+              const v = Math.min(absMax, Math.max(Number(e.target.value), valueMin + step))
+              onChange(valueMin, v)
+            }}
+            className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-accent/50"
+          />
+        </div>
+        <p className="text-center text-[10px] text-white/20 mt-1.5">
+          {format(valueMin)} — {format(valueMax)}
+        </p>
+      </div>
+    </FilterSection>
+  )
+}
+
 function OptionRow({
   label,
   active,
@@ -295,36 +402,13 @@ function FilterSidebar({
     { value: 'price_desc',  label: t('cat.sort_price_desc')  },
   ]
 
-  const PRICE_OPTIONS = [
-    { value: 'any',        label: t('cat.filter_price_any')       },
-    { value: 'under500',   label: t('cat.filter_price_under500')  },
-    { value: '500_1000',   label: t('cat.filter_price_500_1000')  },
-    { value: '1000_1500',  label: t('cat.filter_price_1000_1500') },
-    { value: 'over1500',   label: t('cat.filter_price_over1500')  },
-  ]
-
-  const DISPLAY_OPTIONS = [
-    { value: 'any',   label: t('cat.filter_display_any')   },
-    { value: 'small', label: t('cat.filter_display_small') },
-    { value: 'mid',   label: t('cat.filter_display_mid')   },
-    { value: 'large', label: t('cat.filter_display_large') },
-  ]
-
-  const BATTERY_OPTIONS = [
-    { value: 0,    label: t('cat.filter_battery_any')  },
-    { value: 4000, label: t('cat.filter_battery_4000') },
-    { value: 5000, label: t('cat.filter_battery_5000') },
-    { value: 6000, label: t('cat.filter_battery_6000') },
-  ]
-
-  const hasFilters =
-    filters.brands.length > 0 ||
-    filters.minRam > 0 ||
-    filters.q ||
-    filters.priceRange !== 'any' ||
-    filters.os ||
-    filters.displayRange !== 'any' ||
-    filters.batteryMin > 0
+  const isDefault = (f: Filters) =>
+    f.brands.length === 0 &&
+    !f.q && !f.os &&
+    f.priceMin === DEFAULT_FILTERS.priceMin && f.priceMax === DEFAULT_FILTERS.priceMax &&
+    f.ramMin === DEFAULT_FILTERS.ramMin && f.ramMax === DEFAULT_FILTERS.ramMax &&
+    f.displayMin === DEFAULT_FILTERS.displayMin && f.displayMax === DEFAULT_FILTERS.displayMax &&
+    f.batteryMin === DEFAULT_FILTERS.batteryMin && f.batteryMax === DEFAULT_FILTERS.batteryMax
 
   const toggleBrand = (brand: string) => {
     const next = filters.brands.includes(brand)
@@ -370,18 +454,14 @@ function FilterSidebar({
       </FilterSection>
 
       {/* Price */}
-      <FilterSection title={t('cat.filter_price')}>
-        <div className="space-y-0.5">
-          {PRICE_OPTIONS.map((opt) => (
-            <OptionRow
-              key={opt.value}
-              label={opt.label}
-              active={filters.priceRange === opt.value}
-              onClick={() => onChange({ ...filters, priceRange: opt.value })}
-            />
-          ))}
-        </div>
-      </FilterSection>
+      <RangeFilter
+        title={t('cat.filter_price')}
+        absMin={0} absMax={5000}
+        valueMin={filters.priceMin} valueMax={filters.priceMax}
+        step={50}
+        format={(v) => `$${v.toLocaleString()}`}
+        onChange={(min, max) => onChange({ ...filters, priceMin: min, priceMax: max })}
+      />
 
       {/* Brand */}
       {availableBrands.length > 0 && (
@@ -413,37 +493,25 @@ function FilterSidebar({
       )}
 
       {/* RAM */}
-      <FilterSection title={t('cat.filter_min_ram')}>
-        <div className="grid grid-cols-3 gap-1.5">
-          {RAM_OPTIONS.map((gb) => (
-            <button
-              key={gb}
-              onClick={() => onChange({ ...filters, minRam: gb })}
-              className={`py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                filters.minRam === gb
-                  ? 'bg-accent/15 border border-accent/40 text-accent'
-                  : 'bg-surface-2 border border-border text-white/40 hover:text-white hover:border-white/20'
-              }`}
-            >
-              {gb === 0 ? t('cat.filter_all_ram') : `${gb}GB+`}
-            </button>
-          ))}
-        </div>
-      </FilterSection>
+      <RangeFilter
+        title={t('cat.filter_min_ram')}
+        absMin={0} absMax={64}
+        valueMin={filters.ramMin} valueMax={filters.ramMax}
+        step={2}
+        format={(v) => `${v}GB`}
+        onChange={(min, max) => onChange({ ...filters, ramMin: min, ramMax: max })}
+      />
 
       {/* Display size */}
-      <FilterSection title={t('cat.filter_display')} defaultOpen={false}>
-        <div className="space-y-0.5">
-          {DISPLAY_OPTIONS.map((opt) => (
-            <OptionRow
-              key={opt.value}
-              label={opt.label}
-              active={filters.displayRange === opt.value}
-              onClick={() => onChange({ ...filters, displayRange: opt.value })}
-            />
-          ))}
-        </div>
-      </FilterSection>
+      <RangeFilter
+        title={t('cat.filter_display')}
+        absMin={0} absMax={20}
+        valueMin={filters.displayMin} valueMax={filters.displayMax}
+        step={0.1}
+        format={(v) => `${v.toFixed(1)}"`}
+        onChange={(min, max) => onChange({ ...filters, displayMin: min, displayMax: max })}
+        defaultOpen={false}
+      />
 
       {/* OS */}
       {availableOsList.length > 0 && (
@@ -468,22 +536,19 @@ function FilterSidebar({
 
       {/* Battery (smartphone & tablet only) */}
       {(category === 'smartphone' || category === 'tablet') && (
-        <FilterSection title={t('cat.filter_battery')} defaultOpen={false}>
-          <div className="space-y-0.5">
-            {BATTERY_OPTIONS.map((opt) => (
-              <OptionRow
-                key={opt.value}
-                label={opt.label}
-                active={filters.batteryMin === opt.value}
-                onClick={() => onChange({ ...filters, batteryMin: opt.value })}
-              />
-            ))}
-          </div>
-        </FilterSection>
+        <RangeFilter
+          title={t('cat.filter_battery')}
+          absMin={0} absMax={10000}
+          valueMin={filters.batteryMin} valueMax={filters.batteryMax}
+          step={100}
+          format={(v) => `${v.toLocaleString()} mAh`}
+          onChange={(min, max) => onChange({ ...filters, batteryMin: min, batteryMax: max })}
+          defaultOpen={false}
+        />
       )}
 
       {/* Reset */}
-      {hasFilters && (
+      {!isDefault(filters) && (
         <button
           onClick={() => onChange({ ...DEFAULT_FILTERS, sort: filters.sort })}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-white/40 hover:text-white transition-colors border border-border hover:border-white/20"
@@ -501,30 +566,32 @@ function FilterSidebar({
 function applyClientFilters(products: Product[], filters: Filters): Product[] {
   return products.filter((p) => {
     // Brand
-    if (filters.brands.length > 1 && !filters.brands.includes(p.brand)) return false
+    if (filters.brands.length > 0 && !filters.brands.includes(p.brand)) return false
+
+    // Search
+    if (filters.q) {
+      const q = filters.q.toLowerCase()
+      if (!p.name.toLowerCase().includes(q) && !p.brand.toLowerCase().includes(q)) return false
+    }
 
     // Price
-    if (filters.priceRange !== 'any') {
-      const price = p.price_usd ?? 0
-      if (filters.priceRange === 'under500'  && price >= 500)   return false
-      if (filters.priceRange === '500_1000'  && (price < 500  || price >= 1000)) return false
-      if (filters.priceRange === '1000_1500' && (price < 1000 || price >= 1500)) return false
-      if (filters.priceRange === 'over1500'  && price < 1500)  return false
-    }
+    const price = p.price_usd ?? 0
+    if (price > 0 && (price < filters.priceMin || price > filters.priceMax)) return false
+
+    // RAM
+    const ram = p.ram_gb ?? 0
+    if (ram > 0 && (ram < filters.ramMin || ram > filters.ramMax)) return false
+
+    // Display
+    const disp = p.display_inch ?? 0
+    if (disp > 0 && (disp < filters.displayMin || disp > filters.displayMax)) return false
 
     // OS
     if (filters.os && p.os !== filters.os) return false
 
-    // Display size
-    if (filters.displayRange !== 'any') {
-      const d = p.display_inch ?? 0
-      if (filters.displayRange === 'small' && d >= 6)   return false
-      if (filters.displayRange === 'mid'   && (d < 6 || d >= 6.7)) return false
-      if (filters.displayRange === 'large' && d < 6.7)  return false
-    }
-
     // Battery
-    if (filters.batteryMin > 0 && (p.battery_mah ?? 0) < filters.batteryMin) return false
+    const bat = p.battery_mah ?? 0
+    if (bat > 0 && (bat < filters.batteryMin || bat > filters.batteryMax)) return false
 
     return true
   })
@@ -554,7 +621,6 @@ export default function CategoryClient({ category }: { category: string }) {
       // Fetch all (large limit) for client-side filtering
       const params = new URLSearchParams({ category, sort: filters.sort, page: '1', limit: '999' })
       if (filters.brands.length === 1) params.set('brand', filters.brands[0])
-      if (filters.minRam > 0)          params.set('minRam', String(filters.minRam))
       if (filters.q)                   params.set('q', filters.q)
 
       const res  = await fetch(`/api/products/list?${params}`)
@@ -571,7 +637,7 @@ export default function CategoryClient({ category }: { category: string }) {
     } finally {
       setLoading(false)
     }
-  }, [category, filters.sort, filters.brands, filters.minRam, filters.q])
+  }, [category, filters.sort, filters.brands, filters.q])
 
   useEffect(() => {
     setPage(1)
@@ -584,13 +650,11 @@ export default function CategoryClient({ category }: { category: string }) {
   const products   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const hasFilters =
-    filters.brands.length > 0 ||
-    filters.minRam > 0 ||
-    filters.q ||
-    filters.priceRange !== 'any' ||
-    filters.os ||
-    filters.displayRange !== 'any' ||
-    filters.batteryMin > 0
+    filters.brands.length > 0 || !!filters.q || !!filters.os ||
+    filters.priceMin > DEFAULT_FILTERS.priceMin || filters.priceMax < DEFAULT_FILTERS.priceMax ||
+    filters.ramMin > DEFAULT_FILTERS.ramMin || filters.ramMax < DEFAULT_FILTERS.ramMax ||
+    filters.displayMin > DEFAULT_FILTERS.displayMin || filters.displayMax < DEFAULT_FILTERS.displayMax ||
+    filters.batteryMin > DEFAULT_FILTERS.batteryMin || filters.batteryMax < DEFAULT_FILTERS.batteryMax
 
   if (!Icon) {
     return (
