@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { shortenProductName } from '@/lib/utils'
 
 const DAILY_LIMIT = 5
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+  .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 const PROMPT_TEMPLATE = (productList: string, prefText: string) => `You are a tech product comparison expert. Compare the following products and pick a winner.
 
@@ -79,7 +81,8 @@ export async function POST(req: NextRequest) {
       .select('status')
       .eq('user_id', user.id)
       .maybeSingle()
-    const isPro = sub?.status === 'pro'
+    const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? '')
+    const isPro = isAdmin || sub?.status === 'pro'
 
     // 무료 유저 하루 5회 제한
     let todayCount = 0

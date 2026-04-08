@@ -16,7 +16,7 @@ export default function MyPage() {
 
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null)
   const [compareCount, setCompareCount] = useState<number | null>(null)
-  const [isPro] = useState(false)
+  const [isPro, setIsPro] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showCurrMenu, setShowCurrMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -25,11 +25,27 @@ export default function MyPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
+        const email = data.user.email ?? ''
         setUser({
-          email: data.user.email ?? '',
-          name: data.user.user_metadata?.full_name ?? data.user.email ?? 'user',
+          email,
+          name: data.user.user_metadata?.full_name ?? email ?? 'user',
           avatar: data.user.user_metadata?.avatar_url ?? '',
         })
+
+        // 어드민 이메일이면 자동 pro
+        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+          .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        if (adminEmails.includes(email.toLowerCase())) {
+          setIsPro(true)
+        } else {
+          // 구독 상태 확인
+          supabase
+            .from('subscriptions')
+            .select('status')
+            .eq('user_id', data.user.id)
+            .maybeSingle()
+            .then(({ data: sub }) => setIsPro(sub?.status === 'pro'))
+        }
 
         // 실제 비교 횟수 조회
         supabase
