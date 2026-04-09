@@ -302,8 +302,12 @@ function AIPickLoading({ t }: { t: (k: string) => string }) {
 
 /* ---------- Sidebar Toggle ---------- */
 function SidebarToggle({ label }: { label: string }) {
+  const handleClick = () => {
+    const el = document.getElementById('spec-table')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   return (
-    <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20">
+    <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20" onClick={handleClick}>
       <div className="bg-surface-2 border border-border rounded-l-xl p-3 cursor-pointer hover:bg-surface transition-colors">
         <p className="text-xs text-white/40" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
           {label}
@@ -529,7 +533,7 @@ export default function CompareClient() {
 
   const handleNavSearch = (v: string) => {
     if (v.trim()) {
-      router.push(`/compare?q=${encodeURIComponent(v.trim())}`)
+      router.push(`/?q=${encodeURIComponent(v.trim())}`)
     }
   }
 
@@ -851,7 +855,7 @@ export default function CompareClient() {
             )}
 
             {/* 비교 테이블 */}
-            <div className="bg-surface border border-border rounded-card overflow-hidden mb-8">
+            <div id="spec-table" className="bg-surface border border-border rounded-card overflow-hidden mb-8">
               <div
                 className="grid border-b border-border"
                 style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}

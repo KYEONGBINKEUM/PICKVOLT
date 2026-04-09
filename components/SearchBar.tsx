@@ -13,9 +13,9 @@ interface SearchResult {
   category: string
 }
 
-export default function SearchBar() {
-  const [query, setQuery] = useState('')
-  const [focused, setFocused] = useState(false)
+export default function SearchBar({ initialQuery = '' }: { initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery)
+  const [focused, setFocused] = useState(!!initialQuery)
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const router = useRouter()
@@ -23,6 +23,14 @@ export default function SearchBar() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { add, has, cart } = useCompareCart()
   const { t } = useI18n()
+
+  // initialQuery가 있으면 자동 포커스 + 검색
+  useEffect(() => {
+    if (initialQuery) {
+      inputRef.current?.focus()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (query.length < 2) {

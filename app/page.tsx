@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import { useI18n } from '@/lib/i18n'
@@ -29,6 +30,8 @@ const FALLBACK_TRENDING: TrendingItem[] = [
 
 export default function HomePage() {
   const { t } = useI18n()
+  const searchParams = useSearchParams()
+  const initialQuery = searchParams.get('q') ?? ''
   const [trending, setTrending] = useState<TrendingItem[]>(FALLBACK_TRENDING)
 
   useEffect(() => {
@@ -61,7 +64,7 @@ export default function HomePage() {
           </h1>
 
           {/* Search */}
-          <SearchBar />
+          <SearchBar initialQuery={initialQuery} />
 
           {/* Trending Comparisons */}
           <div className="w-full">
