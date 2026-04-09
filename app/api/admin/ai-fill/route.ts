@@ -20,11 +20,27 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
 
 const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores and specs.
 
-Go to nanoreview.net and find the page for "${name}". Extract:
-- Core count from: <li class="mb"><strong>Cores:</strong> 6</li> (the number after "Cores:")
-- Clock speed from: <li class="mb"><strong>Clock:</strong> 4260 MHz</li> (convert MHz to GHz, e.g. 4260 MHz → 4.26 GHz; use as clock_base, leave clock_boost null unless a separate boost clock is listed)
-- Geekbench 6 single-core and multi-core scores
-- Geekbench 6 GPU compute score (for SoCs with integrated GPU)
+Go to nanoreview.net and find the page for "${name}". Extract values from these exact HTML patterns:
+
+Cores: <li class="mb"><strong>Cores:</strong> 6</li>  → take the integer after "Cores:"
+Clock: <li class="mb"><strong>Clock:</strong> 4260 MHz</li>  → convert MHz to GHz (e.g. 4260 → 4.26), use as clock_base; leave clock_boost null unless a separate boost clock is listed
+
+GB6 Single-Core Score:
+<div class="score-bar-name">Single-Core Score</div>
+<span class="score-bar-result-number">3992</span>
+→ take the integer in score-bar-result-number
+
+GB6 Multi-Core Score:
+<div class="score-bar-name">Multi-Core Score</div>
+<span class="score-bar-result-number">10688</span>
+→ take the integer in score-bar-result-number
+
+GB6 GPU Compute Score (for SoCs with integrated GPU):
+<div class="score-bar-name">Compute Score (GPU)</div>
+<span class="score-bar-result-number">45527</span>
+→ take the integer in score-bar-result-number
+
+Also extract:
 - 3DMark Steel Nomad Light score (not other 3DMark tests)
 - Integrated GPU name
 
@@ -35,11 +51,21 @@ Now return the JSON for "${name}". Use null for any value not found.`
 
 const GPU_PROMPT = (name: string) => `Search nanoreview.net for the GPU named "${name}" and extract its benchmark scores and specs.
 
-Go to nanoreview.net and find the page for "${name}". Extract:
-- Core count from: <li class="mb"><strong>Cores:</strong> 6</li> (the number after "Cores:")
-- Clock speed from: <li class="mb"><strong>Clock:</strong> 4260 MHz</li> (convert MHz to GHz; use as reference for GPU clock if needed)
-- Geekbench 6 GPU Metal/Vulkan score
-- Geekbench 6 OpenCL score
+Go to nanoreview.net and find the page for "${name}". Extract values from these exact HTML patterns:
+
+Cores: <li class="mb"><strong>Cores:</strong> 6</li>  → take the integer after "Cores:"
+
+GB6 GPU Metal/Vulkan Score:
+<div class="score-bar-name">Single-Core Score</div>
+<span class="score-bar-result-number">14000</span>
+→ take the integer in score-bar-result-number
+
+GB6 Compute Score (GPU / OpenCL):
+<div class="score-bar-name">Compute Score (GPU)</div>
+<span class="score-bar-result-number">45527</span>
+→ use as gb6_opencl
+
+Also extract:
 - 3DMark Steel Nomad Light score (not other 3DMark tests)
 - Whether it is a mobile, laptop, or desktop GPU
 
