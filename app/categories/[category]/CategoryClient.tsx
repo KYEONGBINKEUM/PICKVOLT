@@ -142,10 +142,10 @@ function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/product/${product.id}`} className="group block">
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-row h-72">
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-row">
 
         {/* Image — left */}
-        <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden">
+        <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden self-stretch min-h-[10rem]">
           {product.image_url ? (
             <Image
               src={product.image_url}
@@ -738,7 +738,7 @@ export default function CategoryClient({ category }: { category: string }) {
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse flex h-28">
+                <div key={i} className="bg-surface border border-border rounded-2xl overflow-hidden animate-pulse flex min-h-[8rem]">
                   <div className="w-28 bg-surface-2 flex-shrink-0" />
                   <div className="flex-1 p-4 space-y-2">
                     <div className="h-2 bg-surface-2 rounded w-1/4" />
