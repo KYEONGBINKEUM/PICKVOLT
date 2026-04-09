@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, ChevronRight, BarChart2, Globe, DollarSign, Trash2 } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -16,6 +16,7 @@ export default function MyPage() {
 
   const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null)
   const [compareCount, setCompareCount] = useState<number | null>(null)
+  const [isPro, setIsPro] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showCurrMenu, setShowCurrMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -30,6 +31,21 @@ export default function MyPage() {
           name: data.user.user_metadata?.full_name ?? email ?? 'user',
           avatar: data.user.user_metadata?.avatar_url ?? '',
         })
+
+        // 어드민 이메일이면 자동 pro
+        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+          .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+        if (adminEmails.includes(email.toLowerCase())) {
+          setIsPro(true)
+        } else {
+          // 구독 상태 확인
+          supabase
+            .from('subscriptions')
+            .select('status')
+            .eq('user_id', data.user.id)
+            .maybeSingle()
+            .then(({ data: sub }) => setIsPro(sub?.status === 'pro'))
+        }
 
         // 실제 비교 횟수 조회
         supabase
@@ -106,6 +122,33 @@ export default function MyPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Plan */}
+          <div className={`rounded-card p-5 mb-4 flex items-center justify-between ${
+            isPro
+              ? 'bg-gradient-to-r from-accent/20 to-transparent border border-accent/30'
+              : 'bg-surface border border-border'
+          }`}>
+            <div>
+              <p className="text-xs text-white/40 mb-1">{t('mypage.plan')}</p>
+              <p className="text-lg font-black text-white flex items-center gap-2">
+                {isPro ? (
+                  <><Zap className="w-4 h-4 text-accent" /> {t('mypage.pro')}</>
+                ) : (
+                  t('mypage.free')
+                )}
+              </p>
+            </div>
+            {!isPro && (
+              <Link
+                href="/pricing"
+                className="flex items-center gap-1.5 bg-accent hover:bg-accent-light text-white text-xs font-bold px-4 py-2 rounded-full transition-colors"
+              >
+                <Zap className="w-3 h-3" />
+                {t('mypage.upgrade')}
+              </Link>
+            )}
           </div>
 
           {/* Preferences */}

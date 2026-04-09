@@ -46,6 +46,8 @@ interface AiResult {
   winner: string
   summary: string
   reasoning: string
+  remaining: number | null
+  isPro: boolean
   scores?: Record<string, { value: number; reason: string }>
 }
 
@@ -365,6 +367,7 @@ export default function CompareClient() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showReasoning, setShowReasoning] = useState(false)
+  const [remaining, setRemaining] = useState<number | null>(null)
   const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
@@ -446,11 +449,15 @@ export default function CompareClient() {
         }),
       })
 
+      if (compareRes.status === 401) { setError('login_required'); return }
+      if (compareRes.status === 429) { setError('daily_limit'); setRemaining(0); return }
+
       const compareData = await compareRes.json()
-      if (compareData.error) {
+      if (compareData.error && compareData.error !== 'login_required' && compareData.error !== 'daily_limit') {
         setError(t('compare.error_compare'))
       } else {
         setAiResult(compareData)
+        if (compareData.remaining !== null) setRemaining(compareData.remaining)
 
         // 비로그인 사용자: localStorage에 기록 저장
         if (!session) {
@@ -786,7 +793,31 @@ export default function CompareClient() {
         {loading && <LoadingState message={loadingMsg} />}
 
         {/* 에러 */}
-        {error && !loading && (
+        {error === 'login_required' && !loading && (
+          <div className="mt-8 p-6 bg-surface border border-border rounded-card flex items-center gap-4">
+            <Lock className="w-5 h-5 text-white/30 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-white font-bold text-sm mb-1">Sign in to use AI Pick</p>
+              <p className="text-white/40 text-xs">Create a free account to see AI-powered comparisons.</p>
+            </div>
+            <Link href="/login" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
+              {t('auth.signin')}
+            </Link>
+          </div>
+        )}
+        {error === 'daily_limit' && !loading && (
+          <div className="mt-8 p-6 bg-surface border border-amber-500/30 rounded-card flex items-center gap-4">
+            <Zap className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-white font-bold text-sm mb-1">Daily limit reached</p>
+              <p className="text-white/40 text-xs">Upgrade to Pro for unlimited AI comparisons.</p>
+            </div>
+            <Link href="/pricing" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
+              Upgrade
+            </Link>
+          </div>
+        )}
+        {error && error !== 'login_required' && error !== 'daily_limit' && !loading && (
           <div className="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-card text-center">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
@@ -797,13 +828,21 @@ export default function CompareClient() {
           <div className="mt-8">
             {/* AI Pick 영역 */}
             {loadingAI && <AIPickLoading t={t} />}
+            {!session && !loadingAI && !aiResult && <AIPickLocked t={t} />}
             {!loadingAI && aiResult && (
-              <AIPickBanner
-                winner={aiResult.winner}
-                reasoning={aiResult.summary}
-                onViewReasoning={() => setShowReasoning(true)}
-                t={t}
-              />
+              <>
+                <AIPickBanner
+                  winner={aiResult.winner}
+                  reasoning={aiResult.summary}
+                  onViewReasoning={() => setShowReasoning(true)}
+                  t={t}
+                />
+                {session && aiResult.remaining !== null && (
+                  <p className="text-xs text-white/30 text-center -mt-4 mb-6">
+                    {aiResult.remaining} comparison{aiResult.remaining !== 1 ? 's' : ''} left today
+                  </p>
+                )}
+              </>
             )}
 
             {/* 비교 테이블 */}
