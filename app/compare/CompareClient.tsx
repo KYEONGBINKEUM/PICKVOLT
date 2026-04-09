@@ -230,13 +230,13 @@ function ReasoningModal({
 
         {aiResult.scores && (
           <div className="space-y-4">
-            {Object.entries(aiResult.scores).map(([name, s]) => (
+            {Object.entries(aiResult.scores).map(([name, s], i) => (
               <div key={name}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-white/60 truncate">{name}</span>
                   <span className="text-sm font-bold text-white ml-2">{s.value}</span>
                 </div>
-                <PerformanceBar score={s.value} />
+                <PerformanceBar score={s.value} color={PRODUCT_COLORS[i % PRODUCT_COLORS.length]} />
                 <p className="text-xs text-white/30 mt-1">{s.reason}</p>
               </div>
             ))}

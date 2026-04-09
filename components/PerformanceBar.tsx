@@ -21,7 +21,7 @@ export default function PerformanceBar({ score, max = 100, color }: PerformanceB
     <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-3">
       <div
         className="h-full rounded-full transition-all duration-700 ease-out"
-        style={{ width: `${width}%`, backgroundColor: color ?? 'var(--color-accent)' }}
+        style={{ width: `${width}%`, backgroundColor: color ?? '#FF6B2B' }}
       />
     </div>
   )
