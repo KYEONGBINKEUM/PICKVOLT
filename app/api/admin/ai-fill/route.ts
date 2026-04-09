@@ -20,11 +20,12 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
 
 const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores and specs.
 
-Go to nanoreview.net and find the page for "${name}". Collect:
+Go to nanoreview.net and find the page for "${name}". Extract:
+- Core count from: <li class="mb"><strong>Cores:</strong> 6</li> (the number after "Cores:")
+- Clock speed from: <li class="mb"><strong>Clock:</strong> 4260 MHz</li> (convert MHz to GHz, e.g. 4260 MHz → 4.26 GHz; use as clock_base, leave clock_boost null unless a separate boost clock is listed)
 - Geekbench 6 single-core and multi-core scores
 - Geekbench 6 GPU compute score (for SoCs with integrated GPU)
 - 3DMark Steel Nomad Light score (not other 3DMark tests)
-- Core count, base clock GHz, boost clock GHz
 - Integrated GPU name
 
 Return a single JSON object only. No markdown, no explanation, no code fences:
@@ -34,11 +35,12 @@ Now return the JSON for "${name}". Use null for any value not found.`
 
 const GPU_PROMPT = (name: string) => `Search nanoreview.net for the GPU named "${name}" and extract its benchmark scores and specs.
 
-Go to nanoreview.net and find the page for "${name}". Collect:
+Go to nanoreview.net and find the page for "${name}". Extract:
+- Core count from: <li class="mb"><strong>Cores:</strong> 6</li> (the number after "Cores:")
+- Clock speed from: <li class="mb"><strong>Clock:</strong> 4260 MHz</li> (convert MHz to GHz; use as reference for GPU clock if needed)
 - Geekbench 6 GPU Metal/Vulkan score
 - Geekbench 6 OpenCL score
 - 3DMark Steel Nomad Light score (not other 3DMark tests)
-- Shader/compute core count
 - Whether it is a mobile, laptop, or desktop GPU
 
 Return a single JSON object only. No markdown, no explanation, no code fences:
