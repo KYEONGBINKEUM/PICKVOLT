@@ -164,6 +164,7 @@ function SpecRow({
   barMax = 100,
   winnerIndex = -1,
   winnerColor = '#FF6B2B',
+  colors = [],
 }: {
   label: string
   sublabel: string
@@ -171,6 +172,7 @@ function SpecRow({
   barMax?: number
   winnerIndex?: number
   winnerColor?: string
+  colors?: string[]
 }) {
   return (
     <div
@@ -186,7 +188,7 @@ function SpecRow({
           style={i === winnerIndex ? { backgroundColor: `${winnerColor}12` } : {}}>
           <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
           {v.secondary && <p className="text-xs text-white/40 mt-1">{v.secondary}</p>}
-          {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} />}
+          {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={colors[i]} />}
         </div>
       ))}
     </div>
@@ -301,12 +303,8 @@ function AIPickLoading({ t }: { t: (k: string) => string }) {
 }
 
 /* ---------- Action Buttons ---------- */
-function ActionButtons({ t }: { t: (k: string) => string }) {
+function ActionButtons({ t, onExportPDF }: { t: (k: string) => string; onExportPDF: () => void }) {
   const [copied, setCopied] = useState(false)
-
-  const handleExportPDF = () => {
-    window.print()
-  }
 
   const handleShare = async () => {
     const url = window.location.href
@@ -328,7 +326,7 @@ function ActionButtons({ t }: { t: (k: string) => string }) {
   return (
     <div className="flex items-center justify-end gap-3 mb-12">
       <button
-        onClick={handleExportPDF}
+        onClick={onExportPDF}
         className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 print:hidden"
       >
         <Download className="w-4 h-4" />
@@ -780,6 +778,94 @@ export default function CompareClient() {
 
   const specRows = buildSpecRows()
 
+  const handleExportPDF = async () => {
+    const { default: jsPDF } = await import('jspdf')
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageW = 210
+    const margin = 14
+    const colW = (pageW - margin * 2) / products.length
+    let y = 20
+
+    // Title
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 30, 30)
+    doc.text('Product Comparison', margin, y)
+    y += 8
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(120, 120, 120)
+    doc.text(`pickvolt.com  ·  ${new Date().toLocaleDateString()}`, margin, y)
+    y += 10
+
+    // Product name headers
+    doc.setFillColor(240, 240, 240)
+    doc.rect(margin, y, pageW - margin * 2, 12, 'F')
+    products.forEach((p, i) => {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      const name = p.name.length > 28 ? p.name.slice(0, 26) + '…' : p.name
+      doc.text(name, margin + colW * i + 2, y + 8)
+    })
+    y += 16
+
+    // Spec rows
+    specRows.forEach((row) => {
+      if (y > 270) { doc.addPage(); y = 20 }
+
+      // Row label
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(120, 120, 120)
+      doc.text(row.sublabel.toUpperCase(), margin, y)
+      y += 4
+
+      const hasSecondary = row.values.some((v) => v.secondary)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      row.values.forEach((v, i) => {
+        const val = String(v.primary)
+        doc.text(val.length > 22 ? val.slice(0, 20) + '…' : val, margin + colW * i, y)
+        if (v.secondary) {
+          doc.setFontSize(7)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(140, 140, 140)
+          doc.text(v.secondary.length > 26 ? v.secondary.slice(0, 24) + '…' : v.secondary, margin + colW * i, y + 4)
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(30, 30, 30)
+        }
+      })
+      y += hasSecondary ? 10 : 7
+
+      // Divider
+      doc.setDrawColor(220, 220, 220)
+      doc.line(margin, y, pageW - margin, y)
+      y += 4
+    })
+
+    // AI result if available
+    if (aiResult) {
+      if (y > 240) { doc.addPage(); y = 20 }
+      y += 4
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(30, 30, 30)
+      doc.text(`AI Pick: ${aiResult.winner}`, margin, y)
+      y += 6
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(80, 80, 80)
+      const lines = doc.splitTextToSize(aiResult.summary, pageW - margin * 2)
+      doc.text(lines, margin, y)
+    }
+
+    doc.save(`pickvolt-compare-${Date.now()}.pdf`)
+  }
+
   return (
     <>
       <Navbar showSearch />
@@ -981,6 +1067,7 @@ export default function CompareClient() {
                     barMax={row.barMax}
                     winnerIndex={winnerIndex}
                     winnerColor={winnerColor}
+                    colors={PRODUCT_COLORS}
                   />
                 )
               })}
@@ -988,7 +1075,7 @@ export default function CompareClient() {
 
 
             {/* 액션 버튼 */}
-            <ActionButtons t={t} />
+            <ActionButtons t={t} onExportPDF={handleExportPDF} />
 
             {/* 인기 비교 */}
             <PopularComparisons items={popularItems} t={t} />
