@@ -41,7 +41,10 @@ GB6 GPU Compute Score (for SoCs with integrated GPU):
 → take the integer in score-bar-result-number
 
 Also extract:
-- 3DMark Steel Nomad Light score (not other 3DMark tests)
+3DMark Steel Nomad Light score:
+<div class="score-bar-name">3DMark Steel Nomad Light</div>
+<span class="score-bar-result-number">2487</span>
+→ take the integer in score-bar-result-number (use as tdmark_score)
 - Integrated GPU name
 
 Return a single JSON object only. No markdown, no explanation, no code fences:
@@ -66,7 +69,10 @@ GB6 Compute Score (GPU / OpenCL):
 → use as gb6_opencl
 
 Also extract:
-- 3DMark Steel Nomad Light score (not other 3DMark tests)
+3DMark Steel Nomad Light score:
+<div class="score-bar-name">3DMark Steel Nomad Light</div>
+<span class="score-bar-result-number">2487</span>
+→ take the integer in score-bar-result-number (use as tdmark_score)
 - Whether it is a mobile, laptop, or desktop GPU
 
 Return a single JSON object only. No markdown, no explanation, no code fences:
