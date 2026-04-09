@@ -18,15 +18,15 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
 
 const CPU_PROMPT = (name: string) => `Search the web for real benchmark scores and specs for the CPU/SoC named "${name}".
 
-Priority sources (check all):
-- nanoreview.net — search "nanoreview ${name}" for Geekbench 6 scores and specs
-- browser.geekbench.com — for Geekbench 6 single/multi-core and GPU compute scores
-- 3dmark.com or notebookcheck.net — for 3DMark scores
+Priority sources (check all and cross-reference):
+- nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
+- browser.geekbench.com — cross-check Geekbench 6 single/multi-core and GPU compute scores
+- 3dmark.com or notebookcheck.net — cross-check 3DMark score if nanoreview lacks it
 
 Look up:
 - Geekbench 6 single-core and multi-core scores
 - Geekbench 6 GPU compute score (Metal/Vulkan/OpenCL, for SoCs with integrated GPU)
-- 3DMark score if available
+- 3DMark score (check nanoreview first, then 3dmark.com)
 - Core count, base clock, boost clock (GHz)
 - Integrated GPU name
 
@@ -48,15 +48,15 @@ Use the median/typical real-world score found across sources. Use null if not fo
 
 const GPU_PROMPT = (name: string) => `Search the web for real benchmark scores and specs for the GPU named "${name}".
 
-Priority sources (check all):
-- nanoreview.net — search "nanoreview ${name}" for Geekbench 6 scores and specs
-- browser.geekbench.com — for Geekbench 6 Metal/Vulkan/OpenCL scores
-- 3dmark.com or notebookcheck.net — for 3DMark scores
+Priority sources (check all and cross-reference):
+- nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
+- browser.geekbench.com — cross-check Geekbench 6 Metal/Vulkan/OpenCL scores
+- 3dmark.com or notebookcheck.net — cross-check 3DMark score if nanoreview lacks it
 
 Look up:
 - Geekbench 6 GPU Metal/Vulkan score
 - Geekbench 6 OpenCL score
-- 3DMark score if available
+- 3DMark score (check nanoreview first, then 3dmark.com)
 - Shader/compute core count
 - Whether it is a mobile, laptop, or desktop GPU
 
