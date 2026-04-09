@@ -5,10 +5,10 @@ import { Analytics } from '@vercel/analytics/next'
 export default function AnalyticsProvider() {
   return (
     <Analytics
-      beforeSend={() => {
+      beforeSend={(event) => {
         const consent = localStorage.getItem('pv_cookie_consent')
         if (consent !== 'accepted') return null
-        return undefined
+        return event
       }}
     />
   )
