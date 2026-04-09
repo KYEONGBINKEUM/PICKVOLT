@@ -47,6 +47,9 @@ export async function PATCH(
   for (const key of allowedProduct) {
     if (key in body) productUpdates[key] = body[key]
   }
+  if ('price_usd' in productUpdates && productUpdates.price_usd != null) {
+    productUpdates.price_usd = parseFloat(String(productUpdates.price_usd))
+  }
 
   const supabase = makeServiceClient()
   const errors: string[] = []
