@@ -751,20 +751,6 @@ export default function CompareClient() {
             numericVal: p.raw.battery_mah ?? undefined,
           })),
         },
-        {
-          label: t('spec.stylus'),
-          sublabel: t('spec.stylus_support'),
-          values: products.map((p) => ({
-            primary: p.raw.stylus_support === true ? 'Yes' : p.raw.stylus_support === false ? 'No' : '—',
-          })),
-        },
-        {
-          label: t('spec.cellular'),
-          sublabel: t('spec.connectivity'),
-          values: products.map((p) => ({
-            primary: p.raw.cellular === true ? 'Yes' : p.raw.cellular === false ? 'No' : '—',
-          })),
-        },
         osRow,
       ]
     }
@@ -1000,48 +986,6 @@ export default function CompareClient() {
               })}
             </div>
 
-            {/* 레이더 차트 */}
-            {radarProducts && (
-              <div className="bg-surface border border-border rounded-card p-6 mb-6">
-                <div className="mb-4">
-                  <p className="text-sm font-bold text-white">{t('compare.spec_radar')}</p>
-                </div>
-                <div className="flex flex-col md:flex-row items-center gap-8">
-                  <div className="flex-shrink-0">
-                    <RadarChart products={radarProducts} size={260} />
-                  </div>
-                  <div className="flex-1 w-full space-y-4">
-                    {radarProducts.map((rp, i) => (
-                      <div key={i}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: rp.color }} />
-                          <span className="text-xs font-bold text-white truncate">{rp.name}</span>
-                          {productScores && (
-                            <span className="ml-auto text-xs font-black" style={{ color: rp.color }}>
-                              {productScores[i].overall}<span className="text-white/30 font-normal">/100</span>
-                            </span>
-                          )}
-                        </div>
-                        <div className="space-y-1.5">
-                          {rp.dimensions.map((dim) => (
-                            <div key={dim.label} className="flex items-center gap-2">
-                              <span className="text-[10px] text-white/30 w-16 flex-shrink-0">{dim.label}</span>
-                              <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-700"
-                                  style={{ width: `${dim.score}%`, backgroundColor: rp.color }}
-                                />
-                              </div>
-                              <span className="text-[10px] text-white/50 w-7 text-right">{dim.score}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* 액션 버튼 */}
             <ActionButtons t={t} />
