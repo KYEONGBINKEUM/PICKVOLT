@@ -141,6 +141,7 @@ export default function AdminPage() {
   const [newCpuTdmark, setNewCpuTdmark] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
   const [aiFillingCpu, setAiFillingCpu] = useState(false)
+  const [aiCpuError, setAiCpuError] = useState<string | null>(null)
 
   // GPUs
   const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; gb6_single: number | null; gb6_opencl: number | null; tdmark_score: number | null; relative_score: number | null; score_source: string | null; cpu_id: string | null; cpus: { name: string } | null }[]>([])
@@ -161,6 +162,7 @@ export default function AdminPage() {
   const [gpuCpuResults, setGpuCpuResults] = useState<{ id: string; name: string }[]>([])
   const [addingGpu, setAddingGpu] = useState(false)
   const [aiFillingGpu, setAiFillingGpu] = useState(false)
+  const [aiGpuError, setAiGpuError] = useState<string | null>(null)
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -292,15 +294,17 @@ export default function AdminPage() {
   const handleAiFillCpu = async () => {
     if (!newCpuName.trim()) return
     setAiFillingCpu(true)
+    setAiCpuError(null)
     try {
       const res = await fetch('/api/admin/ai-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: newCpuName.trim(), kind: 'cpu' }),
       })
-      if (!res.ok) return
-      const { specs } = await res.json()
-      if (!specs) return
+      const json = await res.json()
+      if (!res.ok) { setAiCpuError(json.error ?? `HTTP ${res.status}`); return }
+      const { specs } = json
+      if (!specs) { setAiCpuError('응답에 specs 없음'); return }
       if (specs.brand)        setNewCpuBrand(specs.brand)
       if (specs.type)         setNewCpuType(specs.type as 'mobile' | 'laptop' | 'desktop')
       if (specs.cores != null)       setNewCpuCores(String(specs.cores))
@@ -311,6 +315,8 @@ export default function AdminPage() {
       if (specs.gb6_multi != null)   setNewCpuGb6Multi(String(specs.gb6_multi))
       if (specs.igpu_gb6_single != null) setNewCpuIgpuSingle(String(specs.igpu_gb6_single))
       if (specs.tdmark_score != null)    setNewCpuTdmark(String(specs.tdmark_score))
+    } catch (e) {
+      setAiCpuError(e instanceof Error ? e.message : String(e))
     } finally {
       setAiFillingCpu(false)
     }
@@ -393,21 +399,25 @@ export default function AdminPage() {
   const handleAiFillGpu = async () => {
     if (!newGpuName.trim()) return
     setAiFillingGpu(true)
+    setAiGpuError(null)
     try {
       const res = await fetch('/api/admin/ai-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: newGpuName.trim(), kind: 'gpu' }),
       })
-      if (!res.ok) return
-      const { specs } = await res.json()
-      if (!specs) return
+      const json = await res.json()
+      if (!res.ok) { setAiGpuError(json.error ?? `HTTP ${res.status}`); return }
+      const { specs } = json
+      if (!specs) { setAiGpuError('응답에 specs 없음'); return }
       if (specs.brand)        setNewGpuBrand(specs.brand)
       if (specs.type)         setNewGpuType(specs.type as 'mobile' | 'laptop' | 'desktop')
       if (specs.cores != null)       setNewGpuCores(String(specs.cores))
       if (specs.gb6_single != null)  setNewGpuGb6Single(String(specs.gb6_single))
       if (specs.gb6_opencl != null)  setNewGpuGb6Opencl(String(specs.gb6_opencl))
       if (specs.tdmark_score != null) setNewGpuTdmark(String(specs.tdmark_score))
+    } catch (e) {
+      setAiGpuError(e instanceof Error ? e.message : String(e))
     } finally {
       setAiFillingGpu(false)
     }
@@ -1018,6 +1028,9 @@ export default function AdminPage() {
                   className="w-36 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
+              {aiCpuError && (
+                <p className="text-xs text-red-400 mb-3">AI 오류: {aiCpuError}</p>
+              )}
 
               {/* 클럭 */}
               <div className="flex flex-wrap gap-3 mb-4">
@@ -1281,6 +1294,9 @@ export default function AdminPage() {
                   className="w-36 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
+              {aiGpuError && (
+                <p className="text-xs text-red-400 mb-3">AI 오류: {aiGpuError}</p>
+              )}
 
               {/* 프로세서 연동 (CPU) */}
               <div className="mb-4">

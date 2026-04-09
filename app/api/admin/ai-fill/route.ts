@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
@@ -16,79 +18,52 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
 }
 
-const CPU_PROMPT = (name: string) => `Search the web for real benchmark scores and specs for the CPU/SoC named "${name}".
+const CPU_PROMPT = (name: string) => `Search the web for real benchmark scores and hardware specs for the CPU/SoC named "${name}".
 
 Priority sources (check all and cross-reference):
 - nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
 - browser.geekbench.com — cross-check Geekbench 6 single/multi-core and GPU compute scores
 - 3dmark.com or notebookcheck.net — cross-check 3DMark score if nanoreview lacks it
 
-Look up:
-- Geekbench 6 single-core and multi-core scores
+Collect:
+- Geekbench 6 single-core and multi-core scores (median from multiple runs)
 - Geekbench 6 GPU compute score (Metal/Vulkan/OpenCL, for SoCs with integrated GPU)
 - 3DMark score (check nanoreview first, then 3dmark.com)
-- Core count, base clock, boost clock (GHz)
+- Core count, base clock GHz, boost clock GHz
 - Integrated GPU name
 
-Return JSON only (no markdown, no explanation):
-{
-  "brand": "Apple | Qualcomm | MediaTek | Samsung | Intel | AMD | HiSilicon | ...",
-  "type": "mobile | laptop | desktop",
-  "cores": <integer or null>,
-  "clock_base": <GHz as float or null>,
-  "clock_boost": <GHz as float or null>,
-  "gpu_name": "<integrated GPU name or null>",
-  "gb6_single": <Geekbench 6 single-core score integer or null>,
-  "gb6_multi": <Geekbench 6 multi-core score integer or null>,
-  "igpu_gb6_single": <Geekbench 6 GPU compute score integer or null>,
-  "tdmark_score": <3DMark score integer or null>
-}
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"brand":"Apple","type":"mobile","cores":6,"clock_base":3.0,"clock_boost":4.0,"gpu_name":"Apple GPU (6-core)","gb6_single":3500,"gb6_multi":8000,"igpu_gb6_single":22000,"tdmark_score":null}
 
-Use the median/typical real-world score found across sources. Use null if not found.`
+Now return the JSON for "${name}". Use null for any value not found.`
 
-const GPU_PROMPT = (name: string) => `Search the web for real benchmark scores and specs for the GPU named "${name}".
+const GPU_PROMPT = (name: string) => `Search the web for real benchmark scores and hardware specs for the GPU named "${name}".
 
 Priority sources (check all and cross-reference):
 - nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
 - browser.geekbench.com — cross-check Geekbench 6 Metal/Vulkan/OpenCL scores
 - 3dmark.com or notebookcheck.net — cross-check 3DMark score if nanoreview lacks it
 
-Look up:
-- Geekbench 6 GPU Metal/Vulkan score
-- Geekbench 6 OpenCL score
+Collect:
+- Geekbench 6 GPU Metal/Vulkan score (median)
+- Geekbench 6 OpenCL score (median)
 - 3DMark score (check nanoreview first, then 3dmark.com)
 - Shader/compute core count
 - Whether it is a mobile, laptop, or desktop GPU
 
-Return JSON only (no markdown, no explanation):
-{
-  "brand": "Apple | NVIDIA | AMD | Intel | Qualcomm (Adreno) | ARM (Mali) | Imagination (PowerVR) | MediaTek | ...",
-  "type": "mobile | laptop | desktop",
-  "cores": <shader/compute core count integer or null>,
-  "gb6_single": <Geekbench 6 GPU Metal/Vulkan score integer or null>,
-  "gb6_opencl": <Geekbench 6 OpenCL score integer or null>,
-  "tdmark_score": <3DMark score integer or null>
-}
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"brand":"Apple","type":"mobile","cores":5,"gb6_single":14000,"gb6_opencl":null,"tdmark_score":null}
 
-Use the median/typical real-world score found across sources. Use null if not found.`
-
-async function callGemini(prompt: string): Promise<string> {
-  const { GoogleGenAI } = await import('@google/genai')
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
-    contents: prompt,
-    config: {
-      tools: [{ googleSearch: {} }],
-    },
-  })
-  return response.text ?? ''
-}
+Now return the JSON for "${name}". Use null for any value not found.`
 
 function extractJson(text: string): Record<string, unknown> {
-  const match = text.match(/\{[\s\S]*\}/)
-  if (!match) throw new Error('No JSON found in response')
-  return JSON.parse(match[0])
+  // Strip markdown code fences if present
+  const stripped = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '')
+  // Find first { and last } to extract the JSON object
+  const start = stripped.indexOf('{')
+  const end = stripped.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error('No JSON object found in response')
+  return JSON.parse(stripped.slice(start, end + 1))
 }
 
 export async function POST(req: NextRequest) {
@@ -106,11 +81,21 @@ export async function POST(req: NextRequest) {
 
   try {
     const prompt = kind === 'cpu' ? CPU_PROMPT(name) : GPU_PROMPT(name)
-    const text = await callGemini(prompt)
-    const result = extractJson(text)
-    return NextResponse.json({ specs: result })
+
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      tools: [{ googleSearch: {} }],
+    })
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+
+    const specs = extractJson(text)
+    return NextResponse.json({ specs })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
+    console.error('[ai-fill] error:', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
