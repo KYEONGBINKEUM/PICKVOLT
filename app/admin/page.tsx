@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
-  Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor,
+  Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -75,11 +75,12 @@ export default function AdminPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
 
   // Users
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; plan: string; provider: string }[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersPage, setUsersPage] = useState(1)
   const [usersTotal, setUsersTotal] = useState(0)
+  const [userSearch, setUserSearch] = useState('')
+  const [updatingPlan, setUpdatingPlan] = useState<string | null>(null)
 
   // Comparisons
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -150,10 +151,12 @@ export default function AdminPage() {
     setProducts(data ?? [])
   }, [authed, search, category, brand, page])
 
-  const fetchUsers = useCallback(async (tok: string, pg: number) => {
+  const fetchUsers = useCallback(async (tok: string, pg: number, q = '') => {
     setUsersLoading(true)
     setUsersError(null)
-    const res = await fetch(`/api/admin/users?page=${pg}`, { headers: { Authorization: `Bearer ${tok}` } })
+    const params = new URLSearchParams({ page: String(pg) })
+    if (q) params.set('q', q)
+    const res = await fetch(`/api/admin/users?${params}`, { headers: { Authorization: `Bearer ${tok}` } })
     if (res.ok) {
       const json = await res.json()
       setUsers(json.users ?? [])
@@ -164,6 +167,19 @@ export default function AdminPage() {
     }
     setUsersLoading(false)
   }, [])
+
+  const handleUpdatePlan = async (userId: string, newPlan: string) => {
+    setUpdatingPlan(userId)
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId, plan: newPlan }),
+    })
+    if (res.ok) {
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, plan: newPlan } : u))
+    }
+    setUpdatingPlan(null)
+  }
 
   const fetchComparisons = useCallback(async (tok: string, pg: number) => {
     setCompLoading(true)
@@ -266,7 +282,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed || !token) return
-    if (tab === 'users') fetchUsers(token, usersPage)
+    if (tab === 'users') fetchUsers(token, usersPage, userSearch)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab, usersPage, fetchUsers])
 
   useEffect(() => {
@@ -548,12 +565,28 @@ export default function AdminPage() {
         {/* ── USERS ── */}
         {tab === 'users' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <h1 className="text-2xl font-black">유저 관리 <span className="text-sm font-normal text-white/30 ml-2">총 {usersTotal}명</span></h1>
-              <button onClick={() => fetchUsers(token, usersPage)} disabled={usersLoading}
+              <button onClick={() => fetchUsers(token, usersPage, userSearch)} disabled={usersLoading}
                 className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors disabled:opacity-40">
                 <RefreshCw size={13} className={usersLoading ? 'animate-spin' : ''} />새로고침
               </button>
+            </div>
+
+            {/* 이메일 검색 */}
+            <div className="relative mb-4">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <input
+                type="text"
+                placeholder="이메일 검색..."
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value)
+                  setUsersPage(1)
+                  fetchUsers(token, 1, e.target.value)
+                }}
+                className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-accent"
+              />
             </div>
 
             {usersError && (
@@ -580,6 +613,7 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">가입일</th>
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">마지막 로그인</th>
                       <th className="text-right px-4 py-3 text-white/40 font-medium">비교수</th>
+                      <th className="text-center px-4 py-3 text-white/40 font-medium">플랜</th>
                       <th className="text-center px-4 py-3 text-white/40 font-medium hidden md:table-cell">로그인</th>
                     </tr>
                   </thead>
@@ -590,13 +624,32 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.last_sign_in_at)}</td>
                         <td className="px-4 py-3 text-white/70 text-right font-mono">{u.comparisons}</td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => handleUpdatePlan(u.id, u.plan === 'pro' ? 'free' : 'pro')}
+                            disabled={updatingPlan === u.id}
+                            className={`flex items-center justify-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full transition-colors mx-auto ${
+                              u.plan === 'pro'
+                                ? 'bg-accent/20 text-accent hover:bg-accent/30'
+                                : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
+                            } disabled:opacity-40`}
+                          >
+                            {updatingPlan === u.id ? (
+                              <RefreshCw size={10} className="animate-spin" />
+                            ) : u.plan === 'pro' ? (
+                              <><Zap size={10} />pro</>
+                            ) : (
+                              'free'
+                            )}
+                          </button>
+                        </td>
                         <td className="px-4 py-3 text-center hidden md:table-cell">
                           <span className="text-xs text-white/30">{u.provider}</span>
                         </td>
                       </tr>
                     ))}
                     {users.length === 0 && (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
                     )}
                   </tbody>
                 </table>
