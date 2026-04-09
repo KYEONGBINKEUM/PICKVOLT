@@ -18,8 +18,13 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
 
 const CPU_PROMPT = (name: string) => `Search the web for real benchmark scores and specs for the CPU/SoC named "${name}".
 
+Priority sources (check all):
+- nanoreview.net — search "nanoreview ${name}" for Geekbench 6 scores and specs
+- browser.geekbench.com — for Geekbench 6 single/multi-core and GPU compute scores
+- 3dmark.com or notebookcheck.net — for 3DMark scores
+
 Look up:
-- Geekbench 6 single-core and multi-core scores (from browser.geekbench.com)
+- Geekbench 6 single-core and multi-core scores
 - Geekbench 6 GPU compute score (Metal/Vulkan/OpenCL, for SoCs with integrated GPU)
 - 3DMark score if available
 - Core count, base clock, boost clock (GHz)
@@ -39,12 +44,17 @@ Return JSON only (no markdown, no explanation):
   "tdmark_score": <3DMark score integer or null>
 }
 
-Use the median/typical real-world score found in search results. Use null if not found.`
+Use the median/typical real-world score found across sources. Use null if not found.`
 
 const GPU_PROMPT = (name: string) => `Search the web for real benchmark scores and specs for the GPU named "${name}".
 
+Priority sources (check all):
+- nanoreview.net — search "nanoreview ${name}" for Geekbench 6 scores and specs
+- browser.geekbench.com — for Geekbench 6 Metal/Vulkan/OpenCL scores
+- 3dmark.com or notebookcheck.net — for 3DMark scores
+
 Look up:
-- Geekbench 6 GPU Metal/Vulkan score (from browser.geekbench.com)
+- Geekbench 6 GPU Metal/Vulkan score
 - Geekbench 6 OpenCL score
 - 3DMark score if available
 - Shader/compute core count
@@ -60,7 +70,7 @@ Return JSON only (no markdown, no explanation):
   "tdmark_score": <3DMark score integer or null>
 }
 
-Use the median/typical real-world score found in search results. Use null if not found.`
+Use the median/typical real-world score found across sources. Use null if not found.`
 
 async function callGemini(prompt: string): Promise<string> {
   const { GoogleGenAI } = await import('@google/genai')
