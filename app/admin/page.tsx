@@ -140,6 +140,7 @@ export default function AdminPage() {
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
   const [newCpuTdmark, setNewCpuTdmark] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
+  const [aiFillingCpu, setAiFillingCpu] = useState(false)
 
   // GPUs
   const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; gb6_single: number | null; gb6_opencl: number | null; tdmark_score: number | null; relative_score: number | null; score_source: string | null; cpu_id: string | null; cpus: { name: string } | null }[]>([])
@@ -159,6 +160,7 @@ export default function AdminPage() {
   const [gpuCpuQuery, setGpuCpuQuery] = useState('')
   const [gpuCpuResults, setGpuCpuResults] = useState<{ id: string; name: string }[]>([])
   const [addingGpu, setAddingGpu] = useState(false)
+  const [aiFillingGpu, setAiFillingGpu] = useState(false)
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -287,6 +289,33 @@ export default function AdminPage() {
     tdmark_score:    newCpuTdmark     ? Number(newCpuTdmark)     : null,
   })
 
+  const handleAiFillCpu = async () => {
+    if (!newCpuName.trim()) return
+    setAiFillingCpu(true)
+    try {
+      const res = await fetch('/api/admin/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newCpuName.trim(), kind: 'cpu' }),
+      })
+      if (!res.ok) return
+      const { specs } = await res.json()
+      if (!specs) return
+      if (specs.brand)        setNewCpuBrand(specs.brand)
+      if (specs.type)         setNewCpuType(specs.type as 'mobile' | 'laptop' | 'desktop')
+      if (specs.cores != null)       setNewCpuCores(String(specs.cores))
+      if (specs.clock_base != null)  setNewCpuClockBase(String(specs.clock_base))
+      if (specs.clock_boost != null) setNewCpuClockBoost(String(specs.clock_boost))
+      if (specs.gpu_name)            setNewCpuGpuName(specs.gpu_name)
+      if (specs.gb6_single != null)  setNewCpuGb6Single(String(specs.gb6_single))
+      if (specs.gb6_multi != null)   setNewCpuGb6Multi(String(specs.gb6_multi))
+      if (specs.igpu_gb6_single != null) setNewCpuIgpuSingle(String(specs.igpu_gb6_single))
+      if (specs.tdmark_score != null)    setNewCpuTdmark(String(specs.tdmark_score))
+    } finally {
+      setAiFillingCpu(false)
+    }
+  }
+
   const handleAddCpu = async () => {
     if (!newCpuName.trim()) return
     setAddingCpu(true)
@@ -359,6 +388,29 @@ export default function AdminPage() {
     setNewGpuCpuName('')
     setGpuCpuQuery('')
     setGpuCpuResults([])
+  }
+
+  const handleAiFillGpu = async () => {
+    if (!newGpuName.trim()) return
+    setAiFillingGpu(true)
+    try {
+      const res = await fetch('/api/admin/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newGpuName.trim(), kind: 'gpu' }),
+      })
+      if (!res.ok) return
+      const { specs } = await res.json()
+      if (!specs) return
+      if (specs.brand)        setNewGpuBrand(specs.brand)
+      if (specs.type)         setNewGpuType(specs.type as 'mobile' | 'laptop' | 'desktop')
+      if (specs.cores != null)       setNewGpuCores(String(specs.cores))
+      if (specs.gb6_single != null)  setNewGpuGb6Single(String(specs.gb6_single))
+      if (specs.gb6_opencl != null)  setNewGpuGb6Opencl(String(specs.gb6_opencl))
+      if (specs.tdmark_score != null) setNewGpuTdmark(String(specs.tdmark_score))
+    } finally {
+      setAiFillingGpu(false)
+    }
   }
 
   const handleAddGpu = async () => {
@@ -949,6 +1001,15 @@ export default function AdminPage() {
                   onChange={(e) => setNewCpuName(e.target.value)}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+                <button
+                  type="button"
+                  onClick={handleAiFillCpu}
+                  disabled={aiFillingCpu || !newCpuName.trim()}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
+                >
+                  {aiFillingCpu ? <RefreshCw size={12} className="animate-spin" /> : <span>✦</span>}
+                  AI 자동입력
+                </button>
                 <input
                   type="number"
                   placeholder="코어 수 (예: 12)"
@@ -1203,6 +1264,15 @@ export default function AdminPage() {
                   onChange={(e) => setNewGpuName(e.target.value)}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+                <button
+                  type="button"
+                  onClick={handleAiFillGpu}
+                  disabled={aiFillingGpu || !newGpuName.trim()}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
+                >
+                  {aiFillingGpu ? <RefreshCw size={12} className="animate-spin" /> : <span>✦</span>}
+                  AI 자동입력
+                </button>
                 <input
                   type="number"
                   placeholder="코어 수 (예: 10)"
