@@ -18,17 +18,12 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
 }
 
-const CPU_PROMPT = (name: string) => `Search the web for real benchmark scores and hardware specs for the CPU/SoC named "${name}".
+const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores and specs.
 
-Priority sources (check all and cross-reference):
-- nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
-- browser.geekbench.com — cross-check Geekbench 6 single/multi-core and GPU compute scores
-- 3dmark.com or notebookcheck.net — cross-check 3DMark Steel Nomad Light score if nanoreview lacks it
-
-Collect:
-- Geekbench 6 single-core and multi-core scores (median from multiple runs)
-- Geekbench 6 GPU compute score (Metal/Vulkan/OpenCL, for SoCs with integrated GPU)
-- 3DMark Steel Nomad Light score specifically (not other 3DMark tests)
+Go to nanoreview.net and find the page for "${name}". Collect:
+- Geekbench 6 single-core and multi-core scores
+- Geekbench 6 GPU compute score (for SoCs with integrated GPU)
+- 3DMark Steel Nomad Light score (not other 3DMark tests)
 - Core count, base clock GHz, boost clock GHz
 - Integrated GPU name
 
@@ -37,17 +32,12 @@ Return a single JSON object only. No markdown, no explanation, no code fences:
 
 Now return the JSON for "${name}". Use null for any value not found.`
 
-const GPU_PROMPT = (name: string) => `Search the web for real benchmark scores and hardware specs for the GPU named "${name}".
+const GPU_PROMPT = (name: string) => `Search nanoreview.net for the GPU named "${name}" and extract its benchmark scores and specs.
 
-Priority sources (check all and cross-reference):
-- nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
-- browser.geekbench.com — cross-check Geekbench 6 Metal/Vulkan/OpenCL scores
-- 3dmark.com or notebookcheck.net — cross-check 3DMark Steel Nomad Light score if nanoreview lacks it
-
-Collect:
-- Geekbench 6 GPU Metal/Vulkan score (median)
-- Geekbench 6 OpenCL score (median)
-- 3DMark Steel Nomad Light score specifically (not other 3DMark tests)
+Go to nanoreview.net and find the page for "${name}". Collect:
+- Geekbench 6 GPU Metal/Vulkan score
+- Geekbench 6 OpenCL score
+- 3DMark Steel Nomad Light score (not other 3DMark tests)
 - Shader/compute core count
 - Whether it is a mobile, laptop, or desktop GPU
 
