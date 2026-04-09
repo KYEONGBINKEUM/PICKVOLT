@@ -171,12 +171,12 @@ export interface CategoryStats {
   weightKg:      { min: number; max: number }
 }
 
-/** 높을수록 좋은 스펙: (value - min) / (max - min) * 100 */
+/** 높을수록 좋은 스펙: value / max × 100 (0을 바닥으로 고정) */
 function relHigh(value: number | null, range: { min: number; max: number }): number {
   if (value == null) return 0
-  const { min, max } = range
-  if (max === min) return 50
-  return Math.min(100, Math.max(0, Math.round((value - min) / (max - min) * 100)))
+  const { max } = range
+  if (max <= 0) return 0
+  return Math.min(100, Math.max(0, Math.round(value / max * 100)))
 }
 
 /** 낮을수록 좋은 스펙 (무게): (max - value) / (max - min) * 100 */
