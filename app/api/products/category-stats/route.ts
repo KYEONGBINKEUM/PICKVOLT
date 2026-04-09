@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export const revalidate = 3600 // 1시간 캐시 — 신제품 추가 시 자동 갱신
+export const dynamic = 'force-dynamic' // 항상 최신 데이터 반환
 
 function firstNum(val: string | number | null | undefined): number | null {
   if (val == null) return null

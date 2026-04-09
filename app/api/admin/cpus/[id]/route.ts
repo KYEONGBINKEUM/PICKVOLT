@@ -43,18 +43,36 @@ export async function PATCH(
     if (key in body) updates[key] = body[key]
   }
 
-  // gb6_multi 변경 시 relative_score 자동 재계산
-  if ('gb6_multi' in updates && updates.gb6_multi != null && !('relative_score' in body)) {
+  // 벤치마크 수치 변경 시 relative_score 자동 재계산 (relative_score를 직접 지정하지 않은 경우)
+  const benchmarkFields = ['gb6_single', 'gb6_multi', 'tdmark_score', 'antutu_score', 'cinebench_single', 'cinebench_multi']
+  const hasBenchmarkChange = benchmarkFields.some((f) => f in updates)
+  if (hasBenchmarkChange && !('relative_score' in body)) {
     const supabaseTmp = makeServiceClient()
-    const { data: maxRow } = await supabaseTmp
+    // 현재 저장된 값 조회 (업데이트되지 않은 필드 유지용)
+    const { data: current } = await supabaseTmp
       .from('cpus')
-      .select('gb6_multi')
-      .order('gb6_multi', { ascending: false })
-      .limit(1)
+      .select('gb6_multi, antutu_score, cinebench_multi')
+      .eq('id', id)
       .single()
-    const maxScore = maxRow?.gb6_multi ?? (updates.gb6_multi as number)
-    const newMulti = updates.gb6_multi as number
-    updates.relative_score = Math.round((newMulti / Math.max(maxScore, newMulti)) * 1000)
+    const gb6Multi       = (updates.gb6_multi       ?? current?.gb6_multi)       as number | null
+    const antutu         = (updates.antutu_score     ?? current?.antutu_score)    as number | null
+    const cinebenchMulti = (updates.cinebench_multi  ?? current?.cinebench_multi) as number | null
+    // 가장 신뢰도 높은 멀티 점수 우선: cinebench_multi → gb6_multi → antutu 환산
+    const scoreForCalc = cinebenchMulti ?? gb6Multi ?? (antutu ? antutu / 3000 : null)
+    if (scoreForCalc != null) {
+      const { data: maxRow } = await supabaseTmp
+        .from('cpus')
+        .select('gb6_multi, cinebench_multi, antutu_score')
+        .order(cinebenchMulti ? 'cinebench_multi' : (gb6Multi ? 'gb6_multi' : 'antutu_score'), { ascending: false })
+        .limit(1)
+        .single()
+      const maxVal = cinebenchMulti
+        ? (maxRow?.cinebench_multi ?? cinebenchMulti)
+        : gb6Multi
+        ? (maxRow?.gb6_multi ?? gb6Multi)
+        : ((maxRow?.antutu_score ?? (antutu ?? 0)) / 3000)
+      updates.relative_score = Math.round((scoreForCalc / Math.max(maxVal, scoreForCalc)) * 1000)
+    }
   }
 
   const supabase = makeServiceClient()

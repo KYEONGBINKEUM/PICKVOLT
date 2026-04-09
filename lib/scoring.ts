@@ -206,7 +206,11 @@ export function computeRelativeScores(
 ): RelativeScoreBreakdown {
   const { category } = input
 
-  const perf = relHigh(input.relativeScore ?? null, stats.relativeScore)
+  // Performance는 0을 바닥으로 고정 — (점수 / DB최고점) × 100
+  // min-max 정규화 시 하위 제품이 0이 되어 상위권 제품이 실제보다 낮아 보이는 문제 방지
+  const perf = input.relativeScore != null && stats.relativeScore.max > 0
+    ? Math.min(100, Math.round(input.relativeScore / stats.relativeScore.max * 100))
+    : 0
   const ram  = relHigh(firstNum(input.ram_gb), stats.ram)
 
   if (category === 'smartphone') {
