@@ -33,21 +33,6 @@ async function getProduct(id: string) {
   const tablet     = product.specs_tablet     as any
   const specSrc    = laptop ?? smartphone ?? tablet ?? {}
 
-  let gb6Single:   number | null = null
-  let gb6Multi:    number | null = null
-  let scoreSource: string | null = null
-
-  if (common?.cpu_id) {
-    const { data: cpu } = await supabase
-      .from('cpus')
-      .select('gb6_single, gb6_multi, score_source')
-      .eq('id', common.cpu_id)
-      .single()
-    gb6Single   = cpu?.gb6_single   ?? null
-    gb6Multi    = cpu?.gb6_multi    ?? null
-    scoreSource = cpu?.score_source ?? null
-  }
-
   // storage_gb, ram_gb는 text 타입 ("256" / "64, 256, 512" / "1024")
   function formatStorageVal(v: string): string {
     const n = parseFloat(v.trim())
@@ -81,9 +66,6 @@ async function getProduct(id: string) {
     image_url:  product.image_url,
     specs: {
       cpu:             common?.cpu_name ?? null,
-      gb6Single,
-      gb6Multi,
-      scoreSource,
       ram:             ramLabel,
       storage:         storageLabel,
       display:         displayParts.length ? displayParts.join(' ') : null,

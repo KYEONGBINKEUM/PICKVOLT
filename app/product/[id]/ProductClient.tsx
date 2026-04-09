@@ -8,9 +8,6 @@ import { useCompareCart } from '@/lib/compareCart'
 
 interface Specs {
   cpu:             string | null
-  gb6Single:       number | null
-  gb6Multi:        number | null
-  scoreSource:     string | null
   ram:             string | null
   storage:         string | null
   display:         string | null
@@ -40,56 +37,6 @@ function SpecRow({ label, value }: { label: string; value: string | null }) {
   )
 }
 
-function BenchmarkCard({
-  gb6Single,
-  gb6Multi,
-  scoreSource,
-}: {
-  gb6Single:   number | null
-  gb6Multi:    number | null
-  scoreSource: string | null
-}) {
-  const { t } = useI18n()
-  if (!gb6Single && !gb6Multi) return null
-
-  const sourceLabel =
-    scoreSource === 'geekbench6' ? 'Geekbench 6' : (scoreSource ?? 'Benchmark')
-
-  return (
-    <div className="mb-6 p-5 bg-surface-2 border border-border rounded-2xl">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs text-white/30 uppercase tracking-widest">{t('product.cpu_perf')}</p>
-        <span className="text-[10px] text-white/20 bg-surface border border-border rounded-full px-2.5 py-1 uppercase tracking-widest">
-          {sourceLabel}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        {gb6Single !== null && (
-          <div>
-            <p className="text-xs text-white/30 mb-1">{t('product.single_core')}</p>
-            <p className="text-3xl font-black text-white tabular-nums">{gb6Single.toLocaleString()}</p>
-          </div>
-        )}
-        {gb6Multi !== null && (
-          <div>
-            <p className="text-xs text-white/30 mb-1">{t('product.multi_core')}</p>
-            <p className="text-3xl font-black text-accent tabular-nums">{gb6Multi.toLocaleString()}</p>
-          </div>
-        )}
-      </div>
-      {gb6Single !== null && gb6Multi !== null && (
-        <div className="mt-4 pt-4 border-t border-border space-y-1.5">
-          <div className="h-1.5 bg-surface rounded-full overflow-hidden">
-            <div className="h-full bg-white/20 rounded-full" style={{ width: `${Math.min((gb6Single / gb6Multi) * 100, 100)}%` }} />
-          </div>
-          <div className="h-1.5 bg-surface rounded-full overflow-hidden">
-            <div className="h-full bg-accent rounded-full w-full" />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function ProductClient({ product }: { product: Product }) {
   const { t } = useI18n()
@@ -186,12 +133,6 @@ export default function ProductClient({ product }: { product: Product }) {
 
         {/* RIGHT — benchmark + specs */}
         <div className="flex-1 min-w-0">
-          <BenchmarkCard
-            gb6Single={product.specs.gb6Single}
-            gb6Multi={product.specs.gb6Multi}
-            scoreSource={product.specs.scoreSource}
-          />
-
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
             <SpecRow label={t('product.spec_cpu')}          value={product.specs.cpu} />
             <SpecRow label={t('product.spec_ram')}          value={product.specs.ram} />
