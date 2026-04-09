@@ -26,58 +26,46 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email)
 }
 
-// GET /api/admin/cpus?q=snapdragon
-export async function GET(req: NextRequest) {
-  const q = new URL(req.url).searchParams.get('q') ?? ''
-  const supabase = makeServiceClient()
-
-  const { data, error } = await supabase
-    .from('cpus')
-    .select(CPU_FIELDS)
-    .ilike('name', `%${q}%`)
-    .order('relative_score', { ascending: false })
-    .limit(20)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ cpus: data ?? [] })
-}
-
-// POST /api/admin/cpus
-export async function POST(req: NextRequest) {
+// PATCH /api/admin/cpus/[id]
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const ok = await verifyAdmin(req)
   if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const body = await req.json()
-  const name = (body.name ?? '').trim()
-  if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
+
+  const allowed = ['name', 'cores', 'clock_base', 'clock_boost', 'gpu_name', 'gb6_single', 'gb6_multi', 'igpu_gb6_single', 'score_source']
+  const updates: Record<string, unknown> = {}
+  for (const key of allowed) {
+    if (key in body) updates[key] = body[key]
+  }
 
   const supabase = makeServiceClient()
-
-  const { data: existing } = await supabase
-    .from('cpus')
-    .select(CPU_FIELDS)
-    .ilike('name', name)
-    .limit(1)
-    .single()
-
-  if (existing) return NextResponse.json({ ...existing, duplicate: true })
-
   const { data, error } = await supabase
     .from('cpus')
-    .insert({
-      name,
-      cores:           body.cores           ?? null,
-      clock_base:      body.clock_base       ?? null,
-      clock_boost:     body.clock_boost      ?? null,
-      gpu_name:        body.gpu_name         ?? null,
-      gb6_single:      body.gb6_single       ?? null,
-      gb6_multi:       body.gb6_multi        ?? null,
-      igpu_gb6_single: body.igpu_gb6_single  ?? null,
-      score_source:    body.score_source     ?? 'geekbench6',
-    })
+    .update(updates)
+    .eq('id', id)
     .select(CPU_FIELDS)
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
+}
+
+// DELETE /api/admin/cpus/[id]
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const ok = await verifyAdmin(req)
+  if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const supabase = makeServiceClient()
+  const { error } = await supabase.from('cpus').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
 }

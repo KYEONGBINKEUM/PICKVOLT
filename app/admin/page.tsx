@@ -91,11 +91,16 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
+  const [editingCpuId, setEditingCpuId] = useState<string | null>(null)
   const [newCpuName, setNewCpuName] = useState('')
+  const [newCpuCores, setNewCpuCores] = useState('')
+  const [newCpuClockBase, setNewCpuClockBase] = useState('')
+  const [newCpuClockBoost, setNewCpuClockBoost] = useState('')
+  const [newCpuGpuName, setNewCpuGpuName] = useState('')
   const [newCpuGb6Single, setNewCpuGb6Single] = useState('')
   const [newCpuGb6Multi, setNewCpuGb6Multi] = useState('')
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
@@ -209,27 +214,70 @@ export default function AdminPage() {
     setCpusLoading(false)
   }, [])
 
+  const resetCpuForm = () => {
+    setEditingCpuId(null)
+    setNewCpuName('')
+    setNewCpuCores('')
+    setNewCpuClockBase('')
+    setNewCpuClockBoost('')
+    setNewCpuGpuName('')
+    setNewCpuGb6Single('')
+    setNewCpuGb6Multi('')
+    setNewCpuIgpuSingle('')
+  }
+
+  const cpuFormBody = () => ({
+    name:            newCpuName.trim(),
+    cores:           newCpuCores      ? Number(newCpuCores)      : null,
+    clock_base:      newCpuClockBase  ? Number(newCpuClockBase)  : null,
+    clock_boost:     newCpuClockBoost ? Number(newCpuClockBoost) : null,
+    gpu_name:        newCpuGpuName.trim() || null,
+    gb6_single:      newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
+    gb6_multi:       newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
+    igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
+  })
+
   const handleAddCpu = async () => {
     if (!newCpuName.trim()) return
     setAddingCpu(true)
-    const res = await fetch('/api/admin/cpus', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        name:           newCpuName.trim(),
-        gb6_single:     newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
-        gb6_multi:      newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
-        igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
-      }),
-    })
-    if (res.ok) {
-      setNewCpuName('')
-      setNewCpuGb6Single('')
-      setNewCpuGb6Multi('')
-      setNewCpuIgpuSingle('')
-      fetchCpus(cpuSearch)
+    if (editingCpuId) {
+      const res = await fetch(`/api/admin/cpus/${editingCpuId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(cpuFormBody()),
+      })
+      if (res.ok) { resetCpuForm(); fetchCpus(cpuSearch) }
+    } else {
+      const res = await fetch('/api/admin/cpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(cpuFormBody()),
+      })
+      if (res.ok) { resetCpuForm(); fetchCpus(cpuSearch) }
     }
     setAddingCpu(false)
+  }
+
+  const handleEditCpu = (c: typeof cpus[0]) => {
+    setEditingCpuId(c.id)
+    setNewCpuName(c.name)
+    setNewCpuCores(c.cores != null ? String(c.cores) : '')
+    setNewCpuClockBase(c.clock_base != null ? String(c.clock_base) : '')
+    setNewCpuClockBoost(c.clock_boost != null ? String(c.clock_boost) : '')
+    setNewCpuGpuName(c.gpu_name ?? '')
+    setNewCpuGb6Single(c.gb6_single != null ? String(c.gb6_single) : '')
+    setNewCpuGb6Multi(c.gb6_multi != null ? String(c.gb6_multi) : '')
+    setNewCpuIgpuSingle(c.igpu_gb6_single != null ? String(c.igpu_gb6_single) : '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDeleteCpu = async (id: string, name: string) => {
+    if (!confirm(`"${name}" CPU를 삭제하시겠습니까?`)) return
+    await fetch(`/api/admin/cpus/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    setCpus((p) => p.filter((c) => c.id !== id))
   }
 
   const fetchGpus = useCallback(async (q: string) => {
@@ -761,20 +809,71 @@ export default function AdminPage() {
           <div>
             <h1 className="text-2xl font-black mb-6">CPU 관리</h1>
 
-            {/* Add CPU form */}
+            {/* Add / Edit CPU form */}
             <div className="bg-surface border border-border rounded-card p-5 mb-6">
-              <p className="text-sm font-semibold text-white mb-3">새 CPU 추가</p>
-              <div className="flex flex-wrap gap-3 mb-3">
+              <p className="text-sm font-semibold text-white mb-4">
+                {editingCpuId ? '✏️ CPU 수정' : '새 CPU 추가'}
+              </p>
+
+              {/* 기본 정보 */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">기본 정보</span>
                 <input
                   type="text"
-                  placeholder="CPU 이름 (예: Snapdragon 8 Gen 3)"
+                  placeholder="CPU 이름 (예: Apple M4 Pro)"
                   value={newCpuName}
-                  onChange={(e) => setNewCpuName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddCpu()}
+                  onChange={(e) => {
+                    setNewCpuName(e.target.value)
+                    if (!newCpuGpuName || newCpuGpuName === newCpuName + ' GPU') {
+                      setNewCpuGpuName(e.target.value ? e.target.value + ' GPU' : '')
+                    }
+                  }}
+                  className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  placeholder="코어 수 (예: 12)"
+                  value={newCpuCores}
+                  onChange={(e) => setNewCpuCores(e.target.value)}
+                  className="w-36 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              {/* 클럭 */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">클럭 속도 (GHz)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="기본 클럭 (예: 3.50)"
+                  value={newCpuClockBase}
+                  onChange={(e) => setNewCpuClockBase(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="부스트 클럭 선택 (예: 4.51)"
+                  value={newCpuClockBoost}
+                  onChange={(e) => setNewCpuClockBoost(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              {/* GPU 이름 */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">내장 GPU 이름 (선택, APU/SoC)</span>
+                <input
+                  type="text"
+                  placeholder="GPU 이름 (예: Apple M4 Pro GPU)"
+                  value={newCpuGpuName}
+                  onChange={(e) => setNewCpuGpuName(e.target.value)}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="flex flex-wrap gap-3 mb-2">
+
+              {/* 벤치마크 */}
+              <div className="flex flex-wrap gap-3 mb-4">
                 <span className="text-xs text-white/30 w-full">CPU 벤치마크 (Geekbench 6)</span>
                 <input
                   type="number"
@@ -791,8 +890,8 @@ export default function AdminPage() {
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="flex flex-wrap gap-3 mb-3">
-                <span className="text-xs text-white/30 w-full">내장 GPU 벤치마크 (선택, APU/SoC용)</span>
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">iGPU 벤치마크 (선택, APU/SoC)</span>
                 <input
                   type="number"
                   placeholder="iGPU GB6 Compute"
@@ -801,6 +900,7 @@ export default function AdminPage() {
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={handleAddCpu}
@@ -808,8 +908,13 @@ export default function AdminPage() {
                   className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40"
                 >
                   {addingCpu ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                  추가
+                  {editingCpuId ? '저장' : '추가'}
                 </button>
+                {editingCpuId && (
+                  <button onClick={resetCpuForm} className="px-4 py-2 border border-border text-white/50 hover:text-white text-sm rounded-lg transition-colors">
+                    취소
+                  </button>
+                )}
               </div>
             </div>
 
@@ -836,10 +941,13 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">코어</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">클럭 (GHz)</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU Compute</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
+                    <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -853,7 +961,18 @@ export default function AdminPage() {
                     </td></tr>
                   ) : cpus.map((c, i) => (
                     <tr key={c.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                      <td className="px-4 py-3 text-white/80 max-w-xs truncate">{c.name}</td>
+                      <td className="px-4 py-3 text-white/80 max-w-[180px] truncate">
+                        <div className="truncate">{c.name}</div>
+                        {c.gpu_name && <div className="text-xs text-white/30 truncate">{c.gpu_name}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.cores ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">
+                        {c.clock_base != null
+                          ? c.clock_boost != null
+                            ? `${c.clock_base} / ${c.clock_boost}`
+                            : String(c.clock_base)
+                          : '—'}
+                      </td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.igpu_gb6_single ?? '—'}</td>
@@ -863,6 +982,16 @@ export default function AdminPage() {
                             {c.relative_score}
                           </span>
                         ) : <span className="text-white/20">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleEditCpu(c)} className="p-1.5 rounded hover:bg-white/10 text-white/30 hover:text-accent transition-colors">
+                            <Edit2 size={12} />
+                          </button>
+                          <button onClick={() => handleDeleteCpu(c.id, c.name)} className="p-1.5 rounded hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

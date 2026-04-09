@@ -117,7 +117,7 @@ export default function ProductEditPage() {
   })
   // CPU 검색 & 연결
   const [cpuQuery, setCpuQuery]       = useState('')
-  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpuSearchOpen, setCpuSearchOpen] = useState(false)
   const [cpuCreating, setCpuCreating] = useState(false)
   const [linkedCpuName, setLinkedCpuName] = useState('')
@@ -224,8 +224,20 @@ export default function ProductEditPage() {
     }, 300)
   }, [])
 
-  const selectCpu = (cpu: { id: string; name: string; relative_score: number | null; score_source: string | null }) => {
-    setCommonSpecs((p) => ({ ...p, cpu_id: cpu.id }))
+  const selectCpu = (cpu: typeof cpuResults[0]) => {
+    const clockLabel = cpu.clock_base != null
+      ? cpu.clock_boost != null
+        ? `${cpu.clock_base} GHz / ${cpu.clock_boost} GHz boost`
+        : `${cpu.clock_base} GHz`
+      : undefined
+    setCommonSpecs((p) => ({
+      ...p,
+      cpu_id:    cpu.id,
+      cpu_name:  cpu.name,
+      ...(cpu.gpu_name  != null && { gpu_name:  cpu.gpu_name }),
+      ...(cpu.cores     != null && { cpu_cores: cpu.cores }),
+      ...(clockLabel             && { cpu_clock: clockLabel }),
+    }))
     setLinkedCpuName(cpu.name)
     setCpuScores((p) => ({ ...p, relative_score: cpu.relative_score ?? null, score_source: cpu.score_source ?? '' }))
     setCpuSearchOpen(false)
