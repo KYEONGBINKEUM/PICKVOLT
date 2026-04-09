@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       specs_tablet ( display_inch, display_resolution, battery_mah, camera_main_mp )
     `)
     .eq('category', category)
-    .eq('scrape_status', 'ok')
+    .eq('is_visible', true)
 
   if (error || !data) return NextResponse.json({ error: error?.message }, { status: 500 })
 

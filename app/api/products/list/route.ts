@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
         specs_laptop ( display_inch, display_resolution, weight_kg, battery_wh, battery_hours ),
         specs_tablet ( display_inch, display_resolution, battery_mah, weight_g, stylus_support )
       `)
-      .eq('scrape_status', 'ok')
       .eq('is_visible', true)
 
     if (category) query = query.eq('category', category)
