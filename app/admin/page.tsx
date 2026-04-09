@@ -91,12 +91,13 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
   const [editingCpuId, setEditingCpuId] = useState<string | null>(null)
   const [newCpuName, setNewCpuName] = useState('')
+  const [newCpuType, setNewCpuType] = useState<'mobile' | 'laptop' | 'desktop'>('mobile')
   const [newCpuCores, setNewCpuCores] = useState('')
   const [newCpuClockBase, setNewCpuClockBase] = useState('')
   const [newCpuClockBoost, setNewCpuClockBoost] = useState('')
@@ -217,6 +218,7 @@ export default function AdminPage() {
   const resetCpuForm = () => {
     setEditingCpuId(null)
     setNewCpuName('')
+    setNewCpuType('mobile')
     setNewCpuCores('')
     setNewCpuClockBase('')
     setNewCpuClockBoost('')
@@ -228,6 +230,7 @@ export default function AdminPage() {
 
   const cpuFormBody = () => ({
     name:            newCpuName.trim(),
+    type:            newCpuType,
     cores:           newCpuCores      ? Number(newCpuCores)      : null,
     clock_base:      newCpuClockBase  ? Number(newCpuClockBase)  : null,
     clock_boost:     newCpuClockBoost ? Number(newCpuClockBoost) : null,
@@ -261,6 +264,7 @@ export default function AdminPage() {
   const handleEditCpu = (c: typeof cpus[0]) => {
     setEditingCpuId(c.id)
     setNewCpuName(c.name)
+    setNewCpuType((c.type as 'mobile' | 'laptop' | 'desktop') ?? 'mobile')
     setNewCpuCores(c.cores != null ? String(c.cores) : '')
     setNewCpuClockBase(c.clock_base != null ? String(c.clock_base) : '')
     setNewCpuClockBoost(c.clock_boost != null ? String(c.clock_boost) : '')
@@ -815,6 +819,22 @@ export default function AdminPage() {
                 {editingCpuId ? '✏️ CPU 수정' : '새 CPU 추가'}
               </p>
 
+              {/* 타입 선택 */}
+              <div className="flex gap-2 mb-4">
+                {(['mobile', 'laptop', 'desktop'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setNewCpuType(t)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      newCpuType === t ? 'bg-accent text-white' : 'border border-border text-white/40 hover:text-white hover:border-white/20'
+                    }`}
+                  >
+                    {t === 'mobile' ? '모바일' : t === 'laptop' ? '랩탑' : '데스크탑'}
+                  </button>
+                ))}
+              </div>
+
               {/* 기본 정보 */}
               <div className="flex flex-wrap gap-3 mb-4">
                 <span className="text-xs text-white/30 w-full">기본 정보</span>
@@ -822,12 +842,7 @@ export default function AdminPage() {
                   type="text"
                   placeholder="CPU 이름 (예: Apple M4 Pro)"
                   value={newCpuName}
-                  onChange={(e) => {
-                    setNewCpuName(e.target.value)
-                    if (!newCpuGpuName || newCpuGpuName === newCpuName + ' GPU') {
-                      setNewCpuGpuName(e.target.value ? e.target.value + ' GPU' : '')
-                    }
-                  }}
+                  onChange={(e) => setNewCpuName(e.target.value)}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
                 <input
@@ -860,16 +875,38 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* GPU 이름 */}
+              {/* GPU 연동 */}
               <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">내장 GPU 이름 (선택, APU/SoC)</span>
-                <input
-                  type="text"
-                  placeholder="GPU 이름 (예: Apple M4 Pro GPU)"
-                  value={newCpuGpuName}
-                  onChange={(e) => setNewCpuGpuName(e.target.value)}
-                  className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
+                <span className="text-xs text-white/30 w-full">내장 GPU 연동 (선택, APU/SoC)</span>
+                <div className="relative flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    placeholder="GPU 이름 직접 입력 또는 아래서 선택"
+                    value={newCpuGpuName}
+                    onChange={(e) => setNewCpuGpuName(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                  />
+                </div>
+                {/* 등록된 GPU 목록 */}
+                {gpus.length > 0 && (
+                  <div className="w-full flex flex-wrap gap-2">
+                    <span className="text-xs text-white/20 w-full">등록된 GPU에서 선택:</span>
+                    {gpus.slice(0, 8).map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setNewCpuGpuName(g.name)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                          newCpuGpuName === g.name
+                            ? 'border-accent text-accent bg-accent/10'
+                            : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                        }`}
+                      >
+                        {g.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 벤치마크 */}
@@ -891,7 +928,7 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">iGPU 벤치마크 (선택, APU/SoC)</span>
+                <span className="text-xs text-white/30 w-full">Geekbench GPU (선택)</span>
                 <input
                   type="number"
                   placeholder="iGPU GB6 Compute"
@@ -941,6 +978,7 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">타입</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">코어</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">클럭 (GHz)</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
@@ -964,6 +1002,15 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-white/80 max-w-[180px] truncate">
                         <div className="truncate">{c.name}</div>
                         {c.gpu_name && <div className="text-xs text-white/30 truncate">{c.gpu_name}</div>}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          c.type === 'laptop' ? 'bg-blue-500/20 text-blue-300' :
+                          c.type === 'desktop' ? 'bg-purple-500/20 text-purple-300' :
+                          'bg-green-500/20 text-green-300'
+                        }`}>
+                          {c.type === 'laptop' ? '랩탑' : c.type === 'desktop' ? '데스크탑' : '모바일'}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.cores ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">
