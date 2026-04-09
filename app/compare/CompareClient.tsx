@@ -369,6 +369,7 @@ export default function CompareClient() {
   const [showReasoning, setShowReasoning] = useState(false)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
+  const [sessionLoaded, setSessionLoaded] = useState(false)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
@@ -382,9 +383,11 @@ export default function CompareClient() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session as typeof session)
+      setSessionLoaded(true)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s as typeof session)
+      setSessionLoaded(true)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -421,10 +424,10 @@ export default function CompareClient() {
       }
 
       setProducts(validProducts)
-      setLoading(false) // 스펙 완료 → 테이블 즉시 표시
+      setLoadingAI(true)   // 스펙 완료 즉시 AI 로딩 표시 시작
+      setLoading(false)    // 테이블 즉시 표시
 
-      // ── 2단계: AI 비교 (로그인 불필요, 무제한) ──────────────────────────
-      setLoadingAI(true)
+      // ── 2단계: AI 비교 ────────────────────────────────────────────────────
       const compareRes = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -489,6 +492,8 @@ export default function CompareClient() {
   }, [t, session, locale])
 
   useEffect(() => {
+    if (!sessionLoaded) return  // 세션 확인 전 실행 차단
+
     const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
     if (ids.length < 2) return
 
@@ -498,7 +503,7 @@ export default function CompareClient() {
 
     ranKeyRef.current = key
     runComparison(ids)
-  }, [idsParam, runComparison, session])
+  }, [idsParam, runComparison, session, sessionLoaded])
 
   // 카테고리 결정 후 DB 전체 min/max 범위 조회
   useEffect(() => {
@@ -793,7 +798,7 @@ export default function CompareClient() {
         {loading && <LoadingState message={loadingMsg} />}
 
         {/* 에러 */}
-        {error === 'login_required' && !loading && (
+        {error === 'login_required' && !loading && sessionLoaded && (
           <div className="mt-8 p-6 bg-surface border border-border rounded-card flex items-center gap-4">
             <Lock className="w-5 h-5 text-white/30 flex-shrink-0" />
             <div className="flex-1">
@@ -828,7 +833,7 @@ export default function CompareClient() {
           <div className="mt-8">
             {/* AI Pick 영역 */}
             {loadingAI && <AIPickLoading t={t} />}
-            {!session && !loadingAI && !aiResult && <AIPickLocked t={t} />}
+            {sessionLoaded && !session && !loadingAI && !aiResult && <AIPickLocked t={t} />}
             {!loadingAI && aiResult && (
               <>
                 <AIPickBanner
