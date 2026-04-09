@@ -176,7 +176,7 @@ function ProductCard({ product }: { product: Product }) {
             </h3>
             {product.price_usd && (
               <p className="text-sm font-black text-accent mt-1">
-                ${Number(product.price_usd).toLocaleString()}
+                From ${Number(product.price_usd).toLocaleString()}
               </p>
             )}
           </div>

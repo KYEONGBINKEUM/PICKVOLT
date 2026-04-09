@@ -158,7 +158,7 @@ export default function ProductClient({ product }: { product: Product }) {
           {/* Price */}
           {product.price_usd && (
             <p className="text-2xl font-black text-accent mb-5">
-              ${Number(product.price_usd).toLocaleString()}
+              From ${Number(product.price_usd).toLocaleString()}
             </p>
           )}
 
