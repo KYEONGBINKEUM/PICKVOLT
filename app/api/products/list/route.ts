@@ -102,9 +102,13 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // RAM filter (done in JS since it's cross-table)
+    // RAM filter — ram_gb는 "8, 12, 16" 같은 다중 값일 수 있어 최대값 기준으로 비교
     const filtered = minRam
-      ? products.filter((p) => (p.ram_gb ?? 0) >= parseFloat(minRam))
+      ? products.filter((p) => {
+          if (!p.ram_gb) return false
+          const maxRam = Math.max(...String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n)))
+          return maxRam >= parseFloat(minRam)
+        })
       : products
 
     // Sort
