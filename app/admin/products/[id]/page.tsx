@@ -376,11 +376,18 @@ export default function ProductEditPage() {
           cpu_id: commonSpecs.cpu_id,
           cpu_scores: cpuScores,
         }
-        await fetch(`/api/admin/products/${newId}`, {
+        const patchRes = await fetch(`/api/admin/products/${newId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(patchBody),
         })
+        const patchJson = await patchRes.json()
+        if (!patchRes.ok) {
+          setMessage({ type: 'err', text: patchJson.error ?? '스펙 저장 오류' })
+          return
+        }
+        setMessage({ type: 'ok', text: '저장됨' })
+        await new Promise((r) => setTimeout(r, 800))
         router.replace(`/admin/products/${newId}`)
         return
       }
