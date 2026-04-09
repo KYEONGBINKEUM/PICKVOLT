@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
@@ -28,7 +28,7 @@ const FALLBACK_TRENDING: TrendingItem[] = [
   { label: 'rtx 4080 vs 7900 xtx', href: '/compare?q=rtx+4080+vs+7900+xtx', cnt: 0 },
 ]
 
-export default function HomePage() {
+function HomeContent() {
   const { t } = useI18n()
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('q') ?? ''
@@ -95,5 +95,13 @@ export default function HomePage() {
       </div>
 
     </main>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   )
 }
