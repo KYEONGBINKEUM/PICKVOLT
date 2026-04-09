@@ -138,18 +138,26 @@ export default function AdminPage() {
   const [newCpuGb6Single, setNewCpuGb6Single] = useState('')
   const [newCpuGb6Multi, setNewCpuGb6Multi] = useState('')
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
+  const [newCpuTdmark, setNewCpuTdmark] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
 
   // GPUs
-  const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; gb6_single: number | null; gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; gb6_single: number | null; gb6_opencl: number | null; tdmark_score: number | null; relative_score: number | null; score_source: string | null; cpu_id: string | null; cpus: { name: string } | null }[]>([])
   const [gpusLoading, setGpusLoading] = useState(false)
   const [gpuSearch, setGpuSearch] = useState('')
   const [gpuError, setGpuError] = useState<string | null>(null)
   const [editingGpuId, setEditingGpuId] = useState<string | null>(null)
   const [newGpuName, setNewGpuName] = useState('')
   const [newGpuBrand, setNewGpuBrand] = useState('')
+  const [newGpuType, setNewGpuType] = useState<'mobile' | 'laptop' | 'desktop'>('mobile')
+  const [newGpuCores, setNewGpuCores] = useState('')
   const [newGpuGb6Single, setNewGpuGb6Single] = useState('')
-  const [newGpuGb6Multi, setNewGpuGb6Multi] = useState('')
+  const [newGpuGb6Opencl, setNewGpuGb6Opencl] = useState('')
+  const [newGpuTdmark, setNewGpuTdmark] = useState('')
+  const [newGpuCpuId, setNewGpuCpuId] = useState<string | null>(null)
+  const [newGpuCpuName, setNewGpuCpuName] = useState('')
+  const [gpuCpuQuery, setGpuCpuQuery] = useState('')
+  const [gpuCpuResults, setGpuCpuResults] = useState<{ id: string; name: string }[]>([])
   const [addingGpu, setAddingGpu] = useState(false)
 
   // Errors
@@ -262,6 +270,7 @@ export default function AdminPage() {
     setNewCpuGb6Single('')
     setNewCpuGb6Multi('')
     setNewCpuIgpuSingle('')
+    setNewCpuTdmark('')
   }
 
   const cpuFormBody = () => ({
@@ -275,6 +284,7 @@ export default function AdminPage() {
     gb6_single:      newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
     gb6_multi:       newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
     igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
+    tdmark_score:    newCpuTdmark     ? Number(newCpuTdmark)     : null,
   })
 
   const handleAddCpu = async () => {
@@ -310,6 +320,7 @@ export default function AdminPage() {
     setNewCpuGb6Single(c.gb6_single != null ? String(c.gb6_single) : '')
     setNewCpuGb6Multi(c.gb6_multi != null ? String(c.gb6_multi) : '')
     setNewCpuIgpuSingle(c.igpu_gb6_single != null ? String(c.igpu_gb6_single) : '')
+    setNewCpuTdmark(c.tdmark_score != null ? String(c.tdmark_score) : '')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -339,18 +350,29 @@ export default function AdminPage() {
     setEditingGpuId(null)
     setNewGpuName('')
     setNewGpuBrand('')
+    setNewGpuType('mobile')
+    setNewGpuCores('')
     setNewGpuGb6Single('')
-    setNewGpuGb6Multi('')
+    setNewGpuGb6Opencl('')
+    setNewGpuTdmark('')
+    setNewGpuCpuId(null)
+    setNewGpuCpuName('')
+    setGpuCpuQuery('')
+    setGpuCpuResults([])
   }
 
   const handleAddGpu = async () => {
     if (!newGpuName.trim()) return
     setAddingGpu(true)
     const body = {
-      name:       newGpuName.trim(),
-      brand:      newGpuBrand.trim() || null,
-      gb6_single: newGpuGb6Single ? Number(newGpuGb6Single) : null,
-      gb6_multi:  newGpuGb6Multi  ? Number(newGpuGb6Multi)  : null,
+      name:         newGpuName.trim(),
+      brand:        newGpuBrand.trim() || null,
+      type:         newGpuType,
+      cores:        newGpuCores    ? Number(newGpuCores)    : null,
+      gb6_single:   newGpuGb6Single  ? Number(newGpuGb6Single)  : null,
+      gb6_opencl:   newGpuGb6Opencl  ? Number(newGpuGb6Opencl)  : null,
+      tdmark_score: newGpuTdmark     ? Number(newGpuTdmark)     : null,
+      cpu_id:       newGpuCpuId || null,
     }
     if (editingGpuId) {
       const res = await fetch(`/api/admin/gpus/${editingGpuId}`, {
@@ -374,8 +396,13 @@ export default function AdminPage() {
     setEditingGpuId(g.id)
     setNewGpuName(g.name)
     setNewGpuBrand(g.brand ?? '')
+    setNewGpuType((g.type as 'mobile' | 'laptop' | 'desktop') ?? 'mobile')
+    setNewGpuCores(g.cores != null ? String(g.cores) : '')
     setNewGpuGb6Single(g.gb6_single != null ? String(g.gb6_single) : '')
-    setNewGpuGb6Multi(g.gb6_multi != null ? String(g.gb6_multi) : '')
+    setNewGpuGb6Opencl(g.gb6_opencl != null ? String(g.gb6_opencl) : '')
+    setNewGpuTdmark(g.tdmark_score != null ? String(g.tdmark_score) : '')
+    setNewGpuCpuId(g.cpu_id ?? null)
+    setNewGpuCpuName(g.cpus?.name ?? '')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -1005,12 +1032,22 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">Geekbench GPU (선택)</span>
+                <span className="text-xs text-white/30 w-full">Geekbench GPU (선택, APU/SoC)</span>
                 <input
                   type="number"
                   placeholder="iGPU GB6 Compute"
                   value={newCpuIgpuSingle}
                   onChange={(e) => setNewCpuIgpuSingle(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">3DMark (선택)</span>
+                <input
+                  type="number"
+                  placeholder="3DMark 점수"
+                  value={newCpuTdmark}
+                  onChange={(e) => setNewCpuTdmark(e.target.value)}
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
@@ -1146,6 +1183,17 @@ export default function AdminPage() {
 
               <BrandSelector value={newGpuBrand} onChange={setNewGpuBrand} brands={GPU_BRANDS} />
 
+              {/* 타입 */}
+              <div className="flex gap-2 mb-4">
+                {(['mobile', 'laptop', 'desktop'] as const).map((t) => (
+                  <button key={t} type="button" onClick={() => setNewGpuType(t)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${newGpuType === t ? 'bg-accent text-white' : 'bg-white/5 text-white/40 hover:text-white'}`}>
+                    {t === 'mobile' ? '모바일' : t === 'laptop' ? '랩탑' : '데스크탑'}
+                  </button>
+                ))}
+              </div>
+
+              {/* 기본 정보 */}
               <div className="flex flex-wrap gap-3 mb-4">
                 <span className="text-xs text-white/30 w-full">기본 정보</span>
                 <input
@@ -1155,17 +1203,83 @@ export default function AdminPage() {
                   onChange={(e) => setNewGpuName(e.target.value)}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
-              </div>
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">Geekbench GPU Compute</span>
                 <input
                   type="number"
-                  placeholder="GB6 Compute (예: 15000)"
+                  placeholder="코어 수 (예: 10)"
+                  value={newGpuCores}
+                  onChange={(e) => setNewGpuCores(e.target.value)}
+                  className="w-36 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              {/* 프로세서 연동 (CPU) */}
+              <div className="mb-4">
+                <span className="text-xs text-white/30 block mb-2">프로세서 연동 (선택, iGPU)</span>
+                {newGpuCpuId ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-accent">{newGpuCpuName}</span>
+                    <button type="button" onClick={() => { setNewGpuCpuId(null); setNewGpuCpuName(''); setGpuCpuQuery(''); setGpuCpuResults([]) }}
+                      className="text-xs text-white/30 hover:text-red-400 transition-colors">✕ 해제</button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="CPU 이름으로 검색..."
+                      value={gpuCpuQuery}
+                      onChange={async (e) => {
+                        setGpuCpuQuery(e.target.value)
+                        if (e.target.value.length < 2) { setGpuCpuResults([]); return }
+                        const res = await fetch(`/api/admin/cpus?q=${encodeURIComponent(e.target.value)}`)
+                        const j = await res.json()
+                        setGpuCpuResults(j.cpus ?? [])
+                      }}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                    />
+                    {gpuCpuResults.length > 0 && (
+                      <div className="absolute top-full mt-1 w-full bg-surface-2 border border-border rounded-lg overflow-hidden z-10 shadow-xl">
+                        {gpuCpuResults.map((c) => (
+                          <button key={c.id} type="button"
+                            onClick={() => { setNewGpuCpuId(c.id); setNewGpuCpuName(c.name); setGpuCpuQuery(''); setGpuCpuResults([]) }}
+                            className="w-full text-left px-4 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors">
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 벤치마크 */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">Geekbench GPU</span>
+                <input
+                  type="number"
+                  placeholder="GB6 Compute/Metal/Vulkan"
                   value={newGpuGb6Single}
                   onChange={(e) => setNewGpuGb6Single(e.target.value)}
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+                <input
+                  type="number"
+                  placeholder="GB6 OpenCL"
+                  value={newGpuGb6Opencl}
+                  onChange={(e) => setNewGpuGb6Opencl(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
               </div>
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">3DMark (선택)</span>
+                <input
+                  type="number"
+                  placeholder="3DMark 점수"
+                  value={newGpuTdmark}
+                  onChange={(e) => setNewGpuTdmark(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={handleAddGpu}
@@ -1207,6 +1321,7 @@ export default function AdminPage() {
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">타입</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Compute</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
                     <th className="px-4 py-3 w-16"></th>
@@ -1214,7 +1329,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {gpusLoading && gpus.length === 0 ? (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center">
+                    <tr><td colSpan={6} className="px-4 py-8 text-center">
                       <div className="flex gap-1.5 justify-center">
                         {[0, 1, 2].map((i) => (
                           <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -1226,6 +1341,13 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-white/80 max-w-[180px] truncate">{g.name}</td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {g.brand && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{g.brand}</span>}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {g.type && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${g.type === 'mobile' ? 'bg-blue-500/20 text-blue-300' : g.type === 'laptop' ? 'bg-purple-500/20 text-purple-300' : 'bg-orange-500/20 text-orange-300'}`}>
+                            {g.type === 'mobile' ? '모바일' : g.type === 'laptop' ? '랩탑' : '데스크탑'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{g.gb6_single ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono">
@@ -1248,7 +1370,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {!gpusLoading && gpus.length === 0 && (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center text-white/30">GPU 없음</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-white/30">GPU 없음</td></tr>
                   )}
                 </tbody>
               </table>

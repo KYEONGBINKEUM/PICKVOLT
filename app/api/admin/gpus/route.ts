@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-const GPU_FIELDS = 'id, name, brand, gb6_single, gb6_multi, relative_score, score_source'
+const GPU_FIELDS = 'id, name, brand, type, cores, gb6_single, gb6_opencl, tdmark_score, relative_score, score_source, cpu_id, cpus(name)'
 
 function makeServiceClient() {
   return createClient(
@@ -65,8 +65,12 @@ export async function POST(req: NextRequest) {
     .insert({
       name,
       brand:        body.brand        ?? null,
+      type:         body.type         ?? 'mobile',
+      cores:        body.cores        ?? null,
       gb6_single:   body.gb6_single   ?? null,
-      gb6_multi:    body.gb6_multi    ?? null,
+      gb6_opencl:   body.gb6_opencl   ?? null,
+      tdmark_score: body.tdmark_score ?? null,
+      cpu_id:       body.cpu_id       ?? null,
       score_source: body.score_source ?? 'geekbench6',
     })
     .select(GPU_FIELDS)
