@@ -123,7 +123,7 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; tdmark_score: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; tdmark_score: number | null; antutu_score: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
@@ -139,6 +139,7 @@ export default function AdminPage() {
   const [newCpuGb6Multi, setNewCpuGb6Multi] = useState('')
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
   const [newCpuTdmark, setNewCpuTdmark] = useState('')
+  const [newCpuAntutu, setNewCpuAntutu] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
   const [aiFillingCpu, setAiFillingCpu] = useState(false)
   const [aiCpuError, setAiCpuError] = useState<string | null>(null)
@@ -275,6 +276,7 @@ export default function AdminPage() {
     setNewCpuGb6Multi('')
     setNewCpuIgpuSingle('')
     setNewCpuTdmark('')
+    setNewCpuAntutu('')
   }
 
   const cpuFormBody = () => ({
@@ -289,6 +291,7 @@ export default function AdminPage() {
     gb6_multi:       newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
     igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
     tdmark_score:    newCpuTdmark     ? Number(newCpuTdmark)     : null,
+    antutu_score:    newCpuAntutu     ? Number(newCpuAntutu)     : null,
   })
 
   const handleAiFillCpu = async () => {
@@ -315,6 +318,7 @@ export default function AdminPage() {
       if (specs.gb6_multi != null)   setNewCpuGb6Multi(String(specs.gb6_multi))
       if (specs.igpu_gb6_single != null) setNewCpuIgpuSingle(String(specs.igpu_gb6_single))
       if (specs.tdmark_score != null)    setNewCpuTdmark(String(specs.tdmark_score))
+      if (specs.antutu_score != null)    setNewCpuAntutu(String(specs.antutu_score))
     } catch (e) {
       setAiCpuError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -356,6 +360,7 @@ export default function AdminPage() {
     setNewCpuGb6Multi(c.gb6_multi != null ? String(c.gb6_multi) : '')
     setNewCpuIgpuSingle(c.igpu_gb6_single != null ? String(c.igpu_gb6_single) : '')
     setNewCpuTdmark(c.tdmark_score != null ? String(c.tdmark_score) : '')
+    setNewCpuAntutu((c as any).antutu_score != null ? String((c as any).antutu_score) : '')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -1116,12 +1121,19 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">3DMark (선택)</span>
+                <span className="text-xs text-white/30 w-full">3DMark / AnTuTu (선택)</span>
                 <input
                   type="number"
-                  placeholder="3DMark 점수"
+                  placeholder="3DMark Steel Nomad Light"
                   value={newCpuTdmark}
                   onChange={(e) => setNewCpuTdmark(e.target.value)}
+                  className="w-48 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  placeholder="AnTuTu 점수"
+                  value={newCpuAntutu}
+                  onChange={(e) => setNewCpuAntutu(e.target.value)}
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>

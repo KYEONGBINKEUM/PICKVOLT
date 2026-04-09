@@ -7,19 +7,21 @@
 // ─── 개별 스펙 점수 ───────────────────────────────────────────────────────────
 
 /** CPU 성능 점수 (0–100)
- *  GB6 Single 33% + GB6 Multi 33% + iGPU 33% 균등 합산
- *  각 항목 최상위 기준: Single ~4200, Multi ~12000, iGPU ~50000 */
+ *  GB6 Single 20% + GB6 Multi 30% + iGPU 20% + AnTuTu 30%
+ *  각 항목 최상위 기준: Single ~4200, Multi ~12000, iGPU ~50000, AnTuTu ~3000000 */
 export function scoreCPU(
   gb6Single: number | null,
   gb6Multi: number | null,
   relScore: number | null,
   igpuGb6: number | null = null,
+  antutu: number | null = null,
 ): number {
-  if (gb6Single != null || gb6Multi != null || igpuGb6 != null) {
-    const normSingle = gb6Single  != null ? Math.min(1, gb6Single  / 4200)  : 0
-    const normMulti  = gb6Multi   != null ? Math.min(1, gb6Multi   / 12000) : 0
-    const normIgpu   = igpuGb6    != null ? Math.min(1, igpuGb6    / 50000) : 0
-    const weighted   = normSingle * 0.333 + normMulti * 0.333 + normIgpu * 0.334
+  if (gb6Single != null || gb6Multi != null || igpuGb6 != null || antutu != null) {
+    const normSingle = gb6Single != null ? Math.min(1, gb6Single / 4200)    : 0
+    const normMulti  = gb6Multi  != null ? Math.min(1, gb6Multi  / 12000)   : 0
+    const normIgpu   = igpuGb6   != null ? Math.min(1, igpuGb6   / 50000)   : 0
+    const normAntutu = antutu    != null ? Math.min(1, antutu    / 3000000) : 0
+    const weighted   = normSingle * 0.20 + normMulti * 0.30 + normIgpu * 0.20 + normAntutu * 0.30
     return Math.min(100, Math.round(weighted * 100))
   }
   // fallback: relative_score (0–1000) → 0–100
@@ -279,6 +281,7 @@ export interface ScoringInput {
   gb6Single?: number | null
   gb6Multi?: number | null
   igpuGb6?: number | null
+  antutu?: number | null
   relativeScore?: number | null
   // Common
   ram_gb?: string | number | null
@@ -305,7 +308,7 @@ export interface ScoreBreakdown {
 export function computeScores(input: ScoringInput): ScoreBreakdown {
   const { category } = input
 
-  const cpu  = scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null, input.igpuGb6 ?? null)
+  const cpu  = scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null, input.igpuGb6 ?? null, input.antutu ?? null)
   const ram  = scoreRAM(firstNum(input.ram_gb))
   const stor = scoreStorage(firstNum(input.storage_gb))
   const ppi  = computePPI(input.display_resolution, input.display_inch)

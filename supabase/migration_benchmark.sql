@@ -49,26 +49,29 @@ alter table gpus
 
 -- ============================================================
 -- STEP 5. 상대 점수 재계산 함수 — cpus
---   공식: (GB6 Single 33% + GB6 Multi 33% + iGPU 33%) 균등 합산
+--   공식: GB6 Single 20% + GB6 Multi 30% + iGPU 20% + AnTuTu 30%
 --         각 항목은 DB 내 최댓값으로 정규화(0–1) 후 가중치 적용 → × 1000
 -- ============================================================
 create or replace function recalc_cpu_relative_scores()
 returns void
 language plpgsql as $$
 declare
-  max_single numeric;
-  max_multi  numeric;
-  max_igpu   numeric;
+  max_single    numeric;
+  max_multi     numeric;
+  max_igpu      numeric;
+  max_antutu    numeric;
 begin
   select max(gb6_single)      into max_single from cpus where gb6_single      is not null;
   select max(gb6_multi)       into max_multi  from cpus where gb6_multi        is not null;
   select max(igpu_gb6_single) into max_igpu   from cpus where igpu_gb6_single  is not null;
+  select max(antutu_score)    into max_antutu from cpus where antutu_score     is not null;
 
   update cpus
      set relative_score = round((
-           coalesce(gb6_single::numeric      / nullif(max_single, 0), 0) * 0.333
-         + coalesce(gb6_multi::numeric       / nullif(max_multi,  0), 0) * 0.333
-         + coalesce(igpu_gb6_single::numeric / nullif(max_igpu,   0), 0) * 0.334
+           coalesce(gb6_single::numeric      / nullif(max_single, 0), 0) * 0.20
+         + coalesce(gb6_multi::numeric       / nullif(max_multi,  0), 0) * 0.30
+         + coalesce(igpu_gb6_single::numeric / nullif(max_igpu,   0), 0) * 0.20
+         + coalesce(antutu_score::numeric    / nullif(max_antutu, 0), 0) * 0.30
          ) * 1000, 1);
 end;
 $$;
@@ -83,8 +86,8 @@ create or replace function recalc_gpu_relative_scores()
 returns void
 language plpgsql as $$
 declare
-  max_single numeric;
-  max_opencl numeric;
+  max_single    numeric;
+  max_opencl    numeric;
 begin
   select max(gb6_single)  into max_single from gpus where gb6_single  is not null;
   select max(gb6_opencl)  into max_opencl from gpus where gb6_opencl  is not null;

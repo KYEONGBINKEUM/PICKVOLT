@@ -40,15 +40,18 @@ GB6 GPU Compute Score (for SoCs with integrated GPU):
 <span class="score-bar-result-number">45527</span>
 → take the integer in score-bar-result-number
 
-Also extract:
 3DMark Steel Nomad Light score:
 <div class="score-bar-name">3DMark Steel Nomad Light</div>
 <span class="score-bar-result-number">2487</span>
 → take the integer in score-bar-result-number (use as tdmark_score)
+
+AnTuTu score: look for AnTuTu benchmark score on the nanoreview page (use as antutu_score)
+
+Also extract:
 - Integrated GPU name
 
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"brand":"Apple","type":"mobile","cores":6,"clock_base":3.0,"clock_boost":4.0,"gpu_name":"Apple GPU (6-core)","gb6_single":3500,"gb6_multi":8000,"igpu_gb6_single":22000,"tdmark_score":null}
+{"brand":"Apple","type":"mobile","cores":6,"clock_base":3.0,"clock_boost":null,"gpu_name":"Apple GPU (6-core)","gb6_single":3500,"gb6_multi":8000,"igpu_gb6_single":22000,"tdmark_score":null,"antutu_score":1700000}
 
 Now return the JSON for "${name}". Use null for any value not found.`
 
