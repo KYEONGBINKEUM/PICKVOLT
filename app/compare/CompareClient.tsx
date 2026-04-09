@@ -965,11 +965,12 @@ export default function CompareClient() {
                           target="_blank"
                           rel="noopener noreferrer sponsored"
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-3 flex items-center justify-center w-full py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
+                          className="mt-3 flex flex-col items-center justify-center gap-1 w-full py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
                           style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/amazon-logo.svg" alt="Buy on Amazon" width={90} height={27} style={{ display: 'block' }} />
+                          <img src="/amazon-logo.svg" alt="Amazon" width={72} height={22} style={{ display: 'block' }} />
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1A1A1A', letterSpacing: '0.02em' }}>지금 구매하기</span>
                         </a>
                       )}
                     </div>
