@@ -89,13 +89,15 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; igpu_gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
   const [newCpuName, setNewCpuName] = useState('')
   const [newCpuGb6Single, setNewCpuGb6Single] = useState('')
   const [newCpuGb6Multi, setNewCpuGb6Multi] = useState('')
+  const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
+  const [newCpuIgpuMulti, setNewCpuIgpuMulti] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
 
   // Errors
@@ -188,15 +190,19 @@ export default function AdminPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        name: newCpuName.trim(),
-        gb6_single: newCpuGb6Single ? Number(newCpuGb6Single) : null,
-        gb6_multi:  newCpuGb6Multi  ? Number(newCpuGb6Multi)  : null,
+        name:           newCpuName.trim(),
+        gb6_single:     newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
+        gb6_multi:      newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
+        igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
+        igpu_gb6_multi:  newCpuIgpuMulti  ? Number(newCpuIgpuMulti)  : null,
       }),
     })
     if (res.ok) {
       setNewCpuName('')
       setNewCpuGb6Single('')
       setNewCpuGb6Multi('')
+      setNewCpuIgpuSingle('')
+      setNewCpuIgpuMulti('')
       fetchCpus(cpuSearch)
     }
     setAddingCpu(false)
@@ -635,7 +641,7 @@ export default function AdminPage() {
             {/* Add CPU form */}
             <div className="bg-surface border border-border rounded-card p-5 mb-6">
               <p className="text-sm font-semibold text-white mb-3">새 CPU 추가</p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 mb-3">
                 <input
                   type="text"
                   placeholder="CPU 이름 (예: Snapdragon 8 Gen 3)"
@@ -644,6 +650,9 @@ export default function AdminPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCpu()}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+              </div>
+              <div className="flex flex-wrap gap-3 mb-2">
+                <span className="text-xs text-white/30 w-full">CPU 벤치마크 (Geekbench 6)</span>
                 <input
                   type="number"
                   placeholder="GB6 Single (예: 2800)"
@@ -658,6 +667,25 @@ export default function AdminPage() {
                   onChange={(e) => setNewCpuGb6Multi(e.target.value)}
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+              </div>
+              <div className="flex flex-wrap gap-3 mb-3">
+                <span className="text-xs text-white/30 w-full">내장 GPU 벤치마크 (선택, APU/SoC용)</span>
+                <input
+                  type="number"
+                  placeholder="iGPU GB6 Single"
+                  value={newCpuIgpuSingle}
+                  onChange={(e) => setNewCpuIgpuSingle(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  placeholder="iGPU GB6 Multi"
+                  value={newCpuIgpuMulti}
+                  onChange={(e) => setNewCpuIgpuMulti(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex gap-3">
                 <button
                   onClick={handleAddCpu}
                   disabled={addingCpu || !newCpuName.trim()}
@@ -694,6 +722,8 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU Single</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU Multi</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
                   </tr>
                 </thead>
@@ -711,6 +741,8 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-white/80 max-w-xs truncate">{c.name}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.igpu_gb6_single ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.igpu_gb6_multi ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono">
                         {c.relative_score !== null ? (
                           <span className={c.relative_score >= 800 ? 'text-emerald-400' : c.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
@@ -721,7 +753,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {!cpusLoading && cpus.length === 0 && (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
                   )}
                 </tbody>
               </table>
