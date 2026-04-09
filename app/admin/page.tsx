@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
-  Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu,
+  Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -17,7 +17,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -99,6 +99,16 @@ export default function AdminPage() {
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
   const [newCpuIgpuMulti, setNewCpuIgpuMulti] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
+
+  // GPUs
+  const [gpus, setGpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [gpusLoading, setGpusLoading] = useState(false)
+  const [gpuSearch, setGpuSearch] = useState('')
+  const [gpuError, setGpuError] = useState<string | null>(null)
+  const [newGpuName, setNewGpuName] = useState('')
+  const [newGpuGb6Single, setNewGpuGb6Single] = useState('')
+  const [newGpuGb6Multi, setNewGpuGb6Multi] = useState('')
+  const [addingGpu, setAddingGpu] = useState(false)
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -208,6 +218,40 @@ export default function AdminPage() {
     setAddingCpu(false)
   }
 
+  const fetchGpus = useCallback(async (q: string) => {
+    setGpusLoading(true)
+    setGpuError(null)
+    const res = await fetch(`/api/admin/gpus?q=${encodeURIComponent(q)}`)
+    if (res.ok) {
+      const json = await res.json()
+      setGpus(json.gpus ?? [])
+    } else {
+      setGpuError('GPU 목록을 불러올 수 없습니다')
+    }
+    setGpusLoading(false)
+  }, [])
+
+  const handleAddGpu = async () => {
+    if (!newGpuName.trim()) return
+    setAddingGpu(true)
+    const res = await fetch('/api/admin/gpus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        name:       newGpuName.trim(),
+        gb6_single: newGpuGb6Single ? Number(newGpuGb6Single) : null,
+        gb6_multi:  newGpuGb6Multi  ? Number(newGpuGb6Multi)  : null,
+      }),
+    })
+    if (res.ok) {
+      setNewGpuName('')
+      setNewGpuGb6Single('')
+      setNewGpuGb6Multi('')
+      fetchGpus(gpuSearch)
+    }
+    setAddingGpu(false)
+  }
+
   // ── Effects by tab ────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -233,6 +277,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return
     if (tab === 'cpus') fetchCpus(cpuSearch)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, tab])
+
+  useEffect(() => {
+    if (!authed) return
+    if (tab === 'gpus') fetchGpus(gpuSearch)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, tab])
 
@@ -275,6 +325,7 @@ export default function AdminPage() {
     { key: 'users', label: '유저 관리', icon: <Users size={15} /> },
     { key: 'comparisons', label: '비교 이력', icon: <BarChart2 size={15} /> },
     { key: 'cpus', label: 'CPU 관리', icon: <Cpu size={15} /> },
+    { key: 'gpus', label: 'GPU 관리', icon: <Monitor size={15} /> },
   ]
 
   return (
@@ -754,6 +805,114 @@ export default function AdminPage() {
                   ))}
                   {!cpusLoading && cpus.length === 0 && (
                     <tr><td colSpan={6} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다. 최대 10개 표시.</p>
+          </div>
+        )}
+
+        {/* ── GPUS ── */}
+        {tab === 'gpus' && (
+          <div>
+            <h1 className="text-2xl font-black mb-6">GPU 관리</h1>
+
+            {/* Add GPU form */}
+            <div className="bg-surface border border-border rounded-card p-5 mb-6">
+              <p className="text-sm font-semibold text-white mb-3">새 GPU 추가</p>
+              <div className="flex flex-wrap gap-3 mb-3">
+                <input
+                  type="text"
+                  placeholder="GPU 이름 (예: Adreno 750)"
+                  value={newGpuName}
+                  onChange={(e) => setNewGpuName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddGpu()}
+                  className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3 mb-3">
+                <span className="text-xs text-white/30 w-full">GPU 벤치마크 (Geekbench 6 Compute)</span>
+                <input
+                  type="number"
+                  placeholder="GB6 Single (예: 15000)"
+                  value={newGpuGb6Single}
+                  onChange={(e) => setNewGpuGb6Single(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  placeholder="GB6 Multi (예: 15000)"
+                  value={newGpuGb6Multi}
+                  onChange={(e) => setNewGpuGb6Multi(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAddGpu}
+                  disabled={addingGpu || !newGpuName.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40"
+                >
+                  {addingGpu ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                  추가
+                </button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+              <input
+                type="text"
+                placeholder="GPU 검색..."
+                value={gpuSearch}
+                onChange={(e) => { setGpuSearch(e.target.value); fetchGpus(e.target.value) }}
+                className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            {gpuError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 mb-4 text-sm text-red-400">
+                {gpuError}
+              </div>
+            )}
+
+            <div className="bg-surface border border-border rounded-card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gpusLoading && gpus.length === 0 ? (
+                    <tr><td colSpan={4} className="px-4 py-8 text-center">
+                      <div className="flex gap-1.5 justify-center">
+                        {[0, 1, 2].map((i) => (
+                          <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                      </div>
+                    </td></tr>
+                  ) : gpus.map((g, i) => (
+                    <tr key={g.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                      <td className="px-4 py-3 text-white/80 max-w-xs truncate">{g.name}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{g.gb6_single ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{g.gb6_multi ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        {g.relative_score !== null ? (
+                          <span className={g.relative_score >= 800 ? 'text-emerald-400' : g.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
+                            {g.relative_score}
+                          </span>
+                        ) : <span className="text-white/20">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                  {!gpusLoading && gpus.length === 0 && (
+                    <tr><td colSpan={4} className="px-4 py-8 text-center text-white/30">GPU 없음</td></tr>
                   )}
                 </tbody>
               </table>
