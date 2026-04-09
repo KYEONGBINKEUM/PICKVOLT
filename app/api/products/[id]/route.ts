@@ -18,7 +18,7 @@ export async function GET(
     .from('products')
     .select(`
       id, name, brand, category, price_usd, image_url, source_url,
-      specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os ),
+      specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os, amazon_url ),
       specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
       specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
       specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )

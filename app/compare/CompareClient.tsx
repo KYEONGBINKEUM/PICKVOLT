@@ -14,6 +14,8 @@ import { saveLocalHistory } from '@/lib/localHistory'
 import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 
+const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
+
 interface ProductSpecs {
   cpu?: string | null
   cpuSpeedMHz?: number | null
@@ -402,7 +404,6 @@ export default function CompareClient() {
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, { ram_gb: number | null; storage_gb: number | null }>>({})
 
 
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
@@ -555,17 +556,6 @@ export default function CompareClient() {
       .then((d) => { if (!d.error) setCategoryStats(d) })
       .catch(() => {})
 
-    // variant 기본값: 각 제품의 최대 RAM / 최대 Storage
-    const initVariants: Record<string, { ram_gb: number | null; storage_gb: number | null }> = {}
-    for (const p of products) {
-      const ramOpts  = parseOptions(p.raw.ram_gb)
-      const storOpts = parseOptions(p.raw.storage_gb)
-      initVariants[p.id] = {
-        ram_gb:     ramOpts.length  ? Math.max(...ramOpts)  : null,
-        storage_gb: storOpts.length ? Math.max(...storOpts) : null,
-      }
-    }
-    setSelectedVariants(initVariants)
   }, [products])
 
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean }
@@ -600,11 +590,10 @@ export default function CompareClient() {
   // 반영 항목: Performance · RAM · Battery · Camera (무게/스토리지/디스플레이 제외)
   const productScores = categoryStats
     ? products.map((p) => {
-        const variant = selectedVariants[p.id]
         return computeRelativeScores({
           category,
           relativeScore:  p.specs.performanceScore,
-          ram_gb:         variant?.ram_gb ?? p.raw.ram_gb,
+          ram_gb:         p.raw.ram_gb,
           battery_mah:    p.raw.battery_mah,
           battery_wh:     p.raw.battery_wh,
           battery_hours:  p.raw.battery_hours,
@@ -614,7 +603,6 @@ export default function CompareClient() {
     : null
 
   // 레이더 차트용 데이터
-  const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
   const radarProducts: RadarProduct[] | null = productScores
     ? products.map((p, i) => ({
         name: p.name,
@@ -646,19 +634,20 @@ export default function CompareClient() {
       sublabel: t('spec.memory'),
       higherIsBetter: true,
       values: products.map((p) => {
-        const sel = selectedVariants[p.id]?.ram_gb
-        const n = (sel ?? parseOptions(p.raw.ram_gb).reduce((a, b) => Math.max(a, b), 0)) || null
-        return { primary: sel != null ? fmtGB(sel) : (p.raw.ram_gb ? `${p.raw.ram_gb}GB` : '—'), numericVal: n ?? undefined }
+        const opts = parseOptions(p.raw.ram_gb)
+        const maxN = opts.length > 0 ? Math.max(...opts) : null
+        const label = opts.length > 0 ? opts.map(fmtGB).join(' / ') : '—'
+        return { primary: label, numericVal: maxN ?? undefined }
       }),
     }
     const storageRow: SpecRowData = {
       label: t('spec.storage'),
       sublabel: t('spec.internal'),
       values: products.map((p) => {
-        const sel = selectedVariants[p.id]?.storage_gb
-        if (sel != null) {
-          const size = fmtGB(sel)
-          return { primary: p.raw.storage_type ? `${size} ${p.raw.storage_type}` : size }
+        const opts = parseOptions(p.raw.storage_gb)
+        if (opts.length > 0) {
+          const label = opts.map((n) => fmtGB(n)).join(' / ')
+          return { primary: p.raw.storage_type ? `${label} ${p.raw.storage_type}` : label }
         }
         return { primary: fmtStorage(p.raw) }
       }),
@@ -964,57 +953,23 @@ export default function CompareClient() {
                   <p className="text-sm font-bold text-white">{t('compare.top_choices')}</p>
                 </div>
                 {products.map((p, pi) => {
-                  const ramOpts  = parseOptions(p.raw.ram_gb)
-                  const storOpts = parseOptions(p.raw.storage_gb)
-                  const variant  = selectedVariants[p.id]
-                  const color    = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
-                  const hasMultiple = ramOpts.length > 1 || storOpts.length > 1
+                  const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                   return (
                     <div key={p.id} className="p-4 border-l border-border">
                       <ProductCard product={p} />
 
-                      {/* Variant selector */}
-                      {hasMultiple && (
-                        <div className="mt-3 space-y-2">
-                          {ramOpts.length > 1 && (
-                            <div>
-                              <p className="text-[9px] text-white/30 uppercase tracking-widest mb-1">RAM</p>
-                              <div className="flex flex-wrap gap-1">
-                                {ramOpts.map((n) => (
-                                  <button
-                                    key={n}
-                                    onClick={() => setSelectedVariants((prev) => ({ ...prev, [p.id]: { ...prev[p.id], ram_gb: n } }))}
-                                    className="text-[10px] px-2 py-0.5 rounded-full border transition-all"
-                                    style={variant?.ram_gb === n
-                                      ? { borderColor: color, color, backgroundColor: `${color}18` }
-                                      : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)' }}
-                                  >
-                                    {fmtGB(n)}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {storOpts.length > 1 && (
-                            <div>
-                              <p className="text-[9px] text-white/30 uppercase tracking-widest mb-1">Storage</p>
-                              <div className="flex flex-wrap gap-1">
-                                {storOpts.map((n) => (
-                                  <button
-                                    key={n}
-                                    onClick={() => setSelectedVariants((prev) => ({ ...prev, [p.id]: { ...prev[p.id], storage_gb: n } }))}
-                                    className="text-[10px] px-2 py-0.5 rounded-full border transition-all"
-                                    style={variant?.storage_gb === n
-                                      ? { borderColor: color, color, backgroundColor: `${color}18` }
-                                      : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)' }}
-                                  >
-                                    {fmtGB(n)}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                      {/* Amazon button */}
+                      {p.raw.amazon_url && (
+                        <a
+                          href={p.raw.amazon_url}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-[11px] font-bold transition-all"
+                          style={{ backgroundColor: `${color}18`, border: `1px solid ${color}40`, color }}
+                        >
+                          Buy on Amazon ↗
+                        </a>
                       )}
                     </div>
                   )
