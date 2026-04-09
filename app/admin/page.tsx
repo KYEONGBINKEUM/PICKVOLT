@@ -91,7 +91,7 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; igpu_gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
@@ -99,7 +99,6 @@ export default function AdminPage() {
   const [newCpuGb6Single, setNewCpuGb6Single] = useState('')
   const [newCpuGb6Multi, setNewCpuGb6Multi] = useState('')
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
-  const [newCpuIgpuMulti, setNewCpuIgpuMulti] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
 
   // GPUs
@@ -221,7 +220,6 @@ export default function AdminPage() {
         gb6_single:     newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
         gb6_multi:      newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
         igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
-        igpu_gb6_multi:  newCpuIgpuMulti  ? Number(newCpuIgpuMulti)  : null,
       }),
     })
     if (res.ok) {
@@ -229,7 +227,6 @@ export default function AdminPage() {
       setNewCpuGb6Single('')
       setNewCpuGb6Multi('')
       setNewCpuIgpuSingle('')
-      setNewCpuIgpuMulti('')
       fetchCpus(cpuSearch)
     }
     setAddingCpu(false)
@@ -798,16 +795,9 @@ export default function AdminPage() {
                 <span className="text-xs text-white/30 w-full">내장 GPU 벤치마크 (선택, APU/SoC용)</span>
                 <input
                   type="number"
-                  placeholder="iGPU GB6 Single"
+                  placeholder="iGPU GB6 Compute"
                   value={newCpuIgpuSingle}
                   onChange={(e) => setNewCpuIgpuSingle(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  placeholder="iGPU GB6 Multi"
-                  value={newCpuIgpuMulti}
-                  onChange={(e) => setNewCpuIgpuMulti(e.target.value)}
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
@@ -848,8 +838,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU Single</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU Multi</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU Compute</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
                   </tr>
                 </thead>
@@ -868,7 +857,6 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.igpu_gb6_single ?? '—'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.igpu_gb6_multi ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono">
                         {c.relative_score !== null ? (
                           <span className={c.relative_score >= 800 ? 'text-emerald-400' : c.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
