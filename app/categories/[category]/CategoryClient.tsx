@@ -141,8 +141,8 @@ function ProductCard({ product }: { product: Product }) {
   const scorePercent = Math.min(100, Math.round((score / 1000) * 100))
 
   return (
-    <Link href={`/product/${product.id}`} className="group block">
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-row">
+    <Link href={`/product/${product.id}`} className="group block h-full">
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-row h-full">
 
         {/* Image — left */}
         <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden self-stretch min-h-[10rem]">

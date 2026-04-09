@@ -37,10 +37,24 @@ export async function PATCH(
   const { id } = await params
   const body = await req.json()
 
-  const allowed = ['name', 'brand', 'type', 'cores', 'clock_base', 'clock_boost', 'gpu_name', 'gb6_single', 'gb6_multi', 'igpu_gb6_single', 'tdmark_score', 'antutu_score', 'cinebench_single', 'cinebench_multi', 'score_source']
+  const allowed = ['name', 'brand', 'type', 'cores', 'clock_base', 'clock_boost', 'gpu_name', 'gb6_single', 'gb6_multi', 'igpu_gb6_single', 'tdmark_score', 'antutu_score', 'cinebench_single', 'cinebench_multi', 'relative_score', 'score_source']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]
+  }
+
+  // gb6_multi 변경 시 relative_score 자동 재계산
+  if ('gb6_multi' in updates && updates.gb6_multi != null && !('relative_score' in body)) {
+    const supabaseTmp = makeServiceClient()
+    const { data: maxRow } = await supabaseTmp
+      .from('cpus')
+      .select('gb6_multi')
+      .order('gb6_multi', { ascending: false })
+      .limit(1)
+      .single()
+    const maxScore = maxRow?.gb6_multi ?? (updates.gb6_multi as number)
+    const newMulti = updates.gb6_multi as number
+    updates.relative_score = Math.round((newMulti / Math.max(maxScore, newMulti)) * 1000)
   }
 
   const supabase = makeServiceClient()
@@ -52,6 +66,15 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // CPU 이름 변경 시 specs_common.cpu_name 일괄 갱신
+  if ('name' in updates && typeof updates.name === 'string') {
+    await supabase
+      .from('specs_common')
+      .update({ cpu_name: updates.name })
+      .eq('cpu_id', id)
+  }
+
   return NextResponse.json(data)
 }
 
