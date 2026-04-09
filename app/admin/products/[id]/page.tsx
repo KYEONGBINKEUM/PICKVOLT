@@ -112,12 +112,21 @@ export default function ProductEditPage() {
   const [form, setForm] = useState<Record<string, unknown>>({})
   const [commonSpecs, setCommonSpecs] = useState<Record<string, unknown>>({})
   const [categorySpecs, setCategorySpecs] = useState<Record<string, unknown>>({})
-  const [cpuScores, setCpuScores] = useState<{ relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; score_source: string }>({
-    relative_score: null, gb6_single: null, gb6_multi: null, score_source: '',
+  const [cpuScores, setCpuScores] = useState<{
+    relative_score: number | null
+    gb6_single: number | null; gb6_multi: number | null
+    tdmark_score: number | null; antutu_score: number | null
+    cinebench_single: number | null; cinebench_multi: number | null
+    score_source: string
+  }>({
+    relative_score: null, gb6_single: null, gb6_multi: null,
+    tdmark_score: null, antutu_score: null,
+    cinebench_single: null, cinebench_multi: null,
+    score_source: '',
   })
   // CPU 검색 & 연결
   const [cpuQuery, setCpuQuery]       = useState('')
-  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; tdmark_score: number | null; antutu_score: number | null; cinebench_single: number | null; cinebench_multi: number | null; score_source: string | null }[]>([])
   const [cpuSearchOpen, setCpuSearchOpen] = useState(false)
   const [cpuCreating, setCpuCreating] = useState(false)
   const [linkedCpuName, setLinkedCpuName] = useState('')
@@ -194,17 +203,21 @@ export default function ProductEditPage() {
         if (cpuId) {
           supabase
             .from('cpus')
-            .select('relative_score, gb6_single, gb6_multi, score_source')
+            .select('name, relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, score_source')
             .eq('id', cpuId)
             .single()
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .then(({ data: cpu }: { data: any }) => {
               if (cpu) {
                 setCpuScores({
-                  relative_score: cpu.relative_score ?? null,
-                  gb6_single:     cpu.gb6_single     ?? null,
-                  gb6_multi:      cpu.gb6_multi       ?? null,
-                  score_source:   cpu.score_source    ?? '',
+                  relative_score:   cpu.relative_score   ?? null,
+                  gb6_single:       cpu.gb6_single       ?? null,
+                  gb6_multi:        cpu.gb6_multi        ?? null,
+                  tdmark_score:     cpu.tdmark_score     ?? null,
+                  antutu_score:     cpu.antutu_score     ?? null,
+                  cinebench_single: cpu.cinebench_single ?? null,
+                  cinebench_multi:  cpu.cinebench_multi  ?? null,
+                  score_source:     cpu.score_source     ?? '',
                 })
                 setLinkedCpuName(cpu.name ?? '')
               }
@@ -239,7 +252,18 @@ export default function ProductEditPage() {
       ...(clockLabel             && { cpu_clock: clockLabel }),
     }))
     setLinkedCpuName(cpu.name)
-    setCpuScores((p) => ({ ...p, relative_score: cpu.relative_score ?? null, score_source: cpu.score_source ?? '' }))
+    // CPU의 모든 벤치마크 점수 자동 로드
+    const full = cpu as Record<string, unknown>
+    setCpuScores({
+      relative_score:   (full.relative_score   as number | null) ?? null,
+      gb6_single:       (full.gb6_single       as number | null) ?? null,
+      gb6_multi:        (full.gb6_multi        as number | null) ?? null,
+      tdmark_score:     (full.tdmark_score     as number | null) ?? null,
+      antutu_score:     (full.antutu_score     as number | null) ?? null,
+      cinebench_single: (full.cinebench_single as number | null) ?? null,
+      cinebench_multi:  (full.cinebench_multi  as number | null) ?? null,
+      score_source:     (full.score_source     as string)        ?? '',
+    })
     setCpuSearchOpen(false)
     setCpuQuery('')
     setCpuResults([])
@@ -524,6 +548,11 @@ export default function ProductEditPage() {
                 <TextInput value={g(form, 'source_url')} onChange={(v) => patchForm('source_url', v)} placeholder="https://..." />
               </Field>
             </div>
+            <div className="md:col-span-2">
+              <Field label="아마존 경유 링크 (affiliate)">
+                <TextInput value={g(commonSpecs, 'amazon_url')} onChange={(v) => patchCommon('amazon_url', v)} placeholder="https://amzn.to/..." />
+              </Field>
+            </div>
           </div>
         </SectionCard>
 
@@ -544,7 +573,7 @@ export default function ProductEditPage() {
                     {cpuScores.relative_score != null && (
                       <span className="ml-auto text-xs text-accent/70 flex-shrink-0">score {cpuScores.relative_score}</span>
                     )}
-                    <button onClick={() => { setCommonSpecs((p) => ({ ...p, cpu_id: undefined })); setLinkedCpuName(''); setCpuScores({ relative_score: null, gb6_single: null, gb6_multi: null, score_source: '' }) }}
+                    <button onClick={() => { setCommonSpecs((p) => ({ ...p, cpu_id: undefined })); setLinkedCpuName(''); setCpuScores({ relative_score: null, gb6_single: null, gb6_multi: null, tdmark_score: null, antutu_score: null, cinebench_single: null, cinebench_multi: null, score_source: '' }) }}
                       className="ml-1 text-white/30 hover:text-red-400 transition-colors flex-shrink-0">
                       <X size={13} />
                     </button>
@@ -587,7 +616,16 @@ export default function ProductEditPage() {
                         >
                           <div>
                             <p className="text-sm text-white font-semibold">{cpu.name}</p>
-                            {cpu.score_source && <p className="text-xs text-white/30">{cpu.score_source}</p>}
+                            <p className="text-xs text-white/30 mt-0.5">
+                              {[
+                                cpu.gb6_single != null && `GB6S: ${cpu.gb6_single}`,
+                                cpu.gb6_multi  != null && `GB6M: ${cpu.gb6_multi}`,
+                                cpu.tdmark_score  != null && `3DM: ${cpu.tdmark_score}`,
+                                cpu.antutu_score  != null && `AnTuTu: ${cpu.antutu_score.toLocaleString()}`,
+                                cpu.cinebench_single != null && `CBs: ${cpu.cinebench_single}`,
+                                cpu.cinebench_multi  != null && `CBm: ${cpu.cinebench_multi}`,
+                              ].filter(Boolean).join(' · ')}
+                            </p>
                           </div>
                           {cpu.relative_score != null && (
                             <span className="text-xs font-bold text-accent ml-3 flex-shrink-0">score {cpu.relative_score}</span>
@@ -727,30 +765,29 @@ export default function ProductEditPage() {
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Relative Score (0 – 1000, 카테고리 내 비교 기준)">
-                  <NumberInput
-                    value={cpuScores.relative_score}
-                    onChange={(v) => setCpuScores((p) => ({ ...p, relative_score: v }))}
-                  />
+                <Field label="Relative Score (0 – 1000)">
+                  <NumberInput value={cpuScores.relative_score} onChange={(v) => setCpuScores((p) => ({ ...p, relative_score: v }))} />
                 </Field>
-                <Field label="점수 출처 (Geekbench6 / AnTuTu / Passmark 등)">
-                  <TextInput
-                    value={cpuScores.score_source}
-                    onChange={(v) => setCpuScores((p) => ({ ...p, score_source: v }))}
-                    placeholder="geekbench6"
-                  />
+                <Field label="점수 출처">
+                  <TextInput value={cpuScores.score_source} onChange={(v) => setCpuScores((p) => ({ ...p, score_source: v }))} placeholder="geekbench6" />
                 </Field>
                 <Field label="GB6 Single-Core">
-                  <NumberInput
-                    value={cpuScores.gb6_single}
-                    onChange={(v) => setCpuScores((p) => ({ ...p, gb6_single: v }))}
-                  />
+                  <NumberInput value={cpuScores.gb6_single} onChange={(v) => setCpuScores((p) => ({ ...p, gb6_single: v }))} />
                 </Field>
                 <Field label="GB6 Multi-Core">
-                  <NumberInput
-                    value={cpuScores.gb6_multi}
-                    onChange={(v) => setCpuScores((p) => ({ ...p, gb6_multi: v }))}
-                  />
+                  <NumberInput value={cpuScores.gb6_multi} onChange={(v) => setCpuScores((p) => ({ ...p, gb6_multi: v }))} />
+                </Field>
+                <Field label="3DMark Steel Nomad Light">
+                  <NumberInput value={cpuScores.tdmark_score} onChange={(v) => setCpuScores((p) => ({ ...p, tdmark_score: v }))} />
+                </Field>
+                <Field label="AnTuTu">
+                  <NumberInput value={cpuScores.antutu_score} onChange={(v) => setCpuScores((p) => ({ ...p, antutu_score: v }))} />
+                </Field>
+                <Field label="Cinebench Single">
+                  <NumberInput value={cpuScores.cinebench_single} onChange={(v) => setCpuScores((p) => ({ ...p, cinebench_single: v }))} />
+                </Field>
+                <Field label="Cinebench Multi">
+                  <NumberInput value={cpuScores.cinebench_multi} onChange={(v) => setCpuScores((p) => ({ ...p, cinebench_multi: v }))} />
                 </Field>
               </div>
             </div>

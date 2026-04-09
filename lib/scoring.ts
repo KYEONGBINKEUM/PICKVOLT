@@ -6,25 +6,43 @@
 
 // ─── 개별 스펙 점수 ───────────────────────────────────────────────────────────
 
-/** CPU 성능 점수 (0–100)
- *  GB6 Single 20% + GB6 Multi 30% + iGPU 20% + AnTuTu 30%
- *  각 항목 최상위 기준: Single ~4200, Multi ~12000, iGPU ~50000, AnTuTu ~3000000 */
+/** 모바일 CPU 성능 점수 (0–100)
+ *  GB6 Single 25% + GB6 Multi 25% + 3DMark 25% + AnTuTu 25%
+ *  각 항목 최상위 기준: Single ~4200, Multi ~12000, 3DMark ~3000, AnTuTu ~3000000 */
 export function scoreCPU(
   gb6Single: number | null,
   gb6Multi: number | null,
   relScore: number | null,
-  igpuGb6: number | null = null,
+  tdmark: number | null = null,
   antutu: number | null = null,
 ): number {
-  if (gb6Single != null || gb6Multi != null || igpuGb6 != null || antutu != null) {
+  if (gb6Single != null || gb6Multi != null || tdmark != null || antutu != null) {
     const normSingle = gb6Single != null ? Math.min(1, gb6Single / 4200)    : 0
     const normMulti  = gb6Multi  != null ? Math.min(1, gb6Multi  / 12000)   : 0
-    const normIgpu   = igpuGb6   != null ? Math.min(1, igpuGb6   / 50000)   : 0
+    const normTdmark = tdmark    != null ? Math.min(1, tdmark    / 3000)    : 0
     const normAntutu = antutu    != null ? Math.min(1, antutu    / 3000000) : 0
-    const weighted   = normSingle * 0.20 + normMulti * 0.30 + normIgpu * 0.20 + normAntutu * 0.30
+    const weighted   = normSingle * 0.25 + normMulti * 0.25 + normTdmark * 0.25 + normAntutu * 0.25
     return Math.min(100, Math.round(weighted * 100))
   }
   // fallback: relative_score (0–1000) → 0–100
+  if (relScore != null) return Math.min(100, Math.round(relScore / 10))
+  return 0
+}
+
+/** 랩탑/데스크탑 CPU 성능 점수 (0–100)
+ *  Cinebench Single 50% + Cinebench Multi 50%
+ *  최상위 기준: Single ~150 (R25), Multi ~45000 (R24) */
+export function scoreCPUDesktop(
+  cbSingle: number | null,
+  cbMulti: number | null,
+  relScore: number | null,
+): number {
+  if (cbSingle != null || cbMulti != null) {
+    const normSingle = cbSingle != null ? Math.min(1, cbSingle / 150)   : 0
+    const normMulti  = cbMulti  != null ? Math.min(1, cbMulti  / 45000) : 0
+    const weighted   = normSingle * 0.50 + normMulti * 0.50
+    return Math.min(100, Math.round(weighted * 100))
+  }
   if (relScore != null) return Math.min(100, Math.round(relScore / 10))
   return 0
 }
@@ -280,8 +298,10 @@ export interface ScoringInput {
   // CPU
   gb6Single?: number | null
   gb6Multi?: number | null
-  igpuGb6?: number | null
+  tdmark?: number | null
   antutu?: number | null
+  cinebenchSingle?: number | null
+  cinebenchMulti?: number | null
   relativeScore?: number | null
   // Common
   ram_gb?: string | number | null
@@ -308,7 +328,11 @@ export interface ScoreBreakdown {
 export function computeScores(input: ScoringInput): ScoreBreakdown {
   const { category } = input
 
-  const cpu  = scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null, input.igpuGb6 ?? null, input.antutu ?? null)
+  // 랩탑/데스크탑은 Cinebench 우선, 없으면 GB6 fallback
+  const isDesktopType = category === 'laptop'
+  const cpu = (isDesktopType && (input.cinebenchSingle != null || input.cinebenchMulti != null))
+    ? scoreCPUDesktop(input.cinebenchSingle ?? null, input.cinebenchMulti ?? null, input.relativeScore ?? null)
+    : scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null, input.tdmark ?? null, input.antutu ?? null)
   const ram  = scoreRAM(firstNum(input.ram_gb))
   const stor = scoreStorage(firstNum(input.storage_gb))
   const ppi  = computePPI(input.display_resolution, input.display_inch)

@@ -31,10 +31,12 @@ create table if not exists gpus (
 -- STEP 3. 새 컬럼 추가 — cpus
 -- ============================================================
 alter table cpus
-  add column if not exists gb6_single     integer,      -- Geekbench 6 Single-Core
-  add column if not exists gb6_multi      integer,      -- Geekbench 6 Multi-Core
-  add column if not exists score_source   text default 'geekbench6',
-  add column if not exists relative_score numeric;      -- (gb6_multi / max) * 1000
+  add column if not exists gb6_single       integer,      -- Geekbench 6 Single-Core (모바일)
+  add column if not exists gb6_multi        integer,      -- Geekbench 6 Multi-Core  (모바일)
+  add column if not exists cinebench_single integer,      -- Cinebench Single-Core   (랩탑/데스크탑)
+  add column if not exists cinebench_multi  integer,      -- Cinebench Multi-Core    (랩탑/데스크탑)
+  add column if not exists score_source     text default 'geekbench6',
+  add column if not exists relative_score   numeric;      -- 타입별 가중치 합산 × 1000
 
 
 -- ============================================================
@@ -60,19 +62,36 @@ declare
   max_multi     numeric;
   max_igpu      numeric;
   max_antutu    numeric;
+  max_cb_single numeric;
+  max_cb_multi  numeric;
 begin
-  select max(gb6_single)      into max_single from cpus where gb6_single      is not null;
-  select max(gb6_multi)       into max_multi  from cpus where gb6_multi        is not null;
-  select max(igpu_gb6_single) into max_igpu   from cpus where igpu_gb6_single  is not null;
-  select max(antutu_score)    into max_antutu from cpus where antutu_score     is not null;
+  -- 모바일 최댓값 (GB6 + 3DMark + AnTuTu 기반)
+  select max(gb6_single)    into max_single from cpus where gb6_single   is not null and type = 'mobile';
+  select max(gb6_multi)     into max_multi  from cpus where gb6_multi    is not null and type = 'mobile';
+  select max(tdmark_score)  into max_igpu   from cpus where tdmark_score is not null and type = 'mobile';
+  select max(antutu_score)  into max_antutu from cpus where antutu_score is not null and type = 'mobile';
 
+  -- 랩탑/데스크탑 최댓값 (Cinebench 기반)
+  select max(cinebench_single) into max_cb_single from cpus where cinebench_single is not null and type in ('laptop', 'desktop');
+  select max(cinebench_multi)  into max_cb_multi  from cpus where cinebench_multi  is not null and type in ('laptop', 'desktop');
+
+  -- 모바일: GB6 Single 25% + GB6 Multi 25% + 3DMark 25% + AnTuTu 25%
   update cpus
      set relative_score = round((
-           coalesce(gb6_single::numeric      / nullif(max_single, 0), 0) * 0.20
-         + coalesce(gb6_multi::numeric       / nullif(max_multi,  0), 0) * 0.30
-         + coalesce(igpu_gb6_single::numeric / nullif(max_igpu,   0), 0) * 0.20
-         + coalesce(antutu_score::numeric    / nullif(max_antutu, 0), 0) * 0.30
-         ) * 1000, 1);
+           coalesce(gb6_single::numeric    / nullif(max_single, 0), 0) * 0.25
+         + coalesce(gb6_multi::numeric     / nullif(max_multi,  0), 0) * 0.25
+         + coalesce(tdmark_score::numeric  / nullif(max_igpu,   0), 0) * 0.25
+         + coalesce(antutu_score::numeric  / nullif(max_antutu, 0), 0) * 0.25
+         ) * 1000, 1)
+   where type = 'mobile';
+
+  -- 랩탑/데스크탑: Cinebench Single 50% + Cinebench Multi 50%
+  update cpus
+     set relative_score = round((
+           coalesce(cinebench_single::numeric / nullif(max_cb_single, 0), 0) * 0.50
+         + coalesce(cinebench_multi::numeric  / nullif(max_cb_multi,  0), 0) * 0.50
+         ) * 1000, 1)
+   where type in ('laptop', 'desktop');
 end;
 $$;
 
@@ -96,7 +115,8 @@ begin
      set relative_score = round((
            coalesce(gb6_single::numeric / nullif(max_single, 0), 0) * 0.60
          + coalesce(gb6_opencl::numeric / nullif(max_opencl, 0), 0) * 0.40
-         ) * 1000, 1);
+         ) * 1000, 1)
+   where id is not null;
 end;
 $$;
 
@@ -127,7 +147,7 @@ $$;
 -- ============================================================
 drop trigger if exists trg_cpu_score_recalc on cpus;
 create trigger trg_cpu_score_recalc
-  after insert or update of gb6_single, gb6_multi
+  after insert or update of gb6_single, gb6_multi, cinebench_single, cinebench_multi
   on cpus
   for each statement
   execute function _trigger_recalc_cpu();

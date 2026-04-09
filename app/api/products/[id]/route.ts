@@ -45,21 +45,29 @@ export async function GET(
   let relativeScore: number | null = null
   let gb6Single: number | null = null
   let gb6Multi: number | null = null
-  let igpuGb6: number | null = null
+  let tdmark: number | null = null
+  let antutu: number | null = null
+  let cinebenchSingle: number | null = null
+  let cinebenchMulti: number | null = null
+  let cpuType: string | null = null
   let scoreSource: string | null = null
 
   if (common?.cpu_id) {
     const { data: cpu } = await supabase
       .from('cpus')
-      .select('relative_score, gb6_single, gb6_multi, igpu_gb6_single, score_source')
+      .select('relative_score, type, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, score_source')
       .eq('id', common.cpu_id)
       .single()
 
-    relativeScore = cpu?.relative_score    ?? null
-    gb6Single     = cpu?.gb6_single        ?? null
-    gb6Multi      = cpu?.gb6_multi         ?? null
-    igpuGb6       = cpu?.igpu_gb6_single   ?? null
-    scoreSource   = cpu?.score_source      ?? null
+    relativeScore   = cpu?.relative_score    ?? null
+    cpuType         = cpu?.type              ?? null
+    gb6Single       = cpu?.gb6_single        ?? null
+    gb6Multi        = cpu?.gb6_multi         ?? null
+    tdmark          = cpu?.tdmark_score      ?? null
+    antutu          = cpu?.antutu_score      ?? null
+    cinebenchSingle = cpu?.cinebench_single  ?? null
+    cinebenchMulti  = cpu?.cinebench_multi   ?? null
+    scoreSource     = cpu?.score_source      ?? null
   }
 
   const specSrc = laptop ?? smartphone ?? tablet ?? {}
@@ -95,10 +103,14 @@ export async function GET(
     cpu:             common?.cpu_name ?? null,
     // 비교 화면용 — 0~1000 상대 점수
     performanceScore: relativeScore,
-    // 제품 상세 화면용 — Geekbench 6 절대값
+    // 제품 상세 화면용 — 벤치마크 절대값
+    cpuType,
     gb6Single,
     gb6Multi,
-    igpuGb6,
+    tdmark,
+    antutu,
+    cinebenchSingle,
+    cinebenchMulti,
     scoreSource,
     ram:             ramLabel,
     storage:         storageLabel,

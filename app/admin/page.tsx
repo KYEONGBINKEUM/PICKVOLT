@@ -103,6 +103,7 @@ export default function AdminPage() {
   }[]>([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
+  const [productCatTab, setProductCatTab] = useState<'smartphone' | 'tablet' | 'laptop'>('smartphone')
   const [brand, setBrand] = useState('')
   const [page, setPage] = useState(0)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -123,7 +124,7 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; tdmark_score: number | null; antutu_score: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; tdmark_score: number | null; antutu_score: number | null; cinebench_single: number | null; cinebench_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
@@ -140,6 +141,9 @@ export default function AdminPage() {
   const [newCpuIgpuSingle, setNewCpuIgpuSingle] = useState('')
   const [newCpuTdmark, setNewCpuTdmark] = useState('')
   const [newCpuAntutu, setNewCpuAntutu] = useState('')
+  const [newCpuCbSingle, setNewCpuCbSingle] = useState('')
+  const [newCpuCbMulti, setNewCpuCbMulti] = useState('')
+  const [cpuTypeTab, setCpuTypeTab] = useState<'mobile' | 'laptop' | 'desktop'>('mobile')
   const [addingCpu, setAddingCpu] = useState(false)
   const [aiFillingCpu, setAiFillingCpu] = useState(false)
   const [aiCpuError, setAiCpuError] = useState<string | null>(null)
@@ -204,6 +208,12 @@ export default function AdminPage() {
     const { data } = await q
     setProducts(data ?? [])
   }, [authed, search, category, brand, page])
+
+  // 탭이 바뀔 때 카테고리 필터 동기화
+  useEffect(() => {
+    setCategory(productCatTab)
+    setPage(0)
+  }, [productCatTab])
 
   const fetchUsers = useCallback(async (tok: string, pg: number, q = '') => {
     setUsersLoading(true)
@@ -277,21 +287,25 @@ export default function AdminPage() {
     setNewCpuIgpuSingle('')
     setNewCpuTdmark('')
     setNewCpuAntutu('')
+    setNewCpuCbSingle('')
+    setNewCpuCbMulti('')
   }
 
   const cpuFormBody = () => ({
-    name:            newCpuName.trim(),
-    brand:           newCpuBrand.trim() || null,
-    type:            newCpuType,
-    cores:           newCpuCores      ? Number(newCpuCores)      : null,
-    clock_base:      newCpuClockBase  ? Number(newCpuClockBase)  : null,
-    clock_boost:     newCpuClockBoost ? Number(newCpuClockBoost) : null,
-    gpu_name:        newCpuGpuName.trim() || null,
-    gb6_single:      newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
-    gb6_multi:       newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
-    igpu_gb6_single: newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
-    tdmark_score:    newCpuTdmark     ? Number(newCpuTdmark)     : null,
-    antutu_score:    newCpuAntutu     ? Number(newCpuAntutu)     : null,
+    name:             newCpuName.trim(),
+    brand:            newCpuBrand.trim() || null,
+    type:             newCpuType,
+    cores:            newCpuCores      ? Number(newCpuCores)      : null,
+    clock_base:       newCpuClockBase  ? Number(newCpuClockBase)  : null,
+    clock_boost:      newCpuClockBoost ? Number(newCpuClockBoost) : null,
+    gpu_name:         newCpuGpuName.trim() || null,
+    gb6_single:       newCpuGb6Single  ? Number(newCpuGb6Single)  : null,
+    gb6_multi:        newCpuGb6Multi   ? Number(newCpuGb6Multi)   : null,
+    igpu_gb6_single:  newCpuIgpuSingle ? Number(newCpuIgpuSingle) : null,
+    tdmark_score:     newCpuTdmark     ? Number(newCpuTdmark)     : null,
+    antutu_score:     newCpuAntutu     ? Number(newCpuAntutu)     : null,
+    cinebench_single: newCpuCbSingle   ? Number(newCpuCbSingle)   : null,
+    cinebench_multi:  newCpuCbMulti    ? Number(newCpuCbMulti)    : null,
   })
 
   const handleAiFillCpu = async () => {
@@ -317,8 +331,10 @@ export default function AdminPage() {
       if (specs.gb6_single != null)  setNewCpuGb6Single(String(specs.gb6_single))
       if (specs.gb6_multi != null)   setNewCpuGb6Multi(String(specs.gb6_multi))
       if (specs.igpu_gb6_single != null) setNewCpuIgpuSingle(String(specs.igpu_gb6_single))
-      if (specs.tdmark_score != null)    setNewCpuTdmark(String(specs.tdmark_score))
-      if (specs.antutu_score != null)    setNewCpuAntutu(String(specs.antutu_score))
+      if (specs.tdmark_score != null)       setNewCpuTdmark(String(specs.tdmark_score))
+      if (specs.antutu_score != null)       setNewCpuAntutu(String(specs.antutu_score))
+      if (specs.cinebench_single != null)   setNewCpuCbSingle(String(specs.cinebench_single))
+      if (specs.cinebench_multi != null)    setNewCpuCbMulti(String(specs.cinebench_multi))
     } catch (e) {
       setAiCpuError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -362,7 +378,9 @@ export default function AdminPage() {
     setNewCpuGb6Multi(c.gb6_multi != null ? String(c.gb6_multi) : '')
     setNewCpuIgpuSingle(c.igpu_gb6_single != null ? String(c.igpu_gb6_single) : '')
     setNewCpuTdmark(c.tdmark_score != null ? String(c.tdmark_score) : '')
-    setNewCpuAntutu((c as any).antutu_score != null ? String((c as any).antutu_score) : '')
+    setNewCpuAntutu(c.antutu_score != null ? String(c.antutu_score) : '')
+    setNewCpuCbSingle(c.cinebench_single != null ? String(c.cinebench_single) : '')
+    setNewCpuCbMulti(c.cinebench_multi != null ? String(c.cinebench_multi) : '')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -587,7 +605,7 @@ export default function AdminPage() {
 
       {/* Tab nav */}
       <div className="border-b border-border px-6">
-        <div className="flex gap-0 max-w-5xl mx-auto">
+        <div className="flex gap-0 max-w-7xl mx-auto">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -605,7 +623,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
@@ -681,6 +699,25 @@ export default function AdminPage() {
               </Link>
             </div>
 
+            {/* 카테고리 탭 */}
+            <div className="flex gap-1 mb-5 border-b border-border">
+              {([
+                { key: 'smartphone', label: '스마트폰' },
+                { key: 'tablet',     label: '태블릿'   },
+                { key: 'laptop',     label: '랩탑'     },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setProductCatTab(t.key)}
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    productCatTab === t.key ? 'border-accent text-white' : 'border-transparent text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* Filters */}
             <div className="flex flex-wrap gap-3 mb-5">
               <div className="relative flex-1 min-w-[200px]">
@@ -692,13 +729,6 @@ export default function AdminPage() {
                   onChange={(e) => { setSearch(e.target.value); setPage(0) }}
                   className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-accent"
                 />
-              </div>
-              <div className="relative">
-                <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(0) }}
-                  className="appearance-none bg-surface border border-border rounded-lg px-3 py-2 pr-8 text-sm text-white focus:outline-none focus:border-accent">
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c || '전체 카테고리'}</option>)}
-                </select>
-                <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
               </div>
               <div className="relative">
                 <select value={brand} onChange={(e) => { setBrand(e.target.value); setPage(0) }}
@@ -716,7 +746,6 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium w-10"></th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium">제품명</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
-                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">카테고리</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8">이미지</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8 hidden md:table-cell" title="CPU 연결 여부">CPU</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8" title="공개 여부">공개</th>
@@ -737,9 +766,6 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-2 text-white/90 max-w-xs truncate">{p.name}</td>
                       <td className="px-4 py-2 text-white/50 hidden md:table-cell">{p.brand}</td>
-                      <td className="px-4 py-2 hidden md:table-cell">
-                        <span className="text-xs bg-white/10 rounded-full px-2 py-0.5 text-white/50">{p.category}</span>
-                      </td>
                       <td className="px-4 py-2">
                         <ImageStatus url={p.image_url} />
                       </td>
@@ -1008,12 +1034,11 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* 기본 정보 */}
+              {/* 이름 + AI */}
               <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">기본 정보</span>
                 <input
                   type="text"
-                  placeholder="CPU 이름 (예: Apple M4 Pro)"
+                  placeholder={newCpuType === 'mobile' ? 'SoC 이름 (예: Apple A19 Pro)' : newCpuType === 'laptop' ? 'CPU 이름 (예: Intel Core Ultra 9 285H)' : 'CPU 이름 (예: AMD Ryzen 9 9950X)'}
                   value={newCpuName}
                   onChange={(e) => setNewCpuName(e.target.value)}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
@@ -1027,118 +1052,71 @@ export default function AdminPage() {
                   {aiFillingCpu ? <RefreshCw size={12} className="animate-spin" /> : <span>✦</span>}
                   AI 자동입력
                 </button>
-                <input
-                  type="number"
-                  placeholder="코어 수 (예: 12)"
-                  value={newCpuCores}
-                  onChange={(e) => setNewCpuCores(e.target.value)}
-                  className="w-36 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
               </div>
               {aiCpuError && (
                 <p className="text-xs text-red-400 mb-3">AI 오류: {aiCpuError}</p>
               )}
 
-              {/* 클럭 */}
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">클럭 속도 (GHz)</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="기본 클럭 (예: 3.50)"
-                  value={newCpuClockBase}
-                  onChange={(e) => setNewCpuClockBase(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="부스트 클럭 선택 (예: 4.51)"
-                  value={newCpuClockBoost}
-                  onChange={(e) => setNewCpuClockBoost(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-              </div>
+              {/* 모바일 벤치마크 */}
+              {newCpuType === 'mobile' && (
+                <>
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <span className="text-xs text-white/30 w-full">Geekbench 6 CPU</span>
+                    <input
+                      type="number"
+                      placeholder="GB6 Single (예: 2800)"
+                      value={newCpuGb6Single}
+                      onChange={(e) => setNewCpuGb6Single(e.target.value)}
+                      className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                    />
+                    <input
+                      type="number"
+                      placeholder="GB6 Multi (예: 7500)"
+                      value={newCpuGb6Multi}
+                      onChange={(e) => setNewCpuGb6Multi(e.target.value)}
+                      className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <span className="text-xs text-white/30 w-full">3DMark Steel Nomad Light / AnTuTu</span>
+                    <input
+                      type="number"
+                      placeholder="3DMark Steel Nomad Light"
+                      value={newCpuTdmark}
+                      onChange={(e) => setNewCpuTdmark(e.target.value)}
+                      className="w-52 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                    />
+                    <input
+                      type="number"
+                      placeholder="AnTuTu 점수"
+                      value={newCpuAntutu}
+                      onChange={(e) => setNewCpuAntutu(e.target.value)}
+                      className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                </>
+              )}
 
-              {/* GPU 연동 */}
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">내장 GPU 연동 (선택, APU/SoC)</span>
-                <div className="relative flex-1 min-w-[200px]">
+              {/* 랩탑/데스크탑 벤치마크 */}
+              {(newCpuType === 'laptop' || newCpuType === 'desktop') && (
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <span className="text-xs text-white/30 w-full">Cinebench</span>
                   <input
-                    type="text"
-                    placeholder="GPU 이름 직접 입력 또는 아래서 선택"
-                    value={newCpuGpuName}
-                    onChange={(e) => setNewCpuGpuName(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                    type="number"
+                    placeholder="Cinebench Single (예: 130)"
+                    value={newCpuCbSingle}
+                    onChange={(e) => setNewCpuCbSingle(e.target.value)}
+                    className="w-48 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Cinebench Multi (예: 1800)"
+                    value={newCpuCbMulti}
+                    onChange={(e) => setNewCpuCbMulti(e.target.value)}
+                    className="w-48 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                   />
                 </div>
-                {/* 등록된 GPU 목록 */}
-                {gpus.length > 0 && (
-                  <div className="w-full flex flex-wrap gap-2">
-                    <span className="text-xs text-white/20 w-full">등록된 GPU에서 선택:</span>
-                    {gpus.slice(0, 8).map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => setNewCpuGpuName(g.name)}
-                        className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                          newCpuGpuName === g.name
-                            ? 'border-accent text-accent bg-accent/10'
-                            : 'border-border text-white/40 hover:border-white/20 hover:text-white'
-                        }`}
-                      >
-                        {g.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 벤치마크 */}
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">CPU 벤치마크 (Geekbench 6)</span>
-                <input
-                  type="number"
-                  placeholder="GB6 Single (예: 2800)"
-                  value={newCpuGb6Single}
-                  onChange={(e) => setNewCpuGb6Single(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  placeholder="GB6 Multi (예: 7500)"
-                  value={newCpuGb6Multi}
-                  onChange={(e) => setNewCpuGb6Multi(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">Geekbench GPU (선택, APU/SoC)</span>
-                <input
-                  type="number"
-                  placeholder="iGPU GB6 Compute"
-                  value={newCpuIgpuSingle}
-                  onChange={(e) => setNewCpuIgpuSingle(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">3DMark / AnTuTu (선택)</span>
-                <input
-                  type="number"
-                  placeholder="3DMark Steel Nomad Light"
-                  value={newCpuTdmark}
-                  onChange={(e) => setNewCpuTdmark(e.target.value)}
-                  className="w-48 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  placeholder="AnTuTu 점수"
-                  value={newCpuAntutu}
-                  onChange={(e) => setNewCpuAntutu(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-              </div>
+              )}
 
               <div className="flex gap-3">
                 <button
@@ -1175,60 +1153,81 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* 서브탭 */}
+            <div className="flex gap-1 mb-4 border-b border-border">
+              {(['mobile', 'laptop', 'desktop'] as const).map((t) => {
+                const count = cpus.filter((c) => (c.type ?? 'mobile') === t).length
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setCpuTypeTab(t)}
+                    className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                      cpuTypeTab === t ? 'border-accent text-white' : 'border-transparent text-white/40 hover:text-white/70'
+                    }`}
+                  >
+                    {t === 'mobile' ? '모바일' : t === 'laptop' ? '랩탑' : '데스크탑'}
+                    <span className="text-xs text-white/30">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+
             <div className="bg-surface border border-border rounded-card overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
-                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">타입</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">코어</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">클럭 (GHz)</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">iGPU</th>
+                    {cpuTypeTab === 'mobile' ? (
+                      <>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">3DMark</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">AnTuTu</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">CB Single</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">CB Multi</th>
+                      </>
+                    )}
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
                     <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {cpusLoading && cpus.length === 0 ? (
-                    <tr><td colSpan={3} className="px-4 py-8 text-center">
+                    <tr><td colSpan={8} className="px-4 py-8 text-center">
                       <div className="flex gap-1.5 justify-center">
                         {[0, 1, 2].map((i) => (
                           <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                         ))}
                       </div>
                     </td></tr>
-                  ) : cpus.map((c, i) => (
+                  ) : cpus.filter((c) => (c.type ?? 'mobile') === cpuTypeTab).map((c, i) => (
                     <tr key={c.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                      <td className="px-4 py-3 text-white/80 max-w-[180px] truncate">
+                      <td className="px-4 py-3 text-white/80 max-w-[200px] truncate">
                         <div className="truncate">{c.name}</div>
                         {c.gpu_name && <div className="text-xs text-white/30 truncate">{c.gpu_name}</div>}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {c.brand && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{c.brand}</span>}
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          c.type === 'laptop' ? 'bg-blue-500/20 text-blue-300' :
-                          c.type === 'desktop' ? 'bg-purple-500/20 text-purple-300' :
-                          'bg-green-500/20 text-green-300'
-                        }`}>
-                          {c.type === 'laptop' ? '랩탑' : c.type === 'desktop' ? '데스크탑' : '모바일'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.cores ?? '—'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">
-                        {c.clock_base != null
-                          ? c.clock_boost != null
-                            ? `${c.clock_base} / ${c.clock_boost}`
-                            : String(c.clock_base)
-                          : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.igpu_gb6_single ?? '—'}</td>
+                      {cpuTypeTab === 'mobile' ? (
+                        <>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.tdmark_score ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">
+                            {c.antutu_score != null ? c.antutu_score.toLocaleString() : '—'}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.cinebench_single ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.cinebench_multi ?? '—'}</td>
+                        </>
+                      )}
                       <td className="px-4 py-3 text-right font-mono">
                         {c.relative_score !== null ? (
                           <span className={c.relative_score >= 800 ? 'text-emerald-400' : c.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
@@ -1248,13 +1247,15 @@ export default function AdminPage() {
                       </td>
                     </tr>
                   ))}
-                  {!cpusLoading && cpus.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
+                  {!cpusLoading && cpus.filter((c) => (c.type ?? 'mobile') === cpuTypeTab).length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-white/30">
+                      {cpuTypeTab === 'mobile' ? '모바일' : cpuTypeTab === 'laptop' ? '랩탑' : '데스크탑'} CPU 없음
+                    </td></tr>
                   )}
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다. 최대 10개 표시.</p>
+            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다. 최대 20개 표시.</p>
           </div>
         )}
 

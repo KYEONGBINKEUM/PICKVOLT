@@ -62,23 +62,27 @@ export async function PATCH(
   // Spec tables upsert
   const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch'] as const
   for (const tableName of specTables) {
-    const specData = body[tableName]
+    const specData = body[tableName] as Record<string, unknown> | undefined
     if (specData && typeof specData === 'object' && Object.keys(specData).length > 0) {
+      // storage_gb, ram_gb는 text 컬럼 — 숫자로 들어와도 문자열로 강제 변환
+      const safe = { ...specData }
+      if ('storage_gb' in safe && safe.storage_gb != null) safe.storage_gb = String(safe.storage_gb)
+      if ('ram_gb'     in safe && safe.ram_gb     != null) safe.ram_gb     = String(safe.ram_gb)
       const { error } = await supabase
         .from(tableName)
-        .upsert({ product_id: id, ...specData }, { onConflict: 'product_id' })
+        .upsert({ product_id: id, ...safe }, { onConflict: 'product_id' })
       if (error) errors.push(`${tableName}: ${error.message}`)
     }
   }
 
   // CPU 벤치마크 점수 업데이트 (cpus 테이블)
   if (body.cpu_scores && typeof body.cpu_scores === 'object') {
-    const cpuId = body.specs_common?.cpu_id ?? body.cpu_id
+    const cpuId = (body.specs_common as Record<string, unknown>)?.cpu_id ?? body.cpu_id
     if (cpuId) {
-      const allowed = ['relative_score', 'gb6_single', 'gb6_multi', 'score_source']
+      const allowed = ['relative_score', 'gb6_single', 'gb6_multi', 'tdmark_score', 'antutu_score', 'cinebench_single', 'cinebench_multi', 'score_source']
       const cpuUpdates: Record<string, unknown> = {}
       for (const key of allowed) {
-        if (key in body.cpu_scores) cpuUpdates[key] = body.cpu_scores[key]
+        if (key in (body.cpu_scores as Record<string, unknown>)) cpuUpdates[key] = (body.cpu_scores as Record<string, unknown>)[key]
       }
       if (Object.keys(cpuUpdates).length > 0) {
         const { error } = await supabase

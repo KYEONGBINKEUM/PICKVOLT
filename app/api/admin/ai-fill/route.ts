@@ -18,27 +18,19 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
 }
 
-const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores and specs.
+const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores.
 
 First check the rating list at https://nanoreview.net/en/soc-list/rating to find the chip, then go to its detail page. Extract values from these exact HTML patterns:
-
-Cores: <li class="mb"><strong>Cores:</strong> 6</li>  → take the integer after "Cores:"
-Clock: <li class="mb"><strong>Clock:</strong> 4260 MHz</li>  → convert MHz to GHz (e.g. 4260 → 4.26), use as clock_base; leave clock_boost null unless a separate boost clock is listed
 
 GB6 Single-Core Score:
 <div class="score-bar-name">Single-Core Score</div>
 <span class="score-bar-result-number">3992</span>
-→ take the integer in score-bar-result-number
+→ take the integer in score-bar-result-number (use as gb6_single)
 
 GB6 Multi-Core Score:
 <div class="score-bar-name">Multi-Core Score</div>
 <span class="score-bar-result-number">10688</span>
-→ take the integer in score-bar-result-number
-
-GB6 GPU Compute Score (for SoCs with integrated GPU):
-<div class="score-bar-name">Compute Score (GPU)</div>
-<span class="score-bar-result-number">45527</span>
-→ take the integer in score-bar-result-number
+→ take the integer in score-bar-result-number (use as gb6_multi)
 
 3DMark Steel Nomad Light score:
 <div class="score-bar-name">3DMark Steel Nomad Light</div>
@@ -48,10 +40,11 @@ GB6 GPU Compute Score (for SoCs with integrated GPU):
 AnTuTu score: look for AnTuTu benchmark score on the nanoreview page (use as antutu_score)
 
 Also extract:
-- Integrated GPU name
+- brand (e.g. Apple, Qualcomm, Samsung, MediaTek)
+- type: "mobile" for smartphone SoCs, "laptop" for laptop CPUs, "desktop" for desktop CPUs
 
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"brand":"Apple","type":"mobile","cores":6,"clock_base":3.0,"clock_boost":null,"gpu_name":"Apple GPU (6-core)","gb6_single":3500,"gb6_multi":8000,"igpu_gb6_single":22000,"tdmark_score":null,"antutu_score":1700000}
+{"brand":"Apple","type":"mobile","gb6_single":3500,"gb6_multi":8000,"tdmark_score":2500,"antutu_score":1700000}
 
 Now return the JSON for "${name}". Use null for any value not found.`
 
