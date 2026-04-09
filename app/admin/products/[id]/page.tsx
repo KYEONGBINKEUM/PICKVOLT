@@ -362,11 +362,26 @@ export default function ProductEditPage() {
           body: JSON.stringify({ name, brand, category }),
         })
         const json = await res.json()
-        if (res.ok) {
-          router.replace(`/admin/products/${json.id}`)
-        } else {
+        if (!res.ok) {
           setMessage({ type: 'err', text: json.error ?? '생성 오류' })
+          return
         }
+        const newId = json.id
+        // 나머지 스펙/정보도 함께 저장
+        const patchBody: Record<string, unknown> = {
+          ...form,
+          name_translations: nameTranslations,
+          specs_common: commonSpecs,
+          [`specs_${category}`]: categorySpecs,
+          cpu_id: commonSpecs.cpu_id,
+          cpu_scores: cpuScores,
+        }
+        await fetch(`/api/admin/products/${newId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(patchBody),
+        })
+        router.replace(`/admin/products/${newId}`)
         return
       }
 
