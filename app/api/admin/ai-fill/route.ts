@@ -23,12 +23,12 @@ const CPU_PROMPT = (name: string) => `Search the web for real benchmark scores a
 Priority sources (check all and cross-reference):
 - nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
 - browser.geekbench.com — cross-check Geekbench 6 single/multi-core and GPU compute scores
-- 3dmark.com or notebookcheck.net — cross-check 3DMark score if nanoreview lacks it
+- 3dmark.com or notebookcheck.net — cross-check 3DMark Steel Nomad Light score if nanoreview lacks it
 
 Collect:
 - Geekbench 6 single-core and multi-core scores (median from multiple runs)
 - Geekbench 6 GPU compute score (Metal/Vulkan/OpenCL, for SoCs with integrated GPU)
-- 3DMark score (check nanoreview first, then 3dmark.com)
+- 3DMark Steel Nomad Light score specifically (not other 3DMark tests)
 - Core count, base clock GHz, boost clock GHz
 - Integrated GPU name
 
@@ -42,12 +42,12 @@ const GPU_PROMPT = (name: string) => `Search the web for real benchmark scores a
 Priority sources (check all and cross-reference):
 - nanoreview.net — primary source for Geekbench 6 scores, 3DMark scores, and specs
 - browser.geekbench.com — cross-check Geekbench 6 Metal/Vulkan/OpenCL scores
-- 3dmark.com or notebookcheck.net — cross-check 3DMark score if nanoreview lacks it
+- 3dmark.com or notebookcheck.net — cross-check 3DMark Steel Nomad Light score if nanoreview lacks it
 
 Collect:
 - Geekbench 6 GPU Metal/Vulkan score (median)
 - Geekbench 6 OpenCL score (median)
-- 3DMark score (check nanoreview first, then 3dmark.com)
+- 3DMark Steel Nomad Light score specifically (not other 3DMark tests)
 - Shader/compute core count
 - Whether it is a mobile, laptop, or desktop GPU
 
