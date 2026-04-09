@@ -965,16 +965,11 @@ export default function CompareClient() {
                           target="_blank"
                           rel="noopener noreferrer sponsored"
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl transition-all hover:brightness-110 active:scale-95 select-none"
-                          style={{ background: 'linear-gradient(180deg, #FFB400 0%, #FF9900 100%)', boxShadow: '0 2px 10px rgba(255,153,0,0.4)' }}
+                          className="mt-3 flex items-center justify-center w-full py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
+                          style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
                         >
-                          {/* amazon wordmark + smile arrow */}
-                          <svg viewBox="0 0 80 24" width="60" height="18" xmlns="http://www.w3.org/2000/svg">
-                            <text x="0" y="17" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="17" fill="#111111" letterSpacing="-0.5">amazon</text>
-                            {/* smile arrow */}
-                            <path d="M4 21 Q30 29 56 21" stroke="#111111" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-                            <path d="M52 18 L56 21 L51 23" stroke="#111111" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/amazon-logo.svg" alt="Buy on Amazon" width={90} height={27} style={{ display: 'block' }} />
                         </a>
                       )}
                     </div>
