@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, ExternalLink, Check, Plus } from 'lucide-react'
+import { ArrowLeft, Check, Plus } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 
@@ -28,7 +28,6 @@ interface Product {
   category:   string
   price_usd:  number | null
   image_url:  string | null
-  source_url: string | null
   specs:      Specs
 }
 
@@ -182,17 +181,6 @@ export default function ProductClient({ product }: { product: Product }) {
               }
             </button>
 
-            {product.source_url && (
-              <a
-                href={product.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-white/40 border border-border hover:text-white/70 hover:border-white/20 transition-all"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                {t('product.source')}
-              </a>
-            )}
           </div>
         </div>
 

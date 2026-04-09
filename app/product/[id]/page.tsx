@@ -12,7 +12,7 @@ async function getProduct(id: string) {
   const { data: product, error } = await supabase
     .from('products')
     .select(`
-      id, name, brand, category, price_usd, image_url, source_url,
+      id, name, brand, category, price_usd, image_url,
       specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os ),
       specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
       specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
@@ -48,6 +48,23 @@ async function getProduct(id: string) {
     scoreSource = cpu?.score_source ?? null
   }
 
+  // storage_gb, ram_gb는 text 타입 ("256" / "64, 256, 512" / "1024")
+  function formatStorageVal(v: string): string {
+    const n = parseFloat(v.trim())
+    if (isNaN(n)) return v.trim()
+    return n >= 1024 ? `${n / 1024}TB` : `${n}GB`
+  }
+  const storageLabel = common?.storage_gb
+    ? String(common.storage_gb).split(',').map(formatStorageVal).join(' / ') +
+      (common.storage_type ? ` ${common.storage_type}` : '')
+    : null
+  const ramLabel = common?.ram_gb
+    ? String(common.ram_gb).split(',').map((v) => {
+        const n = parseFloat(v.trim())
+        return isNaN(n) ? v.trim() : `${n}GB`
+      }).join(' / ')
+    : null
+
   const displayParts = [
     specSrc.display_inch       ? `${specSrc.display_inch}"`  : null,
     specSrc.display_resolution ?? null,
@@ -62,16 +79,13 @@ async function getProduct(id: string) {
     category:   product.category,
     price_usd:  product.price_usd,
     image_url:  product.image_url,
-    source_url: product.source_url,
     specs: {
       cpu:             common?.cpu_name ?? null,
       gb6Single,
       gb6Multi,
       scoreSource,
-      ram:             common?.ram_gb ? `${common.ram_gb}GB` : null,
-      storage:         common?.storage_gb
-                         ? `${common.storage_gb >= 1024 ? `${common.storage_gb / 1024}TB` : `${common.storage_gb}GB`}${common.storage_type ? ` ${common.storage_type}` : ''}`
-                         : null,
+      ram:             ramLabel,
+      storage:         storageLabel,
       display:         displayParts.length ? displayParts.join(' ') : null,
       camera:          smartphone?.camera_main_mp
                          ? `${smartphone.camera_main_mp}MP + ${smartphone.camera_front_mp ?? '?'}MP front`
@@ -122,7 +136,6 @@ export default async function ProductPage({
             priceCurrency: 'USD',
             price: product.price_usd,
             availability: 'https://schema.org/InStock',
-            ...(product.source_url ? { url: product.source_url } : {}),
           },
         } : {}),
         description: [

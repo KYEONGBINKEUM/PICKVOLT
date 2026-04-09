@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         specs_common ( ram_gb, cpu_id, cpu_name, os, launch_year ),
         specs_smartphone ( display_inch, display_resolution, battery_mah, weight_g ),
         specs_laptop ( display_inch, display_resolution, weight_kg, battery_wh, battery_hours ),
-        specs_tablet ( display_inch, display_resolution, battery_mah, stylus_support )
+        specs_tablet ( display_inch, display_resolution, battery_mah, weight_g, stylus_support )
       `)
       .eq('scrape_status', 'ok')
       .eq('is_visible', true)
