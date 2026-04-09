@@ -137,6 +137,7 @@ export default function ProductEditPage() {
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [nameTranslations, setNameTranslations] = useState<Record<string, string>>({ en: '', ko: '', ja: '', es: '', pt: '', fr: '', de: '' })
   const [translating, setTranslating] = useState(false)
+  const [amazonFilling, setAmazonFilling] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -313,6 +314,32 @@ export default function ProductEditPage() {
       setMessage({ type: 'err', text: String(e) })
     } finally {
       setTranslating(false)
+    }
+  }
+
+  const handleAmazonFill = async () => {
+    const name = (form.name as string)?.trim()
+    if (!name) return
+    setAmazonFilling(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name, kind: 'amazon' }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setMessage({ type: 'err', text: json.error ?? 'Amazon 링크 생성 실패' }); return }
+      if (json.amazon_url) {
+        patchCommon('amazon_url', json.amazon_url)
+        setMessage({ type: 'ok', text: `Amazon 링크 생성 완료` })
+      } else {
+        setMessage({ type: 'err', text: 'Amazon에서 해당 제품을 찾을 수 없습니다' })
+      }
+    } catch (e) {
+      setMessage({ type: 'err', text: String(e) })
+    } finally {
+      setAmazonFilling(false)
     }
   }
 
@@ -550,7 +577,28 @@ export default function ProductEditPage() {
             </div>
             <div className="md:col-span-2">
               <Field label="아마존 경유 링크 (affiliate)">
-                <TextInput value={g(commonSpecs, 'amazon_url')} onChange={(v) => patchCommon('amazon_url', v)} placeholder="https://amzn.to/..." />
+                <div className="flex gap-2">
+                  <TextInput value={g(commonSpecs, 'amazon_url')} onChange={(v) => patchCommon('amazon_url', v)} placeholder="https://www.amazon.com/dp/ASIN?tag=pickvolt-20" />
+                  <button
+                    type="button"
+                    onClick={handleAmazonFill}
+                    disabled={amazonFilling || !g(form, 'name')}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 text-orange-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {amazonFilling ? <RefreshCw size={12} className="animate-spin" /> : <span>🔗</span>}
+                    {amazonFilling ? '검색 중...' : 'AI 자동생성'}
+                  </button>
+                  {g(commonSpecs, 'amazon_url') && (
+                    <a
+                      href={g(commonSpecs, 'amazon_url')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-border text-white/40 hover:text-white text-xs rounded-lg transition-colors"
+                    >
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
               </Field>
             </div>
           </div>

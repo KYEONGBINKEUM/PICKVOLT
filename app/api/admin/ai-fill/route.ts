@@ -86,6 +86,20 @@ function extractJson(text: string): Record<string, unknown> {
   return JSON.parse(stripped.slice(start, end + 1))
 }
 
+const AMAZON_TAG = 'pickvolt-20'
+
+const AMAZON_PROMPT = (name: string) => `Search Amazon.com for the product "${name}" and find its ASIN.
+
+The ASIN is a 10-character alphanumeric code found in the Amazon product URL like:
+https://www.amazon.com/dp/B0CHX2F5QT  → ASIN is B0CHX2F5QT
+
+Search for the exact product on amazon.com and return the ASIN of the most relevant listing.
+
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"asin":"B0CHX2F5QT"}
+
+Now return the JSON for "${name}". If not found on Amazon, return {"asin":null}.`
+
 export async function POST(req: NextRequest) {
   if (!await verifyAdmin(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
@@ -93,23 +107,38 @@ export async function POST(req: NextRequest) {
 
   const { name, kind } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
-  if (kind !== 'cpu' && kind !== 'gpu') return NextResponse.json({ error: 'kind must be cpu or gpu' }, { status: 400 })
+  if (kind !== 'cpu' && kind !== 'gpu' && kind !== 'amazon') {
+    return NextResponse.json({ error: 'kind must be cpu, gpu, or amazon' }, { status: 400 })
+  }
 
   if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ error: 'GEMINI_API_KEY not set' }, { status: 500 })
   }
 
   try {
-    const prompt = kind === 'cpu' ? CPU_PROMPT(name) : GPU_PROMPT(name)
-
     const { GoogleGenAI } = await import('@google/genai')
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+
+    if (kind === 'amazon') {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: AMAZON_PROMPT(name),
+        config: { tools: [{ googleSearch: {} }] },
+      })
+      const text = response.text ?? ''
+      if (!text) throw new Error('Empty response from Gemini')
+      const result = extractJson(text)
+      const asin = result.asin as string | null
+      if (!asin) return NextResponse.json({ amazon_url: null })
+      const amazon_url = `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`
+      return NextResponse.json({ amazon_url })
+    }
+
+    const prompt = kind === 'cpu' ? CPU_PROMPT(name) : GPU_PROMPT(name)
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
       contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
+      config: { tools: [{ googleSearch: {} }] },
     })
     const text = response.text ?? ''
     if (!text) throw new Error('Empty response from Gemini')
