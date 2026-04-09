@@ -329,22 +329,24 @@ export default function AdminPage() {
   const handleAddCpu = async () => {
     if (!newCpuName.trim()) return
     setAddingCpu(true)
-    if (editingCpuId) {
-      const res = await fetch(`/api/admin/cpus/${editingCpuId}`, {
-        method: 'PATCH',
+    setCpuError(null)
+    try {
+      const url = editingCpuId ? `/api/admin/cpus/${editingCpuId}` : '/api/admin/cpus'
+      const method = editingCpuId ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(cpuFormBody()),
       })
-      if (res.ok) { resetCpuForm(); fetchCpus(cpuSearch) }
-    } else {
-      const res = await fetch('/api/admin/cpus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(cpuFormBody()),
-      })
-      if (res.ok) { resetCpuForm(); fetchCpus(cpuSearch) }
+      const json = await res.json()
+      if (!res.ok) { setCpuError(json.error ?? `저장 실패 HTTP ${res.status}`); return }
+      resetCpuForm()
+      fetchCpus(cpuSearch)
+    } catch (e) {
+      setCpuError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAddingCpu(false)
     }
-    setAddingCpu(false)
   }
 
   const handleEditCpu = (c: typeof cpus[0]) => {

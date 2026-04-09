@@ -20,7 +20,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
 
 const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores and specs.
 
-Go to nanoreview.net and find the page for "${name}". Extract values from these exact HTML patterns:
+First check the rating list at https://nanoreview.net/en/soc-list/rating to find the chip, then go to its detail page. Extract values from these exact HTML patterns:
 
 Cores: <li class="mb"><strong>Cores:</strong> 6</li>  → take the integer after "Cores:"
 Clock: <li class="mb"><strong>Clock:</strong> 4260 MHz</li>  → convert MHz to GHz (e.g. 4260 → 4.26), use as clock_base; leave clock_boost null unless a separate boost clock is listed
@@ -57,7 +57,7 @@ Now return the JSON for "${name}". Use null for any value not found.`
 
 const GPU_PROMPT = (name: string) => `Search nanoreview.net for the GPU named "${name}" and extract its benchmark scores and specs.
 
-Go to nanoreview.net and find the page for "${name}". Extract values from these exact HTML patterns:
+First check https://nanoreview.net/en/soc-list/rating to find the GPU, then go to its detail page. Extract values from these exact HTML patterns:
 
 Cores: <li class="mb"><strong>Cores:</strong> 6</li>  → take the integer after "Cores:"
 
