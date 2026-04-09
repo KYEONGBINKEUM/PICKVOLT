@@ -11,7 +11,13 @@
       "Bash(rmdir /s /q .git)",
       "Bash(npx tsc:*)",
       "WebSearch",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(python3 -)",
+      "Bash(sed -n '65,75p' app/admin/page.tsx)",
+      "Bash(sed -n '140,160p' app/admin/page.tsx)",
+      "Bash(sed -n '495,545p' app/admin/page.tsx)",
+      "Bash(sed -n '88,110p' app/admin/page.tsx)",
+      "Bash(sed -n '205,240p' app/admin/page.tsx)"
     ]
   }
 }

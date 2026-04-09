@@ -20,6 +20,38 @@ const PAGE_SIZE = 50
 
 type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus'
 
+const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
+const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
+
+function BrandSelector({ value, onChange, brands }: { value: string; onChange: (v: string) => void; brands: string[] }) {
+  return (
+    <div className="mb-4">
+      <span className="text-xs text-white/30 block mb-2">브랜드</span>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {brands.map((b) => (
+          <button
+            key={b}
+            type="button"
+            onClick={() => onChange(value === b ? '' : b)}
+            className={`text-xs px-3 py-1 rounded-full border transition-all ${
+              value === b ? 'border-accent text-accent bg-accent/10' : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+            }`}
+          >
+            {b}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text"
+        placeholder="직접 입력..."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-48 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent"
+      />
+    </div>
+  )
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function StatCard({ icon, label, value, sub, color = 'text-white' }: {
@@ -91,13 +123,14 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
   const [editingCpuId, setEditingCpuId] = useState<string | null>(null)
   const [newCpuName, setNewCpuName] = useState('')
   const [newCpuType, setNewCpuType] = useState<'mobile' | 'laptop' | 'desktop'>('mobile')
+  const [newCpuBrand, setNewCpuBrand] = useState('')
   const [newCpuCores, setNewCpuCores] = useState('')
   const [newCpuClockBase, setNewCpuClockBase] = useState('')
   const [newCpuClockBoost, setNewCpuClockBoost] = useState('')
@@ -108,11 +141,13 @@ export default function AdminPage() {
   const [addingCpu, setAddingCpu] = useState(false)
 
   // GPUs
-  const [gpus, setGpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; gb6_single: number | null; gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [gpusLoading, setGpusLoading] = useState(false)
   const [gpuSearch, setGpuSearch] = useState('')
   const [gpuError, setGpuError] = useState<string | null>(null)
+  const [editingGpuId, setEditingGpuId] = useState<string | null>(null)
   const [newGpuName, setNewGpuName] = useState('')
+  const [newGpuBrand, setNewGpuBrand] = useState('')
   const [newGpuGb6Single, setNewGpuGb6Single] = useState('')
   const [newGpuGb6Multi, setNewGpuGb6Multi] = useState('')
   const [addingGpu, setAddingGpu] = useState(false)
@@ -218,6 +253,7 @@ export default function AdminPage() {
   const resetCpuForm = () => {
     setEditingCpuId(null)
     setNewCpuName('')
+    setNewCpuBrand('')
     setNewCpuType('mobile')
     setNewCpuCores('')
     setNewCpuClockBase('')
@@ -230,6 +266,7 @@ export default function AdminPage() {
 
   const cpuFormBody = () => ({
     name:            newCpuName.trim(),
+    brand:           newCpuBrand.trim() || null,
     type:            newCpuType,
     cores:           newCpuCores      ? Number(newCpuCores)      : null,
     clock_base:      newCpuClockBase  ? Number(newCpuClockBase)  : null,
@@ -264,6 +301,7 @@ export default function AdminPage() {
   const handleEditCpu = (c: typeof cpus[0]) => {
     setEditingCpuId(c.id)
     setNewCpuName(c.name)
+    setNewCpuBrand(c.brand ?? '')
     setNewCpuType((c.type as 'mobile' | 'laptop' | 'desktop') ?? 'mobile')
     setNewCpuCores(c.cores != null ? String(c.cores) : '')
     setNewCpuClockBase(c.clock_base != null ? String(c.clock_base) : '')
@@ -297,25 +335,57 @@ export default function AdminPage() {
     setGpusLoading(false)
   }, [])
 
+  const resetGpuForm = () => {
+    setEditingGpuId(null)
+    setNewGpuName('')
+    setNewGpuBrand('')
+    setNewGpuGb6Single('')
+    setNewGpuGb6Multi('')
+  }
+
   const handleAddGpu = async () => {
     if (!newGpuName.trim()) return
     setAddingGpu(true)
-    const res = await fetch('/api/admin/gpus', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        name:       newGpuName.trim(),
-        gb6_single: newGpuGb6Single ? Number(newGpuGb6Single) : null,
-        gb6_multi:  newGpuGb6Multi  ? Number(newGpuGb6Multi)  : null,
-      }),
-    })
-    if (res.ok) {
-      setNewGpuName('')
-      setNewGpuGb6Single('')
-      setNewGpuGb6Multi('')
-      fetchGpus(gpuSearch)
+    const body = {
+      name:       newGpuName.trim(),
+      brand:      newGpuBrand.trim() || null,
+      gb6_single: newGpuGb6Single ? Number(newGpuGb6Single) : null,
+      gb6_multi:  newGpuGb6Multi  ? Number(newGpuGb6Multi)  : null,
+    }
+    if (editingGpuId) {
+      const res = await fetch(`/api/admin/gpus/${editingGpuId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) { resetGpuForm(); fetchGpus(gpuSearch) }
+    } else {
+      const res = await fetch('/api/admin/gpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) { resetGpuForm(); fetchGpus(gpuSearch) }
     }
     setAddingGpu(false)
+  }
+
+  const handleEditGpu = (g: typeof gpus[0]) => {
+    setEditingGpuId(g.id)
+    setNewGpuName(g.name)
+    setNewGpuBrand(g.brand ?? '')
+    setNewGpuGb6Single(g.gb6_single != null ? String(g.gb6_single) : '')
+    setNewGpuGb6Multi(g.gb6_multi != null ? String(g.gb6_multi) : '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDeleteGpu = async (id: string, name: string) => {
+    if (!confirm(`"${name}" GPU를 삭제하시겠습니까?`)) return
+    await fetch(`/api/admin/gpus/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    setGpus((p) => p.filter((g) => g.id !== id))
   }
 
   // ── Effects by tab ────────────────────────────────────────────────────────
@@ -819,6 +889,13 @@ export default function AdminPage() {
                 {editingCpuId ? '✏️ CPU 수정' : '새 CPU 추가'}
               </p>
 
+              {/* 브랜드 */}
+              <BrandSelector
+                value={newCpuBrand}
+                onChange={setNewCpuBrand}
+                brands={CPU_BRANDS}
+              />
+
               {/* 타입 선택 */}
               <div className="flex gap-2 mb-4">
                 {(['mobile', 'laptop', 'desktop'] as const).map((t) => (
@@ -978,6 +1055,7 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">타입</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">코어</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">클럭 (GHz)</th>
@@ -1002,6 +1080,9 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-white/80 max-w-[180px] truncate">
                         <div className="truncate">{c.name}</div>
                         {c.gpu_name && <div className="text-xs text-white/30 truncate">{c.gpu_name}</div>}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {c.brand && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{c.brand}</span>}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -1057,33 +1138,31 @@ export default function AdminPage() {
           <div>
             <h1 className="text-2xl font-black mb-6">GPU 관리</h1>
 
-            {/* Add GPU form */}
+            {/* Add / Edit GPU form */}
             <div className="bg-surface border border-border rounded-card p-5 mb-6">
-              <p className="text-sm font-semibold text-white mb-3">새 GPU 추가</p>
-              <div className="flex flex-wrap gap-3 mb-3">
+              <p className="text-sm font-semibold text-white mb-4">
+                {editingGpuId ? '✏️ GPU 수정' : '새 GPU 추가'}
+              </p>
+
+              <BrandSelector value={newGpuBrand} onChange={setNewGpuBrand} brands={GPU_BRANDS} />
+
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">기본 정보</span>
                 <input
                   type="text"
                   placeholder="GPU 이름 (예: Adreno 750)"
                   value={newGpuName}
                   onChange={(e) => setNewGpuName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddGpu()}
                   className="flex-1 min-w-[200px] bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
-              <div className="flex flex-wrap gap-3 mb-3">
-                <span className="text-xs text-white/30 w-full">GPU 벤치마크 (Geekbench 6 Compute)</span>
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="text-xs text-white/30 w-full">Geekbench GPU Compute</span>
                 <input
                   type="number"
-                  placeholder="GB6 Single (예: 15000)"
+                  placeholder="GB6 Compute (예: 15000)"
                   value={newGpuGb6Single}
                   onChange={(e) => setNewGpuGb6Single(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  placeholder="GB6 Multi (예: 15000)"
-                  value={newGpuGb6Multi}
-                  onChange={(e) => setNewGpuGb6Multi(e.target.value)}
                   className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
@@ -1094,8 +1173,13 @@ export default function AdminPage() {
                   className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40"
                 >
                   {addingGpu ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                  추가
+                  {editingGpuId ? '저장' : '추가'}
                 </button>
+                {editingGpuId && (
+                  <button onClick={resetGpuForm} className="px-4 py-2 border border-border text-white/50 hover:text-white text-sm rounded-lg transition-colors">
+                    취소
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1122,9 +1206,10 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Compute</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
+                    <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1138,15 +1223,27 @@ export default function AdminPage() {
                     </td></tr>
                   ) : gpus.map((g, i) => (
                     <tr key={g.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                      <td className="px-4 py-3 text-white/80 max-w-xs truncate">{g.name}</td>
+                      <td className="px-4 py-3 text-white/80 max-w-[180px] truncate">{g.name}</td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {g.brand && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{g.brand}</span>}
+                      </td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{g.gb6_single ?? '—'}</td>
-                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{g.gb6_multi ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono">
                         {g.relative_score !== null ? (
                           <span className={g.relative_score >= 800 ? 'text-emerald-400' : g.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
                             {g.relative_score}
                           </span>
                         ) : <span className="text-white/20">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleEditGpu(g)} className="p-1.5 rounded hover:bg-white/10 text-white/30 hover:text-accent transition-colors">
+                            <Edit2 size={12} />
+                          </button>
+                          <button onClick={() => handleDeleteGpu(g.id, g.name)} className="p-1.5 rounded hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

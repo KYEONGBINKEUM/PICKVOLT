@@ -26,52 +26,44 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email)
 }
 
-export async function GET(req: NextRequest) {
-  const q = new URL(req.url).searchParams.get('q') ?? ''
-  const supabase = makeServiceClient()
-
-  const { data, error } = await supabase
-    .from('gpus')
-    .select(GPU_FIELDS)
-    .ilike('name', `%${q}%`)
-    .order('relative_score', { ascending: false })
-    .limit(20)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ gpus: data ?? [] })
-}
-
-export async function POST(req: NextRequest) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const ok = await verifyAdmin(req)
   if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
+  const { id } = await params
   const body = await req.json()
-  const name = (body.name ?? '').trim()
-  if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
+
+  const allowed = ['name', 'brand', 'gb6_single', 'gb6_multi', 'score_source']
+  const updates: Record<string, unknown> = {}
+  for (const key of allowed) {
+    if (key in body) updates[key] = body[key]
+  }
 
   const supabase = makeServiceClient()
-
-  const { data: existing } = await supabase
-    .from('gpus')
-    .select(GPU_FIELDS)
-    .ilike('name', name)
-    .limit(1)
-    .single()
-
-  if (existing) return NextResponse.json({ ...existing, duplicate: true })
-
   const { data, error } = await supabase
     .from('gpus')
-    .insert({
-      name,
-      brand:        body.brand        ?? null,
-      gb6_single:   body.gb6_single   ?? null,
-      gb6_multi:    body.gb6_multi    ?? null,
-      score_source: body.score_source ?? 'geekbench6',
-    })
+    .update(updates)
+    .eq('id', id)
     .select(GPU_FIELDS)
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const ok = await verifyAdmin(req)
+  if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const supabase = makeServiceClient()
+  const { error } = await supabase.from('gpus').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
 }
