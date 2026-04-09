@@ -578,7 +578,18 @@ export default function ProductEditPage() {
             <div className="md:col-span-2">
               <Field label="아마존 경유 링크 (affiliate)">
                 <div className="flex gap-2">
-                  <TextInput value={g(commonSpecs, 'amazon_url')} onChange={(v) => patchCommon('amazon_url', v)} placeholder="https://www.amazon.com/dp/ASIN?tag=pickvolt-20" />
+                  <TextInput
+                    value={(() => { const m = g(commonSpecs, 'amazon_url').match(/\/dp\/([A-Z0-9]{10})/); return m ? m[1] : g(commonSpecs, 'amazon_url') })()}
+                    onChange={(v) => {
+                      const asin = v.trim().toUpperCase()
+                      if (/^[A-Z0-9]{10}$/.test(asin)) {
+                        patchCommon('amazon_url', `https://www.amazon.com/dp/${asin}?tag=pickvolt-20`)
+                      } else {
+                        patchCommon('amazon_url', v)
+                      }
+                    }}
+                    placeholder="ASIN (예: B0XXXXXXXX)"
+                  />
                   <button
                     type="button"
                     onClick={handleAmazonFill}
