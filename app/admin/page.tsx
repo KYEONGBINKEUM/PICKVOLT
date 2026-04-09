@@ -123,7 +123,7 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gb6_single: number | null; gb6_multi: number | null; igpu_gb6_single: number | null; tdmark_score: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
