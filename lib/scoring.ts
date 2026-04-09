@@ -7,14 +7,20 @@
 // ─── 개별 스펙 점수 ───────────────────────────────────────────────────────────
 
 /** CPU 성능 점수 (0–100)
- *  Geekbench 6 Single + Multi 가중 합산 → 최상위 기기 기준 100점 */
-export function scoreCPU(gb6Single: number | null, gb6Multi: number | null, relScore: number | null): number {
-  // GB6 절대값이 있으면 우선 사용
-  if (gb6Single != null && gb6Multi != null) {
-    // 싱글 30% + 멀티 70% 가중 합산
-    const weighted = gb6Single * 0.30 + gb6Multi * 0.70
-    // 최상위 기준: 멀티 ~12,000 (≈100점)
-    return Math.min(100, Math.round(weighted / 120))
+ *  GB6 Single 33% + GB6 Multi 33% + iGPU 33% 균등 합산
+ *  각 항목 최상위 기준: Single ~4200, Multi ~12000, iGPU ~50000 */
+export function scoreCPU(
+  gb6Single: number | null,
+  gb6Multi: number | null,
+  relScore: number | null,
+  igpuGb6: number | null = null,
+): number {
+  if (gb6Single != null || gb6Multi != null || igpuGb6 != null) {
+    const normSingle = gb6Single  != null ? Math.min(1, gb6Single  / 4200)  : 0
+    const normMulti  = gb6Multi   != null ? Math.min(1, gb6Multi   / 12000) : 0
+    const normIgpu   = igpuGb6    != null ? Math.min(1, igpuGb6    / 50000) : 0
+    const weighted   = normSingle * 0.333 + normMulti * 0.333 + normIgpu * 0.334
+    return Math.min(100, Math.round(weighted * 100))
   }
   // fallback: relative_score (0–1000) → 0–100
   if (relScore != null) return Math.min(100, Math.round(relScore / 10))
@@ -272,6 +278,7 @@ export interface ScoringInput {
   // CPU
   gb6Single?: number | null
   gb6Multi?: number | null
+  igpuGb6?: number | null
   relativeScore?: number | null
   // Common
   ram_gb?: string | number | null
@@ -298,7 +305,7 @@ export interface ScoreBreakdown {
 export function computeScores(input: ScoringInput): ScoreBreakdown {
   const { category } = input
 
-  const cpu  = scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null)
+  const cpu  = scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null, input.igpuGb6 ?? null)
   const ram  = scoreRAM(firstNum(input.ram_gb))
   const stor = scoreStorage(firstNum(input.storage_gb))
   const ppi  = computePPI(input.display_resolution, input.display_inch)

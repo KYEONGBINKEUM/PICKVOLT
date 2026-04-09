@@ -45,19 +45,21 @@ export async function GET(
   let relativeScore: number | null = null
   let gb6Single: number | null = null
   let gb6Multi: number | null = null
+  let igpuGb6: number | null = null
   let scoreSource: string | null = null
 
   if (common?.cpu_id) {
     const { data: cpu } = await supabase
       .from('cpus')
-      .select('relative_score, gb6_single, gb6_multi, score_source')
+      .select('relative_score, gb6_single, gb6_multi, igpu_gb6_single, score_source')
       .eq('id', common.cpu_id)
       .single()
 
-    relativeScore = cpu?.relative_score ?? null
-    gb6Single     = cpu?.gb6_single    ?? null
-    gb6Multi      = cpu?.gb6_multi     ?? null
-    scoreSource   = cpu?.score_source  ?? null
+    relativeScore = cpu?.relative_score    ?? null
+    gb6Single     = cpu?.gb6_single        ?? null
+    gb6Multi      = cpu?.gb6_multi         ?? null
+    igpuGb6       = cpu?.igpu_gb6_single   ?? null
+    scoreSource   = cpu?.score_source      ?? null
   }
 
   const specSrc = laptop ?? smartphone ?? tablet ?? {}
@@ -96,6 +98,7 @@ export async function GET(
     // 제품 상세 화면용 — Geekbench 6 절대값
     gb6Single,
     gb6Multi,
+    igpuGb6,
     scoreSource,
     ram:             ramLabel,
     storage:         storageLabel,
