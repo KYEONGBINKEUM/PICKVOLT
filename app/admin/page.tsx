@@ -1255,7 +1255,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다. 최대 20개 표시.</p>
+            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다.</p>
           </div>
         )}
 
@@ -1476,7 +1476,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다. 최대 10개 표시.</p>
+            <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다.</p>
           </div>
         )}
 

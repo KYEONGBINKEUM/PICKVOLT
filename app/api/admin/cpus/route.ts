@@ -36,7 +36,6 @@ export async function GET(req: NextRequest) {
     .select(CPU_FIELDS)
     .ilike('name', `%${q}%`)
     .order('relative_score', { ascending: false })
-    .limit(20)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ cpus: data ?? [] })
