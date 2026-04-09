@@ -7,6 +7,7 @@ import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
 import CompareTray from '@/components/CompareTray'
 import Footer from '@/components/Footer'
+import { Analytics } from '@vercel/analytics/next'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Footer />
               <CookieBanner />
               <CompareTray />
+              <Analytics />
             </CompareCartProvider>
           </CurrencyProvider>
         </I18nProvider>
