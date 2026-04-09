@@ -970,7 +970,7 @@ export default function CompareClient() {
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src="/amazon-logo.svg" alt="Amazon" width={72} height={22} style={{ display: 'block' }} />
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1A1A1A', letterSpacing: '0.02em' }}>지금 구매하기</span>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', letterSpacing: '0.02em' }}>{t('compare.buy_now')}</span>
                         </a>
                       )}
                     </div>
