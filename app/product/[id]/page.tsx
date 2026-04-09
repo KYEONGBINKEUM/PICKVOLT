@@ -16,7 +16,7 @@ async function getProduct(id: string) {
       specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os ),
       specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
       specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
-      specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, stylus_support, cellular )
+      specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )
     `)
     .eq('id', id)
     .single()
@@ -87,8 +87,8 @@ async function getProduct(id: string) {
       ram:             ramLabel,
       storage:         storageLabel,
       display:         displayParts.length ? displayParts.join(' ') : null,
-      camera:          smartphone?.camera_main_mp
-                         ? `${smartphone.camera_main_mp}MP + ${smartphone.camera_front_mp ?? '?'}MP front`
+      camera:          (smartphone ?? tablet)?.camera_main_mp
+                         ? `${(smartphone ?? tablet).camera_main_mp}MP + ${(smartphone ?? tablet).camera_front_mp ?? '?'}MP front`
                          : null,
       batteryCapacity: smartphone?.battery_mah
                          ? `${smartphone.battery_mah} mAh`
