@@ -25,6 +25,7 @@ interface Product {
   category:   string
   price_usd:  number | null
   image_url:  string | null
+  amazon_url: string | null
   specs:      Specs
 }
 
@@ -128,6 +129,20 @@ export default function ProductClient({ product }: { product: Product }) {
               }
             </button>
 
+            {/* Amazon button */}
+            {product.amazon_url && (
+              <a
+                href={product.amazon_url}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
+                style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/amazon-logo.svg" alt="Amazon" width={72} height={22} style={{ display: 'block' }} />
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', letterSpacing: '0.02em' }}>{t('compare.buy_now')}</span>
+              </a>
+            )}
           </div>
         </div>
 
