@@ -89,12 +89,13 @@ export default function AdminPage() {
   const [compTotal, setCompTotal] = useState(0)
 
   // CPUs
-  const [cpus, setCpus] = useState<{ id: string; name: string; relative_score: number | null; score_source: string | null }[]>([])
+  const [cpus, setCpus] = useState<{ id: string; name: string; gb6_single: number | null; gb6_multi: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
   const [newCpuName, setNewCpuName] = useState('')
-  const [newCpuScore, setNewCpuScore] = useState('')
+  const [newCpuGb6Single, setNewCpuGb6Single] = useState('')
+  const [newCpuGb6Multi, setNewCpuGb6Multi] = useState('')
   const [addingCpu, setAddingCpu] = useState(false)
 
   // Errors
@@ -186,11 +187,16 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/cpus', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: newCpuName.trim(), relative_score: newCpuScore ? Number(newCpuScore) : null }),
+      body: JSON.stringify({
+        name: newCpuName.trim(),
+        gb6_single: newCpuGb6Single ? Number(newCpuGb6Single) : null,
+        gb6_multi:  newCpuGb6Multi  ? Number(newCpuGb6Multi)  : null,
+      }),
     })
     if (res.ok) {
       setNewCpuName('')
-      setNewCpuScore('')
+      setNewCpuGb6Single('')
+      setNewCpuGb6Multi('')
       fetchCpus(cpuSearch)
     }
     setAddingCpu(false)
@@ -640,10 +646,17 @@ export default function AdminPage() {
                 />
                 <input
                   type="number"
-                  placeholder="상대 점수 (0–100)"
-                  value={newCpuScore}
-                  onChange={(e) => setNewCpuScore(e.target.value)}
-                  className="w-40 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                  placeholder="GB6 Single (예: 2800)"
+                  value={newCpuGb6Single}
+                  onChange={(e) => setNewCpuGb6Single(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                />
+                <input
+                  type="number"
+                  placeholder="GB6 Multi (예: 7500)"
+                  value={newCpuGb6Multi}
+                  onChange={(e) => setNewCpuGb6Multi(e.target.value)}
+                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
                 <button
                   onClick={handleAddCpu}
@@ -679,8 +692,9 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
-                    <th className="text-right px-4 py-3 text-white/40 font-medium">상대 점수</th>
-                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">출처</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -695,18 +709,19 @@ export default function AdminPage() {
                   ) : cpus.map((c, i) => (
                     <tr key={c.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
                       <td className="px-4 py-3 text-white/80 max-w-xs truncate">{c.name}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono">
                         {c.relative_score !== null ? (
-                          <span className={c.relative_score >= 80 ? 'text-emerald-400' : c.relative_score >= 50 ? 'text-amber-400' : 'text-white/50'}>
+                          <span className={c.relative_score >= 800 ? 'text-emerald-400' : c.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
                             {c.relative_score}
                           </span>
                         ) : <span className="text-white/20">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-white/30 text-xs hidden md:table-cell">{c.score_source ?? '—'}</td>
                     </tr>
                   ))}
                   {!cpusLoading && cpus.length === 0 && (
-                    <tr><td colSpan={3} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
+                    <tr><td colSpan={4} className="px-4 py-8 text-center text-white/30">CPU 없음</td></tr>
                   )}
                 </tbody>
               </table>

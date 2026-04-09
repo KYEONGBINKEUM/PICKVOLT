@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('cpus')
-    .select('id, name, relative_score, score_source')
+    .select('id, name, gb6_single, gb6_multi, relative_score, score_source')
     .ilike('name', `%${q}%`)
     .order('relative_score', { ascending: false })
     .limit(10)
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   // 동일 이름(대소문자 무시) 중복 방지
   const { data: existing } = await supabase
     .from('cpus')
-    .select('id, name, relative_score, score_source')
+    .select('id, name, gb6_single, gb6_multi, relative_score, score_source')
     .ilike('name', name)
     .limit(1)
     .single()
@@ -65,10 +65,11 @@ export async function POST(req: NextRequest) {
     .from('cpus')
     .insert({
       name,
-      relative_score: body.relative_score ?? null,
-      score_source:   body.score_source   ?? null,
+      gb6_single:   body.gb6_single   ?? null,
+      gb6_multi:    body.gb6_multi    ?? null,
+      score_source: body.score_source ?? 'geekbench6',
     })
-    .select('id, name, relative_score, score_source')
+    .select('id, name, gb6_single, gb6_multi, relative_score, score_source')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
