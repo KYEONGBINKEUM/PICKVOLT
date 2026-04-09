@@ -457,29 +457,41 @@ export default function CompareClient() {
       setLoading(false)    // 테이블 즉시 표시
 
       // ── 2단계: AI 비교 ────────────────────────────────────────────────────
-      const compareRes = await fetch('/api/compare', {
+      const comparePayload = JSON.stringify({
+        products: validProducts.map((p) => ({
+          name: p.name,
+          specs: {
+            cpu: p.specs.cpu,
+            ram: p.specs.ram,
+            storage: p.specs.storage,
+            display: p.specs.display,
+            camera: p.specs.camera,
+            battery: p.specs.batteryCapacity,
+            batteryLife: p.specs.batteryLife,
+            os: p.specs.os,
+            weight: p.specs.weight,
+          },
+        })),
+        productIds: ids,
+        accessToken: session?.access_token ?? null,
+        locale: locale as Locale,
+      })
+
+      let compareRes = await fetch('/api/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          products: validProducts.map((p) => ({
-            name: p.name,
-            specs: {
-              cpu: p.specs.cpu,
-              ram: p.specs.ram,
-              storage: p.specs.storage,
-              display: p.specs.display,
-              camera: p.specs.camera,
-              battery: p.specs.batteryCapacity,
-              batteryLife: p.specs.batteryLife,
-              os: p.specs.os,
-              weight: p.specs.weight,
-            },
-          })),
-          productIds: ids,
-          accessToken: session?.access_token ?? null,
-          locale: locale as Locale,
-        }),
+        body: comparePayload,
       })
+
+      // 서버 오류 시 1회 재시도
+      if (compareRes.status >= 500) {
+        await new Promise((r) => setTimeout(r, 1500))
+        compareRes = await fetch('/api/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: comparePayload,
+        })
+      }
 
       if (compareRes.status === 401) { setError('login_required'); return }
       if (compareRes.status === 429) { setError('daily_limit'); setRemaining(0); return }

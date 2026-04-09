@@ -125,14 +125,27 @@ export async function POST(req: NextRequest) {
 
     const prompt = PROMPT_TEMPLATE(productList, prefText, lang)
 
+    const MAX_RETRIES = 3
     let result
-    if (process.env.GEMINI_API_KEY) {
-      result = await runWithGemini(prompt)
-    } else if (process.env.ANTHROPIC_API_KEY) {
-      result = await runWithClaude(prompt)
-    } else {
-      return NextResponse.json({ error: 'AI API 키가 설정되지 않았습니다.' }, { status: 500 })
+    let lastError: unknown
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (process.env.GEMINI_API_KEY) {
+          result = await runWithGemini(prompt)
+        } else if (process.env.ANTHROPIC_API_KEY) {
+          result = await runWithClaude(prompt)
+        } else {
+          return NextResponse.json({ error: 'AI API 키가 설정되지 않았습니다.' }, { status: 500 })
+        }
+        break
+      } catch (e) {
+        lastError = e
+        if (attempt < MAX_RETRIES) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt))
+        }
+      }
     }
+    if (!result) throw lastError
 
     // 히스토리 서버사이드 저장
     const title = products.map((p: { name: string }) => shortenProductName(p.name)).join(' vs ')
