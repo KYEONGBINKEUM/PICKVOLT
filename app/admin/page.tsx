@@ -7,6 +7,7 @@ import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
+  Eye, EyeOff,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -64,7 +65,7 @@ export default function AdminPage() {
 
   // Products
   const [products, setProducts] = useState<{
-    id: string; name: string; brand: string; category: string; image_url: string | null; scrape_status: string | null
+    id: string; name: string; brand: string; category: string; image_url: string | null; scrape_status: string | null; is_visible: boolean
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     specs_common: any
   }[]>([])
@@ -141,7 +142,7 @@ export default function AdminPage() {
     if (!authed) return
     let q = supabase
       .from('products')
-      .select('id, name, brand, category, image_url, scrape_status, specs_common(cpu_id)')
+      .select('id, name, brand, category, image_url, scrape_status, is_visible, specs_common(cpu_id)')
       .order('brand').order('name')
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
     if (search) q = q.ilike('name', `%${search}%`)
@@ -304,6 +305,15 @@ export default function AdminPage() {
   }, [authed, tab])
 
   // ── Actions ───────────────────────────────────────────────────────────────
+
+  const handleToggleVisible = async (id: string, current: boolean) => {
+    setProducts((p) => p.map((x) => x.id === id ? { ...x, is_visible: !current } : x))
+    await fetch(`/api/admin/products/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_visible: !current }),
+    })
+  }
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (!confirm(`"${name}" 제품을 삭제하시겠습니까?`)) return
@@ -494,6 +504,7 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">카테고리</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8">이미지</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8 hidden md:table-cell" title="CPU 연결 여부">CPU</th>
+                    <th className="px-4 py-3 text-white/40 font-medium w-8" title="공개 여부">공개</th>
                     <th className="w-20 px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -521,6 +532,17 @@ export default function AdminPage() {
                         {p.specs_common?.cpu_id
                           ? <CheckCircle size={14} className="text-emerald-400" />
                           : <AlertCircle size={14} className="text-amber-400" />}
+                      </td>
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => handleToggleVisible(p.id, p.is_visible)}
+                          title={p.is_visible ? '공개 중 (클릭 시 비공개)' : '비공개 (클릭 시 공개)'}
+                          className="p-1.5 rounded transition-colors"
+                        >
+                          {p.is_visible
+                            ? <Eye size={14} className="text-emerald-400" />
+                            : <EyeOff size={14} className="text-white/20" />}
+                        </button>
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1">

@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       .from('products')
       .select('id, name, brand, category, specs_common(launch_year, cpus(relative_score))')
       .eq('scrape_status', 'ok')
+      .eq('is_visible', true)
 
     if (q) query = query.ilike('name', `%${q}%`)
     if (category) query = query.eq('category', category)

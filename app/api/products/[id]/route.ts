@@ -22,6 +22,7 @@ export async function GET(
       specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, stylus_support, cellular )
     `)
     .eq('id', id)
+    .eq('is_visible', true)
     .single()
 
   if (error || !product) {
