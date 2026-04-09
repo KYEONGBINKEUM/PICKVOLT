@@ -214,19 +214,17 @@ export function computeRelativeScores(
   const ram  = relHigh(firstNum(input.ram_gb), stats.ram)
 
   if (category === 'smartphone') {
-    const cam = relHigh(input.camera_main_mp ?? null, stats.cameraMP)
-    const bat = relHigh(input.battery_mah    ?? null, stats.batteryMah)
+    const bat = relHigh(input.battery_mah ?? null, stats.batteryMah)
 
     const overall = Math.round(
-      perf * 0.40 + cam * 0.25 + ram * 0.20 + bat * 0.15
+      perf * 0.50 + ram * 0.30 + bat * 0.20
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf, weight: 40 },
-        { label: 'Camera',      score: cam,  weight: 25 },
-        { label: 'RAM',         score: ram,  weight: 20 },
-        { label: 'Battery',     score: bat,  weight: 15 },
+        { label: 'Performance', score: perf, weight: 50 },
+        { label: 'RAM',         score: ram,  weight: 30 },
+        { label: 'Battery',     score: bat,  weight: 20 },
       ],
     }
   }
@@ -248,19 +246,17 @@ export function computeRelativeScores(
   }
 
   if (category === 'tablet') {
-    const cam = relHigh(input.camera_main_mp ?? null, stats.cameraMP)
-    const bat = relHigh(input.battery_mah    ?? null, stats.batteryMah)
+    const bat = relHigh(input.battery_mah ?? null, stats.batteryMah)
 
     const overall = Math.round(
-      perf * 0.40 + ram * 0.25 + bat * 0.25 + cam * 0.10
+      perf * 0.45 + ram * 0.30 + bat * 0.25
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf, weight: 40 },
-        { label: 'RAM',         score: ram,  weight: 25 },
+        { label: 'Performance', score: perf, weight: 45 },
+        { label: 'RAM',         score: ram,  weight: 30 },
         { label: 'Battery',     score: bat,  weight: 25 },
-        { label: 'Camera',      score: cam,  weight: 10 },
       ],
     }
   }
