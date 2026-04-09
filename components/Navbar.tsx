@@ -8,16 +8,13 @@ import { User } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
+import SearchBar from '@/components/SearchBar'
 
 interface NavbarProps {
   showSearch?: boolean
-  searchValue?: string
-  onSearchChange?: (v: string) => void
-  onSearchSubmit?: (v: string) => void
-  searchPlaceholder?: string
 }
 
-export default function Navbar({ showSearch, searchValue, onSearchChange, onSearchSubmit, searchPlaceholder }: NavbarProps) {
+export default function Navbar({ showSearch }: NavbarProps) {
   const pathname = usePathname()
   const { t } = useI18n()
   const [loggedIn, setLoggedIn] = useState(false)
@@ -55,18 +52,7 @@ export default function Navbar({ showSearch, searchValue, onSearchChange, onSear
       {/* Center search */}
       {showSearch && (
         <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <input
-            type="text"
-            value={searchValue ?? ''}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && searchValue?.trim()) {
-                onSearchSubmit?.(searchValue.trim())
-              }
-            }}
-            placeholder={searchPlaceholder ?? 'search for products or specs...'}
-            className="w-full bg-surface-2 border border-border rounded-full px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-accent/50 transition-colors"
-          />
+          <SearchBar />
         </div>
       )}
 

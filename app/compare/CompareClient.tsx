@@ -300,19 +300,47 @@ function AIPickLoading({ t }: { t: (k: string) => string }) {
   )
 }
 
-/* ---------- Sidebar Toggle ---------- */
-function SidebarToggle({ label }: { label: string }) {
-  const handleClick = () => {
-    const el = document.getElementById('spec-table')
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+/* ---------- Action Buttons ---------- */
+function ActionButtons({ t }: { t: (k: string) => string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleExportPDF = () => {
+    window.print()
   }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: document.title, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    } catch {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
   return (
-    <div className="hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-20" onClick={handleClick}>
-      <div className="bg-surface-2 border border-border rounded-l-xl p-3 cursor-pointer hover:bg-surface transition-colors">
-        <p className="text-xs text-white/40" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-          {label}
-        </p>
-      </div>
+    <div className="flex items-center justify-end gap-3 mb-12">
+      <button
+        onClick={handleExportPDF}
+        className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 print:hidden"
+      >
+        <Download className="w-4 h-4" />
+        {t('compare.export_pdf')}
+      </button>
+      <button
+        onClick={handleShare}
+        className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 print:hidden"
+      >
+        <Share2 className="w-4 h-4" />
+        {copied ? 'Copied!' : t('compare.share')}
+      </button>
     </div>
   )
 }
@@ -364,7 +392,6 @@ export default function CompareClient() {
   const idsParam = searchParams.get('ids') ?? ''
   const { t, locale } = useI18n()
 
-  const [navSearch, setNavSearch] = useState('')
   const [products, setProducts] = useState<Product[]>([])
   const [aiResult, setAiResult] = useState<AiResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -530,12 +557,6 @@ export default function CompareClient() {
     }
     setSelectedVariants(initVariants)
   }, [products])
-
-  const handleNavSearch = (v: string) => {
-    if (v.trim()) {
-      router.push(`/?q=${encodeURIComponent(v.trim())}`)
-    }
-  }
 
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean }
 
@@ -775,13 +796,7 @@ export default function CompareClient() {
 
   return (
     <>
-      <Navbar
-        showSearch
-        searchValue={navSearch}
-        onSearchChange={setNavSearch}
-        onSearchSubmit={handleNavSearch}
-        searchPlaceholder='e.g. "iphone 15 pro vs s24 ultra"'
-      />
+      <Navbar showSearch />
 
       <main className="min-h-screen bg-background pt-20 pb-20 px-4 md:px-6 max-w-inner mx-auto">
 
@@ -1029,16 +1044,7 @@ export default function CompareClient() {
             )}
 
             {/* 액션 버튼 */}
-            <div className="flex items-center justify-end gap-3 mb-12">
-              <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
-                <Download className="w-4 h-4" />
-                {t('compare.export_pdf')}
-              </button>
-              <button className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20">
-                <Share2 className="w-4 h-4" />
-                {t('compare.share')}
-              </button>
-            </div>
+            <ActionButtons t={t} />
 
             {/* 인기 비교 */}
             <PopularComparisons items={popularItems} t={t} />
@@ -1067,7 +1073,6 @@ export default function CompareClient() {
         </div>
       )}
 
-      <SidebarToggle label={t('compare.specs_side_by_side')} />
     </>
   )
 }

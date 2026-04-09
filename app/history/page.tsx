@@ -78,7 +78,7 @@ function HistoryCard({
         </button>
         <button
           onClick={() => onDelete(item.id)}
-          className="p-2 rounded-full text-white/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+          className="p-2 rounded-full text-white/30 hover:text-red-400 transition-all"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
