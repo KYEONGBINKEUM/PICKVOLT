@@ -7,9 +7,9 @@
 // ─── 개별 스펙 점수 ───────────────────────────────────────────────────────────
 
 /** 모바일 CPU 성능 점수 (0–100)
- *  GB6 = 주요 지표 (70%) — 없으면 페널티 없이 보조 지표만 사용
- *  3DMark · AnTuTu = 보조 지표 (30%) — 없어도 불이익 없음
- *  최상위 기준: GB6 Single ~4200, Multi ~12000, 3DMark ~3000, AnTuTu ~3000000 */
+ *  GB6 Single / GB6 Multi / AnTuTu = 필수 입력 (각 1/3 또는 1/4)
+ *  3DMark Steel Nomad Light        = 선택 입력 (있으면 4등분, 없으면 3등분)
+ *  최상위 기준: Single ~4200, Multi ~12000, 3DMark ~3000, AnTuTu ~3000000 */
 export function scoreCPU(
   gb6Single: number | null,
   gb6Multi: number | null,
@@ -17,27 +17,15 @@ export function scoreCPU(
   tdmark: number | null = null,
   antutu: number | null = null,
 ): number {
-  const normSingle = gb6Single != null ? Math.min(1, gb6Single / 4200)    : null
-  const normMulti  = gb6Multi  != null ? Math.min(1, gb6Multi  / 12000)   : null
-  const normTdmark = tdmark    != null ? Math.min(1, tdmark    / 3000)    : null
-  const normAntutu = antutu    != null ? Math.min(1, antutu    / 3000000) : null
+  const parts: number[] = []
+  if (gb6Single != null) parts.push(Math.min(1, gb6Single / 4200))
+  if (gb6Multi  != null) parts.push(Math.min(1, gb6Multi  / 12000))
+  if (tdmark    != null) parts.push(Math.min(1, tdmark    / 3000))
+  if (antutu    != null) parts.push(Math.min(1, antutu    / 3000000))
 
-  // GB6 평균 (주요)
-  let gb6: number | null = null
-  if (normSingle != null && normMulti != null) gb6 = (normSingle + normMulti) / 2
-  else if (normSingle != null) gb6 = normSingle
-  else if (normMulti  != null) gb6 = normMulti
-
-  // 보조 지표 평균 (있는 것만)
-  const suppParts: number[] = []
-  if (normTdmark != null) suppParts.push(normTdmark)
-  if (normAntutu != null) suppParts.push(normAntutu)
-  const supp = suppParts.length > 0 ? suppParts.reduce((a, b) => a + b, 0) / suppParts.length : null
-
-  if (gb6 != null && supp != null) return Math.min(100, Math.round((gb6 * 0.70 + supp * 0.30) * 100))
-  if (gb6  != null) return Math.min(100, Math.round(gb6  * 100))
-  if (supp != null) return Math.min(100, Math.round(supp * 100))
-
+  if (parts.length > 0) {
+    return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
+  }
   // fallback: relative_score (0–1000) → 0–100
   if (relScore != null) return Math.min(100, Math.round(relScore / 10))
   return 0
@@ -220,56 +208,37 @@ export interface RelativeScoreBreakdown {
  * 실 벤치마크 수치로 성능 점수 계산 — 없으면 null
  *
  * 모바일/태블릿:
- *   GB6(Single+Multi 평균) = 주요 지표(70%) — 없어도 페널티 없음
- *   3DMark · AnTuTu       = 보조 지표(30%) — 없어도 페널티 없음
- *   → 3DMark 미보유 CPU가 GB6 보유 CPU 대비 불이익 없음
+ *   GB6 Single / GB6 Multi / AnTuTu = 필수 → 항상 분모에 포함
+ *   3DMark Steel Nomad Light        = 선택 → 있으면 4등분, 없으면 3등분
+ *   (분모가 항상 3 이상이므로 3DMark 유무로 유불리 없음)
  *
  * 랩탑:
- *   Cinebench 우선, 없으면 GB6 fallback (단순 평균 — 지표 다양성 낮음)
+ *   Cinebench 우선, 없으면 GB6 fallback
  */
 function benchmarkPerf(input: ScoringInput): number | null {
   const isDesktop = input.category === 'laptop'
 
   if (isDesktop) {
-    // Cinebench 우선
-    if (input.cinebenchSingle != null || input.cinebenchMulti != null) {
-      const parts: number[] = []
-      if (input.cinebenchSingle != null) parts.push(Math.min(1, input.cinebenchSingle / 150))
-      if (input.cinebenchMulti  != null) parts.push(Math.min(1, input.cinebenchMulti  / 45000))
-      return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
-    }
-    // Cinebench 없으면 GB6 fallback
-    if (input.gb6Single != null || input.gb6Multi != null) {
-      const parts: number[] = []
+    const parts: number[] = []
+    if (input.cinebenchSingle != null) parts.push(Math.min(1, input.cinebenchSingle / 150))
+    if (input.cinebenchMulti  != null) parts.push(Math.min(1, input.cinebenchMulti  / 45000))
+    if (parts.length === 0) {
       if (input.gb6Single != null) parts.push(Math.min(1, input.gb6Single / 4200))
       if (input.gb6Multi  != null) parts.push(Math.min(1, input.gb6Multi  / 15000))
-      return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
     }
-    return null
+    if (parts.length === 0) return null
+    return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
   }
 
-  // 모바일 / 태블릿: GB6 주요(70%) + 보조(30%)
-  const normSingle = input.gb6Single != null ? Math.min(1, input.gb6Single / 4200)    : null
-  const normMulti  = input.gb6Multi  != null ? Math.min(1, input.gb6Multi  / 15000)   : null
-  const normTdmark = input.tdmark    != null ? Math.min(1, input.tdmark    / 3000)    : null
-  const normAntutu = input.antutu    != null ? Math.min(1, input.antutu    / 3000000) : null
+  // 모바일 / 태블릿: 있는 지표 동등 분할 (필수 3개 + 선택 1개)
+  const parts: number[] = []
+  if (input.gb6Single != null) parts.push(Math.min(1, input.gb6Single / 4200))
+  if (input.gb6Multi  != null) parts.push(Math.min(1, input.gb6Multi  / 15000))
+  if (input.tdmark    != null) parts.push(Math.min(1, input.tdmark    / 3000))
+  if (input.antutu    != null) parts.push(Math.min(1, input.antutu    / 3000000))
 
-  // GB6 평균 (주요)
-  let gb6: number | null = null
-  if (normSingle != null && normMulti != null) gb6 = (normSingle + normMulti) / 2
-  else if (normSingle != null) gb6 = normSingle
-  else if (normMulti  != null) gb6 = normMulti
-
-  // 보조 지표 평균 (있는 것만)
-  const suppParts: number[] = []
-  if (normTdmark != null) suppParts.push(normTdmark)
-  if (normAntutu != null) suppParts.push(normAntutu)
-  const supp = suppParts.length > 0 ? suppParts.reduce((a, b) => a + b, 0) / suppParts.length : null
-
-  if (gb6 != null && supp != null) return Math.min(100, Math.round((gb6 * 0.70 + supp * 0.30) * 100))
-  if (gb6  != null) return Math.min(100, Math.round(gb6  * 100))
-  if (supp != null) return Math.min(100, Math.round(supp * 100))
-  return null
+  if (parts.length === 0) return null
+  return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
 }
 
 export function computeRelativeScores(
