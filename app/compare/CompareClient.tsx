@@ -353,8 +353,8 @@ function ActionButtons({
     setOpen(false)
     try {
       await fn()
-      if (key === 'html')  showToast('HTML 코드가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
-      if (key === 'image') showToast('이미지가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+      if (key === 'html')  showToast(t('export.toast_html'), t('export.toast_paste'))
+      if (key === 'image') showToast(t('export.toast_image'), t('export.toast_paste'))
     } finally {
       setExporting(null)
     }
@@ -380,20 +380,20 @@ function ActionButtons({
             className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            내보내기
+            {t('export.label')}
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
           {open && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute right-0 bottom-full mb-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[200px] z-20">
+              <div className="absolute right-0 top-full mt-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[200px] z-20">
                 <button
                   onClick={() => wrap('html', onExportHTML)}
                   disabled={!!exporting}
                   className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
                 >
                   <Code2 className="w-4 h-4 flex-shrink-0" />
-                  HTML 코드 복사
+                  {t('export.html')}
                 </button>
                 <button
                   onClick={() => wrap('image', onExportImage)}
@@ -401,7 +401,7 @@ function ActionButtons({
                   className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
                 >
                   <Copy className="w-4 h-4 flex-shrink-0" />
-                  이미지 복사
+                  {t('export.image')}
                 </button>
                 <button
                   onClick={() => wrap('pdf', onExportPDF)}
@@ -409,7 +409,7 @@ function ActionButtons({
                   className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
                 >
                   <FileDown className="w-4 h-4 flex-shrink-0" />
-                  PDF 저장
+                  {t('export.pdf')}
                 </button>
               </div>
             </>

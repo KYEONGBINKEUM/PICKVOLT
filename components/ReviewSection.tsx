@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Send, Trash2, Pencil, Check, X, ChevronRight, Heart } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useI18n } from '@/lib/i18n'
 
 interface Review {
   id: string
@@ -75,6 +76,7 @@ function RatingBadge({ rating }: { rating: number }) {
 }
 
 export default function ReviewSection({ productId, compact = false }: Props) {
+  const { t } = useI18n()
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [myUserId, setMyUserId] = useState<string | null>(null)
@@ -198,7 +200,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
   if (compact) {
     return (
       <div className="pt-3">
-        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-3 font-semibold">Reviews</p>
+        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-3 font-semibold">{t('review.title')}</p>
         {loading ? (
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
@@ -206,7 +208,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
             ))}
           </div>
         ) : displayed.length === 0 ? (
-          <p className="text-xs text-white/20">No reviews yet</p>
+          <p className="text-xs text-white/20">{t('review.empty')}</p>
         ) : (
           <div className="space-y-2">
             {displayed.map((r) => (
@@ -229,7 +231,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
           href={`/product/${productId}`}
           className="inline-flex items-center gap-0.5 mt-3 text-[11px] text-white/25 hover:text-white/50 transition-colors"
         >
-          {sessionLoaded && myUserId && !hasMyReview ? 'Write a review' : 'All reviews'}
+          {sessionLoaded && myUserId && !hasMyReview ? t('review.write') : t('review.all')}
           <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
@@ -239,20 +241,20 @@ export default function ReviewSection({ productId, compact = false }: Props) {
   /* ── Full mode (product detail page) ─────────────────────── */
   return (
     <div className="mt-10">
-      <h2 className="text-base font-bold text-white mb-5">User Reviews</h2>
+      <h2 className="text-base font-bold text-white mb-5">{t('review.title')}</h2>
 
       {/* 새 리뷰 작성 폼 */}
       {sessionLoaded && myUserId && !hasMyReview && (
         <div className="mb-6 bg-surface border border-border rounded-2xl p-4">
           <div className="mb-3">
-            <p className="text-xs text-white/40 mb-2">Score</p>
+            <p className="text-xs text-white/40 mb-2">{t('review.score')}</p>
             <RatingPicker value={rating} onChange={setRating} />
           </div>
           <div className="border-t border-border pt-3">
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Share your experience with this product… (10–500 characters)"
+              placeholder={t('review.placeholder')}
               rows={3}
               maxLength={500}
               className="w-full bg-transparent text-sm text-white/80 placeholder-white/20 resize-none outline-none leading-relaxed"
@@ -268,7 +270,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
                 className="flex items-center gap-1.5 bg-accent hover:bg-accent/90 disabled:opacity-40 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
               >
                 <Send className="w-3 h-3" />
-                Submit
+                {t('review.submit')}
               </button>
             </div>
           </div>
@@ -277,9 +279,9 @@ export default function ReviewSection({ productId, compact = false }: Props) {
 
       {sessionLoaded && !myUserId && (
         <div className="mb-6 p-4 bg-surface border border-border rounded-2xl flex items-center justify-between gap-4">
-          <p className="text-sm text-white/40">Sign in to write a review</p>
+          <p className="text-sm text-white/40">{t('review.sign_in_prompt')}</p>
           <Link href="/login" className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors flex-shrink-0">
-            Sign in →
+            {t('review.sign_in_cta')}
           </Link>
         </div>
       )}
@@ -292,7 +294,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
           ))}
         </div>
       ) : reviews.length === 0 ? (
-        <p className="text-sm text-white/20 text-center py-8">No reviews yet. Be the first to share your experience!</p>
+        <p className="text-sm text-white/20 text-center py-8">{t('review.empty')}</p>
       ) : (
         <div className="space-y-3">
           {reviews.map((r) => (
@@ -329,7 +331,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
               {editingId === r.id ? (
                 <div className="mt-3">
                   <div className="mb-2">
-                    <p className="text-xs text-white/40 mb-1.5">Score</p>
+                    <p className="text-xs text-white/40 mb-1.5">{t('review.score')}</p>
                     <RatingPicker value={editRating} onChange={setEditRating} />
                   </div>
                   <textarea
@@ -344,14 +346,14 @@ export default function ReviewSection({ productId, compact = false }: Props) {
                     <div className="flex items-center gap-2">
                       {editErrMsg && <span className="text-xs text-red-400">{editErrMsg}</span>}
                       <button onClick={cancelEdit} className="flex items-center gap-1 text-white/30 hover:text-white/60 text-xs px-2 py-1 rounded-full transition-colors">
-                        <X className="w-3 h-3" /> Cancel
+                        <X className="w-3 h-3" /> {t('review.cancel')}
                       </button>
                       <button
                         onClick={() => handleEdit(r.id)}
                         disabled={editSaving || editContent.trim().length < 10}
                         className="flex items-center gap-1 bg-accent hover:bg-accent/90 disabled:opacity-40 text-white text-xs font-semibold px-3 py-1 rounded-full transition-all"
                       >
-                        <Check className="w-3 h-3" /> Save
+                        <Check className="w-3 h-3" /> {t('review.save')}
                       </button>
                     </div>
                   </div>
@@ -372,7 +374,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
                       }`}
                     />
                     <span className={`text-xs transition-colors ${likedIds.has(r.id) ? 'text-red-400' : 'text-white/25 group-hover:text-white/50'}`}>
-                      {r.likes > 0 ? r.likes : 'Helpful?'}
+                      {r.likes > 0 ? r.likes : t('review.helpful')}
                     </span>
                   </button>
                 </>

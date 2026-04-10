@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User } from 'lucide-react'
@@ -26,6 +26,8 @@ export default function MyPage() {
   const [nicknameInput, setNicknameInput] = useState('')
   const [nicknameSaving, setNicknameSaving] = useState(false)
   const [nicknameError, setNicknameError] = useState('')
+  const [nicknameDupStatus, setNicknameDupStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const nicknameDupRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -92,20 +94,34 @@ export default function MyPage() {
     }
   }
 
+  const handleNicknameInputChange = (value: string) => {
+    setNicknameInput(value)
+    setNicknameError('')
+    const trimmed = value.trim()
+    if (trimmed.length < 2 || trimmed === nickname) { setNicknameDupStatus('idle'); return }
+    setNicknameDupStatus('checking')
+    if (nicknameDupRef.current) clearTimeout(nicknameDupRef.current)
+    nicknameDupRef.current = setTimeout(async () => {
+      const { data } = await supabase.from('profiles').select('user_id').ilike('nickname', trimmed).maybeSingle()
+      setNicknameDupStatus(data ? 'taken' : 'available')
+    }, 400)
+  }
+
   const handleNicknameSave = async () => {
     const trimmed = nicknameInput.trim()
-    if (trimmed.length < 2) { setNicknameError('2자 이상 입력해주세요'); return }
-    if (trimmed.length > 20) { setNicknameError('20자 이하로 입력해주세요'); return }
+    if (trimmed.length < 2) { setNicknameError(t('nickname.error_short')); return }
+    if (trimmed.length > 20) { setNicknameError(t('nickname.error_long')); return }
+    if (nicknameDupStatus === 'taken') { setNicknameError(t('nickname.error_taken')); return }
     setNicknameSaving(true); setNicknameError('')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setNicknameSaving(false); return }
     const { error } = await supabase.from('profiles').upsert({ user_id: user.id, nickname: trimmed })
     if (error) {
-      setNicknameError(error.code === '23505' ? '이미 사용 중인 닉네임입니다' : error.message)
+      setNicknameError(error.code === '23505' ? t('nickname.error_taken') : error.message)
       setNicknameSaving(false)
       return
     }
-    setNickname(trimmed); setEditingNickname(false); setNicknameSaving(false)
+    setNickname(trimmed); setEditingNickname(false); setNicknameSaving(false); setNicknameDupStatus('idle')
   }
 
   const currentLang = LANGUAGES.find((l) => l.code === locale)
@@ -145,34 +161,46 @@ export default function MyPage() {
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-white/40 flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-white/40 mb-0.5">닉네임</p>
+                  <p className="text-xs text-white/40 mb-0.5">{t('mypage.nickname')}</p>
                   {editingNickname ? (
-                    <input
-                      value={nicknameInput}
-                      onChange={(e) => setNicknameInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleNicknameSave()}
-                      maxLength={20}
-                      autoFocus
-                      className="bg-surface-2 border border-border rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/20 transition-colors w-40"
-                    />
+                    <div className="flex flex-col gap-1">
+                      <input
+                        value={nicknameInput}
+                        onChange={(e) => handleNicknameInputChange(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleNicknameSave()}
+                        maxLength={20}
+                        autoFocus
+                        className="bg-surface-2 border border-border rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/20 transition-colors w-40"
+                      />
+                      {nicknameInput.trim().length >= 2 && nicknameInput.trim() !== nickname && (
+                        <span className={`text-[10px] font-semibold ${
+                          nicknameDupStatus === 'available' ? 'text-green-400' :
+                          nicknameDupStatus === 'taken' ? 'text-red-400' : 'text-white/30'
+                        }`}>
+                          {nicknameDupStatus === 'checking' ? t('nickname.checking') :
+                           nicknameDupStatus === 'available' ? t('nickname.available') :
+                           nicknameDupStatus === 'taken' ? t('nickname.error_taken') : ''}
+                        </span>
+                      )}
+                    </div>
                   ) : (
-                    <p className="text-sm font-semibold text-white">{nickname ?? '설정되지 않음'}</p>
+                    <p className="text-sm font-semibold text-white">{nickname ?? t('mypage.nickname_unset')}</p>
                   )}
                   {nicknameError && <p className="text-xs text-red-400 mt-1">{nicknameError}</p>}
                 </div>
               </div>
               {editingNickname ? (
                 <div className="flex items-center gap-2">
-                  <button onClick={() => { setEditingNickname(false); setNicknameError('') }} className="text-white/30 hover:text-white/60 transition-colors">
+                  <button onClick={() => { setEditingNickname(false); setNicknameError(''); setNicknameDupStatus('idle') }} className="text-white/30 hover:text-white/60 transition-colors">
                     <X className="w-4 h-4" />
                   </button>
-                  <button onClick={handleNicknameSave} disabled={nicknameSaving} className="text-accent hover:text-accent/80 transition-colors disabled:opacity-40">
+                  <button onClick={handleNicknameSave} disabled={nicknameSaving || nicknameDupStatus === 'taken' || nicknameDupStatus === 'checking'} className="text-accent hover:text-accent/80 transition-colors disabled:opacity-40">
                     <Check className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 <button
-                  onClick={() => { setNicknameInput(nickname ?? ''); setEditingNickname(true); setNicknameError('') }}
+                  onClick={() => { setNicknameInput(nickname ?? ''); setEditingNickname(true); setNicknameError(''); setNicknameDupStatus('idle') }}
                   className="text-white/30 hover:text-white/60 transition-colors"
                 >
                   <Pencil className="w-4 h-4" />

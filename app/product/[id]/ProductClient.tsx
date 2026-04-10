@@ -137,7 +137,7 @@ ${priceHTML}
 </html>`
 
     await navigator.clipboard.writeText(html)
-    showToast('HTML 코드가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+    showToast(t('export.toast_html'), t('export.toast_paste'))
   }
 
   const handleExportImage = async () => {
@@ -146,7 +146,7 @@ ${priceHTML}
       if (!blob) return
       try {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-        showToast('이미지가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+        showToast(t('export.toast_image'), t('export.toast_paste'))
       } catch {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -226,20 +226,20 @@ ${priceHTML}
               className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
             >
               {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              내보내기
+              {t('export.label')}
               <ChevronDown className="w-3 h-3" />
             </button>
             {exportOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
-                <div className="absolute right-0 bottom-full mb-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[180px] z-20">
+                <div className="absolute right-0 top-full mt-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[180px] z-20">
                   <button
                     onClick={() => wrap('html', handleExportHTML)}
                     disabled={!!exporting}
                     className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
                   >
                     <Code2 className="w-4 h-4 flex-shrink-0" />
-                    HTML 코드 복사
+                    {t('export.html')}
                   </button>
                   <button
                     onClick={() => wrap('image', handleExportImage)}
@@ -247,7 +247,7 @@ ${priceHTML}
                     className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
                   >
                     <Copy className="w-4 h-4 flex-shrink-0" />
-                    이미지 복사
+                    {t('export.image')}
                   </button>
                   <button
                     onClick={() => wrap('pdf', handleExportPDF)}
@@ -255,7 +255,7 @@ ${priceHTML}
                     className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
                   >
                     <FileDown className="w-4 h-4 flex-shrink-0" />
-                    PDF 저장
+                    {t('export.pdf')}
                   </button>
                 </div>
               </>
