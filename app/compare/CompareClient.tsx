@@ -43,6 +43,7 @@ interface Product {
   name: string
   brand: string
   category: string
+  price_usd?: number | null
   image_url?: string | null
   source_url?: string | null
   specs: ProductSpecs
@@ -667,12 +668,31 @@ export default function CompareClient() {
     const displayRow: SpecRowData = {
       label: t('spec.display'),
       sublabel: t('spec.screen'),
-      values: products.map((p) => ({ primary: fmtDisplay(p.raw), secondary: fmtDisplaySub(p.raw) })),
+      values: products.map((p) => ({ primary: fmtDisplay(p.raw) })),
+    }
+    const resolutionRow: SpecRowData = {
+      label: t('spec.resolution'),
+      sublabel: t('spec.resolution_sub'),
+      values: products.map((p) => ({ primary: p.raw.display_resolution ?? '—' })),
+    }
+    const refreshRateRow: SpecRowData = {
+      label: t('spec.refresh_rate'),
+      sublabel: t('spec.refresh_rate_sub'),
+      values: products.map((p) => ({ primary: p.raw.display_hz ? `${p.raw.display_hz}Hz` : '—' })),
     }
     const osRow: SpecRowData = {
       label: t('spec.os_label'),
       sublabel: t('spec.operating_system'),
       values: products.map((p) => ({ primary: p.raw.os ?? p.specs.os ?? '—' })),
+    }
+    const priceRow: SpecRowData = {
+      label: t('spec.price'),
+      sublabel: t('spec.price_sub'),
+      higherIsBetter: false,
+      values: products.map((p) => ({
+        primary: p.price_usd ? `$${Number(p.price_usd).toLocaleString()}` : '—',
+        numericVal: p.price_usd ?? undefined,
+      })),
     }
 
     if (category === 'smartphone') {
@@ -681,6 +701,8 @@ export default function CompareClient() {
         ramRow,
         storageRow,
         displayRow,
+        resolutionRow,
+        refreshRateRow,
         {
           label: t('spec.camera'),
           sublabel: t('spec.main_sensor'),
@@ -699,6 +721,7 @@ export default function CompareClient() {
           })),
         },
         osRow,
+        priceRow,
         {
           label: t('spec.weight'),
           sublabel: t('spec.weight_body'),
@@ -717,6 +740,8 @@ export default function CompareClient() {
         ramRow,
         storageRow,
         displayRow,
+        resolutionRow,
+        refreshRateRow,
         {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
@@ -727,6 +752,7 @@ export default function CompareClient() {
           })),
         },
         osRow,
+        priceRow,
         {
           label: t('spec.weight'),
           sublabel: t('spec.weight_body'),
@@ -745,6 +771,8 @@ export default function CompareClient() {
         ramRow,
         storageRow,
         displayRow,
+        resolutionRow,
+        refreshRateRow,
         {
           label: t('spec.camera'),
           sublabel: t('spec.main_sensor'),
@@ -763,6 +791,7 @@ export default function CompareClient() {
           })),
         },
         osRow,
+        priceRow,
       ]
     }
 
