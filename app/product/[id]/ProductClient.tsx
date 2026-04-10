@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
+import ReviewSection from '@/components/ReviewSection'
 
 interface Specs {
   cpu:             string | null
@@ -361,6 +362,7 @@ ${priceHTML}
             <SpecRow label={t('product.spec_os')}      value={product.specs.os} />
             <SpecRow label={t('product.spec_weight')}  value={product.specs.weight} />
           </div>
+          <ReviewSection productId={product.id} />
         </div>
       </div>
     </>

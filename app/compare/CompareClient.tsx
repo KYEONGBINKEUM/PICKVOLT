@@ -13,6 +13,7 @@ import { shortenCompareTitle, shortenProductName } from '@/lib/utils'
 import { saveLocalHistory } from '@/lib/localHistory'
 import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
+import ReviewSection from '@/components/ReviewSection'
 
 const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
 
@@ -1195,6 +1196,25 @@ export default function CompareClient() {
               })}
             </div>
 
+            {/* User Reviews */}
+            <div
+              className="mt-4 mb-8 bg-surface border border-border rounded-card overflow-hidden"
+              data-export-exclude="true"
+            >
+              <div
+                className="grid"
+                style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
+              >
+                <div className="p-4 pt-5">
+                  <p className="text-xs text-white/40 font-semibold">User Reviews</p>
+                </div>
+                {products.map((p) => (
+                  <div key={p.id} className="p-4 border-l border-border">
+                    <ReviewSection productId={p.id} compact />
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* 액션 버튼 */}
             <ActionButtons
