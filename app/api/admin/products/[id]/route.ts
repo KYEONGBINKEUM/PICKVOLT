@@ -119,23 +119,27 @@ export async function PUT(
 
   const supabase = makeServiceClient()
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const path = `products/${id}.${ext}`
+  const ts = Date.now()
+  const newPath = `products/${id}-${ts}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
 
-  await supabase.storage.from('product-images').remove([path])
+  // 기존 이미지 파일 삭제 (이름이 달라도 정리)
+  const { data: existing } = await supabase.from('products').select('image_url').eq('id', id).single()
+  if (existing?.image_url) {
+    const oldPath = existing.image_url.split('/product-images/')[1]?.split('?')[0]
+    if (oldPath) await supabase.storage.from('product-images').remove([oldPath])
+  }
 
   const { error: uploadError } = await supabase.storage
     .from('product-images')
-    .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
+    .upload(newPath, arrayBuffer, { contentType: file.type })
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
-  const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
-  // Append cache-buster so CDN serves the new image immediately
-  const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
-  await supabase.from('products').update({ image_url: cacheBustedUrl }).eq('id', id)
+  const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(newPath)
+  await supabase.from('products').update({ image_url: publicUrl }).eq('id', id)
 
-  return NextResponse.json({ ok: true, image_url: cacheBustedUrl })
+  return NextResponse.json({ ok: true, image_url: publicUrl })
 }
 
 // POST: 제품 복사 (is_visible = false 강제)

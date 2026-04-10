@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ArrowLeft, Check, Plus, Share2, Download } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 
@@ -39,13 +39,21 @@ function SpecRow({ label, value }: { label: string; value: string | null }) {
   )
 }
 
-
 export default function ProductClient({ product }: { product: Product }) {
   const { t } = useI18n()
   const { cart, add, remove } = useCompareCart()
   const inCart   = cart.some((i) => i.id === product.id)
   const cartFull = cart.length >= 4
+
   const [shareCopied, setShareCopied] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exporting, setExporting] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ msg: string; sub: string } | null>(null)
+
+  const showToast = (msg: string, sub: string) => {
+    setToast({ msg, sub })
+    setTimeout(() => setToast(null), 2500)
+  }
 
   const toggleCart = () => {
     if (inCart) remove(product.id)
@@ -69,12 +77,88 @@ export default function ProductClient({ product }: { product: Product }) {
     }
   }
 
-  const handleExportPDF = async () => {
+  const captureCanvas = async () => {
     const { default: html2canvas } = await import('html2canvas')
-    const { default: jsPDF } = await import('jspdf')
     const el = document.getElementById('product-detail')
-    if (!el) return
-    const canvas = await html2canvas(el, { backgroundColor: '#0d0d0d', scale: 2, useCORS: true, logging: false })
+    if (!el) throw new Error('element not found')
+    return html2canvas(el, {
+      backgroundColor: '#0d0d0d',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      ignoreElements: (el) => el.getAttribute('data-export-exclude') === 'true',
+    })
+  }
+
+  const handleExportHTML = async () => {
+    const specRows = [
+      { label: t('product.spec_cpu'),     value: product.specs.cpu },
+      { label: t('product.spec_ram'),     value: product.specs.ram },
+      { label: t('product.spec_storage'), value: product.specs.storage },
+      { label: t('product.spec_display'), value: product.specs.display },
+      { label: t('product.spec_battery'), value: product.specs.batteryCapacity },
+      { label: t('product.spec_camera'),  value: product.specs.camera },
+      { label: t('product.spec_os'),      value: product.specs.os },
+      { label: t('product.spec_weight'),  value: product.specs.weight },
+    ].filter((r) => r.value)
+
+    const rowsHTML = specRows.map((r) =>
+      `<tr>
+        <td style="padding:10px 14px;color:#aaa;font-size:11px;text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid #2a2a2a;white-space:nowrap;">${r.label}</td>
+        <td style="padding:10px 14px;color:#fff;font-size:13px;border-bottom:1px solid #2a2a2a;">${r.value}</td>
+      </tr>`
+    ).join('')
+
+    const imgHTML = product.image_url
+      ? `<img src="${product.image_url}" alt="${product.name}" style="width:180px;height:180px;object-fit:contain;display:block;margin-bottom:16px;">`
+      : ''
+    const priceHTML = product.price_usd
+      ? `<p style="font-size:22px;font-weight:900;color:#FF6B2B;margin:0 0 20px;">From $${Number(product.price_usd).toLocaleString()}</p>`
+      : ''
+
+    const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>${product.name} — PICKVOLT</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#0d0d0d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:32px;}</style>
+</head>
+<body>
+${imgHTML}
+<p style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">${product.brand} · ${product.category}</p>
+<h1 style="font-size:24px;font-weight:900;color:#fff;margin-bottom:12px;">${product.name}</h1>
+${priceHTML}
+<table style="border-collapse:collapse;width:100%;background:#161616;border-radius:12px;overflow:hidden;">
+  <tbody>${rowsHTML}</tbody>
+</table>
+<p style="margin-top:16px;font-size:10px;color:#444;">pickvolt.com · ${new Date().toLocaleDateString()}</p>
+</body>
+</html>`
+
+    await navigator.clipboard.writeText(html)
+    showToast('HTML 코드가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+  }
+
+  const handleExportImage = async () => {
+    const canvas = await captureCanvas()
+    canvas.toBlob(async (blob) => {
+      if (!blob) return
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        showToast('이미지가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+      } catch {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `pickvolt-${product.name.replace(/\s+/g, '-')}.png`
+        a.click(); URL.revokeObjectURL(url)
+        showToast('이미지가 다운로드되었습니다', '클립보드 접근이 차단되어 파일로 저장했습니다')
+      }
+    })
+  }
+
+  const handleExportPDF = async () => {
+    const canvas = await captureCanvas()
+    const { default: jsPDF } = await import('jspdf')
     const imgData = canvas.toDataURL('image/png')
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const pageW = doc.internal.pageSize.getWidth()
@@ -102,15 +186,29 @@ export default function ProductClient({ product }: { product: Product }) {
     doc.save(`pickvolt-${product.name.replace(/\s+/g, '-')}.pdf`)
   }
 
+  const wrap = async (key: string, fn: () => Promise<void>) => {
+    setExporting(key)
+    setExportOpen(false)
+    try { await fn() } finally { setExporting(null) }
+  }
+
   const categoryLabel: Record<string, string> = {
-    laptop:     'Laptop',
-    smartphone: 'Smartphone',
-    tablet:     'Tablet',
+    laptop: 'Laptop', smartphone: 'Smartphone', tablet: 'Tablet',
   }
 
   return (
     <>
-      {/* Back + share/export row */}
+      {/* Toast */}
+      {toast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white text-black rounded-2xl px-8 py-5 shadow-2xl text-center">
+            <p className="font-bold text-base">✓ {toast.msg}</p>
+            <p className="text-sm text-black/50 mt-1">{toast.sub}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Back + export/share row */}
       <div className="flex items-center justify-between mb-8">
         <Link
           href="/"
@@ -120,13 +218,49 @@ export default function ProductClient({ product }: { product: Product }) {
           {t('product.back')}
         </Link>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportPDF}
-            className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
-          >
-            <Download className="w-3.5 h-3.5" />
-            PDF
-          </button>
+          {/* 내보내기 dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setExportOpen((o) => !o)}
+              className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+            >
+              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              내보내기
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
+                <div className="absolute right-0 bottom-full mb-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[180px] z-20">
+                  <button
+                    onClick={() => wrap('html', handleExportHTML)}
+                    disabled={!!exporting}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+                  >
+                    <Code2 className="w-4 h-4 flex-shrink-0" />
+                    HTML 코드 복사
+                  </button>
+                  <button
+                    onClick={() => wrap('image', handleExportImage)}
+                    disabled={!!exporting}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+                  >
+                    <Copy className="w-4 h-4 flex-shrink-0" />
+                    이미지 복사
+                  </button>
+                  <button
+                    onClick={() => wrap('pdf', handleExportPDF)}
+                    disabled={!!exporting}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+                  >
+                    <FileDown className="w-4 h-4 flex-shrink-0" />
+                    PDF 저장
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          {/* 공유 */}
           <button
             onClick={handleShare}
             className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
@@ -180,8 +314,8 @@ export default function ProductClient({ product }: { product: Product }) {
             </p>
           )}
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
+          {/* Actions — 내보내기시 제외 */}
+          <div className="flex flex-col gap-2" data-export-exclude="true">
             <button
               onClick={toggleCart}
               disabled={!inCart && cartFull}
@@ -199,7 +333,6 @@ export default function ProductClient({ product }: { product: Product }) {
               }
             </button>
 
-            {/* Amazon button */}
             {product.amazon_url && (
               <a
                 href={product.amazon_url}
@@ -219,14 +352,14 @@ export default function ProductClient({ product }: { product: Product }) {
         {/* RIGHT — benchmark + specs */}
         <div className="flex-1 min-w-0">
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
-            <SpecRow label={t('product.spec_cpu')}          value={product.specs.cpu} />
-            <SpecRow label={t('product.spec_ram')}          value={product.specs.ram} />
-            <SpecRow label={t('product.spec_storage')}      value={product.specs.storage} />
-            <SpecRow label={t('product.spec_display')}      value={product.specs.display} />
-            <SpecRow label={t('product.spec_battery')}      value={product.specs.batteryCapacity} />
-            <SpecRow label={t('product.spec_camera')}       value={product.specs.camera} />
-            <SpecRow label={t('product.spec_os')}           value={product.specs.os} />
-            <SpecRow label={t('product.spec_weight')}       value={product.specs.weight} />
+            <SpecRow label={t('product.spec_cpu')}     value={product.specs.cpu} />
+            <SpecRow label={t('product.spec_ram')}     value={product.specs.ram} />
+            <SpecRow label={t('product.spec_storage')} value={product.specs.storage} />
+            <SpecRow label={t('product.spec_display')} value={product.specs.display} />
+            <SpecRow label={t('product.spec_battery')} value={product.specs.batteryCapacity} />
+            <SpecRow label={t('product.spec_camera')}  value={product.specs.camera} />
+            <SpecRow label={t('product.spec_os')}      value={product.specs.os} />
+            <SpecRow label={t('product.spec_weight')}  value={product.specs.weight} />
           </div>
         </div>
       </div>

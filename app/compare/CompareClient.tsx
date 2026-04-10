@@ -323,6 +323,12 @@ function ActionButtons({
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ msg: string; sub: string } | null>(null)
+
+  const showToast = (msg: string, sub: string) => {
+    setToast({ msg, sub })
+    setTimeout(() => setToast(null), 2500)
+  }
 
   const handleShare = async () => {
     const url = window.location.href
@@ -344,62 +350,79 @@ function ActionButtons({
   const wrap = async (key: string, fn: () => Promise<void>) => {
     setExporting(key)
     setOpen(false)
-    try { await fn() } finally { setExporting(null) }
+    try {
+      await fn()
+      if (key === 'html')  showToast('HTML 코드가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+      if (key === 'image') showToast('이미지가 복사되었습니다', 'Ctrl+V (⌘+V)로 붙여넣기 하세요')
+    } finally {
+      setExporting(null)
+    }
   }
 
   return (
-    <div className="flex items-center justify-end gap-3 mb-12 print:hidden">
-      {/* Export dropdown */}
-      <div className="relative">
+    <>
+      {/* Toast overlay */}
+      {toast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white text-black rounded-2xl px-8 py-5 shadow-2xl text-center">
+            <p className="font-bold text-base">✓ {toast.msg}</p>
+            <p className="text-sm text-black/50 mt-1">{toast.sub}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-3 mb-12 print:hidden">
+        {/* Export dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            내보내기
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+          {open && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+              <div className="absolute right-0 bottom-full mb-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[200px] z-20">
+                <button
+                  onClick={() => wrap('html', onExportHTML)}
+                  disabled={!!exporting}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+                >
+                  <Code2 className="w-4 h-4 flex-shrink-0" />
+                  HTML 코드 복사
+                </button>
+                <button
+                  onClick={() => wrap('image', onExportImage)}
+                  disabled={!!exporting}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+                >
+                  <Copy className="w-4 h-4 flex-shrink-0" />
+                  이미지 복사
+                </button>
+                <button
+                  onClick={() => wrap('pdf', onExportPDF)}
+                  disabled={!!exporting}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+                >
+                  <FileDown className="w-4 h-4 flex-shrink-0" />
+                  PDF 저장
+                </button>
+              </div>
+            </>
+          )}
+        </div>
         <button
-          onClick={() => setOpen((o) => !o)}
+          onClick={handleShare}
           className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
         >
-          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          {t('compare.export_pdf')}
-          <ChevronDown className="w-3.5 h-3.5" />
+          <Share2 className="w-4 h-4" />
+          {copied ? 'Copied!' : t('compare.share')}
         </button>
-        {open && (
-          <>
-            {/* backdrop */}
-            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 bottom-full mb-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[200px] z-20">
-              <button
-                onClick={() => wrap('html', onExportHTML)}
-                disabled={!!exporting}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
-              >
-                <Code2 className="w-4 h-4 flex-shrink-0" />
-                HTML 코드 복사
-              </button>
-              <button
-                onClick={() => wrap('image', onExportImage)}
-                disabled={!!exporting}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
-              >
-                <Copy className="w-4 h-4 flex-shrink-0" />
-                이미지 복사
-              </button>
-              <button
-                onClick={() => wrap('pdf', onExportPDF)}
-                disabled={!!exporting}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
-              >
-                <FileDown className="w-4 h-4 flex-shrink-0" />
-                PDF 저장
-              </button>
-            </div>
-          </>
-        )}
       </div>
-      <button
-        onClick={handleShare}
-        className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
-      >
-        <Share2 className="w-4 h-4" />
-        {copied ? 'Copied!' : t('compare.share')}
-      </button>
-    </div>
+    </>
   )
 }
 
@@ -940,7 +963,7 @@ export default function CompareClient() {
     const el = compareTableRef.current
     if (!el) return
     const { default: html2canvas } = await import('html2canvas')
-    const canvas = await html2canvas(el, { backgroundColor: '#111827', scale: 2, useCORS: true, logging: false })
+    const canvas = await html2canvas(el, { backgroundColor: '#111827', scale: 2, useCORS: true, logging: false, ignoreElements: (e) => e.getAttribute('data-export-exclude') === 'true' })
     canvas.toBlob(async (blob) => {
       if (!blob) return
       try {
@@ -962,7 +985,7 @@ export default function CompareClient() {
     if (!el) return
     const { default: html2canvas } = await import('html2canvas')
     const { default: jsPDF } = await import('jspdf')
-    const canvas = await html2canvas(el, { backgroundColor: '#111827', scale: 2, useCORS: true, logging: false })
+    const canvas = await html2canvas(el, { backgroundColor: '#111827', scale: 2, useCORS: true, logging: false, ignoreElements: (e) => e.getAttribute('data-export-exclude') === 'true' })
     const imgData = canvas.toDataURL('image/png')
     // Landscape A4: 297mm x 210mm
     const pdfW = 297
@@ -1087,13 +1110,14 @@ export default function CompareClient() {
                     <div key={p.id} className="p-4 border-l border-border">
                       <ProductCard product={p} />
 
-                      {/* Amazon button */}
+                      {/* Amazon button — 내보내기시 제외 */}
                       {p.raw.amazon_url && (
                         <a
                           href={p.raw.amazon_url}
                           target="_blank"
                           rel="noopener noreferrer sponsored"
                           onClick={(e) => e.stopPropagation()}
+                          data-export-exclude="true"
                           className="mt-3 flex items-center justify-center gap-2 w-full py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
                           style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
                         >
