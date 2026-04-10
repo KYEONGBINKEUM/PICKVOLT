@@ -137,15 +137,18 @@ export async function GET(
     ipRating:        null,
   }
 
-  return NextResponse.json({
-    id:        product.id,
-    name:      product.name,
-    brand:     product.brand,
-    category:  product.category,
-    price_usd: product.price_usd,
-    image_url: product.image_url,
-    source_url: product.source_url,
-    specs,
-    raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
-  })
+  return NextResponse.json(
+    {
+      id:        product.id,
+      name:      product.name,
+      brand:     product.brand,
+      category:  product.category,
+      price_usd: product.price_usd,
+      image_url: product.image_url,
+      source_url: product.source_url,
+      specs,
+      raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
+    },
+    { headers: { 'Cache-Control': 'no-store' } }
+  )
 }

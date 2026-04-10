@@ -3,12 +3,17 @@ import ProductClient from './ProductClient'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+export const dynamic = 'force-dynamic'
+
+function makeSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 async function getProduct(id: string) {
+  const supabase = makeSupabase()
   const { data: product, error } = await supabase
     .from('products')
     .select(`
