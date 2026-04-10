@@ -158,9 +158,6 @@ function ProductCard({ product }: { product: Product }) {
       >
         {product.name}
       </Link>
-      {product.specs.os && (
-        <p className="text-white/40 text-xs mt-1">{product.specs.os}</p>
-      )}
     </div>
   )
 }
