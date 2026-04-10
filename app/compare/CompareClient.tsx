@@ -20,6 +20,12 @@ interface ProductSpecs {
   cpu?: string | null
   cpuSpeedMHz?: number | null
   performanceScore?: number | null
+  gb6Single?: number | null
+  gb6Multi?: number | null
+  tdmark?: number | null
+  antutu?: number | null
+  cinebenchSingle?: number | null
+  cinebenchMulti?: number | null
   ram?: string | null
   storage?: string | null
   display?: string | null
