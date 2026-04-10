@@ -580,9 +580,18 @@ function applyClientFilters(products: Product[], filters: Filters): Product[] {
     const price = p.price_usd ?? 0
     if (price > 0 && (price < filters.priceMin || price > filters.priceMax)) return false
 
-    // RAM
-    const ram = p.ram_gb ?? 0
-    if (ram > 0 && (ram < filters.ramMin || ram > filters.ramMax)) return false
+    // RAM — ram_gb는 "8" 또는 "8, 16" 같은 TEXT. 모든 옵션을 파싱해서 비교
+    if (p.ram_gb != null) {
+      const ramOpts = String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n))
+      if (ramOpts.length > 0) {
+        const minRam = Math.min(...ramOpts)
+        const maxRam = Math.max(...ramOpts)
+        // ramMin: 가장 낮은 옵션도 최소값 미만이면 제외
+        if (maxRam < filters.ramMin) return false
+        // ramMax: 가장 낮은 옵션이 최대값 초과면 제외
+        if (minRam > filters.ramMax) return false
+      }
+    }
 
     // Display
     const disp = p.display_inch ?? 0
@@ -646,7 +655,14 @@ export default function CategoryClient({ category }: { category: string }) {
 
       // Compute actual max values from DB products
       const maxPrice   = Math.ceil(Math.max(0, ...results.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
-      const maxRam     = Math.ceil(Math.max(0, ...results.map((p) => p.ram_gb       ?? 0)) / 2)   * 2   || DEFAULT_FILTERS.ramMax
+      const allRamVals = results.flatMap((p) =>
+        p.ram_gb != null
+          ? String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n))
+          : []
+      )
+      const maxRam     = allRamVals.length > 0
+        ? Math.ceil(Math.max(0, ...allRamVals) / 2) * 2
+        : DEFAULT_FILTERS.ramMax
       const maxDisplay = Math.ceil(Math.max(0, ...results.map((p) => p.display_inch ?? 0)) * 10)  / 10  || DEFAULT_FILTERS.displayMax
       const maxBattery = Math.ceil(Math.max(0, ...results.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
 
