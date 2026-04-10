@@ -592,12 +592,18 @@ export default function CompareClient() {
     ? products.map((p) => {
         return computeRelativeScores({
           category,
-          relativeScore:  p.specs.performanceScore,
-          ram_gb:         p.raw.ram_gb,
-          battery_mah:    p.raw.battery_mah,
-          battery_wh:     p.raw.battery_wh,
-          battery_hours:  p.raw.battery_hours,
-          camera_main_mp: p.raw.camera_main_mp,
+          relativeScore:    p.specs.performanceScore,
+          gb6Single:        p.specs.gb6Single,
+          gb6Multi:         p.specs.gb6Multi,
+          tdmark:           p.specs.tdmark,
+          antutu:           p.specs.antutu,
+          cinebenchSingle:  p.specs.cinebenchSingle,
+          cinebenchMulti:   p.specs.cinebenchMulti,
+          ram_gb:           p.raw.ram_gb,
+          battery_mah:      p.raw.battery_mah,
+          battery_wh:       p.raw.battery_wh,
+          battery_hours:    p.raw.battery_hours,
+          camera_main_mp:   p.raw.camera_main_mp,
         }, categoryStats)
       })
     : null
@@ -925,7 +931,7 @@ export default function CompareClient() {
           <div className="mt-8">
             {/* AI Pick 영역 */}
             {loadingAI && <AIPickLoading t={t} />}
-            {sessionLoaded && !session && !loadingAI && !aiResult && <AIPickLocked t={t} />}
+            {sessionLoaded && !session && !loadingAI && !aiResult && !error && <AIPickLocked t={t} />}
             {!loadingAI && aiResult && (
               <>
                 <AIPickBanner

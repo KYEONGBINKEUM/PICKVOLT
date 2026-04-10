@@ -196,21 +196,50 @@ export interface RelativeScoreBreakdown {
  * DB 전체 min/max 기준 상대 점수 산출 — 신제품 추가 시 기존 제품 점수 자동 하락
  *
  * 점수 반영 기준:
- *  - CPU relative_score (0–1000, DB 자체 기준) 만 사용 — Geekbench 등 상업 벤치마크 미사용
+ *  - 실제 벤치마크 수치(GB6/AnTuTu/Cinebench)가 있으면 절대값 기준 정규화 → M5/M4 자동 차등화
+ *  - 벤치마크 없으면 relative_score / DB최고점 fallback
  *  - 무게 / 스토리지 / 디스플레이는 개인 취향 차이가 크고 스펙 분기가 많아 overall에서 제외
  *  - 반영 항목: Performance · RAM · Battery · Camera (스마트폰·태블릿)
  */
+
+/** 실 벤치마크 수치로 성능 점수 계산 (있는 지표만 평균) — 없으면 null */
+function benchmarkPerf(input: ScoringInput): number | null {
+  const isDesktop = input.category === 'laptop'
+  const parts: number[] = []
+
+  if (isDesktop) {
+    // Cinebench 우선
+    if (input.cinebenchSingle != null) parts.push(Math.min(1, input.cinebenchSingle / 150))
+    if (input.cinebenchMulti  != null) parts.push(Math.min(1, input.cinebenchMulti  / 45000))
+    // Cinebench 없으면 GB6 fallback
+    if (parts.length === 0) {
+      if (input.gb6Single != null) parts.push(Math.min(1, input.gb6Single / 4200))
+      if (input.gb6Multi  != null) parts.push(Math.min(1, input.gb6Multi  / 15000))
+    }
+  } else {
+    if (input.gb6Single != null) parts.push(Math.min(1, input.gb6Single / 4200))
+    if (input.gb6Multi  != null) parts.push(Math.min(1, input.gb6Multi  / 15000))
+    if (input.tdmark    != null) parts.push(Math.min(1, input.tdmark    / 3000))
+    if (input.antutu    != null) parts.push(Math.min(1, input.antutu    / 3000000))
+  }
+
+  if (parts.length === 0) return null
+  return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
+}
+
 export function computeRelativeScores(
   input: ScoringInput,
   stats: CategoryStats,
 ): RelativeScoreBreakdown {
   const { category } = input
 
-  // Performance는 0을 바닥으로 고정 — (점수 / DB최고점) × 100
-  // min-max 정규화 시 하위 제품이 0이 되어 상위권 제품이 실제보다 낮아 보이는 문제 방지
-  const perf = input.relativeScore != null && stats.relativeScore.max > 0
-    ? Math.min(100, Math.round(input.relativeScore / stats.relativeScore.max * 100))
-    : 0
+  // 실 벤치마크 수치가 있으면 절대값 기준, 없으면 DB 상대 점수 fallback
+  const perfFromBench = benchmarkPerf(input)
+  const perf = perfFromBench != null
+    ? perfFromBench
+    : (input.relativeScore != null && stats.relativeScore.max > 0
+        ? Math.min(100, Math.round(input.relativeScore / stats.relativeScore.max * 100))
+        : 0)
   const ram  = relHigh(firstNum(input.ram_gb), stats.ram)
 
   if (category === 'smartphone') {
