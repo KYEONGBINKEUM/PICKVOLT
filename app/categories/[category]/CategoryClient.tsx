@@ -563,6 +563,26 @@ function FilterSidebar({
   )
 }
 
+// ─── OS 대분류 매핑 ───────────────────────────────────────────────────────────
+
+const OS_GROUP_MAP: [RegExp, string][] = [
+  [/android/i,              'Android'],
+  [/ipad\s*os|ipados/i,     'iPadOS'],
+  [/ios/i,                  'iOS'],
+  [/windows/i,              'Windows'],
+  [/mac\s*os|macos/i,       'macOS'],
+  [/chrome\s*os|chromeos/i, 'ChromeOS'],
+  [/harmony/i,              'HarmonyOS'],
+  [/linux/i,                'Linux'],
+]
+
+function osGroup(os: string): string {
+  for (const [pattern, label] of OS_GROUP_MAP) {
+    if (pattern.test(os)) return label
+  }
+  return os  // 매핑 없으면 원본 그대로
+}
+
 // ─── Client-side filter logic ─────────────────────────────────────────────────
 
 function applyClientFilters(products: Product[], filters: Filters): Product[] {
@@ -597,8 +617,8 @@ function applyClientFilters(products: Product[], filters: Filters): Product[] {
     const disp = p.display_inch ?? 0
     if (disp > 0 && (disp < filters.displayMin || disp > filters.displayMax)) return false
 
-    // OS
-    if (filters.os && p.os !== filters.os) return false
+    // OS — 대분류로 비교
+    if (filters.os && (!p.os || osGroup(p.os) !== filters.os)) return false
 
     // Battery
     const bat = p.battery_mah ?? 0
@@ -649,7 +669,7 @@ export default function CategoryClient({ category }: { category: string }) {
 
       // Extract unique OS values
       const osValues = Array.from(new Set(
-        results.map((p) => p.os).filter(Boolean) as string[]
+        results.map((p) => p.os).filter(Boolean).map((os) => osGroup(os as string))
       )).sort()
       setAvailableOsList(osValues)
 

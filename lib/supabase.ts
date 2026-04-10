@@ -15,6 +15,7 @@ export interface ComparisonHistory {
     winner: string
     summary: string
     reasoning: string
+    scores?: Record<string, { value: number; reason: string }>
   }
   pinned: boolean
   created_at: string
