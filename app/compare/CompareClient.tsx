@@ -397,6 +397,7 @@ export default function CompareClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const idsParam = searchParams.get('ids') ?? ''
+  const historyId = searchParams.get('history') ?? ''
   const { t, locale } = useI18n()
 
   const [products, setProducts] = useState<Product[]>([])
@@ -437,7 +438,7 @@ export default function CompareClient() {
       .catch(() => {})
   }, [])
 
-  const runComparison = useCallback(async (ids: string[]) => {
+  const runComparison = useCallback(async (ids: string[], fromHistoryId?: string) => {
     if (ids.length < 2) return
 
     setLoading(true)
@@ -461,8 +462,34 @@ export default function CompareClient() {
       }
 
       setProducts(validProducts)
+      setLoading(false)
+
+      // ── 히스토리에서 불러온 경우: 저장된 AI 결과 사용 (API 재호출 없음) ──
+      if (fromHistoryId) {
+        // 로그인 유저: Supabase에서 저장된 결과 fetch
+        if (fromHistoryId.startsWith('local_')) {
+          // 로컬 히스토리: localStorage에서 결과 읽기
+          const { getLocalHistory } = await import('@/lib/localHistory')
+          const localItems = getLocalHistory()
+          const found = localItems.find((item) => item.id === fromHistoryId)
+          if (found?.result) {
+            setAiResult(found.result as AiResult)
+            return
+          }
+        } else {
+          const { data } = await supabase
+            .from('comparison_history')
+            .select('result')
+            .eq('id', fromHistoryId)
+            .single()
+          if (data?.result) {
+            setAiResult(data.result as AiResult)
+            return
+          }
+        }
+      }
+
       setLoadingAI(true)   // 스펙 완료 즉시 AI 로딩 표시 시작
-      setLoading(false)    // 테이블 즉시 표시
 
       // ── 2단계: AI 비교 ────────────────────────────────────────────────────
       const comparePayload = JSON.stringify({
@@ -551,8 +578,8 @@ export default function CompareClient() {
     if (ranKeyRef.current === key) return
 
     ranKeyRef.current = key
-    runComparison(ids)
-  }, [idsParam, runComparison, session, sessionLoaded])
+    runComparison(ids, historyId || undefined)
+  }, [idsParam, historyId, runComparison, session, sessionLoaded])
 
   // 카테고리 결정 후 DB 전체 min/max 범위 조회
   useEffect(() => {

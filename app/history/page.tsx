@@ -61,7 +61,7 @@ function HistoryCard({
           {item.products.length} {t('history.products')}
         </span>
         <Link
-          href={`/compare?ids=${item.products.join(',')}`}
+          href={`/compare?ids=${item.products.join(',')}&history=${item.id}`}
           className="text-xs font-semibold text-white/70 hover:text-white border border-border hover:border-white/20 px-4 py-1.5 rounded-full transition-all"
         >
           {t('history.view')}
