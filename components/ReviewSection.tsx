@@ -34,6 +34,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [content, setContent] = useState('')
@@ -41,8 +42,12 @@ export default function ReviewSection({ productId, compact = false }: Props) {
   const [errMsg, setErrMsg] = useState('')
 
   useEffect(() => {
+    const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+      .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
     supabase.auth.getSession().then(({ data }) => {
+      const email = (data.session?.user.email ?? '').toLowerCase()
       setMyUserId(data.session?.user.id ?? null)
+      setIsAdmin(adminEmails.length > 0 && adminEmails.includes(email))
       setToken(data.session?.access_token ?? null)
       setSessionLoaded(true)
     })
@@ -199,7 +204,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
                     <p className="text-[10px] text-white/30">{timeAgo(r.created_at)}</p>
                   </div>
                 </div>
-                {r.user_id === myUserId && (
+                {(r.user_id === myUserId || isAdmin) && (
                   <button
                     onClick={() => handleDelete(r.id)}
                     className="text-white/20 hover:text-red-400 transition-colors"

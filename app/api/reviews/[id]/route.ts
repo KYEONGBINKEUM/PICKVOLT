@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean)
+
 async function getAuthUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '')
   if (!token) return null
@@ -20,6 +25,8 @@ export async function DELETE(
   const user = await getAuthUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
+  const isAdmin = ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
+
   const { id } = await params
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +40,9 @@ export async function DELETE(
     .single()
 
   if (!review) return NextResponse.json({ error: 'not found' }, { status: 404 })
-  if (review.user_id !== user.id) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  if (!isAdmin && review.user_id !== user.id) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
 
   const { error } = await supabase.from('reviews').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
