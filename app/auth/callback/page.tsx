@@ -11,25 +11,32 @@ function AuthCallbackInner() {
   useEffect(() => {
     const code = searchParams.get('code')
 
-    if (code) {
-      // PKCE flow: code를 세션으로 교환
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          router.replace('/login')
-        } else {
-          router.replace('/mypage')
-        }
-      })
-    } else {
-      // fallback: 이미 세션이 있는 경우
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          router.replace('/mypage')
-        } else {
-          router.replace('/login')
-        }
-      })
+    async function handleCallback() {
+      let userId: string | null = null
+
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) { router.replace('/login'); return }
+        userId = data.session?.user.id ?? null
+      } else {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.replace('/login'); return }
+        userId = session.user.id
+      }
+
+      if (!userId) { router.replace('/login'); return }
+
+      // 닉네임 설정 여부 확인
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      router.replace(profile ? '/mypage' : '/setup-nickname')
     }
+
+    handleCallback()
   }, [router, searchParams])
 
   return (

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2 } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -21,6 +21,11 @@ export default function MyPage() {
   const [showCurrMenu, setShowCurrMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [nickname, setNickname] = useState<string | null>(null)
+  const [editingNickname, setEditingNickname] = useState(false)
+  const [nicknameInput, setNicknameInput] = useState('')
+  const [nicknameSaving, setNicknameSaving] = useState(false)
+  const [nicknameError, setNicknameError] = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -53,6 +58,13 @@ export default function MyPage() {
           .select('id', { count: 'exact', head: true })
           .eq('user_id', data.user.id)
           .then(({ count }) => setCompareCount(count ?? 0))
+
+        supabase
+          .from('profiles')
+          .select('nickname')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+          .then(({ data: p }) => setNickname(p?.nickname ?? null))
       }
     })
   }, [])
@@ -78,6 +90,22 @@ export default function MyPage() {
       setIsDeleting(false)
       setShowDeleteConfirm(false)
     }
+  }
+
+  const handleNicknameSave = async () => {
+    const trimmed = nicknameInput.trim()
+    if (trimmed.length < 2) { setNicknameError('2자 이상 입력해주세요'); return }
+    if (trimmed.length > 20) { setNicknameError('20자 이하로 입력해주세요'); return }
+    setNicknameSaving(true); setNicknameError('')
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setNicknameSaving(false); return }
+    const { error } = await supabase.from('profiles').upsert({ user_id: user.id, nickname: trimmed })
+    if (error) {
+      setNicknameError(error.code === '23505' ? '이미 사용 중인 닉네임입니다' : error.message)
+      setNicknameSaving(false)
+      return
+    }
+    setNickname(trimmed); setEditingNickname(false); setNicknameSaving(false)
   }
 
   const currentLang = LANGUAGES.find((l) => l.code === locale)
@@ -108,6 +136,48 @@ export default function MyPage() {
                 <p className="font-bold text-white">{user?.name ?? '...'}</p>
                 <p className="text-xs text-white/40">{user?.email ?? '...'}</p>
               </div>
+            </div>
+          </div>
+
+          {/* Nickname */}
+          <div className="bg-surface border border-border rounded-card p-5 mb-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <User className="w-4 h-4 text-white/40 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-white/40 mb-0.5">닉네임</p>
+                  {editingNickname ? (
+                    <input
+                      value={nicknameInput}
+                      onChange={(e) => setNicknameInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleNicknameSave()}
+                      maxLength={20}
+                      autoFocus
+                      className="bg-surface-2 border border-border rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-white/20 transition-colors w-40"
+                    />
+                  ) : (
+                    <p className="text-sm font-semibold text-white">{nickname ?? '설정되지 않음'}</p>
+                  )}
+                  {nicknameError && <p className="text-xs text-red-400 mt-1">{nicknameError}</p>}
+                </div>
+              </div>
+              {editingNickname ? (
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setEditingNickname(false); setNicknameError('') }} className="text-white/30 hover:text-white/60 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button onClick={handleNicknameSave} disabled={nicknameSaving} className="text-accent hover:text-accent/80 transition-colors disabled:opacity-40">
+                    <Check className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setNicknameInput(nickname ?? ''); setEditingNickname(true); setNicknameError('') }}
+                  className="text-white/30 hover:text-white/60 transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 

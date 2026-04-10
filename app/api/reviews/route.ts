@@ -29,8 +29,9 @@ export async function GET(req: NextRequest) {
   const supabase = makeServiceClient()
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, user_id, user_display_name, content, created_at')
+    .select('id, user_id, user_display_name, content, rating, likes, created_at')
     .eq('product_id', productId)
+    .order('likes', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -45,21 +46,29 @@ export async function POST(req: NextRequest) {
   const user = await getAuthUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { product_id, content } = await req.json()
+  const { product_id, content, rating } = await req.json()
   if (!product_id || !content?.trim()) {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
   }
   const trimmed = content.trim()
   if (trimmed.length < 10) return NextResponse.json({ error: '10자 이상 입력해주세요' }, { status: 400 })
   if (trimmed.length > 500) return NextResponse.json({ error: '500자 이하로 입력해주세요' }, { status: 400 })
-
-  const displayName = user.email?.split('@')[0] ?? 'user'
+  const ratingVal = typeof rating === 'number' && rating >= 1 && rating <= 10 ? rating : 5
 
   const supabase = makeServiceClient()
+
+  // 프로필에서 닉네임 조회 (없으면 이메일 앞부분 fallback)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nickname')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const displayName = profile?.nickname ?? user.email?.split('@')[0] ?? 'user'
+
   const { data, error } = await supabase
     .from('reviews')
-    .insert({ product_id, user_id: user.id, user_display_name: displayName, content: trimmed })
-    .select('id, user_id, user_display_name, content, created_at')
+    .insert({ product_id, user_id: user.id, user_display_name: displayName, content: trimmed, rating: ratingVal, likes: 0 })
+    .select('id, user_id, user_display_name, content, rating, likes, created_at')
     .single()
 
   if (error) {
