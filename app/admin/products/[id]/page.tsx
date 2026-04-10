@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap } from 'lucide-react'
+import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap, Copy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
@@ -133,6 +133,7 @@ export default function ProductEditPage() {
   const cpuSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [imagePreview, setImagePreview] = useState('')
   const [saving, setSaving] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [nameTranslations, setNameTranslations] = useState<Record<string, string>>({ en: '', ko: '', ja: '', es: '', pt: '', fr: '', de: '' })
@@ -419,6 +420,27 @@ export default function ProductEditPage() {
     }
   }
 
+  const handleDuplicate = async () => {
+    if (!confirm('이 제품을 복사하시겠어요? 복사본은 비공개로 생성됩니다.')) return
+    setDuplicating(true)
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json()
+      if (res.ok && json.id) {
+        router.push(`/admin/products/${json.id}`)
+      } else {
+        setMessage({ type: 'err', text: json.error ?? '복사 오류' })
+      }
+    } catch (e) {
+      setMessage({ type: 'err', text: String(e) })
+    } finally {
+      setDuplicating(false)
+    }
+  }
+
   const handleFileUpload = async (file: File) => {
     setUploading(true)
     setMessage(null)
@@ -479,6 +501,16 @@ export default function ProductEditPage() {
               className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors">
               <ExternalLink size={13} />소스
             </a>
+          )}
+          {!isNew && (
+            <button
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              className="flex items-center gap-2 bg-surface border border-border hover:border-white/20 text-white/60 hover:text-white font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-50 transition-colors"
+            >
+              {duplicating ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
+              복사
+            </button>
           )}
           <button
             onClick={handleSave}

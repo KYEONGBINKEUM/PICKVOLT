@@ -138,6 +138,70 @@ export async function PUT(
   return NextResponse.json({ ok: true, image_url: cacheBustedUrl })
 }
 
+// POST: 제품 복사 (is_visible = false 강제)
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const admin = await verifyAdmin(req)
+  if (!admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const supabase = makeServiceClient()
+
+  // 원본 제품 조회
+  const { data: original, error: fetchError } = await supabase
+    .from('products')
+    .select('name, brand, category, image_url, price_usd, source_url, scrape_status, name_translations')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !original) {
+    return NextResponse.json({ error: fetchError?.message ?? 'not found' }, { status: 404 })
+  }
+
+  // 새 제품 생성 (is_visible 항상 false)
+  const { data: newProduct, error: insertError } = await supabase
+    .from('products')
+    .insert({
+      name: `${original.name} (복사본)`,
+      brand: original.brand,
+      category: original.category,
+      image_url: original.image_url,
+      price_usd: original.price_usd,
+      source_url: original.source_url,
+      scrape_status: original.scrape_status,
+      name_translations: original.name_translations,
+      is_visible: false,
+    })
+    .select('id')
+    .single()
+
+  if (insertError || !newProduct) {
+    return NextResponse.json({ error: insertError?.message ?? 'insert failed' }, { status: 500 })
+  }
+
+  const newId = newProduct.id
+
+  // 스펙 테이블 복사
+  const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch'] as const
+  for (const tableName of specTables) {
+    const { data: specs } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('product_id', id)
+      .maybeSingle()
+
+    if (specs) {
+      const { id: _id, product_id: _pid, created_at: _ca, ...rest } = specs as Record<string, unknown> & { id: unknown; product_id: unknown; created_at: unknown }
+      void _id; void _pid; void _ca
+      await supabase.from(tableName).insert({ product_id: newId, ...rest })
+    }
+  }
+
+  return NextResponse.json({ id: newId })
+}
+
 // DELETE: 제품 삭제
 export async function DELETE(
   req: NextRequest,
