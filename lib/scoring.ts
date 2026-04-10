@@ -17,11 +17,12 @@ export function scoreCPU(
   tdmark: number | null = null,
   antutu: number | null = null,
 ): number {
+  // 0은 "미입력"으로 간주 (null과 동일 처리)
   const parts: number[] = []
-  if (gb6Single != null) parts.push(Math.min(1, gb6Single / 4200))
-  if (gb6Multi  != null) parts.push(Math.min(1, gb6Multi  / 12000))
-  if (tdmark    != null) parts.push(Math.min(1, tdmark    / 3000))
-  if (antutu    != null) parts.push(Math.min(1, antutu    / 3000000))
+  if (gb6Single) parts.push(Math.min(1, gb6Single / 4200))
+  if (gb6Multi)  parts.push(Math.min(1, gb6Multi  / 12000))
+  if (tdmark)    parts.push(Math.min(1, tdmark    / 3000))
+  if (antutu)    parts.push(Math.min(1, antutu    / 3000000))
 
   if (parts.length > 0) {
     return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
@@ -231,11 +232,12 @@ function benchmarkPerf(input: ScoringInput): number | null {
   }
 
   // 모바일 / 태블릿: 있는 지표 동등 분할 (필수 3개 + 선택 1개)
+  // 0은 "미입력"으로 간주 (null과 동일 처리)
   const parts: number[] = []
-  if (input.gb6Single != null) parts.push(Math.min(1, input.gb6Single / 4200))
-  if (input.gb6Multi  != null) parts.push(Math.min(1, input.gb6Multi  / 15000))
-  if (input.tdmark    != null) parts.push(Math.min(1, input.tdmark    / 3000))
-  if (input.antutu    != null) parts.push(Math.min(1, input.antutu    / 3000000))
+  if (input.gb6Single) parts.push(Math.min(1, input.gb6Single / 4200))
+  if (input.gb6Multi)  parts.push(Math.min(1, input.gb6Multi  / 15000))
+  if (input.tdmark)    parts.push(Math.min(1, input.tdmark    / 3000))
+  if (input.antutu)    parts.push(Math.min(1, input.antutu    / 3000000))
 
   if (parts.length === 0) return null
   return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
