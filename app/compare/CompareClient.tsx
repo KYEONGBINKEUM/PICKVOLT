@@ -546,6 +546,7 @@ export default function CompareClient() {
               winner: compareData.winner,
               summary: compareData.summary,
               reasoning: compareData.reasoning,
+              scores: compareData.scores ?? {},
             },
             created_at: new Date().toISOString(),
           })

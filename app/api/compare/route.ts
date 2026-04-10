@@ -157,6 +157,7 @@ export async function POST(req: NextRequest) {
         winner: result.winner,
         summary: result.summary,
         reasoning: result.reasoning,
+        scores: result.scores ?? {},
       },
       pinned: false,
     })
