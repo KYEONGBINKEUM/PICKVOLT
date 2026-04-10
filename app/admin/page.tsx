@@ -7,7 +7,7 @@ import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
-  Eye, EyeOff,
+  Eye, EyeOff, Copy,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -107,6 +107,7 @@ export default function AdminPage() {
   const [brand, setBrand] = useState('')
   const [page, setPage] = useState(0)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [duplicating, setDuplicating] = useState<string | null>(null)
 
   // Users
   const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; plan: string; provider: string }[]>([])
@@ -561,6 +562,20 @@ export default function AdminPage() {
     setDeleting(null)
   }
 
+  const handleDuplicateProduct = async (id: string, name: string) => {
+    if (!confirm(`"${name}" 제품을 복사하시겠습니까? 복사본은 비공개로 생성됩니다.`)) return
+    setDuplicating(id)
+    const res = await fetch(`/api/admin/products/${id}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const json = await res.json()
+    if (res.ok && json.id) {
+      router.push(`/admin/products/${json.id}`)
+    }
+    setDuplicating(null)
+  }
+
   // ── Loading ───────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -791,6 +806,14 @@ export default function AdminPage() {
                             className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-accent transition-colors inline-flex">
                             <Edit2 size={13} />
                           </Link>
+                          <button
+                            onClick={() => handleDuplicateProduct(p.id, p.name)}
+                            disabled={duplicating === p.id}
+                            title="복사"
+                            className="p-1.5 rounded hover:bg-white/10 text-white/20 hover:text-white/60 transition-colors inline-flex disabled:opacity-40"
+                          >
+                            {duplicating === p.id ? <RefreshCw size={13} className="animate-spin" /> : <Copy size={13} />}
+                          </button>
                           <button
                             onClick={() => handleDeleteProduct(p.id, p.name)}
                             disabled={deleting === p.id}
