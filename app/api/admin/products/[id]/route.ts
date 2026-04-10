@@ -123,18 +123,19 @@ export async function PUT(
   const newPath = `products/${id}-${ts}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
 
-  // 기존 이미지 파일 삭제 (이름이 달라도 정리)
-  const { data: existing } = await supabase.from('products').select('image_url').eq('id', id).single()
-  if (existing?.image_url) {
-    const oldPath = existing.image_url.split('/product-images/')[1]?.split('?')[0]
-    if (oldPath) await supabase.storage.from('product-images').remove([oldPath])
-  }
-
+  // 새 파일을 먼저 업로드 — 성공한 뒤에 기존 파일 삭제
   const { error: uploadError } = await supabase.storage
     .from('product-images')
     .upload(newPath, arrayBuffer, { contentType: file.type })
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
+
+  // 업로드 성공 후 기존 파일 삭제
+  const { data: existing } = await supabase.from('products').select('image_url').eq('id', id).single()
+  if (existing?.image_url) {
+    const oldPath = existing.image_url.split('/product-images/')[1]?.split('?')[0]
+    if (oldPath) await supabase.storage.from('product-images').remove([oldPath])
+  }
 
   const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(newPath)
   await supabase.from('products').update({ image_url: publicUrl }).eq('id', id)
@@ -165,13 +166,14 @@ export async function POST(
   }
 
   // 새 제품 생성 (is_visible 항상 false)
+  // image_url은 복사하지 않음 — 같은 스토리지 파일을 공유하면 한쪽 이미지 교체 시 원본 파일이 삭제됨
   const { data: newProduct, error: insertError } = await supabase
     .from('products')
     .insert({
       name: `${original.name} (복사본)`,
       brand: original.brand,
       category: original.category,
-      image_url: original.image_url,
+      image_url: null,
       price_usd: original.price_usd,
       source_url: original.source_url,
       scrape_status: original.scrape_status,
@@ -216,6 +218,13 @@ export async function DELETE(
 
   const { id } = await params
   const supabase = makeServiceClient()
+
+  // 스토리지 파일 먼저 정리
+  const { data: existing } = await supabase.from('products').select('image_url').eq('id', id).single()
+  if (existing?.image_url) {
+    const oldPath = existing.image_url.split('/product-images/')[1]?.split('?')[0]
+    if (oldPath) await supabase.storage.from('product-images').remove([oldPath])
+  }
 
   const { error } = await supabase.from('products').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,6 +1,14 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
+-- profiles 테이블에 avatar_url 컬럼 추가 (없을 경우)
+-- Supabase 대시보드 SQL Editor에서 실행:
+-- alter table profiles add column if not exists avatar_url text;
+--
+-- avatars 버킷 생성 (Storage > New bucket):
+--   Name: avatars
+--   Public: true
+
 -- Comparison history
 create table if not exists comparison_history (
   id uuid primary key default uuid_generate_v4(),

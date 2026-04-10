@@ -67,7 +67,7 @@ export default function SetupNicknamePage() {
       setLoading(false)
       return
     }
-    router.replace('/mypage')
+    router.replace('/setup-avatar')
   }
 
   if (checking) {

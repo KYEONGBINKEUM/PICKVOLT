@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -14,7 +14,7 @@ export default function MyPage() {
   const { currency, setCurrency } = useCurrency()
   const router = useRouter()
 
-  const [user, setUser] = useState<{ email: string; name: string; avatar: string } | null>(null)
+  const [user, setUser] = useState<{ email: string; name: string } | null>(null)
   const [compareCount, setCompareCount] = useState<number | null>(null)
   const [isPro, setIsPro] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
@@ -22,6 +22,10 @@ export default function MyPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [nickname, setNickname] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
+  const avatarFileRef = useRef<HTMLInputElement>(null)
   const [editingNickname, setEditingNickname] = useState(false)
   const [nicknameInput, setNicknameInput] = useState('')
   const [nicknameSaving, setNicknameSaving] = useState(false)
@@ -36,7 +40,6 @@ export default function MyPage() {
         setUser({
           email,
           name: data.user.user_metadata?.full_name ?? email ?? 'user',
-          avatar: data.user.user_metadata?.avatar_url ?? '',
         })
 
         // 어드민 이메일이면 자동 pro
@@ -63,10 +66,13 @@ export default function MyPage() {
 
         supabase
           .from('profiles')
-          .select('nickname')
+          .select('nickname, avatar_url')
           .eq('user_id', data.user.id)
           .maybeSingle()
-          .then(({ data: p }) => setNickname(p?.nickname ?? null))
+          .then(({ data: p }) => {
+            setNickname(p?.nickname ?? null)
+            setAvatarUrl(p?.avatar_url ?? null)
+          })
       }
     })
   }, [])
@@ -92,6 +98,49 @@ export default function MyPage() {
       setIsDeleting(false)
       setShowDeleteConfirm(false)
     }
+  }
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarError('')
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) { setAvatarError(t('avatar.error_type')); return }
+    if (file.size > 5 * 1024 * 1024) { setAvatarError(t('avatar.error_size')); return }
+
+    setAvatarUploading(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setAvatarUploading(false); return }
+
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch('/api/user/avatar', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: formData,
+    })
+
+    if (!res.ok) {
+      setAvatarError(t('avatar.error_upload'))
+    } else {
+      const json = await res.json()
+      setAvatarUrl(json.avatar_url + `?t=${Date.now()}`)
+    }
+    setAvatarUploading(false)
+    if (e.target) e.target.value = ''
+  }
+
+  const handleAvatarRemove = async () => {
+    setAvatarUploading(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setAvatarUploading(false); return }
+    await fetch('/api/user/avatar', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+    setAvatarUrl(null)
+    setAvatarUploading(false)
   }
 
   const handleNicknameInputChange = (value: string) => {
@@ -138,21 +187,51 @@ export default function MyPage() {
           {/* Profile card */}
           <div className="bg-surface border border-border rounded-card p-6 mb-4">
             <div className="flex items-center gap-4">
-              {user?.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center">
-                  <span className="text-accent font-bold text-lg">
-                    {(user?.name?.[0] ?? 'U').toUpperCase()}
-                  </span>
+              {/* Avatar with change button */}
+              <div className="relative flex-shrink-0">
+                <div className="w-14 h-14 rounded-full overflow-hidden bg-accent/20 flex items-center justify-center">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt={nickname ?? user?.name ?? ''} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-accent font-bold text-xl">
+                      {(nickname?.[0] ?? user?.name?.[0] ?? 'U').toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => avatarFileRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-accent flex items-center justify-center disabled:opacity-50"
+                >
+                  <Camera className="w-3 h-3 text-white" />
+                </button>
+                <input
+                  ref={avatarFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarFileChange}
+                  className="hidden"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white truncate">{user?.name ?? '...'}</p>
+                <p className="text-xs text-white/40 truncate">{user?.email ?? '...'}</p>
+                {avatarUrl && (
+                  <button onClick={handleAvatarRemove} disabled={avatarUploading} className="text-[10px] text-white/30 hover:text-white/50 transition-colors mt-0.5 disabled:opacity-40">
+                    {t('avatar.remove')}
+                  </button>
+                )}
+              </div>
+              {avatarUploading && (
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  ))}
                 </div>
               )}
-              <div>
-                <p className="font-bold text-white">{user?.name ?? '...'}</p>
-                <p className="text-xs text-white/40">{user?.email ?? '...'}</p>
-              </div>
             </div>
+            {avatarError && <p className="mt-3 text-xs text-red-400">{avatarError}</p>}
           </div>
 
           {/* Nickname */}
