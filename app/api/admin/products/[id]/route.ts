@@ -131,9 +131,11 @@ export async function PUT(
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
-  await supabase.from('products').update({ image_url: publicUrl }).eq('id', id)
+  // Append cache-buster so CDN serves the new image immediately
+  const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
+  await supabase.from('products').update({ image_url: cacheBustedUrl }).eq('id', id)
 
-  return NextResponse.json({ ok: true, image_url: publicUrl })
+  return NextResponse.json({ ok: true, image_url: cacheBustedUrl })
 }
 
 // DELETE: 제품 삭제

@@ -17,7 +17,12 @@
       "Bash(sed -n '140,160p' app/admin/page.tsx)",
       "Bash(sed -n '495,545p' app/admin/page.tsx)",
       "Bash(sed -n '88,110p' app/admin/page.tsx)",
-      "Bash(sed -n '205,240p' app/admin/page.tsx)"
+      "Bash(sed -n '205,240p' app/admin/page.tsx)",
+      "Bash(ls /tmp/*.png /tmp/*.jpg)",
+      "Read(//Users/keumkyeongbin/Downloads/**)",
+      "Read(//private/var/folders/**)",
+      "Bash(curl -L \"https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg\" -o \"/Users/keumkyeongbin/바이브 코딩/PICKVOLT/public/amazon-logo.svg\")",
+      "Bash(npm list:*)"
     ]
   }
 }

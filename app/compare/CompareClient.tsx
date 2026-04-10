@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Download, Share2, ChevronRight, RotateCcw, Loader2, TrendingUp, Lock, Zap } from 'lucide-react'
+import { Download, Share2, ChevronRight, RotateCcw, Loader2, TrendingUp, Lock, Zap, Code2, FileDown, Copy, ChevronDown } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n, type Locale } from '@/lib/i18n'
@@ -309,8 +309,20 @@ function AIPickLoading({ t }: { t: (k: string) => string }) {
 }
 
 /* ---------- Action Buttons ---------- */
-function ActionButtons({ t, onExportPDF }: { t: (k: string) => string; onExportPDF: () => void }) {
+function ActionButtons({
+  t,
+  onExportHTML,
+  onExportImage,
+  onExportPDF,
+}: {
+  t: (k: string) => string
+  onExportHTML: () => Promise<void>
+  onExportImage: () => Promise<void>
+  onExportPDF: () => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [exporting, setExporting] = useState<string | null>(null)
 
   const handleShare = async () => {
     const url = window.location.href
@@ -329,18 +341,60 @@ function ActionButtons({ t, onExportPDF }: { t: (k: string) => string; onExportP
     }
   }
 
+  const wrap = async (key: string, fn: () => Promise<void>) => {
+    setExporting(key)
+    setOpen(false)
+    try { await fn() } finally { setExporting(null) }
+  }
+
   return (
-    <div className="flex items-center justify-end gap-3 mb-12">
-      <button
-        onClick={onExportPDF}
-        className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 print:hidden"
-      >
-        <Download className="w-4 h-4" />
-        {t('compare.export_pdf')}
-      </button>
+    <div className="flex items-center justify-end gap-3 mb-12 print:hidden">
+      {/* Export dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
+        >
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {t('compare.export_pdf')}
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+        {open && (
+          <>
+            {/* backdrop */}
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 bottom-full mb-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[200px] z-20">
+              <button
+                onClick={() => wrap('html', onExportHTML)}
+                disabled={!!exporting}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+              >
+                <Code2 className="w-4 h-4 flex-shrink-0" />
+                HTML 코드 복사
+              </button>
+              <button
+                onClick={() => wrap('image', onExportImage)}
+                disabled={!!exporting}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+              >
+                <Copy className="w-4 h-4 flex-shrink-0" />
+                이미지 복사
+              </button>
+              <button
+                onClick={() => wrap('pdf', onExportPDF)}
+                disabled={!!exporting}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+              >
+                <FileDown className="w-4 h-4 flex-shrink-0" />
+                PDF 저장
+              </button>
+            </div>
+          </>
+        )}
+      </div>
       <button
         onClick={handleShare}
-        className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 print:hidden"
+        className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
       >
         <Share2 className="w-4 h-4" />
         {copied ? 'Copied!' : t('compare.share')}
@@ -413,6 +467,7 @@ export default function CompareClient() {
 
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
   const ranKeyRef = useRef<string>('')
+  const compareTableRef = useRef<HTMLDivElement>(null)
 
   // 세션 확인
   useEffect(() => {
@@ -845,91 +900,99 @@ export default function CompareClient() {
 
   const specRows = buildSpecRows()
 
+  const handleExportHTML = async () => {
+    const rows = specRows
+    const colStyle = `border: 1px solid #2a2a2a; padding: 12px 16px; vertical-align: top;`
+    const headerCols = products.map((p) =>
+      `<th style="${colStyle} background:#1a1a1a; color:#fff; font-size:13px;">${p.name}</th>`
+    ).join('')
+    const bodyRows = rows.map((row) =>
+      `<tr>
+        <td style="${colStyle} background:#161616; color:#aaa; font-size:11px; white-space:nowrap;">${row.label}</td>
+        ${row.values.map((v) =>
+          `<td style="${colStyle} color:#fff; font-size:13px; font-weight:700;">${v.primary}${v.secondary ? `<br><span style="font-size:10px;color:#666;font-weight:400;">${v.secondary}</span>` : ''}</td>`
+        ).join('')}
+      </tr>`
+    ).join('')
+    const aiRow = aiResult
+      ? `<tr><td colspan="${products.length + 1}" style="${colStyle} background:#ff6b2b22; color:#ff6b2b; font-size:13px; font-weight:700;">AI Pick: ${aiResult.winner} — ${aiResult.summary}</td></tr>`
+      : ''
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product Comparison — PICKVOLT</title>
+<style>body{margin:0;background:#0d0d0d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}table{border-collapse:collapse;width:100%;}h2{color:#fff;margin:0 0 16px;font-size:20px;}p{color:#888;font-size:12px;margin:0 0 20px;}</style>
+</head>
+<body style="padding:24px;">
+<h2>Product Comparison</h2>
+<p>pickvolt.com · ${new Date().toLocaleDateString()}</p>
+<table>
+  <thead><tr><th style="${colStyle} background:#111; color:#888; font-size:11px; text-align:left;">Spec</th>${headerCols}</tr></thead>
+  <tbody>${bodyRows}${aiRow}</tbody>
+</table>
+</body>
+</html>`
+    await navigator.clipboard.writeText(html)
+  }
+
+  const handleExportImage = async () => {
+    const el = compareTableRef.current
+    if (!el) return
+    const { default: html2canvas } = await import('html2canvas')
+    const canvas = await html2canvas(el, { backgroundColor: '#111827', scale: 2, useCORS: true, logging: false })
+    canvas.toBlob(async (blob) => {
+      if (!blob) return
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      } catch {
+        // Fallback: download as file if clipboard write is blocked
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `pickvolt-compare-${Date.now()}.png`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    })
+  }
+
   const handleExportPDF = async () => {
+    const el = compareTableRef.current
+    if (!el) return
+    const { default: html2canvas } = await import('html2canvas')
     const { default: jsPDF } = await import('jspdf')
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const pageW = 210
-    const margin = 14
-    const colW = (pageW - margin * 2) / products.length
-    let y = 20
-
-    // Title
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(30, 30, 30)
-    doc.text('Product Comparison', margin, y)
-    y += 8
-
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(120, 120, 120)
-    doc.text(`pickvolt.com  ·  ${new Date().toLocaleDateString()}`, margin, y)
-    y += 10
-
-    // Product name headers
-    doc.setFillColor(240, 240, 240)
-    doc.rect(margin, y, pageW - margin * 2, 12, 'F')
-    products.forEach((p, i) => {
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 30, 30)
-      const name = p.name.length > 28 ? p.name.slice(0, 26) + '…' : p.name
-      doc.text(name, margin + colW * i + 2, y + 8)
-    })
-    y += 16
-
-    // Spec rows
-    specRows.forEach((row) => {
-      if (y > 270) { doc.addPage(); y = 20 }
-
-      // Row label
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(120, 120, 120)
-      doc.text(row.sublabel.toUpperCase(), margin, y)
-      y += 4
-
-      const hasSecondary = row.values.some((v) => v.secondary)
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 30, 30)
-      row.values.forEach((v, i) => {
-        const val = String(v.primary)
-        doc.text(val.length > 22 ? val.slice(0, 20) + '…' : val, margin + colW * i, y)
-        if (v.secondary) {
-          doc.setFontSize(7)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(140, 140, 140)
-          doc.text(v.secondary.length > 26 ? v.secondary.slice(0, 24) + '…' : v.secondary, margin + colW * i, y + 4)
-          doc.setFontSize(10)
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(30, 30, 30)
-        }
-      })
-      y += hasSecondary ? 10 : 7
-
-      // Divider
-      doc.setDrawColor(220, 220, 220)
-      doc.line(margin, y, pageW - margin, y)
-      y += 4
-    })
-
-    // AI result if available
-    if (aiResult) {
-      if (y > 240) { doc.addPage(); y = 20 }
-      y += 4
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 30, 30)
-      doc.text(`AI Pick: ${aiResult.winner}`, margin, y)
-      y += 6
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(80, 80, 80)
-      const lines = doc.splitTextToSize(aiResult.summary, pageW - margin * 2)
-      doc.text(lines, margin, y)
+    const canvas = await html2canvas(el, { backgroundColor: '#111827', scale: 2, useCORS: true, logging: false })
+    const imgData = canvas.toDataURL('image/png')
+    // Landscape A4: 297mm x 210mm
+    const pdfW = 297
+    const ratio = pdfW / (canvas.width / 2)
+    const pdfH = Math.max(210, (canvas.height / 2) * ratio)
+    const orientation = pdfH > pdfW ? 'portrait' : 'landscape'
+    const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const imgW = pageW
+    const imgH = (canvas.height / canvas.width) * pageW
+    if (imgH <= pageH) {
+      doc.addImage(imgData, 'PNG', 0, 0, imgW, imgH)
+    } else {
+      // Multi-page: slice the image across pages
+      const scale = pageW / (canvas.width / 2)
+      const pxPerPage = pageH / scale
+      let srcY = 0
+      while (srcY < canvas.height / 2) {
+        if (srcY > 0) doc.addPage()
+        const sliceH = Math.min(pxPerPage, canvas.height / 2 - srcY)
+        const sliceCanvas = document.createElement('canvas')
+        sliceCanvas.width = canvas.width
+        sliceCanvas.height = sliceH * 2
+        const ctx = sliceCanvas.getContext('2d')!
+        ctx.drawImage(canvas, 0, srcY * 2, canvas.width, sliceH * 2, 0, 0, canvas.width, sliceH * 2)
+        doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, sliceH * scale)
+        srcY += sliceH
+      }
     }
-
     doc.save(`pickvolt-compare-${Date.now()}.pdf`)
   }
 
@@ -1009,7 +1072,7 @@ export default function CompareClient() {
             )}
 
             {/* 비교 테이블 */}
-            <div id="spec-table" className="bg-surface border border-border rounded-card overflow-hidden mb-8">
+            <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
               <div
                 className="grid border-b border-border"
                 style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
@@ -1110,7 +1173,12 @@ export default function CompareClient() {
 
 
             {/* 액션 버튼 */}
-            <ActionButtons t={t} onExportPDF={handleExportPDF} />
+            <ActionButtons
+              t={t}
+              onExportHTML={handleExportHTML}
+              onExportImage={handleExportImage}
+              onExportPDF={handleExportPDF}
+            />
 
             {/* 인기 비교 */}
             <PopularComparisons items={popularItems} t={t} />

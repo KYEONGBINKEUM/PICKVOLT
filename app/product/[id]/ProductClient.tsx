@@ -2,7 +2,8 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Check, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, Check, Plus, Share2, Download } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 
@@ -44,10 +45,61 @@ export default function ProductClient({ product }: { product: Product }) {
   const { cart, add, remove } = useCompareCart()
   const inCart   = cart.some((i) => i.id === product.id)
   const cartFull = cart.length >= 4
+  const [shareCopied, setShareCopied] = useState(false)
 
   const toggleCart = () => {
     if (inCart) remove(product.id)
     else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
+  }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setShareCopied(true)
+        setTimeout(() => setShareCopied(false), 2000)
+      }
+    } catch {
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    }
+  }
+
+  const handleExportPDF = async () => {
+    const { default: html2canvas } = await import('html2canvas')
+    const { default: jsPDF } = await import('jspdf')
+    const el = document.getElementById('product-detail')
+    if (!el) return
+    const canvas = await html2canvas(el, { backgroundColor: '#0d0d0d', scale: 2, useCORS: true, logging: false })
+    const imgData = canvas.toDataURL('image/png')
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const imgW = pageW
+    const imgH = (canvas.height / canvas.width) * pageW
+    if (imgH <= pageH) {
+      doc.addImage(imgData, 'PNG', 0, 0, imgW, imgH)
+    } else {
+      const scale = pageW / (canvas.width / 2)
+      const pxPerPage = pageH / scale
+      let srcY = 0
+      while (srcY < canvas.height / 2) {
+        if (srcY > 0) doc.addPage()
+        const sliceH = Math.min(pxPerPage, canvas.height / 2 - srcY)
+        const sliceCanvas = document.createElement('canvas')
+        sliceCanvas.width = canvas.width
+        sliceCanvas.height = sliceH * 2
+        const ctx = sliceCanvas.getContext('2d')!
+        ctx.drawImage(canvas, 0, srcY * 2, canvas.width, sliceH * 2, 0, 0, canvas.width, sliceH * 2)
+        doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 0, 0, pageW, sliceH * scale)
+        srcY += sliceH
+      }
+    }
+    doc.save(`pickvolt-${product.name.replace(/\s+/g, '-')}.pdf`)
   }
 
   const categoryLabel: Record<string, string> = {
@@ -58,17 +110,35 @@ export default function ProductClient({ product }: { product: Product }) {
 
   return (
     <>
-      {/* Back */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/60 text-sm transition-colors mb-8"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        {t('product.back')}
-      </Link>
+      {/* Back + share/export row */}
+      <div className="flex items-center justify-between mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/60 text-sm transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          {t('product.back')}
+        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportPDF}
+            className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+          >
+            <Download className="w-3.5 h-3.5" />
+            PDF
+          </button>
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            {shareCopied ? 'Copied!' : t('compare.share')}
+          </button>
+        </div>
+      </div>
 
       {/* Two-column layout */}
-      <div className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
+      <div id="product-detail" className="flex flex-col lg:flex-row gap-10 lg:gap-14 items-start">
 
         {/* LEFT — image + header info (sticky on desktop) */}
         <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-28">
