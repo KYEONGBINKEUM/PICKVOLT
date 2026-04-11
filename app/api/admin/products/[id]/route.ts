@@ -131,10 +131,13 @@ export async function PUT(
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   // 업로드 성공 후 기존 파일 삭제
+  // 안전 검사: 경로에 이 제품의 id가 포함된 파일만 삭제 — 다른 제품 파일을 실수로 지우는 것 방지
   const { data: existing } = await supabase.from('products').select('image_url').eq('id', id).single()
   if (existing?.image_url) {
     const oldPath = existing.image_url.split('/product-images/')[1]?.split('?')[0]
-    if (oldPath) await supabase.storage.from('product-images').remove([oldPath])
+    if (oldPath && oldPath.includes(id)) {
+      await supabase.storage.from('product-images').remove([oldPath])
+    }
   }
 
   const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(newPath)
