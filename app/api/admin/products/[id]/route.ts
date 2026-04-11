@@ -219,13 +219,6 @@ export async function DELETE(
   const { id } = await params
   const supabase = makeServiceClient()
 
-  // 스토리지 파일 먼저 정리
-  const { data: existing } = await supabase.from('products').select('image_url').eq('id', id).single()
-  if (existing?.image_url) {
-    const oldPath = existing.image_url.split('/product-images/')[1]?.split('?')[0]
-    if (oldPath) await supabase.storage.from('product-images').remove([oldPath])
-  }
-
   const { error } = await supabase.from('products').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
