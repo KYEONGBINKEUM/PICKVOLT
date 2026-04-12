@@ -296,7 +296,18 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
           ))}
         </div>
       ) : reviews.length === 0 ? (
-        <p className="text-sm text-white/20 text-center py-8">{t('review.empty')}</p>
+        <div className="text-center py-8">
+          <p className="text-sm text-white/20 mb-4">{t('review.empty')}</p>
+          {readOnly && (
+            <Link
+              href={`/product/${productId}`}
+              className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors"
+            >
+              <Send className="w-3 h-3" />
+              {t('review.write')}
+            </Link>
+          )}
+        </div>
       ) : (
         <div className="space-y-3">
           {reviews.map((r) => (

@@ -577,6 +577,16 @@ function ReviewTabs({ products }: { products: Product[] }) {
       <div className="px-5 py-2">
         <ReviewSection key={active.id} productId={active.id} readOnly />
       </div>
+      {/* 리뷰 작성 링크 */}
+      <div className="px-5 pb-4 border-t border-border pt-3">
+        <Link
+          href={`/product/${active.id}`}
+          className="inline-flex items-center gap-1.5 text-xs text-white/30 hover:text-accent transition-colors"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+          {active.name} 리뷰 작성하러 가기
+        </Link>
+      </div>
     </div>
   )
 }
