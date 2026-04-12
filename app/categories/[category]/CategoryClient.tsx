@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -639,8 +639,9 @@ export default function CategoryClient({ category }: { category: string }) {
   const [availableBrands, setAvailableBrands] = useState<string[]>([])
   const [availableOsList, setAvailableOsList] = useState<string[]>([])
   const [loading,         setLoading]         = useState(true)
-  const [page,            setPage]            = useState(1)
+  const [visibleCount,    setVisibleCount]    = useState(30)
   const [mobileFilters,   setMobileFilters]   = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const [dataRanges, setDataRanges] = useState({
     priceMax: DEFAULT_FILTERS.priceMax,
     ramMax: DEFAULT_FILTERS.ramMax,
@@ -651,6 +652,22 @@ export default function CategoryClient({ category }: { category: string }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
 
   const PAGE_SIZE = 30
+
+  // 무한 스크롤: sentinel이 뷰포트에 들어오면 더 보여주기
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) => c + PAGE_SIZE)
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loading])
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
@@ -701,14 +718,14 @@ export default function CategoryClient({ category }: { category: string }) {
   }, [category, filters.sort, filters.brands, filters.q])
 
   useEffect(() => {
-    setPage(1)
+    setVisibleCount(PAGE_SIZE)
     fetchProducts()
   }, [fetchProducts])
 
-  const filtered = applyClientFilters(allProducts, filters)
+  const filtered  = applyClientFilters(allProducts, filters)
   const total     = filtered.length
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-  const products   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const products  = filtered.slice(0, visibleCount)
+  const hasMore   = visibleCount < total
 
   const hasFilters =
     filters.brands.length > 0 || !!filters.q || !!filters.os ||
@@ -765,7 +782,7 @@ export default function CategoryClient({ category }: { category: string }) {
             availableOsList={availableOsList}
             filters={filters}
             dataRanges={dataRanges}
-            onChange={(f) => { setFilters(f); setPage(1) }}
+            onChange={(f) => { setFilters(f); setVisibleCount(PAGE_SIZE) }}
           />
         </div>
 
@@ -812,26 +829,16 @@ export default function CategoryClient({ category }: { category: string }) {
                 ))}
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-3 mt-10">
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => { setPage(page - 1); window.scrollTo({ top: 0 }) }}
-                    className="px-4 py-2 rounded-xl bg-surface border border-border text-sm text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {t('cat.prev')}
-                  </button>
-                  <span className="text-sm text-white/30 tabular-nums">{page} / {totalPages}</span>
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => { setPage(page + 1); window.scrollTo({ top: 0 }) }}
-                    className="px-4 py-2 rounded-xl bg-surface border border-border text-sm text-white/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {t('cat.next')}
-                  </button>
-                </div>
-              )}
+              {/* 무한 스크롤 sentinel */}
+              <div ref={sentinelRef} className="h-10 mt-6 flex items-center justify-center">
+                {hasMore && (
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
