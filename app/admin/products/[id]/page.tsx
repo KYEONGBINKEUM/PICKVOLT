@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap, Copy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -104,7 +104,11 @@ function SectionCard({ title, children, defaultOpen = true }: { title: string; c
 export default function ProductEditPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const fromCategory = searchParams.get('category') ?? ''
+  const backUrl = `/admin?tab=products${fromCategory ? `&category=${fromCategory}` : ''}`
 
   const [authed, setAuthed] = useState(false)
   const [token, setToken] = useState('')
@@ -139,6 +143,7 @@ export default function ProductEditPage() {
   const [nameTranslations, setNameTranslations] = useState<Record<string, string>>({ en: '', ko: '', ja: '', es: '', pt: '', fr: '', de: '' })
   const [translating, setTranslating] = useState(false)
   const [amazonFilling, setAmazonFilling] = useState(false)
+  const [sameProducts, setSameProducts] = useState<{ id: string; name: string; brand: string; image_url: string | null; is_visible: boolean }[]>([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -151,6 +156,27 @@ export default function ProductEditPage() {
   }, [router])
 
   const isNew = id === 'new'
+
+  // 새 제품일 때 URL 카테고리 파라미터로 초기값 설정
+  useEffect(() => {
+    if (isNew && fromCategory) {
+      setForm((prev) => ({ ...prev, category: fromCategory }))
+    }
+  }, [isNew, fromCategory])
+
+  // 같은 카테고리 제품 목록 fetch
+  useEffect(() => {
+    const cat = (form.category as string) || fromCategory
+    if (!authed || !cat) return
+    supabase
+      .from('products')
+      .select('id, name, brand, image_url, is_visible')
+      .eq('category', cat)
+      .order('brand').order('name')
+      .limit(100)
+      .then(({ data }) => setSameProducts(data ?? []))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, form.category, fromCategory])
 
   useEffect(() => {
     if (!authed || isNew) return
@@ -389,7 +415,7 @@ export default function ProductEditPage() {
         }
         setMessage({ type: 'ok', text: '저장됨' })
         await new Promise((r) => setTimeout(r, 800))
-        router.replace(`/admin/products/${newId}`)
+        router.replace(backUrl)
         return
       }
 
@@ -488,9 +514,9 @@ export default function ProductEditPage() {
       {/* Header */}
       <div className="border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 bg-background z-10">
         <div className="flex items-center gap-3">
-          <Link href="/admin" className="flex items-center gap-1.5 text-white/40 hover:text-white transition-colors text-sm">
+          <Link href={backUrl} className="flex items-center gap-1.5 text-white/40 hover:text-white transition-colors text-sm">
             <ArrowLeft size={14} />
-            관리자
+            제품 관리
           </Link>
           <span className="text-white/20">/</span>
           <span className="text-sm text-white/60 truncate max-w-xs">{isNew ? '새 제품 추가' : (product?.name as string)}</span>
@@ -1114,6 +1140,59 @@ export default function ProductEditPage() {
                   <Toggle value={gb(categorySpecs, 'cellular')} onChange={(v) => patchCat('cellular', v)} label="셀룰러" />
                 </div>
               </div>
+            </div>
+          </SectionCard>
+        )}
+
+        {/* 같은 카테고리 제품 목록 */}
+        {sameProducts.length > 0 && (
+          <SectionCard title={`같은 카테고리 제품 (${sameProducts.length}개)`} defaultOpen={false}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left pb-2 text-white/40 font-medium w-10"></th>
+                    <th className="text-left pb-2 text-white/40 font-medium">제품명</th>
+                    <th className="text-left pb-2 text-white/40 font-medium">브랜드</th>
+                    <th className="pb-2 text-white/40 font-medium w-16 text-center">공개</th>
+                    <th className="pb-2 w-12"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sameProducts.map((p) => (
+                    <tr key={p.id} className={`border-b border-border/40 ${p.id === id ? 'bg-accent/5' : 'hover:bg-white/5'} transition-colors`}>
+                      <td className="py-2 pr-2">
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.image_url} alt="" className="w-7 h-7 object-contain rounded"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        ) : (
+                          <div className="w-7 h-7 rounded bg-white/5" />
+                        )}
+                      </td>
+                      <td className="py-2 text-white/80 max-w-xs truncate">
+                        {p.id === id ? <span className="text-accent font-semibold">{p.name} (현재)</span> : p.name}
+                      </td>
+                      <td className="py-2 text-white/40 text-xs">{p.brand}</td>
+                      <td className="py-2 text-center">
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${p.is_visible ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/20'}`}>
+                          {p.is_visible ? '공개' : '비공개'}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">
+                        {p.id !== id && (
+                          <Link
+                            href={`/admin/products/${p.id}?category=${(form.category as string) || fromCategory}`}
+                            className="text-xs text-white/30 hover:text-accent transition-colors px-2 py-1 rounded hover:bg-white/5"
+                          >
+                            편집
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </SectionCard>
         )}

@@ -187,6 +187,19 @@ export default function AdminPage() {
     })
   }, [router])
 
+  // URL 파라미터로 탭/카테고리 초기화
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tabParam = params.get('tab') as Tab | null
+    const catParam = params.get('category') as 'smartphone' | 'tablet' | 'laptop' | null
+    if (tabParam && ['dashboard', 'products', 'users', 'comparisons', 'cpus', 'gpus'].includes(tabParam)) {
+      setTab(tabParam)
+    }
+    if (catParam && ['smartphone', 'tablet', 'laptop'].includes(catParam)) {
+      setProductCatTab(catParam)
+    }
+  }, [])
+
   // ── Data fetchers ─────────────────────────────────────────────────────────
 
   const fetchStats = useCallback(async (tok: string) => {
@@ -706,7 +719,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-black">제품 관리</h1>
               <Link
-                href="/admin/products/new"
+                href={`/admin/products/new?category=${productCatTab}`}
                 className="flex items-center gap-1.5 text-sm bg-accent hover:bg-accent/90 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus size={14} />
@@ -802,7 +815,7 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1">
-                          <Link href={`/admin/products/${p.id}`}
+                          <Link href={`/admin/products/${p.id}?category=${productCatTab}`}
                             className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-accent transition-colors inline-flex">
                             <Edit2 size={13} />
                           </Link>
@@ -1038,7 +1051,7 @@ export default function AdminPage() {
               <BrandSelector
                 value={newCpuBrand}
                 onChange={setNewCpuBrand}
-                brands={CPU_BRANDS}
+                brands={Array.from(new Set([...CPU_BRANDS, ...cpus.map((c) => c.brand).filter((b): b is string => Boolean(b))]))}
               />
 
               {/* 타입 선택 */}
@@ -1293,7 +1306,7 @@ export default function AdminPage() {
                 {editingGpuId ? '✏️ GPU 수정' : '새 GPU 추가'}
               </p>
 
-              <BrandSelector value={newGpuBrand} onChange={setNewGpuBrand} brands={GPU_BRANDS} />
+              <BrandSelector value={newGpuBrand} onChange={setNewGpuBrand} brands={Array.from(new Set([...GPU_BRANDS, ...gpus.map((g) => g.brand).filter((b): b is string => Boolean(b))]))} />
 
               {/* 타입 */}
               <div className="flex gap-2 mb-4">
