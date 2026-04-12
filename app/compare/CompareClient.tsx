@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Download, Share2, ChevronRight, RotateCcw, Loader2, TrendingUp, Lock, Zap, Code2, FileDown, Copy, ChevronDown } from 'lucide-react'
+import { Download, Share2, ChevronRight, Loader2, TrendingUp, Lock, Zap, Code2, FileDown, Copy, ChevronDown } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n, type Locale } from '@/lib/i18n'
@@ -171,6 +170,7 @@ function SpecRow({
   winnerIndex = -1,
   colors = [],
   rowIndex = 0,
+  nameLabels = [],
 }: {
   label: string
   sublabel: string
@@ -181,46 +181,66 @@ function SpecRow({
   colors?: string[]
   rowIndex?: number
   productNames?: string[]
+  nameLabels?: string[]
 }) {
   const evenRow = rowIndex % 2 === 0
   return (
     <div className="border-t border-border">
       {/* ── 모바일: 세로 나열 ── */}
-      <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.02]'}`}>
-        {/* 스펙 라벨 */}
-        <div className="px-4 pt-3 pb-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-white/25">{sublabel} · </span>
-          <span className="text-sm font-bold text-white/55">{label}</span>
+      <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.018]'}`}>
+        {/* 스펙 헤더 */}
+        <div className="px-4 pt-3 pb-2">
+          <span className="text-[10px] uppercase tracking-wider text-white/25">{sublabel}</span>
+          <span className="text-[13px] font-bold text-white/55 ml-1.5">{label}</span>
         </div>
-        {/* 제품별 값 — 세로 목록, 컬러 좌측 스트라이프 */}
+        {/* 제품별 값 */}
         {values.map((v, i) => {
           const isWinner = i === winnerIndex
           const color = colors[i % colors.length] ?? '#FF6B2B'
+          const hasBar = v.bar !== undefined
+          const nameLabel = nameLabels[i] ?? ''
           return (
             <div
               key={i}
-              className="flex items-stretch border-t border-border/15"
+              className="px-4 pt-2.5 pb-3 border-t border-border/20"
               style={isWinner ? { backgroundColor: `${color}08` } : {}}
             >
-              {/* 컬러 좌측 스트라이프 */}
-              <div className="w-[3px] flex-shrink-0 rounded-r" style={{ backgroundColor: color }} />
-              {/* 값 */}
-              <div className="flex-1 flex items-center gap-3 pl-4 pr-3 py-3 min-w-0">
-                <span className={`text-[17px] font-black leading-tight break-words flex-1 ${isWinner ? 'text-white' : 'text-white/70'}`}>
-                  {v.primary}
-                </span>
-                {v.secondary && <p className="text-xs text-white/30 leading-tight">{v.secondary}</p>}
-                {v.bar !== undefined && <div className="mt-1.5 w-full"><PerformanceBar score={v.bar} max={barMax} color={color} /></div>}
-                {isWinner && (
-                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: `${color}20`, color }}>
-                    BEST
+              {/* 제품명 또는 칩셋명 */}
+              {nameLabel && (
+                <p className="text-[11px] text-white/35 mb-1.5 leading-none truncate">{nameLabel}</p>
+              )}
+              {hasBar ? (
+                /* 점수가 있는 행: 숫자 왼쪽, 바 오른쪽 */
+                <div className="flex items-center gap-3">
+                  <span className="text-[20px] font-black leading-none flex-shrink-0 w-9" style={{ color: isWinner ? color : 'rgba(255,255,255,0.85)' }}>
+                    {v.primary}
                   </span>
-                )}
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <PerformanceBar score={v.bar!} max={barMax} color={color} />
+                  </div>
+                  {isWinner && (
+                    <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
+                      BEST
+                    </span>
+                  )}
+                </div>
+              ) : (
+                /* 일반 값 행 */
+                <div className="flex items-center justify-between gap-3">
+                  <span className={`text-[18px] font-black leading-tight ${isWinner ? 'text-white' : 'text-white/72'}`}>
+                    {v.primary}
+                  </span>
+                  {isWinner && (
+                    <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
+                      BEST
+                    </span>
+                  )}
+                </div>
+              )}
+              {v.secondary && <p className="text-xs text-white/30 mt-1 leading-tight">{v.secondary}</p>}
             </div>
           )
         })}
-        <div className="pb-1" />
       </div>
 
       {/* ── 데스크탑: 가로 그리드 ── */}
@@ -239,6 +259,9 @@ function SpecRow({
             <div key={i}
               className="p-4 border-l border-border transition-colors"
               style={isWinner ? { backgroundColor: `${color}12` } : {}}>
+              {nameLabels[i] && (
+                <p className="text-[10px] text-white/30 mb-1.5 truncate">{nameLabels[i]}</p>
+              )}
               <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
               {v.secondary && <p className="text-xs text-white/40 mt-0.5">{v.secondary}</p>}
               {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={color} />}
@@ -518,7 +541,6 @@ function fmtGB(n: number): string {
 /* ---------- Main ---------- */
 export default function CompareClient() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const idsParam = searchParams.get('ids') ?? ''
   const historyId = searchParams.get('history') ?? ''
   const { t, locale } = useI18n()
@@ -537,12 +559,9 @@ export default function CompareClient() {
   const [loadingAI, setLoadingAI] = useState(false)
 
 
-  const [showLegend, setShowLegend] = useState(false)
-
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
   const ranKeyRef = useRef<string>('')
   const compareTableRef = useRef<HTMLDivElement>(null)
-  const mobileHeaderRef = useRef<HTMLDivElement>(null)
 
   // 세션 확인
   useEffect(() => {
@@ -556,18 +575,6 @@ export default function CompareClient() {
     })
     return () => subscription.unsubscribe()
   }, [])
-
-  // 모바일 헤더가 뷰포트 밖으로 나가면 플로팅 레전드 표시
-  useEffect(() => {
-    const el = mobileHeaderRef.current
-    if (!el || products.length < 2) return
-    const obs = new IntersectionObserver(
-      ([entry]) => setShowLegend(!entry.isIntersecting),
-      { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [products])
 
   // 인기 비교 로드
   useEffect(() => {
@@ -732,7 +739,7 @@ export default function CompareClient() {
 
   }, [products])
 
-  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean }
+  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[] }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fmtDisplay = (raw: Record<string, any>) => {
@@ -794,16 +801,21 @@ export default function CompareClient() {
   const buildSpecRows = (): SpecRowData[] => {
     if (products.length === 0) return []
 
+    // 기본: 제품명 레이블
+    const pNames = products.map((p) => p.name)
+    // 성능 행: 칩셋명 레이블
+    const chipNames = products.map((p) => p.specs.cpu ?? p.name)
+
     const performanceRow: SpecRowData = {
       label: t('spec.performance'),
       sublabel: t('spec.benchmark'),
       barMax: 100,
       higherIsBetter: true,
+      nameLabels: chipNames,
       values: products.map((p, i) => {
         const score = productScores ? productScores[i].details.find((d) => d.label === 'Performance')?.score : null
         return {
           primary: score != null ? score : '—',
-          secondary: p.specs.cpu ?? undefined,
           bar: score ?? undefined,
           numericVal: score ?? undefined,
         }
@@ -813,6 +825,7 @@ export default function CompareClient() {
       label: t('spec.ram'),
       sublabel: t('spec.memory'),
       higherIsBetter: true,
+      nameLabels: pNames,
       values: products.map((p) => {
         const opts = parseOptions(p.raw.ram_gb)
         const maxN = opts.length > 0 ? Math.max(...opts) : null
@@ -823,6 +836,7 @@ export default function CompareClient() {
     const storageRow: SpecRowData = {
       label: t('spec.storage'),
       sublabel: t('spec.internal'),
+      nameLabels: pNames,
       values: products.map((p) => {
         const opts = parseOptions(p.raw.storage_gb)
         if (opts.length > 0) {
@@ -835,27 +849,32 @@ export default function CompareClient() {
     const displayRow: SpecRowData = {
       label: t('spec.display'),
       sublabel: t('spec.screen'),
+      nameLabels: pNames,
       values: products.map((p) => ({ primary: fmtDisplay(p.raw) })),
     }
     const resolutionRow: SpecRowData = {
       label: t('spec.resolution'),
       sublabel: t('spec.resolution_sub'),
+      nameLabels: pNames,
       values: products.map((p) => ({ primary: p.raw.display_resolution ?? '—' })),
     }
     const refreshRateRow: SpecRowData = {
       label: t('spec.refresh_rate'),
       sublabel: t('spec.refresh_rate_sub'),
+      nameLabels: pNames,
       values: products.map((p) => ({ primary: p.raw.display_hz ? `${p.raw.display_hz}Hz` : '—' })),
     }
     const osRow: SpecRowData = {
       label: t('spec.os_label'),
       sublabel: t('spec.operating_system'),
+      nameLabels: pNames,
       values: products.map((p) => ({ primary: p.raw.os ?? p.specs.os ?? '—' })),
     }
     const priceRow: SpecRowData = {
       label: t('spec.price'),
       sublabel: t('spec.price_sub'),
       higherIsBetter: false,
+      nameLabels: pNames,
       values: products.map((p) => ({
         primary: p.price_usd ? `$${Number(p.price_usd).toLocaleString()}` : '—',
         numericVal: p.price_usd ?? undefined,
@@ -873,6 +892,7 @@ export default function CompareClient() {
         {
           label: t('spec.camera'),
           sublabel: t('spec.main_sensor'),
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.camera_main_mp ? `${p.raw.camera_main_mp}MP` : '—',
             secondary: p.raw.camera_front_mp ? `${p.raw.camera_front_mp}MP front` : undefined,
@@ -882,6 +902,7 @@ export default function CompareClient() {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
           higherIsBetter: true,
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
             numericVal: p.raw.battery_mah ?? undefined,
@@ -893,6 +914,7 @@ export default function CompareClient() {
           label: t('spec.weight'),
           sublabel: t('spec.weight_body'),
           higherIsBetter: false,
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.weight_g ? `${p.raw.weight_g}g` : '—',
             numericVal: p.raw.weight_g ?? undefined,
@@ -913,6 +935,7 @@ export default function CompareClient() {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
           higherIsBetter: true,
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
             numericVal: p.raw.battery_wh ?? undefined,
@@ -924,6 +947,7 @@ export default function CompareClient() {
           label: t('spec.weight'),
           sublabel: t('spec.weight_body'),
           higherIsBetter: false,
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.weight_kg ? `${p.raw.weight_kg} kg` : '—',
             numericVal: p.raw.weight_kg ?? undefined,
@@ -943,6 +967,7 @@ export default function CompareClient() {
         {
           label: t('spec.camera'),
           sublabel: t('spec.main_sensor'),
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.camera_main_mp ? `${p.raw.camera_main_mp}MP` : '—',
             secondary: p.raw.camera_front_mp ? `${p.raw.camera_front_mp}MP front` : undefined,
@@ -952,6 +977,7 @@ export default function CompareClient() {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
           higherIsBetter: true,
+          nameLabels: pNames,
           values: products.map((p) => ({
             primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
             numericVal: p.raw.battery_mah ?? undefined,
@@ -1161,56 +1187,7 @@ export default function CompareClient() {
             {/* 비교 테이블 */}
             <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
 
-              {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
-              <div ref={mobileHeaderRef} className="sm:hidden border-b border-border">
-                <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
-                  {products.map((p, pi) => {
-                    const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
-                    const imgSrc = p.image_url ?? null
-                    return (
-                      <div key={p.id} className="flex-shrink-0 snap-center w-[46%] min-w-[150px]">
-                        {/* 이미지 + 번호 칩 */}
-                        <div className="relative aspect-square rounded-xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-2.5">
-                          {imgSrc
-                            ? <img src={imgSrc} alt={p.name} className="w-full h-full object-contain p-2" />
-                            : <p className="text-xs text-white/20">{p.brand}</p>
-                          }
-                          {/* 번호 칩 — 이미지 우하단 */}
-                          <span
-                            className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center text-white"
-                            style={{ backgroundColor: color }}
-                          >
-                            {pi + 1}
-                          </span>
-                        </div>
-                        {/* 이름 */}
-                        <Link href={`/product/${p.id}`} className="text-xs font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
-                          {p.name}
-                        </Link>
-                        {p.price_usd && (
-                          <p className="text-[11px] text-white/40 mb-1.5">${Number(p.price_usd).toLocaleString()}</p>
-                        )}
-                        {/* Amazon button */}
-                        {p.raw.amazon_url && (
-                          <a
-                            href={p.raw.amazon_url}
-                            target="_blank"
-                            rel="noopener noreferrer sponsored"
-                            data-export-exclude="true"
-                            className="flex items-center justify-center w-full py-1.5 rounded-lg transition-all hover:brightness-105 active:scale-95"
-                            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 6px rgba(0,0,0,0.15)' }}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/amazon-logo.svg" alt="Amazon" width={50} height={16} style={{ display: 'block' }} />
-                          </a>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* ── 데스크탑 헤더: 기존 그리드 ── */}
+              {/* ── 헤더: 데스크탑 그리드 (모바일은 하단 고정 바로 대체) ── */}
               <div
                 className="hidden sm:grid border-b border-border"
                 style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
@@ -1247,27 +1224,29 @@ export default function CompareClient() {
                 const maxScore = Math.max(...productScores.map((s) => s.overall))
                 return (
                   <div className="border-t border-border bg-surface-2/40">
-                    {/* ── 모바일: 세로 나열 ── */}
-                    <div className="sm:hidden pt-3 pb-3">
-                      <p className="text-[10px] uppercase tracking-wider text-white/25 mb-2 px-4">{t('compare.overall_score')}</p>
-                      <div className="space-y-0 divide-y divide-border/15">
-                        {productScores.map((s, i) => {
-                          const isWinner = s.overall === maxScore
-                          const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
-                          return (
-                            <div key={i} className="flex items-stretch" style={isWinner ? { backgroundColor: `${color}08` } : {}}>
-                              <div className="w-[3px] flex-shrink-0 rounded-r" style={{ backgroundColor: color }} />
-                              <div className="flex-1 flex items-center gap-3 pl-4 pr-3 py-3">
-                                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${s.overall}%`, backgroundColor: color }} />
-                                </div>
-                                <span className="text-[17px] font-black w-9 text-right flex-shrink-0" style={{ color }}>{s.overall}</span>
-                                {isWinner && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${color}20`, color }}>BEST</span>}
-                              </div>
-                            </div>
-                          )
-                        })}
+                    {/* ── 모바일: 세로 나열 (SpecRow와 동일한 패턴) ── */}
+                    <div className="sm:hidden">
+                      <div className="px-4 pt-3 pb-2">
+                        <span className="text-[10px] uppercase tracking-wider text-white/25">{t('compare.overall_score')}</span>
                       </div>
+                      {productScores.map((s, i) => {
+                        const isWinner = s.overall === maxScore
+                        const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
+                        return (
+                          <div key={i} className="px-4 pt-2.5 pb-3 border-t border-border/20" style={isWinner ? { backgroundColor: `${color}08` } : {}}>
+                            <p className="text-[11px] text-white/35 mb-1.5 leading-none truncate">{products[i]?.name ?? ''}</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[20px] font-black leading-none flex-shrink-0 w-9" style={{ color: isWinner ? color : 'rgba(255,255,255,0.85)' }}>
+                                {s.overall}
+                              </span>
+                              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${s.overall}%`, backgroundColor: color }} />
+                              </div>
+                              {isWinner && <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>BEST</span>}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
 
                     {/* ── 데스크탑: 기존 그리드 ── */}
@@ -1328,47 +1307,28 @@ export default function CompareClient() {
                     winnerColor={winnerColor}
                     colors={PRODUCT_COLORS}
                     rowIndex={ri}
-                    productNames={products.map((p) => p.name)}
+                    nameLabels={row.nameLabels ?? products.map((p) => p.name)}
                   />
                 )
               })}
             </div>
 
-            {/* User Reviews */}
-            <div
-              className="mt-4 mb-8 bg-surface border border-border rounded-card overflow-hidden"
-              data-export-exclude="true"
-            >
-              <div className="px-4 pt-4 pb-2 border-b border-border">
-                <p className="text-xs text-white/40 font-semibold uppercase tracking-widest">User Reviews</p>
-              </div>
-              {/* 모바일: 세로 스택 */}
-              <div className="sm:hidden divide-y divide-border">
-                {products.map((p, pi) => {
-                  const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
-                  return (
-                    <div key={p.id} className="flex items-stretch">
-                      <div className="w-[3px] flex-shrink-0 rounded-r my-4" style={{ backgroundColor: color }} />
-                      <div className="flex-1 p-4">
-                        <span className="text-sm font-bold text-white/70 line-clamp-1 block mb-3">{p.name}</span>
-                        <ReviewSection productId={p.id} compact />
-                      </div>
+            {/* User Reviews — 제품별 전체 표시 */}
+            <div className="mt-4 mb-32 sm:mb-8 space-y-6" data-export-exclude="true">
+              {products.map((p, pi) => {
+                const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                return (
+                  <div key={p.id} className="bg-surface border border-border rounded-card overflow-hidden">
+                    <div className="px-5 pt-4 pb-3 border-b border-border flex items-center gap-3">
+                      <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                      <p className="text-sm font-bold text-white/80 truncate">{p.name}</p>
                     </div>
-                  )
-                })}
-              </div>
-              {/* 데스크탑: 가로 그리드 */}
-              <div
-                className="hidden sm:grid"
-                style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
-              >
-                <div className="p-4 pt-5" />
-                {products.map((p) => (
-                  <div key={p.id} className="p-4 border-l border-border">
-                    <ReviewSection productId={p.id} compact />
+                    <div className="px-5 pb-2">
+                      <ReviewSection productId={p.id} />
+                    </div>
                   </div>
-                ))}
-              </div>
+                )
+              })}
             </div>
 
             {/* 액션 버튼 */}
@@ -1394,36 +1354,44 @@ export default function CompareClient() {
         />
       )}
 
+      {/* ── 모바일 하단 고정 바 — 제품 썸네일 + Amazon ── */}
       {!loading && products.length >= 2 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
-          <button
-            onClick={() => router.push('/')}
-            className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20 shadow-lg"
-          >
-            <RotateCcw className="w-4 h-4" />
-            {t('compare.new_comparison')}
-          </button>
-        </div>
-      )}
-
-      {/* ── 모바일 플로팅 레전드 — 헤더가 화면 밖으로 나갈 때 표시 ── */}
-      {showLegend && products.length >= 2 && (
-        <div className="sm:hidden fixed top-[56px] left-0 right-0 z-40 pointer-events-none">
-          <div className="mx-4 mt-1.5 bg-surface-2/95 backdrop-blur-md border border-border/60 rounded-2xl px-4 py-2.5 shadow-xl pointer-events-auto">
-            <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-              {products.map((p, pi) => {
-                const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
-                return (
-                  <div key={p.id} className="flex items-center gap-2 flex-shrink-0 mr-3 last:mr-0">
-                    {/* 컬러 스트라이프 조각 */}
-                    <div className="w-[3px] h-5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-xs font-semibold text-white/70 max-w-[90px] truncate leading-tight">
-                      {p.name}
-                    </span>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
+          <div className="flex divide-x divide-border">
+            {products.map((p, pi) => {
+              const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+              return (
+                <div key={p.id} className="flex-1 flex flex-col items-center gap-1.5 px-2 pt-2 pb-3 min-w-0">
+                  {/* 썸네일 — 컬러 상단 보더 */}
+                  <div
+                    className="w-11 h-11 rounded-xl bg-surface-2 overflow-hidden flex items-center justify-center border border-border flex-shrink-0"
+                    style={{ borderTopColor: color, borderTopWidth: 2 }}
+                  >
+                    {p.image_url
+                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1" />
+                      : <span className="text-[8px] text-white/30 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
+                    }
                   </div>
-                )
-              })}
-            </div>
+                  {/* 제품명 축약 */}
+                  <p className="text-[9px] text-white/40 text-center leading-tight w-full truncate px-1">{p.name}</p>
+                  {/* Amazon 버튼 */}
+                  {p.raw.amazon_url ? (
+                    <a
+                      href={p.raw.amazon_url}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="w-full flex items-center justify-center py-1 rounded-lg"
+                      style={{ backgroundColor: '#FFFFFF' }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/amazon-logo.svg" alt="Amazon" width={38} height={12} style={{ display: 'block' }} />
+                    </a>
+                  ) : (
+                    <div className="w-full h-[22px]" />
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
