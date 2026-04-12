@@ -1483,7 +1483,7 @@ export default function CompareClient() {
                     }
                   </div>
                   {/* 제품명 */}
-                  <p className="text-[9px] text-white/40 text-center leading-tight w-full line-clamp-2 px-0.5">{p.name}</p>
+                  <p className="text-[9px] text-white/40 text-center leading-tight w-full truncate px-0.5">{p.name}</p>
                   {/* Amazon 버튼 */}
                   {p.raw.amazon_url ? (
                     <a
