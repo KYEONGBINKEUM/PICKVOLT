@@ -188,45 +188,39 @@ function SpecRow({
       {/* ── 모바일: 세로 나열 ── */}
       <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.02]'}`}>
         {/* 스펙 라벨 */}
-        <div className="px-4 pt-3 pb-2">
+        <div className="px-4 pt-3 pb-1.5">
           <span className="text-[10px] uppercase tracking-wider text-white/25">{sublabel} · </span>
-          <span className="text-sm font-bold text-white/60">{label}</span>
+          <span className="text-sm font-bold text-white/55">{label}</span>
         </div>
-        {/* 제품별 값 — 세로 목록 */}
+        {/* 제품별 값 — 세로 목록, 컬러 좌측 스트라이프 */}
         {values.map((v, i) => {
           const isWinner = i === winnerIndex
           const color = colors[i % colors.length] ?? '#FF6B2B'
           return (
             <div
               key={i}
-              className={`flex items-center gap-3 px-4 py-3 border-t border-border/20`}
-              style={isWinner ? { backgroundColor: `${color}0d` } : {}}
+              className="flex items-stretch border-t border-border/15"
+              style={isWinner ? { backgroundColor: `${color}08` } : {}}
             >
-              {/* 번호 칩만 — 색상으로 제품 구분 */}
-              <span
-                className="flex-shrink-0 w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center text-white"
-                style={{ backgroundColor: color }}
-              >
-                {i + 1}
-              </span>
+              {/* 컬러 좌측 스트라이프 */}
+              <div className="w-[3px] flex-shrink-0 rounded-r" style={{ backgroundColor: color }} />
               {/* 값 */}
-              <div className="flex-1 min-w-0">
-                <span className={`text-base font-black leading-tight break-words ${isWinner ? 'text-white' : 'text-white/75'}`}>
+              <div className="flex-1 flex items-center gap-3 pl-4 pr-3 py-3 min-w-0">
+                <span className={`text-[17px] font-black leading-tight break-words flex-1 ${isWinner ? 'text-white' : 'text-white/70'}`}>
                   {v.primary}
                 </span>
-                {v.secondary && <p className="text-xs text-white/35 mt-0.5 leading-tight">{v.secondary}</p>}
-                {v.bar !== undefined && <div className="mt-1.5"><PerformanceBar score={v.bar} max={barMax} color={color} /></div>}
+                {v.secondary && <p className="text-xs text-white/30 leading-tight">{v.secondary}</p>}
+                {v.bar !== undefined && <div className="mt-1.5 w-full"><PerformanceBar score={v.bar} max={barMax} color={color} /></div>}
+                {isWinner && (
+                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ backgroundColor: `${color}20`, color }}>
+                    BEST
+                  </span>
+                )}
               </div>
-              {/* 우승 뱃지 */}
-              {isWinner && (
-                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
-                  BEST
-                </span>
-              )}
             </div>
           )
         })}
-        <div className="pb-2" />
+        <div className="pb-1" />
       </div>
 
       {/* ── 데스크탑: 가로 그리드 ── */}
@@ -543,9 +537,12 @@ export default function CompareClient() {
   const [loadingAI, setLoadingAI] = useState(false)
 
 
+  const [showLegend, setShowLegend] = useState(false)
+
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
   const ranKeyRef = useRef<string>('')
   const compareTableRef = useRef<HTMLDivElement>(null)
+  const mobileHeaderRef = useRef<HTMLDivElement>(null)
 
   // 세션 확인
   useEffect(() => {
@@ -559,6 +556,18 @@ export default function CompareClient() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // 모바일 헤더가 뷰포트 밖으로 나가면 플로팅 레전드 표시
+  useEffect(() => {
+    const el = mobileHeaderRef.current
+    if (!el || products.length < 2) return
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowLegend(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [products])
 
   // 인기 비교 로드
   useEffect(() => {
@@ -1153,7 +1162,7 @@ export default function CompareClient() {
             <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
 
               {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
-              <div className="sm:hidden border-b border-border">
+              <div ref={mobileHeaderRef} className="sm:hidden border-b border-border">
                 <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                   {products.map((p, pi) => {
                     const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
@@ -1239,25 +1248,20 @@ export default function CompareClient() {
                 return (
                   <div className="border-t border-border bg-surface-2/40">
                     {/* ── 모바일: 세로 나열 ── */}
-                    <div className="sm:hidden px-4 pt-3 pb-3">
-                      <p className="text-[10px] uppercase tracking-wider text-white/25 mb-3">{t('compare.overall_score')}</p>
-                      <div className="space-y-3">
+                    <div className="sm:hidden pt-3 pb-3">
+                      <p className="text-[10px] uppercase tracking-wider text-white/25 mb-2 px-4">{t('compare.overall_score')}</p>
+                      <div className="space-y-0 divide-y divide-border/15">
                         {productScores.map((s, i) => {
                           const isWinner = s.overall === maxScore
                           const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
                           return (
-                            <div key={i} className="flex items-center gap-3">
-                              <span
-                                className="flex-shrink-0 w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center text-white"
-                                style={{ backgroundColor: color }}
-                              >
-                                {i + 1}
-                              </span>
-                              <div className="flex-1 flex items-center gap-2">
+                            <div key={i} className="flex items-stretch" style={isWinner ? { backgroundColor: `${color}08` } : {}}>
+                              <div className="w-[3px] flex-shrink-0 rounded-r" style={{ backgroundColor: color }} />
+                              <div className="flex-1 flex items-center gap-3 pl-4 pr-3 py-3">
                                 <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                   <div className="h-full rounded-full transition-all duration-700" style={{ width: `${s.overall}%`, backgroundColor: color }} />
                                 </div>
-                                <span className="text-sm font-black w-8 text-right flex-shrink-0" style={{ color }}>{s.overall}</span>
+                                <span className="text-[17px] font-black w-9 text-right flex-shrink-0" style={{ color }}>{s.overall}</span>
                                 {isWinner && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${color}20`, color }}>BEST</span>}
                               </div>
                             </div>
@@ -1343,17 +1347,12 @@ export default function CompareClient() {
                 {products.map((p, pi) => {
                   const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                   return (
-                    <div key={p.id} className="p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span
-                          className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center text-white flex-shrink-0"
-                          style={{ backgroundColor: color }}
-                        >
-                          {pi + 1}
-                        </span>
-                        <span className="text-sm font-bold text-white/70 line-clamp-1">{p.name}</span>
+                    <div key={p.id} className="flex items-stretch">
+                      <div className="w-[3px] flex-shrink-0 rounded-r my-4" style={{ backgroundColor: color }} />
+                      <div className="flex-1 p-4">
+                        <span className="text-sm font-bold text-white/70 line-clamp-1 block mb-3">{p.name}</span>
+                        <ReviewSection productId={p.id} compact />
                       </div>
-                      <ReviewSection productId={p.id} compact />
                     </div>
                   )
                 })}
@@ -1404,6 +1403,28 @@ export default function CompareClient() {
             <RotateCcw className="w-4 h-4" />
             {t('compare.new_comparison')}
           </button>
+        </div>
+      )}
+
+      {/* ── 모바일 플로팅 레전드 — 헤더가 화면 밖으로 나갈 때 표시 ── */}
+      {showLegend && products.length >= 2 && (
+        <div className="sm:hidden fixed top-[56px] left-0 right-0 z-40 pointer-events-none">
+          <div className="mx-4 mt-1.5 bg-surface-2/95 backdrop-blur-md border border-border/60 rounded-2xl px-4 py-2.5 shadow-xl pointer-events-auto">
+            <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              {products.map((p, pi) => {
+                const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                return (
+                  <div key={p.id} className="flex items-center gap-2 flex-shrink-0 mr-3 last:mr-0">
+                    {/* 컬러 스트라이프 조각 */}
+                    <div className="w-[3px] h-5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="text-xs font-semibold text-white/70 max-w-[90px] truncate leading-tight">
+                      {p.name}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 
