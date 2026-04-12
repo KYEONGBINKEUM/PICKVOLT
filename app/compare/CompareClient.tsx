@@ -79,17 +79,17 @@ function AIPickBanner({
   t: (k: string) => string
 }) {
   return (
-    <div className="relative rounded-card overflow-hidden bg-gradient-to-br from-[#FF6B2B] via-accent to-[#cc3300] p-5 sm:p-8 mb-6 sm:mb-8">
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-        <span className="text-[10px] sm:text-xs font-bold tracking-widest bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1 sm:px-3 sm:py-1.5 text-white uppercase">
+    <div className="relative rounded-card overflow-hidden bg-gradient-to-br from-[#FF6B2B] via-accent to-[#cc3300] p-5 lg:p-8 mb-6 lg:mb-8">
+      <div className="absolute top-3 right-3 lg:top-4 lg:right-4">
+        <span className="text-[10px] lg:text-xs font-bold tracking-widest bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1 lg:px-3 lg:py-1.5 text-white uppercase">
           {t('compare.aipick')}
         </span>
       </div>
       <div className="max-w-lg">
-        <h2 className="text-xl sm:text-3xl md:text-4xl font-black text-black leading-tight mb-2 sm:mb-3 pr-16 sm:pr-0">
+        <h2 className="text-xl lg:text-3xl md:text-4xl font-black text-black leading-tight mb-2 lg:mb-3 pr-16 lg:pr-0">
           the {winner} {t('compare.winner')}
         </h2>
-        <p className="text-black/70 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6">{reasoning}</p>
+        <p className="text-black/70 text-xs lg:text-sm leading-relaxed mb-4 lg:mb-6">{reasoning}</p>
         <button
           onClick={onViewReasoning}
           className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-white/90 transition-colors"
@@ -132,16 +132,16 @@ function ProductCard({ product }: { product: Product }) {
 
   return (
     <div className="flex flex-col">
-      <div className="relative aspect-square sm:aspect-[4/3] rounded-lg sm:rounded-xl bg-surface-2 border border-border mb-2 sm:mb-4 overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-square lg:aspect-[4/3] rounded-lg lg:rounded-xl bg-surface-2 border border-border mb-2 lg:mb-4 overflow-hidden flex items-center justify-center">
         {imgSrc ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imgSrc}
               alt={product.name}
-              className="w-full h-full object-contain p-2 sm:p-4"
+              className="w-full h-full object-contain p-2 lg:p-4"
             />
-            <span className="absolute bottom-1 right-1.5 text-[8px] text-white/20 leading-none hidden sm:block">
+            <span className="absolute bottom-1 right-1.5 text-[8px] text-white/20 leading-none hidden lg:block">
               © {sourceDomain}
             </span>
           </>
@@ -153,7 +153,7 @@ function ProductCard({ product }: { product: Product }) {
       </div>
       <Link
         href={`/product/${product.id}`}
-        className="text-xs sm:text-sm font-bold text-white hover:text-accent transition-colors line-clamp-2 leading-snug"
+        className="text-xs lg:text-sm font-bold text-white hover:text-accent transition-colors line-clamp-2 leading-snug"
       >
         {product.name}
       </Link>
@@ -189,7 +189,7 @@ function SpecRow({
   return (
     <div className="border-t border-border">
       {/* ── 모바일: 세로 나열 ── */}
-      <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.018]'}`}>
+      <div className={`lg:hidden ${evenRow ? '' : 'bg-white/[0.018]'}`}>
         {/* 스펙 헤더 */}
         <div className="px-4 pt-3 pb-2">
           <span className="text-[10px] uppercase tracking-wider text-white/25">{sublabel}</span>
@@ -259,7 +259,7 @@ function SpecRow({
 
       {/* ── 데스크탑: 가로 그리드 ── */}
       <div
-        className="hidden sm:grid"
+        className="hidden lg:grid"
         style={{ gridTemplateColumns: `80px repeat(${values.length}, 1fr)` }}
       >
         <div className="p-4 flex flex-col gap-0.5 justify-center">
@@ -549,7 +549,7 @@ function ReviewTabs({ products }: { products: Product[] }) {
   if (products.length === 0) return null
   const active = products[activeIdx]
   return (
-    <div className="mt-4 mb-32 sm:mb-8 bg-surface border border-border rounded-card overflow-hidden" data-export-exclude="true">
+    <div className="mt-4 mb-32 lg:mb-8 bg-surface border border-border rounded-card overflow-hidden" data-export-exclude="true">
       {/* 탭 헤더 */}
       <div className="flex overflow-x-auto border-b border-border" style={{ scrollbarWidth: 'none' }}>
         {products.map((p, pi) => {
@@ -568,7 +568,7 @@ function ReviewTabs({ products }: { products: Product[] }) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.image_url} alt={p.name} className="w-5 h-5 object-contain flex-shrink-0" />
               )}
-              <span className="truncate max-w-[120px] sm:max-w-[180px]">{p.name}</span>
+              <span className="truncate max-w-[120px] lg:max-w-[180px]">{p.name}</span>
             </button>
           )
         })}
@@ -1263,7 +1263,7 @@ export default function CompareClient() {
             <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
 
               {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
-              <div ref={mobileHeaderRef} className="sm:hidden border-b border-border">
+              <div ref={mobileHeaderRef} className="lg:hidden border-b border-border">
                 <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                   {products.map((p, pi) => {
                     const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
@@ -1303,15 +1303,15 @@ export default function CompareClient() {
 
               {/* ── 헤더: 데스크탑 그리드 ── */}
               <div
-                className="hidden sm:grid border-b border-border"
+                className="hidden lg:grid border-b border-border"
                 style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
               >
-                <div className="p-3 sm:p-4 flex items-center">
-                  <p className="text-[10px] sm:text-xs text-white/40 font-semibold">{t('compare.overview')}</p>
+                <div className="p-3 lg:p-4 flex items-center">
+                  <p className="text-[10px] lg:text-xs text-white/40 font-semibold">{t('compare.overview')}</p>
                 </div>
                 {products.map((p, pi) => {
                   return (
-                    <div key={p.id} className="p-2 sm:p-4 border-l border-border">
+                    <div key={p.id} className="p-2 lg:p-4 border-l border-border">
                       <ProductCard product={p} />
                       {p.raw.amazon_url && (
                         <a
@@ -1320,12 +1320,12 @@ export default function CompareClient() {
                           rel="noopener noreferrer sponsored"
                           onClick={(e) => e.stopPropagation()}
                           data-export-exclude="true"
-                          className="mt-2 sm:mt-3 flex items-center justify-center gap-1.5 w-full py-2 sm:py-3 rounded-lg sm:rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
+                          className="mt-2 lg:mt-3 flex items-center justify-center gap-1.5 w-full py-2 lg:py-3 rounded-lg lg:rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
                           style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/amazon-logo.svg" alt="Amazon" width={56} height={18} className="sm:w-[72px] sm:h-[22px]" style={{ display: 'block' }} />
-                          <span className="hidden sm:inline" style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', letterSpacing: '0.02em' }}>{t('compare.buy_now')}</span>
+                          <img src="/amazon-logo.svg" alt="Amazon" width={56} height={18} className="lg:w-[72px] lg:h-[22px]" style={{ display: 'block' }} />
+                          <span className="hidden lg:inline" style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', letterSpacing: '0.02em' }}>{t('compare.buy_now')}</span>
                         </a>
                       )}
                     </div>
@@ -1339,7 +1339,7 @@ export default function CompareClient() {
                 return (
                   <div className="border-t border-border bg-surface-2/40">
                     {/* ── 모바일: 세로 나열 (SpecRow와 동일한 패턴) ── */}
-                    <div className="sm:hidden">
+                    <div className="lg:hidden">
                       <div className="px-4 pt-3 pb-2">
                         <span className="text-[10px] uppercase tracking-wider text-white/25">{t('compare.overall_score')}</span>
                       </div>
@@ -1374,23 +1374,23 @@ export default function CompareClient() {
 
                     {/* ── 데스크탑: 기존 그리드 ── */}
                     <div
-                      className="hidden sm:grid"
+                      className="hidden lg:grid"
                       style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
                     >
-                      <div className="p-3 sm:p-4 flex flex-col gap-0.5 justify-center">
-                        <span className="text-[10px] sm:text-sm font-semibold text-white/60 sm:text-white">{t('compare.overall_score')}</span>
+                      <div className="p-3 lg:p-4 flex flex-col gap-0.5 justify-center">
+                        <span className="text-[10px] lg:text-sm font-semibold text-white/60 lg:text-white">{t('compare.overall_score')}</span>
                       </div>
                       {productScores.map((s, i) => {
                         const isWinner = s.overall === maxScore
                         const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
                         return (
-                          <div key={i} className="p-3 sm:p-4 border-l border-border transition-colors"
+                          <div key={i} className="p-3 lg:p-4 border-l border-border transition-colors"
                             style={isWinner ? { backgroundColor: `${color}12` } : {}}>
-                            <div className="flex items-baseline gap-1 mb-1.5 sm:mb-2">
-                              <span className="text-xl sm:text-3xl font-black leading-none" style={{ color }}>
+                            <div className="flex items-baseline gap-1 mb-1.5 lg:mb-2">
+                              <span className="text-xl lg:text-3xl font-black leading-none" style={{ color }}>
                                 {s.overall}
                               </span>
-                              <span className="text-[10px] sm:text-xs text-white/30 font-semibold">/ 100</span>
+                              <span className="text-[10px] lg:text-xs text-white/30 font-semibold">/ 100</span>
                             </div>
                             <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                               <div
@@ -1466,7 +1466,7 @@ export default function CompareClient() {
 
       {/* ── 모바일 하단 고정 바 — 헤더가 사라질 때만 표시, 슬라이더 ── */}
       {!loading && products.length >= 2 && showBottomBar && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
           <div className="flex overflow-x-auto gap-2 px-3 pt-2 pb-3 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
             {products.map((p, pi) => {
               const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
