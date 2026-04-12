@@ -1264,24 +1264,24 @@ export default function CompareClient() {
 
               {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
               <div ref={mobileHeaderRef} className="lg:hidden border-b border-border">
-                <div className="flex overflow-x-auto gap-2.5 px-3 py-3 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+                <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                   {products.map((p, pi) => {
                     const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                     return (
-                      <div key={p.id} className="flex-shrink-0 snap-start w-[36vw] min-w-[120px] max-w-[160px]">
+                      <div key={p.id} className="flex-shrink-0 snap-start w-[52vw] min-w-[180px]">
                         {/* 이미지 */}
-                        <div className="aspect-square rounded-xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-2" style={{ borderTopColor: color, borderTopWidth: 2 }}>
+                        <div className="aspect-square rounded-2xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-3" style={{ borderTopColor: color, borderTopWidth: 2 }}>
                           {p.image_url
-                            ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-2" />
-                            : <span className="text-[10px] text-white/20 font-bold">{p.brand}</span>
+                            ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-3" />
+                            : <span className="text-xs text-white/20 font-bold">{p.brand}</span>
                           }
                         </div>
                         {/* 이름 */}
-                        <Link href={`/product/${p.id}`} className="text-xs font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
+                        <Link href={`/product/${p.id}`} className="text-sm font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
                           {p.name}
                         </Link>
                         {p.price_usd && (
-                          <p className="text-[10px] text-white/40 mb-1.5">${Number(p.price_usd).toLocaleString()}</p>
+                          <p className="text-xs text-white/40 mb-2">${Number(p.price_usd).toLocaleString()}</p>
                         )}
                         {p.raw.amazon_url && (
                           <a
@@ -1289,10 +1289,10 @@ export default function CompareClient() {
                             target="_blank"
                             rel="noopener noreferrer sponsored"
                             className="flex items-center justify-center w-full py-1.5 rounded-lg"
-                            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}
+                            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 6px rgba(0,0,0,0.12)' }}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/amazon-logo.svg" alt="Amazon" width={42} height={13} style={{ display: 'block' }} />
+                            <img src="/amazon-logo.svg" alt="Amazon" width={52} height={16} style={{ display: 'block' }} />
                           </a>
                         )}
                       </div>
@@ -1467,37 +1467,37 @@ export default function CompareClient() {
       {/* ── 모바일 하단 고정 바 — 헤더가 사라질 때만 표시, 슬라이더 ── */}
       {!loading && products.length >= 2 && showBottomBar && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
-          <div className="flex overflow-x-auto gap-2 px-3 pt-1.5 pb-2 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex overflow-x-auto gap-2 px-3 pt-2 pb-3 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
             {products.map((p, pi) => {
               const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
               return (
-                <div key={p.id} className="flex-shrink-0 snap-start w-[20vw] min-w-[72px] max-w-[90px] flex flex-col items-center gap-1">
+                <div key={p.id} className="flex-shrink-0 snap-start w-[28vw] min-w-[100px] flex flex-col items-center gap-1">
                   {/* 썸네일 — 컬러 상단 보더 */}
                   <div
-                    className="w-10 h-10 rounded-lg bg-surface-2 overflow-hidden flex items-center justify-center border border-border flex-shrink-0"
+                    className="w-full aspect-square rounded-xl bg-surface-2 overflow-hidden flex items-center justify-center border border-border"
                     style={{ borderTopColor: color, borderTopWidth: 2 }}
                   >
                     {p.image_url
-                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1" />
-                      : <span className="text-[7px] text-white/30 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
+                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1.5" />
+                      : <span className="text-[8px] text-white/30 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
                     }
                   </div>
                   {/* 제품명 */}
-                  <p className="text-[8px] text-white/35 text-center leading-tight w-full line-clamp-2 px-0.5">{p.name}</p>
+                  <p className="text-[9px] text-white/40 text-center leading-tight w-full line-clamp-2 px-0.5">{p.name}</p>
                   {/* Amazon 버튼 */}
                   {p.raw.amazon_url ? (
                     <a
                       href={p.raw.amazon_url}
                       target="_blank"
                       rel="noopener noreferrer sponsored"
-                      className="w-full flex items-center justify-center py-0.5 rounded-md"
+                      className="w-full flex items-center justify-center py-1 rounded-lg"
                       style={{ backgroundColor: '#FFFFFF' }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/amazon-logo.svg" alt="Amazon" width={28} height={9} style={{ display: 'block' }} />
+                      <img src="/amazon-logo.svg" alt="Amazon" width={36} height={11} style={{ display: 'block' }} />
                     </a>
                   ) : (
-                    <div className="h-[16px]" />
+                    <div className="h-[20px]" />
                   )}
                 </div>
               )
