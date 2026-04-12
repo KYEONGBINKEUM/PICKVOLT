@@ -543,6 +543,44 @@ function PopularComparisons({ items, t }: { items: PopularItem[]; t: (k: string)
   )
 }
 
+/* ---------- Review Tabs ---------- */
+function ReviewTabs({ products }: { products: Product[] }) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  if (products.length === 0) return null
+  const active = products[activeIdx]
+  return (
+    <div className="mt-4 mb-32 sm:mb-8 bg-surface border border-border rounded-card overflow-hidden" data-export-exclude="true">
+      {/* 탭 헤더 */}
+      <div className="flex overflow-x-auto border-b border-border" style={{ scrollbarWidth: 'none' }}>
+        {products.map((p, pi) => {
+          const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+          const isActive = pi === activeIdx
+          return (
+            <button
+              key={p.id}
+              onClick={() => setActiveIdx(pi)}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
+                isActive ? 'text-white' : 'text-white/35 hover:text-white/60 border-transparent'
+              }`}
+              style={isActive ? { borderBottomColor: color } : {}}
+            >
+              {p.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.image_url} alt={p.name} className="w-5 h-5 object-contain flex-shrink-0" />
+              )}
+              <span className="truncate max-w-[120px] sm:max-w-[180px]">{p.name}</span>
+            </button>
+          )
+        })}
+      </div>
+      {/* 리뷰 내용 */}
+      <div className="px-5 py-2">
+        <ReviewSection key={active.id} productId={active.id} readOnly />
+      </div>
+    </div>
+  )
+}
+
 // RAM / Storage 옵션 파싱 ("8, 16, 32" → [8, 16, 32])
 function parseOptions(val: string | number | null | undefined): number[] {
   if (val == null) return []
@@ -1389,23 +1427,9 @@ export default function CompareClient() {
               })}
             </div>
 
-            {/* User Reviews — 제품별 전체 표시 */}
-            <div className="mt-4 mb-32 sm:mb-8 space-y-6" data-export-exclude="true">
-              {products.map((p, pi) => {
-                const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
-                return (
-                  <div key={p.id} className="bg-surface border border-border rounded-card overflow-hidden">
-                    <div className="px-5 pt-4 pb-3 border-b border-border flex items-center gap-3">
-                      <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                      <p className="text-sm font-bold text-white/80 truncate">{p.name}</p>
-                    </div>
-                    <div className="px-5 pb-2">
-                      <ReviewSection productId={p.id} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            {/* User Reviews — 탭으로 제품별 전환 */}
+            <ReviewTabs products={products} />
+
 
             {/* 액션 버튼 */}
             <ActionButtons

@@ -20,6 +20,7 @@ interface Review {
 interface Props {
   productId: string
   compact?: boolean
+  readOnly?: boolean
 }
 
 function timeAgo(dateStr: string): string {
@@ -76,7 +77,7 @@ function RatingBadge({ rating }: { rating: number }) {
   )
 }
 
-export default function ReviewSection({ productId, compact = false }: Props) {
+export default function ReviewSection({ productId, compact = false, readOnly = false }: Props) {
   const { t } = useI18n()
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
@@ -241,11 +242,11 @@ export default function ReviewSection({ productId, compact = false }: Props) {
 
   /* ── Full mode (product detail page) ─────────────────────── */
   return (
-    <div className="mt-10">
-      <h2 className="text-base font-bold text-white mb-5">{t('review.title')}</h2>
+    <div className={readOnly ? '' : 'mt-10'}>
+      {!readOnly && <h2 className="text-base font-bold text-white mb-5">{t('review.title')}</h2>}
 
-      {/* 새 리뷰 작성 폼 */}
-      {sessionLoaded && myUserId && !hasMyReview && (
+      {/* 새 리뷰 작성 폼 — readOnly 모드에서는 숨김 */}
+      {!readOnly && sessionLoaded && myUserId && !hasMyReview && (
         <div className="mb-6 bg-surface border border-border rounded-2xl p-4">
           <div className="mb-3">
             <p className="text-xs text-white/40 mb-2">{t('review.score')}</p>
@@ -278,7 +279,7 @@ export default function ReviewSection({ productId, compact = false }: Props) {
         </div>
       )}
 
-      {sessionLoaded && !myUserId && (
+      {!readOnly && sessionLoaded && !myUserId && (
         <div className="mb-6 p-4 bg-surface border border-border rounded-2xl flex items-center justify-between gap-4">
           <p className="text-sm text-white/40">{t('review.sign_in_prompt')}</p>
           <Link href="/login" className="text-xs font-semibold text-accent hover:text-accent/80 transition-colors flex-shrink-0">
