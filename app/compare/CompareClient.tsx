@@ -571,11 +571,12 @@ export default function CompareClient() {
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
-
+  const [showBottomBar, setShowBottomBar] = useState(false)
 
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
   const ranKeyRef = useRef<string>('')
   const compareTableRef = useRef<HTMLDivElement>(null)
+  const mobileHeaderRef = useRef<HTMLDivElement>(null)
 
   // 세션 확인
   useEffect(() => {
@@ -589,6 +590,18 @@ export default function CompareClient() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // 모바일 헤더가 사라지면 하단 바 표시
+  useEffect(() => {
+    const el = mobileHeaderRef.current
+    if (!el || products.length < 2) return
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowBottomBar(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-56px 0px 0px 0px' }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [products])
 
   // 인기 비교 로드
   useEffect(() => {
@@ -1201,7 +1214,50 @@ export default function CompareClient() {
             {/* 비교 테이블 */}
             <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
 
-              {/* ── 헤더: 데스크탑 그리드 (모바일은 하단 고정 바로 대체) ── */}
+              {/* ── 모바일 헤더: 가로 슬라이드 카드 (넓게, 4개도 여유있게) ── */}
+              <div ref={mobileHeaderRef} className="sm:hidden border-b border-border">
+                <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+                  {products.map((p, pi) => {
+                    const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                    return (
+                      <div key={p.id} className="flex-shrink-0 snap-start w-[72vw] max-w-[260px]">
+                        <div className="bg-surface-2 border border-border rounded-2xl p-3 flex gap-3 items-start">
+                          {/* 썸네일 */}
+                          <div className="w-16 h-16 rounded-xl bg-surface overflow-hidden flex items-center justify-center flex-shrink-0 border border-border/50" style={{ borderTopColor: color, borderTopWidth: 2 }}>
+                            {p.image_url
+                              ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1" />
+                              : <span className="text-[10px] text-white/20 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
+                            }
+                          </div>
+                          {/* 정보 */}
+                          <div className="flex-1 min-w-0">
+                            <Link href={`/product/${p.id}`} className="text-xs font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
+                              {p.name}
+                            </Link>
+                            {p.price_usd && (
+                              <p className="text-[11px] text-white/40 mb-2">${Number(p.price_usd).toLocaleString()}</p>
+                            )}
+                            {p.raw.amazon_url && (
+                              <a
+                                href={p.raw.amazon_url}
+                                target="_blank"
+                                rel="noopener noreferrer sponsored"
+                                className="flex items-center justify-center w-full py-1.5 rounded-lg"
+                                style={{ backgroundColor: '#FFFFFF' }}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src="/amazon-logo.svg" alt="Amazon" width={46} height={14} style={{ display: 'block' }} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* ── 헤더: 데스크탑 그리드 ── */}
               <div
                 className="hidden sm:grid border-b border-border"
                 style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
@@ -1378,8 +1434,8 @@ export default function CompareClient() {
         />
       )}
 
-      {/* ── 모바일 하단 고정 바 — 제품 썸네일 + Amazon ── */}
-      {!loading && products.length >= 2 && (
+      {/* ── 모바일 하단 고정 바 — 헤더가 사라질 때만 표시 ── */}
+      {!loading && products.length >= 2 && showBottomBar && (
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
           <div className="flex divide-x divide-border">
             {products.map((p, pi) => {
