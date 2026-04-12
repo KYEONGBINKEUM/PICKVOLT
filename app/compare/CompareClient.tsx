@@ -1471,7 +1471,7 @@ export default function CompareClient() {
             {products.map((p, pi) => {
               const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
               return (
-                <div key={p.id} className="flex-shrink-0 snap-start w-[28vw] min-w-[100px] flex flex-col items-center gap-1">
+                <div key={p.id} className="flex-shrink-0 snap-start w-[22vw] min-w-[84px] flex flex-col items-center gap-1">
                   {/* 썸네일 — 컬러 상단 보더 */}
                   <div
                     className="w-full aspect-square rounded-xl bg-surface-2 overflow-hidden flex items-center justify-center border border-border"
