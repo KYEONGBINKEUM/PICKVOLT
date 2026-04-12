@@ -222,6 +222,11 @@ function SpecRow({
                 {nameLabel && (
                   <p className="text-[11px] text-white/40 leading-tight truncate flex-1">{nameLabel}</p>
                 )}
+                {isWinner && hasBar && (
+                  <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
+                    BEST
+                  </span>
+                )}
               </div>
               {hasBar ? (
                 /* 점수가 있는 행: 숫자 왼쪽, 바 오른쪽 */
@@ -232,11 +237,6 @@ function SpecRow({
                   <div className="flex-1 min-w-0">
                     <PerformanceBar score={v.bar!} max={barMax} color={color} />
                   </div>
-                  {isWinner && (
-                    <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
-                      BEST
-                    </span>
-                  )}
                 </div>
               ) : (
                 /* 일반 값 행 */
