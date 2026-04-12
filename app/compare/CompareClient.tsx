@@ -1430,26 +1430,26 @@ export default function CompareClient() {
         />
       )}
 
-      {/* ── 모바일 하단 고정 바 — 헤더가 사라질 때만 표시 ── */}
+      {/* ── 모바일 하단 고정 바 — 헤더가 사라질 때만 표시, 슬라이더 ── */}
       {!loading && products.length >= 2 && showBottomBar && (
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
-          <div className="flex divide-x divide-border">
+          <div className="flex overflow-x-auto gap-2 px-3 pt-2 pb-3 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
             {products.map((p, pi) => {
               const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
               return (
-                <div key={p.id} className="flex-1 flex flex-col items-center gap-1.5 px-2 pt-2 pb-3 min-w-0">
+                <div key={p.id} className="flex-shrink-0 snap-start w-[28vw] min-w-[100px] flex flex-col items-center gap-1.5">
                   {/* 썸네일 — 컬러 상단 보더 */}
                   <div
-                    className="w-11 h-11 rounded-xl bg-surface-2 overflow-hidden flex items-center justify-center border border-border flex-shrink-0"
+                    className="w-full aspect-square rounded-xl bg-surface-2 overflow-hidden flex items-center justify-center border border-border"
                     style={{ borderTopColor: color, borderTopWidth: 2 }}
                   >
                     {p.image_url
-                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1" />
+                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1.5" />
                       : <span className="text-[8px] text-white/30 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
                     }
                   </div>
-                  {/* 제품명 축약 */}
-                  <p className="text-[9px] text-white/40 text-center leading-tight w-full truncate px-1">{p.name}</p>
+                  {/* 제품명 */}
+                  <p className="text-[9px] text-white/40 text-center leading-tight w-full line-clamp-2 px-0.5">{p.name}</p>
                   {/* Amazon 버튼 */}
                   {p.raw.amazon_url ? (
                     <a
@@ -1460,10 +1460,10 @@ export default function CompareClient() {
                       style={{ backgroundColor: '#FFFFFF' }}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/amazon-logo.svg" alt="Amazon" width={38} height={12} style={{ display: 'block' }} />
+                      <img src="/amazon-logo.svg" alt="Amazon" width={36} height={11} style={{ display: 'block' }} />
                     </a>
                   ) : (
-                    <div className="w-full h-[22px]" />
+                    <div className="h-[20px]" />
                   )}
                 </div>
               )
