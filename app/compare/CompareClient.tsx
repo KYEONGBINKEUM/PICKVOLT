@@ -169,8 +169,9 @@ function SpecRow({
   values,
   barMax = 100,
   winnerIndex = -1,
-  winnerColor = '#FF6B2B',
   colors = [],
+  rowIndex = 0,
+  productNames = [],
 }: {
   label: string
   sublabel: string
@@ -179,34 +180,75 @@ function SpecRow({
   winnerIndex?: number
   winnerColor?: string
   colors?: string[]
+  rowIndex?: number
+  productNames?: string[]
 }) {
+  const evenRow = rowIndex % 2 === 0
   return (
     <div className="border-t border-border">
-      {/* 모바일: 라벨 위에, 값들 아래에 가로 배치 */}
-      <div className="px-3 pt-3 pb-1 sm:hidden">
-        <span className="text-[10px] text-white/30 uppercase tracking-widest">{sublabel}</span>
-        <span className="text-xs font-semibold text-white/60 ml-1.5">{label}</span>
+      {/* ── 모바일: 세로 나열 ── */}
+      <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.025]'}`}>
+        {/* 스펙 라벨 */}
+        <div className="px-4 pt-2.5 pb-1">
+          <span className="text-[9px] uppercase tracking-widest text-white/30">{sublabel}</span>
+          <span className="text-xs font-bold text-white/70 ml-1.5">{label}</span>
+        </div>
+        {/* 제품별 값 — 세로 목록 */}
+        {values.map((v, i) => {
+          const isWinner = i === winnerIndex
+          const color = colors[i % colors.length] ?? '#FF6B2B'
+          const shortName = productNames[i] ?? `P${i + 1}`
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-3 px-4 py-2 border-t border-border/30 ${isWinner ? 'border-l-2' : 'border-l-2 border-l-transparent'}`}
+              style={isWinner ? { borderLeftColor: color, backgroundColor: `${color}0d` } : {}}
+            >
+              {/* 컬러 인디케이터 + 제품명 */}
+              <div className="flex items-center gap-2 w-[110px] flex-shrink-0 min-w-0">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                <span className="text-[10px] text-white/40 truncate leading-tight">{shortName}</span>
+              </div>
+              {/* 값 */}
+              <div className="flex-1 min-w-0">
+                <span className={`text-sm font-black leading-tight break-words ${isWinner ? 'text-white' : 'text-white/70'}`}>{v.primary}</span>
+                {v.secondary && <p className="text-[9px] text-white/30 mt-0.5 leading-tight">{v.secondary}</p>}
+                {v.bar !== undefined && <div className="mt-1"><PerformanceBar score={v.bar} max={barMax} color={color} /></div>}
+              </div>
+              {/* 우승 뱃지 */}
+              {isWinner && (
+                <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${color}25`, color }}>
+                  BEST
+                </span>
+              )}
+            </div>
+          )
+        })}
+        <div className="pb-1" />
       </div>
+
+      {/* ── 데스크탑: 가로 그리드 ── */}
       <div
-        className="grid"
+        className="hidden sm:grid"
         style={{ gridTemplateColumns: `80px repeat(${values.length}, 1fr)` }}
       >
-        {/* 라벨 — 데스크탑에서만 크게 */}
-        <div className="hidden sm:flex p-4 flex-col gap-0.5 justify-center">
+        <div className="p-4 flex flex-col gap-0.5 justify-center">
           <span className="text-xs text-white/40">{sublabel}</span>
           <span className="text-sm font-semibold text-white">{label}</span>
         </div>
-        {/* 모바일용 빈 칸 (공간 맞추기) */}
-        <div className="sm:hidden" />
-        {values.map((v, i) => (
-          <div key={i}
-            className="p-3 sm:p-4 border-l border-border transition-colors"
-            style={i === winnerIndex ? { backgroundColor: `${winnerColor}12` } : {}}>
-            <span className="text-base sm:text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
-            {v.secondary && <p className="text-[10px] sm:text-xs text-white/40 mt-0.5">{v.secondary}</p>}
-            {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={colors[i]} />}
-          </div>
-        ))}
+        {values.map((v, i) => {
+          const isWinner = i === winnerIndex
+          const color = colors[i % colors.length] ?? '#FF6B2B'
+          return (
+            <div key={i}
+              className="p-4 border-l border-border transition-colors"
+              style={isWinner ? { backgroundColor: `${color}12` } : {}}>
+              <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
+              {v.secondary && <p className="text-xs text-white/40 mt-0.5">{v.secondary}</p>}
+              {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={color} />}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1107,20 +1149,77 @@ export default function CompareClient() {
 
             {/* 비교 테이블 */}
             <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
+
+              {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
+              <div className="sm:hidden border-b border-border">
+                <div className="px-4 pt-3 pb-1">
+                  <p className="text-[10px] text-white/30 font-semibold uppercase tracking-widest">{t('compare.overview')}</p>
+                </div>
+                <div className="flex overflow-x-auto gap-3 px-4 pb-4 pt-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+                  {products.map((p, pi) => {
+                    const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                    const imgSrc = p.image_url ?? null
+                    return (
+                      <div key={p.id} className="flex-shrink-0 snap-center w-[48%] min-w-[140px]">
+                        {/* 컬러 인디케이터 */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          <span className="text-[10px] text-white/40 font-semibold">P{pi + 1}</span>
+                        </div>
+                        {/* 이미지 */}
+                        <div className="aspect-square rounded-xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-2">
+                          {imgSrc
+                            ? <img src={imgSrc} alt={p.name} className="w-full h-full object-contain p-2" />
+                            : <p className="text-[10px] text-white/20">{p.brand}</p>
+                          }
+                        </div>
+                        {/* 이름 */}
+                        <Link href={`/product/${p.id}`} className="text-xs font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
+                          {p.name}
+                        </Link>
+                        {p.price_usd && (
+                          <p className="text-[11px] text-white/40">${Number(p.price_usd).toLocaleString()}</p>
+                        )}
+                        {/* Amazon button */}
+                        {p.raw.amazon_url && (
+                          <a
+                            href={p.raw.amazon_url}
+                            target="_blank"
+                            rel="noopener noreferrer sponsored"
+                            data-export-exclude="true"
+                            className="mt-2 flex items-center justify-center w-full py-2 rounded-lg transition-all hover:brightness-105 active:scale-95"
+                            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 6px rgba(0,0,0,0.15)' }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/amazon-logo.svg" alt="Amazon" width={50} height={16} style={{ display: 'block' }} />
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* 스크롤 인디케이터 점 */}
+                {products.length > 2 && (
+                  <div className="flex justify-center gap-1.5 pb-3">
+                    {products.map((_, pi) => (
+                      <div key={pi} className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── 데스크탑 헤더: 기존 그리드 ── */}
               <div
-                className="grid border-b border-border"
+                className="hidden sm:grid border-b border-border"
                 style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
               >
                 <div className="p-3 sm:p-4 flex items-center">
                   <p className="text-[10px] sm:text-xs text-white/40 font-semibold">{t('compare.overview')}</p>
                 </div>
                 {products.map((p, pi) => {
-                  const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                   return (
                     <div key={p.id} className="p-2 sm:p-4 border-l border-border">
                       <ProductCard product={p} />
-
-                      {/* Amazon button — 내보내기시 제외 */}
                       {p.raw.amazon_url && (
                         <a
                           href={p.raw.amazon_url}
@@ -1145,34 +1244,62 @@ export default function CompareClient() {
               {productScores && productScores.length >= 2 && (() => {
                 const maxScore = Math.max(...productScores.map((s) => s.overall))
                 return (
-                  <div
-                    className="grid border-t border-border bg-surface-2/40"
-                    style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
-                  >
-                    <div className="p-3 sm:p-4 flex flex-col gap-0.5 justify-center">
-                      <span className="text-[10px] sm:text-sm font-semibold text-white/60 sm:text-white">{t('compare.overall_score')}</span>
+                  <div className="border-t border-border bg-surface-2/40">
+                    {/* ── 모바일: 세로 나열 ── */}
+                    <div className="sm:hidden px-4 pt-3 pb-2">
+                      <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">{t('compare.overall_score')}</p>
+                      <div className="space-y-2">
+                        {productScores.map((s, i) => {
+                          const isWinner = s.overall === maxScore
+                          const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
+                          const shortName = products[i]?.name ?? `P${i + 1}`
+                          return (
+                            <div key={i} className="flex items-center gap-3">
+                              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                              <span className="text-[10px] text-white/40 w-[100px] flex-shrink-0 truncate">{shortName}</span>
+                              <div className="flex-1 flex items-center gap-2">
+                                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${s.overall}%`, backgroundColor: color }} />
+                                </div>
+                                <span className="text-sm font-black w-8 text-right flex-shrink-0" style={{ color }}>{s.overall}</span>
+                                {isWinner && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${color}25`, color }}>BEST</span>}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                    {productScores.map((s, i) => {
-                      const isWinner = s.overall === maxScore
-                      const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
-                      return (
-                        <div key={i} className="p-3 sm:p-4 border-l border-border transition-colors"
-                          style={isWinner ? { backgroundColor: `${color}12` } : {}}>
-                          <div className="flex items-baseline gap-1 mb-1.5 sm:mb-2">
-                            <span className="text-xl sm:text-3xl font-black leading-none" style={{ color }}>
-                              {s.overall}
-                            </span>
-                            <span className="text-[10px] sm:text-xs text-white/30 font-semibold">/ 100</span>
+
+                    {/* ── 데스크탑: 기존 그리드 ── */}
+                    <div
+                      className="hidden sm:grid"
+                      style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
+                    >
+                      <div className="p-3 sm:p-4 flex flex-col gap-0.5 justify-center">
+                        <span className="text-[10px] sm:text-sm font-semibold text-white/60 sm:text-white">{t('compare.overall_score')}</span>
+                      </div>
+                      {productScores.map((s, i) => {
+                        const isWinner = s.overall === maxScore
+                        const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
+                        return (
+                          <div key={i} className="p-3 sm:p-4 border-l border-border transition-colors"
+                            style={isWinner ? { backgroundColor: `${color}12` } : {}}>
+                            <div className="flex items-baseline gap-1 mb-1.5 sm:mb-2">
+                              <span className="text-xl sm:text-3xl font-black leading-none" style={{ color }}>
+                                {s.overall}
+                              </span>
+                              <span className="text-[10px] sm:text-xs text-white/30 font-semibold">/ 100</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-700"
+                                style={{ width: `${s.overall}%`, backgroundColor: color }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-700"
-                              style={{ width: `${s.overall}%`, backgroundColor: color }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
                   </div>
                 )
               })()}
@@ -1200,6 +1327,8 @@ export default function CompareClient() {
                     winnerIndex={winnerIndex}
                     winnerColor={winnerColor}
                     colors={PRODUCT_COLORS}
+                    rowIndex={ri}
+                    productNames={products.map((p) => p.name)}
                   />
                 )
               })}
@@ -1210,13 +1339,30 @@ export default function CompareClient() {
               className="mt-4 mb-8 bg-surface border border-border rounded-card overflow-hidden"
               data-export-exclude="true"
             >
+              <div className="px-4 pt-4 pb-2 border-b border-border">
+                <p className="text-xs text-white/40 font-semibold uppercase tracking-widest">User Reviews</p>
+              </div>
+              {/* 모바일: 세로 스택 */}
+              <div className="sm:hidden divide-y divide-border">
+                {products.map((p, pi) => {
+                  const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                  return (
+                    <div key={p.id} className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                        <span className="text-xs font-bold text-white/60 truncate">{p.name}</span>
+                      </div>
+                      <ReviewSection productId={p.id} compact />
+                    </div>
+                  )
+                })}
+              </div>
+              {/* 데스크탑: 가로 그리드 */}
               <div
-                className="grid"
-                style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
+                className="hidden sm:grid"
+                style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
               >
-                <div className="p-4 pt-5">
-                  <p className="text-xs text-white/40 font-semibold">User Reviews</p>
-                </div>
+                <div className="p-4 pt-5" />
                 {products.map((p) => (
                   <div key={p.id} className="p-4 border-l border-border">
                     <ReviewSection productId={p.id} compact />

@@ -122,7 +122,7 @@ export default function MyPage() {
   // Canvas로 이미지를 지정 크기로 리사이징해 WebP Blob 반환
   const resizeImage = (file: File, maxSize = 256): Promise<Blob> =>
     new Promise((resolve, reject) => {
-      const img = new Image()
+      const img = document.createElement('img') as HTMLImageElement
       const url = URL.createObjectURL(file)
       img.onload = () => {
         URL.revokeObjectURL(url)
