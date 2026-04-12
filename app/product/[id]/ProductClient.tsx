@@ -2,11 +2,12 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
-import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2, Heart } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
+import { supabase } from '@/lib/supabase'
 
 interface Specs {
   cpu:             string | null
@@ -50,6 +51,46 @@ export default function ProductClient({ product }: { product: Product }) {
   const [exportOpen, setExportOpen] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; sub: string } | null>(null)
+  const [wishlisted, setWishlisted] = useState(false)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [authToken, setAuthToken] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      setAuthToken(session.access_token)
+      // 현재 제품 찜 여부 확인
+      fetch(`/api/wishlist`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then((r) => r.json())
+        .then((json) => {
+          const list = json.wishlist ?? []
+          setWishlisted(list.some((w: { product_id: string }) => w.product_id === product.id))
+        })
+    })
+  }, [product.id])
+
+  const handleWishlist = async () => {
+    if (!authToken) { window.location.href = '/login'; return }
+    setWishlistLoading(true)
+    try {
+      if (wishlisted) {
+        await fetch(`/api/wishlist?product_id=${product.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        setWishlisted(false)
+      } else {
+        await fetch('/api/wishlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+          body: JSON.stringify({ product_id: product.id }),
+        })
+        setWishlisted(true)
+      }
+    } finally {
+      setWishlistLoading(false)
+    }
+  }
 
   const showToast = (msg: string, sub: string) => {
     setToast({ msg, sub })
@@ -268,6 +309,20 @@ ${priceHTML}
           >
             <Share2 className="w-3.5 h-3.5" />
             {shareCopied ? 'Copied!' : t('compare.share')}
+          </button>
+          {/* 찜 */}
+          <button
+            onClick={handleWishlist}
+            disabled={wishlistLoading}
+            title={wishlisted ? '찜 해제' : '찜하기'}
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold border px-3 py-1.5 rounded-full transition-all disabled:opacity-50 ${
+              wishlisted
+                ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                : 'border-border text-white/40 hover:text-white/70 hover:border-white/20'
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-red-400' : ''}`} />
+            {wishlisted ? '찜됨' : '찜'}
           </button>
         </div>
       </div>

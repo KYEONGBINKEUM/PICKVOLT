@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera } from 'lucide-react'
+import Image from 'next/image'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -17,6 +18,14 @@ export default function MyPage() {
   const [user, setUser] = useState<{ email: string; name: string } | null>(null)
   const [compareCount, setCompareCount] = useState<number | null>(null)
   const [isPro, setIsPro] = useState(false)
+  const [myReviews, setMyReviews] = useState<{
+    id: string; content: string; rating: number; created_at: string
+    products: { id: string; name: string; brand: string; category: string; image_url: string | null } | null
+  }[]>([])
+  const [wishlist, setWishlist] = useState<{
+    id: string; product_id: string; created_at: string
+    products: { id: string; name: string; brand: string; category: string; image_url: string | null; price_usd: number | null } | null
+  }[]>([])
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showCurrMenu, setShowCurrMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -73,6 +82,16 @@ export default function MyPage() {
             setNickname(p?.nickname ?? null)
             setAvatarUrl(p?.avatar_url ?? null)
           })
+
+        // 내 리뷰 + 찜 목록 (토큰 필요)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) return
+          const token = session.access_token
+          fetch('/api/reviews/my', { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json()).then((j) => setMyReviews(j.reviews ?? []))
+          fetch('/api/wishlist', { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json()).then((j) => setWishlist(j.wishlist ?? []))
+        })
       }
     })
   }, [])
@@ -300,6 +319,76 @@ export default function MyPage() {
               </div>
             </div>
           </div>
+
+          {/* 찜 목록 */}
+          {wishlist.length > 0 && (
+            <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+                <Heart className="w-4 h-4 text-red-400 fill-red-400" />
+                <p className="text-sm font-bold text-white">찜한 제품 <span className="text-white/30 font-normal text-xs ml-1">{wishlist.length}개</span></p>
+              </div>
+              <div className="divide-y divide-border">
+                {wishlist.map((w) => {
+                  const p = w.products
+                  if (!p) return null
+                  return (
+                    <Link key={w.id} href={`/product/${p.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-surface-2 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                        {p.image_url ? (
+                          <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" unoptimized />
+                        ) : (
+                          <span className="text-white/20 text-xs font-bold">{p.brand?.[0]}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-white/30 truncate">{p.brand}</p>
+                        <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                        {p.price_usd && <p className="text-xs text-accent font-bold">${Number(p.price_usd).toLocaleString()}</p>}
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-white/20 flex-shrink-0" />
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 내가 쓴 리뷰 */}
+          {myReviews.length > 0 && (
+            <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+                <MessageSquare className="w-4 h-4 text-white/40" />
+                <p className="text-sm font-bold text-white">내가 쓴 리뷰 <span className="text-white/30 font-normal text-xs ml-1">{myReviews.length}개</span></p>
+              </div>
+              <div className="divide-y divide-border">
+                {myReviews.map((r) => {
+                  const p = r.products
+                  if (!p) return null
+                  return (
+                    <Link key={r.id} href={`/product/${p.id}`} className="flex items-start gap-3 px-5 py-3.5 hover:bg-surface-2 transition-colors">
+                      <div className="w-10 h-10 rounded-xl bg-surface-2 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                        {p.image_url ? (
+                          <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" unoptimized />
+                        ) : (
+                          <span className="text-white/20 text-xs font-bold">{p.brand?.[0]}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <Star className="w-3 h-3 text-accent fill-accent" />
+                            <span className="text-xs font-bold text-accent">{r.rating}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-white/40 line-clamp-2 leading-relaxed">{r.content}</p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Plan */}
           <div className={`rounded-card p-5 mb-4 flex items-center justify-between ${

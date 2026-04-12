@@ -10,6 +10,7 @@ interface Review {
   id: string
   user_id: string
   user_display_name: string
+  avatar_url: string | null
   content: string
   rating: number
   likes: number
@@ -302,8 +303,13 @@ export default function ReviewSection({ productId, compact = false }: Props) {
               {/* 헤더 */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-accent uppercase">{r.user_display_name[0]}</span>
+                  <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {r.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.avatar_url} alt={r.user_display_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold text-accent uppercase">{r.user_display_name[0]}</span>
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">

@@ -74,7 +74,7 @@ export default function SearchBar({ initialQuery = '' }: { initialQuery?: string
   return (
     <form onSubmit={handleSubmit} className="relative w-full max-w-2xl">
       <div
-        className={`flex items-center gap-3 bg-surface border transition-all duration-200 rounded-full px-5 py-4 ${
+        className={`flex items-center gap-3 bg-surface border transition-all duration-200 rounded-full px-4 py-2.5 ${
           focused ? 'border-white/20 shadow-lg shadow-black/50' : 'border-border'
         }`}
       >
@@ -90,7 +90,7 @@ export default function SearchBar({ initialQuery = '' }: { initialQuery?: string
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={t('search.placeholder')}
-          className="flex-1 bg-transparent text-white placeholder:text-white/30 text-base focus:outline-none"
+          className="flex-1 bg-transparent text-white placeholder:text-white/30 text-sm focus:outline-none"
           autoComplete="off"
         />
         {query && (

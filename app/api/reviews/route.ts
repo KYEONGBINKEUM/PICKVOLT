@@ -36,8 +36,22 @@ export async function GET(req: NextRequest) {
     .limit(50)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 프로필 이미지 일괄 조회
+  const userIds = Array.from(new Set((data ?? []).map((r) => r.user_id).filter(Boolean)))
+  let avatarMap: Record<string, string | null> = {}
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, avatar_url')
+      .in('user_id', userIds)
+    avatarMap = Object.fromEntries((profiles ?? []).map((p) => [p.user_id, p.avatar_url ?? null]))
+  }
+
+  const reviews = (data ?? []).map((r) => ({ ...r, avatar_url: avatarMap[r.user_id] ?? null }))
+
   return NextResponse.json(
-    { reviews: data ?? [] },
+    { reviews },
     { headers: { 'Cache-Control': 'no-store' } }
   )
 }
