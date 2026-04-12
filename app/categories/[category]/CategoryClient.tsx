@@ -14,7 +14,6 @@ import {
   Search,
   X,
   ArrowUpDown,
-  Tag,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
@@ -643,6 +642,7 @@ export default function CategoryClient({ category }: { category: string }) {
   const [loading,         setLoading]         = useState(true)
   const [visibleCount,    setVisibleCount]    = useState(30)
   const [mobileSheet,     setMobileSheet]     = useState(false)
+  const [mobileSortOpen,  setMobileSortOpen]  = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // 바텀시트 열릴 때 body 스크롤 막기
@@ -852,33 +852,61 @@ export default function CategoryClient({ category }: { category: string }) {
         </div>
       </div>
 
-      {/* ── 모바일 하단 고정 필터 바 ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-background/90 backdrop-blur-md border-t border-border px-4 py-3 flex items-center gap-2">
-        {/* 정렬 퀵 버튼 */}
-        <div className="flex gap-1.5 flex-1 overflow-x-auto no-scrollbar">
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => { setFilters((f) => ({ ...f, sort: opt.value })); setVisibleCount(PAGE_SIZE) }}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                filters.sort === opt.value
-                  ? 'bg-accent/10 border-accent/40 text-accent'
-                  : 'border-border text-white/40 hover:text-white hover:border-white/20'
-              }`}
-            >
-              {opt.value === 'performance' && <ArrowUpDown className="w-3 h-3" />}
-              {opt.label}
-            </button>
-          ))}
+      {/* ── 모바일 하단 고정 바 ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 flex items-center gap-3">
+
+        {/* 정렬 토글 버튼 (좌측) */}
+        <div className="relative flex-1">
+          <button
+            onClick={() => setMobileSortOpen((v) => !v)}
+            className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+              filters.sort !== 'performance'
+                ? 'bg-accent/10 border-accent/40 text-accent'
+                : 'bg-surface border-border text-white/70 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="truncate">{currentSortLabel}</span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${mobileSortOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* 정렬 드롭업 */}
+          {mobileSortOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMobileSortOpen(false)} />
+              <div className="absolute bottom-full left-0 right-0 mb-2 z-20 bg-surface border border-border rounded-2xl overflow-hidden shadow-2xl">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setFilters((f) => ({ ...f, sort: opt.value }))
+                      setVisibleCount(PAGE_SIZE)
+                      setMobileSortOpen(false)
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors ${
+                      filters.sort === opt.value
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {opt.label}
+                    {filters.sort === opt.value && <Check className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* 필터 버튼 */}
+        {/* 필터 버튼 (우측) */}
         <button
           onClick={() => setMobileSheet(true)}
-          className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
             hasFilters
               ? 'bg-accent/10 border-accent/40 text-accent'
-              : 'border-border text-white/50 hover:text-white hover:border-white/20'
+              : 'bg-surface border-border text-white/70 hover:text-white'
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
