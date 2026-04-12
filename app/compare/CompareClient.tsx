@@ -171,6 +171,7 @@ function SpecRow({
   colors = [],
   rowIndex = 0,
   nameLabels = [],
+  productImages = [],
 }: {
   label: string
   sublabel: string
@@ -182,6 +183,7 @@ function SpecRow({
   rowIndex?: number
   productNames?: string[]
   nameLabels?: string[]
+  productImages?: (string | null)[]
 }) {
   const evenRow = rowIndex % 2 === 0
   return (
@@ -199,16 +201,28 @@ function SpecRow({
           const color = colors[i % colors.length] ?? '#FF6B2B'
           const hasBar = v.bar !== undefined
           const nameLabel = nameLabels[i] ?? ''
+          const imgSrc = productImages[i] ?? null
           return (
             <div
               key={i}
               className="px-4 pt-2.5 pb-3 border-t border-border/20"
               style={isWinner ? { backgroundColor: `${color}08` } : {}}
             >
-              {/* 제품명 또는 칩셋명 */}
-              {nameLabel && (
-                <p className="text-[11px] text-white/35 mb-1.5 leading-none truncate">{nameLabel}</p>
-              )}
+              {/* 썸네일 + 제품명/칩셋명 */}
+              <div className="flex items-center gap-2 mb-2">
+                <div
+                  className="w-7 h-7 rounded-lg bg-surface-2 border border-border overflow-hidden flex items-center justify-center flex-shrink-0"
+                  style={{ borderTopColor: color, borderTopWidth: 2 }}
+                >
+                  {imgSrc
+                    ? <img src={imgSrc} alt={nameLabel} className="w-full h-full object-contain p-0.5" />
+                    : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />
+                  }
+                </div>
+                {nameLabel && (
+                  <p className="text-[11px] text-white/40 leading-tight truncate flex-1">{nameLabel}</p>
+                )}
+              </div>
               {hasBar ? (
                 /* 점수가 있는 행: 숫자 왼쪽, 바 오른쪽 */
                 <div className="flex items-center gap-3">
@@ -1232,9 +1246,18 @@ export default function CompareClient() {
                       {productScores.map((s, i) => {
                         const isWinner = s.overall === maxScore
                         const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
+                        const p = products[i]
                         return (
                           <div key={i} className="px-4 pt-2.5 pb-3 border-t border-border/20" style={isWinner ? { backgroundColor: `${color}08` } : {}}>
-                            <p className="text-[11px] text-white/35 mb-1.5 leading-none truncate">{products[i]?.name ?? ''}</p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-7 h-7 rounded-lg bg-surface-2 border border-border overflow-hidden flex items-center justify-center flex-shrink-0" style={{ borderTopColor: color, borderTopWidth: 2 }}>
+                                {p?.image_url
+                                  ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-0.5" />
+                                  : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />
+                                }
+                              </div>
+                              <p className="text-[11px] text-white/40 leading-tight truncate flex-1">{p?.name ?? ''}</p>
+                            </div>
                             <div className="flex items-center gap-3">
                               <span className="text-[20px] font-black leading-none flex-shrink-0 w-9" style={{ color: isWinner ? color : 'rgba(255,255,255,0.85)' }}>
                                 {s.overall}
@@ -1308,6 +1331,7 @@ export default function CompareClient() {
                     colors={PRODUCT_COLORS}
                     rowIndex={ri}
                     nameLabels={row.nameLabels ?? products.map((p) => p.name)}
+                    productImages={products.map((p) => p.image_url ?? null)}
                   />
                 )
               })}
