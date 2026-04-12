@@ -171,7 +171,6 @@ function SpecRow({
   winnerIndex = -1,
   colors = [],
   rowIndex = 0,
-  productNames = [],
 }: {
   label: string
   sublabel: string
@@ -187,44 +186,47 @@ function SpecRow({
   return (
     <div className="border-t border-border">
       {/* ── 모바일: 세로 나열 ── */}
-      <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.025]'}`}>
+      <div className={`sm:hidden ${evenRow ? '' : 'bg-white/[0.02]'}`}>
         {/* 스펙 라벨 */}
-        <div className="px-4 pt-2.5 pb-1">
-          <span className="text-[9px] uppercase tracking-widest text-white/30">{sublabel}</span>
-          <span className="text-xs font-bold text-white/70 ml-1.5">{label}</span>
+        <div className="px-4 pt-3 pb-2">
+          <span className="text-[10px] uppercase tracking-wider text-white/25">{sublabel} · </span>
+          <span className="text-sm font-bold text-white/60">{label}</span>
         </div>
         {/* 제품별 값 — 세로 목록 */}
         {values.map((v, i) => {
           const isWinner = i === winnerIndex
           const color = colors[i % colors.length] ?? '#FF6B2B'
-          const shortName = productNames[i] ?? `P${i + 1}`
           return (
             <div
               key={i}
-              className={`flex items-center gap-3 px-4 py-2 border-t border-border/30 ${isWinner ? 'border-l-2' : 'border-l-2 border-l-transparent'}`}
-              style={isWinner ? { borderLeftColor: color, backgroundColor: `${color}0d` } : {}}
+              className={`flex items-center gap-3 px-4 py-3 border-t border-border/20`}
+              style={isWinner ? { backgroundColor: `${color}0d` } : {}}
             >
-              {/* 컬러 인디케이터 + 제품명 */}
-              <div className="flex items-center gap-2 w-[110px] flex-shrink-0 min-w-0">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                <span className="text-[10px] text-white/40 truncate leading-tight">{shortName}</span>
-              </div>
+              {/* 번호 칩만 — 색상으로 제품 구분 */}
+              <span
+                className="flex-shrink-0 w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center text-white"
+                style={{ backgroundColor: color }}
+              >
+                {i + 1}
+              </span>
               {/* 값 */}
               <div className="flex-1 min-w-0">
-                <span className={`text-sm font-black leading-tight break-words ${isWinner ? 'text-white' : 'text-white/70'}`}>{v.primary}</span>
-                {v.secondary && <p className="text-[9px] text-white/30 mt-0.5 leading-tight">{v.secondary}</p>}
-                {v.bar !== undefined && <div className="mt-1"><PerformanceBar score={v.bar} max={barMax} color={color} /></div>}
+                <span className={`text-base font-black leading-tight break-words ${isWinner ? 'text-white' : 'text-white/75'}`}>
+                  {v.primary}
+                </span>
+                {v.secondary && <p className="text-xs text-white/35 mt-0.5 leading-tight">{v.secondary}</p>}
+                {v.bar !== undefined && <div className="mt-1.5"><PerformanceBar score={v.bar} max={barMax} color={color} /></div>}
               </div>
               {/* 우승 뱃지 */}
               {isWinner && (
-                <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${color}25`, color }}>
+                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
                   BEST
                 </span>
               )}
             </div>
           )
         })}
-        <div className="pb-1" />
+        <div className="pb-2" />
       </div>
 
       {/* ── 데스크탑: 가로 그리드 ── */}
@@ -1152,33 +1154,32 @@ export default function CompareClient() {
 
               {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
               <div className="sm:hidden border-b border-border">
-                <div className="px-4 pt-3 pb-1">
-                  <p className="text-[10px] text-white/30 font-semibold uppercase tracking-widest">{t('compare.overview')}</p>
-                </div>
-                <div className="flex overflow-x-auto gap-3 px-4 pb-4 pt-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+                <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                   {products.map((p, pi) => {
                     const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                     const imgSrc = p.image_url ?? null
                     return (
-                      <div key={p.id} className="flex-shrink-0 snap-center w-[48%] min-w-[140px]">
-                        {/* 컬러 인디케이터 */}
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          <span className="text-[10px] text-white/40 font-semibold">P{pi + 1}</span>
-                        </div>
-                        {/* 이미지 */}
-                        <div className="aspect-square rounded-xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-2">
+                      <div key={p.id} className="flex-shrink-0 snap-center w-[46%] min-w-[150px]">
+                        {/* 이미지 + 번호 칩 */}
+                        <div className="relative aspect-square rounded-xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-2.5">
                           {imgSrc
                             ? <img src={imgSrc} alt={p.name} className="w-full h-full object-contain p-2" />
-                            : <p className="text-[10px] text-white/20">{p.brand}</p>
+                            : <p className="text-xs text-white/20">{p.brand}</p>
                           }
+                          {/* 번호 칩 — 이미지 우하단 */}
+                          <span
+                            className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center text-white"
+                            style={{ backgroundColor: color }}
+                          >
+                            {pi + 1}
+                          </span>
                         </div>
                         {/* 이름 */}
                         <Link href={`/product/${p.id}`} className="text-xs font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
                           {p.name}
                         </Link>
                         {p.price_usd && (
-                          <p className="text-[11px] text-white/40">${Number(p.price_usd).toLocaleString()}</p>
+                          <p className="text-[11px] text-white/40 mb-1.5">${Number(p.price_usd).toLocaleString()}</p>
                         )}
                         {/* Amazon button */}
                         {p.raw.amazon_url && (
@@ -1187,7 +1188,7 @@ export default function CompareClient() {
                             target="_blank"
                             rel="noopener noreferrer sponsored"
                             data-export-exclude="true"
-                            className="mt-2 flex items-center justify-center w-full py-2 rounded-lg transition-all hover:brightness-105 active:scale-95"
+                            className="flex items-center justify-center w-full py-1.5 rounded-lg transition-all hover:brightness-105 active:scale-95"
                             style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 6px rgba(0,0,0,0.15)' }}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1198,14 +1199,6 @@ export default function CompareClient() {
                     )
                   })}
                 </div>
-                {/* 스크롤 인디케이터 점 */}
-                {products.length > 2 && (
-                  <div className="flex justify-center gap-1.5 pb-3">
-                    {products.map((_, pi) => (
-                      <div key={pi} className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* ── 데스크탑 헤더: 기존 그리드 ── */}
@@ -1246,23 +1239,26 @@ export default function CompareClient() {
                 return (
                   <div className="border-t border-border bg-surface-2/40">
                     {/* ── 모바일: 세로 나열 ── */}
-                    <div className="sm:hidden px-4 pt-3 pb-2">
-                      <p className="text-[10px] uppercase tracking-widest text-white/30 mb-2">{t('compare.overall_score')}</p>
-                      <div className="space-y-2">
+                    <div className="sm:hidden px-4 pt-3 pb-3">
+                      <p className="text-[10px] uppercase tracking-wider text-white/25 mb-3">{t('compare.overall_score')}</p>
+                      <div className="space-y-3">
                         {productScores.map((s, i) => {
                           const isWinner = s.overall === maxScore
                           const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
-                          const shortName = products[i]?.name ?? `P${i + 1}`
                           return (
                             <div key={i} className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                              <span className="text-[10px] text-white/40 w-[100px] flex-shrink-0 truncate">{shortName}</span>
+                              <span
+                                className="flex-shrink-0 w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center text-white"
+                                style={{ backgroundColor: color }}
+                              >
+                                {i + 1}
+                              </span>
                               <div className="flex-1 flex items-center gap-2">
-                                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                   <div className="h-full rounded-full transition-all duration-700" style={{ width: `${s.overall}%`, backgroundColor: color }} />
                                 </div>
                                 <span className="text-sm font-black w-8 text-right flex-shrink-0" style={{ color }}>{s.overall}</span>
-                                {isWinner && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${color}25`, color }}>BEST</span>}
+                                {isWinner && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: `${color}20`, color }}>BEST</span>}
                               </div>
                             </div>
                           )
@@ -1349,8 +1345,13 @@ export default function CompareClient() {
                   return (
                     <div key={p.id} className="p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="text-xs font-bold text-white/60 truncate">{p.name}</span>
+                        <span
+                          className="w-6 h-6 rounded-md text-[11px] font-black flex items-center justify-center text-white flex-shrink-0"
+                          style={{ backgroundColor: color }}
+                        >
+                          {pi + 1}
+                        </span>
+                        <span className="text-sm font-bold text-white/70 line-clamp-1">{p.name}</span>
                       </div>
                       <ReviewSection productId={p.id} compact />
                     </div>
