@@ -1214,43 +1214,39 @@ export default function CompareClient() {
             {/* 비교 테이블 */}
             <div id="spec-table" ref={compareTableRef} className="bg-surface border border-border rounded-card overflow-hidden mb-8">
 
-              {/* ── 모바일 헤더: 가로 슬라이드 카드 (넓게, 4개도 여유있게) ── */}
+              {/* ── 모바일 헤더: 가로 슬라이드 카드 ── */}
               <div ref={mobileHeaderRef} className="sm:hidden border-b border-border">
                 <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                   {products.map((p, pi) => {
                     const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                     return (
-                      <div key={p.id} className="flex-shrink-0 snap-start w-[72vw] max-w-[260px]">
-                        <div className="bg-surface-2 border border-border rounded-2xl p-3 flex gap-3 items-start">
-                          {/* 썸네일 */}
-                          <div className="w-16 h-16 rounded-xl bg-surface overflow-hidden flex items-center justify-center flex-shrink-0 border border-border/50" style={{ borderTopColor: color, borderTopWidth: 2 }}>
-                            {p.image_url
-                              ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1" />
-                              : <span className="text-[10px] text-white/20 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
-                            }
-                          </div>
-                          {/* 정보 */}
-                          <div className="flex-1 min-w-0">
-                            <Link href={`/product/${p.id}`} className="text-xs font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
-                              {p.name}
-                            </Link>
-                            {p.price_usd && (
-                              <p className="text-[11px] text-white/40 mb-2">${Number(p.price_usd).toLocaleString()}</p>
-                            )}
-                            {p.raw.amazon_url && (
-                              <a
-                                href={p.raw.amazon_url}
-                                target="_blank"
-                                rel="noopener noreferrer sponsored"
-                                className="flex items-center justify-center w-full py-1.5 rounded-lg"
-                                style={{ backgroundColor: '#FFFFFF' }}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src="/amazon-logo.svg" alt="Amazon" width={46} height={14} style={{ display: 'block' }} />
-                              </a>
-                            )}
-                          </div>
+                      <div key={p.id} className="flex-shrink-0 snap-start w-[52vw] min-w-[180px]">
+                        {/* 이미지 */}
+                        <div className="aspect-square rounded-2xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-3" style={{ borderTopColor: color, borderTopWidth: 2 }}>
+                          {p.image_url
+                            ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-3" />
+                            : <span className="text-xs text-white/20 font-bold">{p.brand}</span>
+                          }
                         </div>
+                        {/* 이름 */}
+                        <Link href={`/product/${p.id}`} className="text-sm font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
+                          {p.name}
+                        </Link>
+                        {p.price_usd && (
+                          <p className="text-xs text-white/40 mb-2">${Number(p.price_usd).toLocaleString()}</p>
+                        )}
+                        {p.raw.amazon_url && (
+                          <a
+                            href={p.raw.amazon_url}
+                            target="_blank"
+                            rel="noopener noreferrer sponsored"
+                            className="flex items-center justify-center w-full py-2 rounded-xl"
+                            style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 6px rgba(0,0,0,0.12)' }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/amazon-logo.svg" alt="Amazon" width={52} height={16} style={{ display: 'block' }} />
+                          </a>
+                        )}
                       </div>
                     )
                   })}
