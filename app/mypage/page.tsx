@@ -119,6 +119,31 @@ export default function MyPage() {
     }
   }
 
+  // Canvas로 이미지를 지정 크기로 리사이징해 WebP Blob 반환
+  const resizeImage = (file: File, maxSize = 256): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, w, h)
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error('resize failed')),
+          'image/webp',
+          0.85
+        )
+      }
+      img.onerror = reject
+      img.src = url
+    })
+
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -126,14 +151,23 @@ export default function MyPage() {
 
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
     if (!allowed.includes(file.type)) { setAvatarError(t('avatar.error_type')); return }
-    if (file.size > 5 * 1024 * 1024) { setAvatarError(t('avatar.error_size')); return }
 
     setAvatarUploading(true)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setAvatarUploading(false); return }
 
+    // 256×256 이하로 리사이징 후 WebP 변환
+    let uploadBlob: Blob
+    try {
+      uploadBlob = await resizeImage(file, 256)
+    } catch {
+      setAvatarError(t('avatar.error_upload'))
+      setAvatarUploading(false)
+      return
+    }
+
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', new File([uploadBlob], 'avatar.webp', { type: 'image/webp' }))
     const res = await fetch('/api/user/avatar', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${session.access_token}` },
