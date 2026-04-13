@@ -10,7 +10,7 @@ import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle, shortenProductName } from '@/lib/utils'
 import { saveLocalHistory } from '@/lib/localHistory'
-import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
+import { computeRelativeScores, type CategoryStats, type CpuBenchmarkMaxes } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
 
@@ -618,6 +618,7 @@ export default function CompareClient() {
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
+  const [cpuMaxes, setCpuMaxes] = useState<CpuBenchmarkMaxes | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
   const [showBottomBar, setShowBottomBar] = useState(false)
 
@@ -803,7 +804,7 @@ export default function CompareClient() {
     runComparison(ids, historyId || undefined)
   }, [idsParam, historyId, runComparison, session, sessionLoaded])
 
-  // 카테고리 결정 후 DB 전체 min/max 범위 조회
+  // 카테고리 결정 후 DB 전체 min/max 범위 + CPU 벤치마크 최댓값 조회
   useEffect(() => {
     if (products.length === 0) return
     const cat = products[0].category.toLowerCase()
@@ -811,7 +812,10 @@ export default function CompareClient() {
       .then((r) => r.json())
       .then((d) => { if (!d.error) setCategoryStats(d) })
       .catch(() => {})
-
+    fetch('/api/cpus/stats')
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setCpuMaxes(d) })
+      .catch(() => {})
   }, [products])
 
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[] }
@@ -860,7 +864,7 @@ export default function CompareClient() {
           battery_wh:       p.raw.battery_wh,
           battery_hours:    p.raw.battery_hours,
           camera_main_mp:   p.raw.camera_main_mp,
-        }, categoryStats)
+        }, categoryStats, cpuMaxes ?? undefined)
       })
     : null
 

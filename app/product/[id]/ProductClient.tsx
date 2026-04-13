@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2, Heart } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2, Heart, Pencil } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
@@ -54,11 +54,17 @@ export default function ProductClient({ product }: { product: Product }) {
   const [wishlisted, setWishlisted] = useState(false)
   const [wishlistLoading, setWishlistLoading] = useState(false)
   const [authToken, setAuthToken] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+    .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
       setAuthToken(session.access_token)
+      const email = (session.user?.email ?? '').toLowerCase()
+      if (ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email)) setIsAdmin(true)
       // 현재 제품 찜 여부 확인
       fetch(`/api/wishlist`, { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then((r) => r.json())
@@ -324,6 +330,16 @@ ${priceHTML}
             <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-red-400' : ''}`} />
             {wishlisted ? '찜됨' : '찜'}
           </button>
+          {/* 관리자 수정 */}
+          {isAdmin && (
+            <Link
+              href={`/admin/products/${product.id}`}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-3 py-1.5 rounded-full transition-all"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              수정
+            </Link>
+          )}
         </div>
       </div>
 

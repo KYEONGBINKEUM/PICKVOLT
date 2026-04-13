@@ -14,9 +14,12 @@ import {
   Search,
   X,
   ArrowUpDown,
+  Heart,
+  Pencil,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
+import { supabase } from '@/lib/supabase'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -96,7 +99,17 @@ const DEFAULT_FILTERS: Filters = {
 
 // ─── Product Card (horizontal layout) ────────────────────────────────────────
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({
+  product,
+  wishlisted,
+  onWishlistToggle,
+  isAdmin,
+}: {
+  product: Product
+  wishlisted: boolean
+  onWishlistToggle: (productId: string, e: React.MouseEvent) => void
+  isAdmin: boolean
+}) {
   const { t } = useI18n()
   const { cart, add, remove } = useCompareCart()
   const inCart   = cart.some((i) => i.id === product.id)
@@ -206,26 +219,55 @@ function ProductCard({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Add to Compare */}
-          <button
-            onClick={toggleCart}
-            disabled={!inCart && cartFull}
-            className={`self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
-              inCart
-                ? 'bg-accent/15 border border-accent/40 text-accent'
-                : cartFull
-                ? 'bg-surface-2 border border-border text-white/20 cursor-not-allowed'
-                : 'bg-surface-2 border border-border text-white/50 hover:border-white/20 hover:text-white'
-            }`}
-          >
-            {inCart ? (
-              <><Check className="w-3 h-3" />{t('cat.in_compare')}</>
-            ) : cartFull ? (
-              <>{t('cat.compare_full')}</>
-            ) : (
-              <><Plus className="w-3 h-3" />{t('cat.add_compare')}</>
+          {/* Action row */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Add to Compare */}
+            <button
+              onClick={toggleCart}
+              disabled={!inCart && cartFull}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+                inCart
+                  ? 'bg-accent/15 border border-accent/40 text-accent'
+                  : cartFull
+                  ? 'bg-surface-2 border border-border text-white/20 cursor-not-allowed'
+                  : 'bg-surface-2 border border-border text-white/50 hover:border-white/20 hover:text-white'
+              }`}
+            >
+              {inCart ? (
+                <><Check className="w-3 h-3" />{t('cat.in_compare')}</>
+              ) : cartFull ? (
+                <>{t('cat.compare_full')}</>
+              ) : (
+                <><Plus className="w-3 h-3" />{t('cat.add_compare')}</>
+              )}
+            </button>
+
+            {/* Wishlist */}
+            <button
+              onClick={(e) => onWishlistToggle(product.id, e)}
+              title={wishlisted ? '찜 해제' : '찜하기'}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                wishlisted
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                  : 'bg-surface-2 border-border text-white/40 hover:text-white/70 hover:border-white/20'
+              }`}
+            >
+              <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-400' : ''}`} />
+              {wishlisted ? '찜됨' : '찜'}
+            </button>
+
+            {/* Admin edit */}
+            {isAdmin && (
+              <button
+                onClick={(e) => { e.preventDefault(); window.location.href = `/admin/products/${product.id}` }}
+                title="제품 수정"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all"
+              >
+                <Pencil className="w-3 h-3" />
+                수정
+              </button>
             )}
-          </button>
+          </div>
         </div>
       </div>
     </Link>
@@ -631,6 +673,9 @@ function applyClientFilters(products: Product[], filters: Filters): Product[] {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+  .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+
 export default function CategoryClient({ category }: { category: string }) {
   const { t } = useI18n()
   const Icon = CATEGORY_ICON[category]
@@ -644,6 +689,50 @@ export default function CategoryClient({ category }: { category: string }) {
   const [mobileSheet,     setMobileSheet]     = useState(false)
   const [mobileSortOpen,  setMobileSortOpen]  = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // ── Auth / Wishlist ──────────────────────────────────────────────────────────
+  const [authToken,     setAuthToken]     = useState<string | null>(null)
+  const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set())
+  const [isAdmin,       setIsAdmin]       = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      setAuthToken(session.access_token)
+      const email = (session.user?.email ?? '').toLowerCase()
+      if (ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email)) setIsAdmin(true)
+      fetch('/api/wishlist', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then((r) => r.json())
+        .then((json) => {
+          setWishlistedIds(new Set((json.wishlist ?? []).map((w: { product_id: string }) => w.product_id)))
+        })
+    })
+  }, [])
+
+  const toggleWishlist = async (productId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!authToken) { window.location.href = '/login'; return }
+    const wasWishlisted = wishlistedIds.has(productId)
+    setWishlistedIds((prev) => {
+      const next = new Set(prev)
+      if (wasWishlisted) next.delete(productId)
+      else next.add(productId)
+      return next
+    })
+    if (wasWishlisted) {
+      await fetch(`/api/wishlist?product_id=${productId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+    } else {
+      await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ product_id: productId }),
+      })
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   // 바텀시트 열릴 때 body 스크롤 막기
   useEffect(() => {
@@ -833,7 +922,13 @@ export default function CategoryClient({ category }: { category: string }) {
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    wishlisted={wishlistedIds.has(product.id)}
+                    onWishlistToggle={toggleWishlist}
+                    isAdmin={isAdmin}
+                  />
                 ))}
               </div>
 
