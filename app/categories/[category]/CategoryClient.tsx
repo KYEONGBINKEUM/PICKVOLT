@@ -245,7 +245,7 @@ function ProductCard({
             {/* Wishlist */}
             <button
               onClick={(e) => onWishlistToggle(product.id, e)}
-              title={wishlisted ? '찜 해제' : '찜하기'}
+              title={wishlisted ? t('wishlist.remove') : t('wishlist.add')}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
                 wishlisted
                   ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
@@ -253,7 +253,7 @@ function ProductCard({
               }`}
             >
               <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-400' : ''}`} />
-              {wishlisted ? '찜됨' : '찜'}
+              {wishlisted ? t('wishlist.saved') : t('wishlist.unsaved')}
             </button>
 
             {/* Admin edit */}

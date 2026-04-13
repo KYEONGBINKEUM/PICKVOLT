@@ -574,7 +574,7 @@ function ReviewTabs({ products }: { products: Product[] }) {
           className="inline-flex items-center gap-1.5 text-xs text-white/30 hover:text-accent transition-colors"
         >
           <ChevronRight className="w-3.5 h-3.5" />
-          {active.name} 리뷰 작성하러 가기
+          {active.name} — {t('compare.go_review')}
         </Link>
       </div>
     </div>
@@ -939,8 +939,8 @@ export default function CompareClient() {
       higherIsBetter: true,
       nameLabels: pNames,
       values: products.map((p) => {
-        const hz = p.raw.display_hz as number | null
-        return { primary: hz ? `${hz}Hz` : '—', numericVal: hz ?? undefined }
+        const hz = p.raw.display_hz != null ? Number(p.raw.display_hz) : null
+        return { primary: hz && hz > 0 ? `${hz}Hz` : '—', numericVal: hz && hz > 0 ? hz : undefined }
       }),
     }
     const osRow: SpecRowData = {

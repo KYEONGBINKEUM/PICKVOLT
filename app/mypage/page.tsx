@@ -359,7 +359,7 @@ export default function MyPage() {
             <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
               <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
                 <Heart className="w-4 h-4 text-red-400 fill-red-400" />
-                <p className="text-sm font-bold text-white">찜한 제품 <span className="text-white/30 font-normal text-xs ml-1">{wishlist.length}개</span></p>
+                <p className="text-sm font-bold text-white">{t('mypage.wishlist_heading')} <span className="text-white/30 font-normal text-xs ml-1">{wishlist.length}{t('mypage.count_unit')}</span></p>
               </div>
               <div className="divide-y divide-border">
                 {wishlist.map((w) => {
@@ -392,7 +392,7 @@ export default function MyPage() {
             <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
               <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
                 <MessageSquare className="w-4 h-4 text-white/40" />
-                <p className="text-sm font-bold text-white">내가 쓴 리뷰 <span className="text-white/30 font-normal text-xs ml-1">{myReviews.length}개</span></p>
+                <p className="text-sm font-bold text-white">{t('mypage.my_reviews_heading')} <span className="text-white/30 font-normal text-xs ml-1">{myReviews.length}{t('mypage.count_unit')}</span></p>
               </div>
               <div className="divide-y divide-border">
                 {myReviews.map((r) => {

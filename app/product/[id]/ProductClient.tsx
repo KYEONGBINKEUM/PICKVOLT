@@ -320,7 +320,7 @@ ${priceHTML}
           <button
             onClick={handleWishlist}
             disabled={wishlistLoading}
-            title={wishlisted ? '찜 해제' : '찜하기'}
+            title={wishlisted ? t('wishlist.remove') : t('wishlist.add')}
             className={`inline-flex items-center gap-1.5 text-xs font-semibold border px-3 py-1.5 rounded-full transition-all disabled:opacity-50 ${
               wishlisted
                 ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
@@ -328,7 +328,7 @@ ${priceHTML}
             }`}
           >
             <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-red-400' : ''}`} />
-            {wishlisted ? '찜됨' : '찜'}
+            {wishlisted ? t('wishlist.saved') : t('wishlist.unsaved')}
           </button>
           {/* 관리자 수정 */}
           {isAdmin && (
