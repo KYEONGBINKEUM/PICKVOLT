@@ -82,6 +82,8 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [myDisplayName, setMyDisplayName] = useState<string>('')
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [token, setToken] = useState<string | null>(null)
@@ -105,8 +107,16 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
     const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
       .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
     supabase.auth.getSession().then(({ data }) => {
-      const email = (data.session?.user.email ?? '').toLowerCase()
-      setMyUserId(data.session?.user.id ?? null)
+      const user = data.session?.user
+      const email = (user?.email ?? '').toLowerCase()
+      setMyUserId(user?.id ?? null)
+      setMyDisplayName(
+        user?.user_metadata?.full_name ??
+        user?.user_metadata?.name ??
+        email.split('@')[0] ??
+        ''
+      )
+      setMyAvatarUrl(user?.user_metadata?.avatar_url ?? null)
       setIsAdmin(adminEmails.length > 0 && adminEmails.includes(email))
       setToken(data.session?.access_token ?? null)
       setSessionLoaded(true)
@@ -130,19 +140,45 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
   const displayed = compact ? reviews.slice(0, 3) : reviews
 
   const handleSubmit = async () => {
-    if (!content.trim() || !token) return
+    if (!content.trim() || !token || !myUserId) return
     setSubmitting(true)
     setErrMsg('')
+
+    // Optimistic update: show the comment immediately before the API responds
+    const tempId = `temp-${Date.now()}`
+    const tempReview: Review = {
+      id: tempId,
+      user_id: myUserId,
+      user_display_name: myDisplayName,
+      avatar_url: myAvatarUrl,
+      content,
+      rating,
+      likes: 0,
+      created_at: new Date().toISOString(),
+    }
+    const savedContent = content
+    const savedRating = rating
+    setReviews((prev) => [tempReview, ...prev])
+    setContent('')
+    setRating(7)
+
     try {
       const res = await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ product_id: productId, content, rating }),
+        body: JSON.stringify({ product_id: productId, content: savedContent, rating: savedRating }),
       })
       const json = await res.json()
-      if (!res.ok) { setErrMsg(json.error ?? '오류가 발생했습니다'); return }
-      setContent(''); setRating(7)
-      setReviews((prev) => [json.review, ...prev])
+      if (!res.ok) {
+        // Rollback: remove temp review and restore the form
+        setReviews((prev) => prev.filter((r) => r.id !== tempId))
+        setContent(savedContent)
+        setRating(savedRating)
+        setErrMsg(json.error ?? '오류가 발생했습니다')
+        return
+      }
+      // Replace temp review with the real one from the server
+      setReviews((prev) => prev.map((r) => r.id === tempId ? json.review : r))
     } finally {
       setSubmitting(false)
     }

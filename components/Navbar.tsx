@@ -22,13 +22,18 @@ export default function Navbar({ showSearch }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setLoggedIn(!!data.user)
+    // getSession reads from localStorage — no network round-trip, resolves almost instantly
+    let settled = false
+    supabase.auth.getSession().then(({ data }) => {
+      settled = true
+      setLoggedIn(!!data.session)
       setAuthReady(true)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      // Ignore events that arrive before the initial session check completes
+      // to prevent the login button from flashing for logged-in users
+      if (!settled) return
       setLoggedIn(!!session)
-      setAuthReady(true)
     })
     return () => subscription.unsubscribe()
   }, [])
