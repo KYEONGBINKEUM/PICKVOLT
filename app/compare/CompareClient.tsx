@@ -535,6 +535,7 @@ function PopularComparisons({ items, t }: { items: PopularItem[]; t: (k: string)
 
 /* ---------- Review Tabs ---------- */
 function ReviewTabs({ products }: { products: Product[] }) {
+  const { t } = useI18n()
   const [activeIdx, setActiveIdx] = useState(0)
   if (products.length === 0) return null
   const active = products[activeIdx]
