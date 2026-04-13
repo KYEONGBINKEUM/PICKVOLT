@@ -1415,12 +1415,18 @@ export default function CompareClient() {
                 // 숫자 값이 있는 행에서 winner 셀 계산
                 let winnerIndex = -1
                 if (row.higherIsBetter !== undefined) {
-                  const nums = row.values.map((v) => v.numericVal ?? null)
-                  const valid = nums.filter((n) => n != null) as number[]
-                  if (valid.length > 1) {
+                  const nums = row.values.map((v) => {
+                    const n = v.numericVal
+                    return (n != null && !Number.isNaN(n)) ? n : null
+                  })
+                  const valid = nums.filter((n): n is number => n !== null)
+                  if (valid.length >= 1) {
                     const best = row.higherIsBetter ? Math.max(...valid) : Math.min(...valid)
-                    const idx = nums.indexOf(best)
-                    if (idx !== -1 && nums.filter((n) => n === best).length === 1) winnerIndex = idx
+                    const bestCount = nums.filter((n) => n === best).length
+                    if (bestCount === 1) {
+                      const idx = nums.indexOf(best)
+                      if (idx !== -1) winnerIndex = idx
+                    }
                   }
                 }
                 const winnerColor = winnerIndex >= 0 ? PRODUCT_COLORS[winnerIndex % PRODUCT_COLORS.length] : '#FF6B2B'
