@@ -260,7 +260,7 @@ function SpecRow({
       {/* ── 데스크탑: 가로 그리드 ── */}
       <div
         className="hidden lg:grid"
-        style={{ gridTemplateColumns: `80px repeat(${values.length}, 1fr)` }}
+        style={{ gridTemplateColumns: `160px repeat(${values.length}, 1fr)` }}
       >
         <div className="p-4 flex flex-col gap-0.5 justify-center">
           <span className="text-xs text-white/40">{sublabel}</span>
@@ -1305,7 +1305,7 @@ export default function CompareClient() {
               {/* ── 헤더: 데스크탑 그리드 ── */}
               <div
                 className="hidden lg:grid border-b border-border"
-                style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
+                style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
               >
                 <div className="p-3 lg:p-4 flex items-center">
                   <p className="text-[10px] lg:text-xs text-white/40 font-semibold">{t('compare.overview')}</p>
@@ -1376,7 +1376,7 @@ export default function CompareClient() {
                     {/* ── 데스크탑: 기존 그리드 ── */}
                     <div
                       className="hidden lg:grid"
-                      style={{ gridTemplateColumns: `80px repeat(${products.length}, 1fr)` }}
+                      style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}
                     >
                       <div className="p-3 lg:p-4 flex flex-col gap-0.5 justify-center">
                         <span className="text-[10px] lg:text-sm font-semibold text-white/60 lg:text-white">{t('compare.overall_score')}</span>
