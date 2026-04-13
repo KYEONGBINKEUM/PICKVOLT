@@ -273,9 +273,6 @@ function SpecRow({
             <div key={i}
               className="p-4 border-l border-border transition-colors"
               style={isWinner ? { backgroundColor: `${color}12` } : {}}>
-              {nameLabels[i] && (
-                <p className="text-[10px] text-white/30 mb-1.5 truncate">{nameLabels[i]}</p>
-              )}
               <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
               {v.secondary && <p className="text-xs text-white/40 mt-0.5">{v.secondary}</p>}
               {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={color} />}
