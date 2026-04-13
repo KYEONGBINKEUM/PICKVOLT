@@ -208,7 +208,7 @@ function SpecRow({
               className="px-4 pt-2.5 pb-3 border-t border-border/20"
               style={isWinner ? { backgroundColor: `${color}08` } : {}}
             >
-              {/* 썸네일 + 제품명/칩셋명 */}
+              {/* 썸네일 + 제품명/칩셋명 + BEST 뱃지 */}
               <div className="flex items-center gap-2 mb-2">
                 <div
                   className="w-7 h-7 rounded-lg bg-surface-2 border border-border overflow-hidden flex items-center justify-center flex-shrink-0"
@@ -220,9 +220,9 @@ function SpecRow({
                   }
                 </div>
                 {nameLabel && (
-                  <p className="text-[11px] text-white/40 leading-tight truncate flex-1">{nameLabel}</p>
+                  <p className="text-[13px] text-white/50 leading-tight truncate flex-1">{nameLabel}</p>
                 )}
-                {isWinner && hasBar && (
+                {isWinner && (
                   <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
                     BEST
                   </span>
@@ -240,16 +240,9 @@ function SpecRow({
                 </div>
               ) : (
                 /* 일반 값 행 */
-                <div className="flex items-center justify-between gap-3">
-                  <span className={`text-[18px] font-black leading-tight ${isWinner ? 'text-white' : 'text-white/72'}`}>
-                    {v.primary}
-                  </span>
-                  {isWinner && (
-                    <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
-                      BEST
-                    </span>
-                  )}
-                </div>
+                <span className={`text-[18px] font-black leading-tight ${isWinner ? 'text-white' : 'text-white/72'}`}>
+                  {v.primary}
+                </span>
               )}
               {v.secondary && <p className="text-xs text-white/30 mt-1 leading-tight">{v.secondary}</p>}
             </div>
@@ -1357,7 +1350,8 @@ export default function CompareClient() {
                                   : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />
                                 }
                               </div>
-                              <p className="text-[11px] text-white/40 leading-tight truncate flex-1">{p?.name ?? ''}</p>
+                              <p className="text-[13px] text-white/50 leading-tight truncate flex-1">{p?.name ?? ''}</p>
+                              {isWinner && <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>BEST</span>}
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="text-[20px] font-black leading-none flex-shrink-0 w-9" style={{ color: isWinner ? color : 'rgba(255,255,255,0.85)' }}>
@@ -1366,7 +1360,6 @@ export default function CompareClient() {
                               <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                 <div className="h-full rounded-full transition-all duration-700" style={{ width: `${s.overall}%`, backgroundColor: color }} />
                               </div>
-                              {isWinner && <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>BEST</span>}
                             </div>
                           </div>
                         )
