@@ -167,7 +167,7 @@ function SpecRow({
   sublabel,
   values,
   barMax = 100,
-  winnerIndex = -1,
+  winnerIndices = [],
   colors = [],
   rowIndex = 0,
   nameLabels = [],
@@ -177,7 +177,7 @@ function SpecRow({
   sublabel: string
   values: { primary: string | number; secondary?: string; bar?: number }[]
   barMax?: number
-  winnerIndex?: number
+  winnerIndices?: number[]
   winnerColor?: string
   colors?: string[]
   rowIndex?: number
@@ -197,7 +197,7 @@ function SpecRow({
         </div>
         {/* 제품별 값 */}
         {values.map((v, i) => {
-          const isWinner = i === winnerIndex
+          const isWinner = winnerIndices.includes(i)
           const color = colors[i % colors.length] ?? '#FF6B2B'
           const hasBar = v.bar !== undefined
           const nameLabel = nameLabels[i] ?? ''
@@ -260,7 +260,7 @@ function SpecRow({
           <span className="text-sm font-semibold text-white">{label}</span>
         </div>
         {values.map((v, i) => {
-          const isWinner = i === winnerIndex
+          const isWinner = winnerIndices.includes(i)
           const color = colors[i % colors.length] ?? '#FF6B2B'
           return (
             <div key={i}
@@ -1412,8 +1412,8 @@ export default function CompareClient() {
               })()}
 
               {specRows.map((row, ri) => {
-                // 숫자 값이 있는 행에서 winner 셀 계산
-                let winnerIndex = -1
+                // 숫자 값이 있는 행에서 winner 셀(들) 계산 — 동률 포함
+                let winnerIndices: number[] = []
                 if (row.higherIsBetter !== undefined) {
                   const nums = row.values.map((v) => {
                     const n = v.numericVal
@@ -1422,14 +1422,16 @@ export default function CompareClient() {
                   const valid = nums.filter((n): n is number => n !== null)
                   if (valid.length >= 1) {
                     const best = row.higherIsBetter ? Math.max(...valid) : Math.min(...valid)
-                    const bestCount = nums.filter((n) => n === best).length
-                    if (bestCount === 1) {
-                      const idx = nums.indexOf(best)
-                      if (idx !== -1) winnerIndex = idx
+                    // 최솟값(lowerIsBetter)이 아닌 경우만 처리: 1등과 최하위 모두 같으면 배지 없음
+                    const loserBest = row.higherIsBetter ? Math.min(...valid) : Math.max(...valid)
+                    if (best !== loserBest || valid.length === 1) {
+                      winnerIndices = nums.reduce<number[]>((acc, n, idx) => {
+                        if (n === best) acc.push(idx)
+                        return acc
+                      }, [])
                     }
                   }
                 }
-                const winnerColor = winnerIndex >= 0 ? PRODUCT_COLORS[winnerIndex % PRODUCT_COLORS.length] : '#FF6B2B'
                 return (
                   <SpecRow
                     key={`${row.label}-${ri}`}
@@ -1437,8 +1439,7 @@ export default function CompareClient() {
                     sublabel={row.sublabel}
                     values={row.values}
                     barMax={row.barMax}
-                    winnerIndex={winnerIndex}
-                    winnerColor={winnerColor}
+                    winnerIndices={winnerIndices}
                     colors={PRODUCT_COLORS}
                     rowIndex={ri}
                     nameLabels={row.nameLabels ?? products.map((p) => p.name)}
