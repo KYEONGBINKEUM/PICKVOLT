@@ -924,14 +924,24 @@ export default function CompareClient() {
     const resolutionRow: SpecRowData = {
       label: t('spec.resolution'),
       sublabel: t('spec.resolution_sub'),
+      higherIsBetter: true,
       nameLabels: pNames,
-      values: products.map((p) => ({ primary: p.raw.display_resolution ?? '—' })),
+      values: products.map((p) => {
+        const res = p.raw.display_resolution as string | null
+        const match = res?.match(/(\d+)\s*[x×X]\s*(\d+)/)
+        const numericVal = match ? parseInt(match[1]) * parseInt(match[2]) : undefined
+        return { primary: res ?? '—', numericVal }
+      }),
     }
     const refreshRateRow: SpecRowData = {
       label: t('spec.refresh_rate'),
       sublabel: t('spec.refresh_rate_sub'),
+      higherIsBetter: true,
       nameLabels: pNames,
-      values: products.map((p) => ({ primary: p.raw.display_hz ? `${p.raw.display_hz}Hz` : '—' })),
+      values: products.map((p) => {
+        const hz = p.raw.display_hz as number | null
+        return { primary: hz ? `${hz}Hz` : '—', numericVal: hz ?? undefined }
+      }),
     }
     const osRow: SpecRowData = {
       label: t('spec.os_label'),
