@@ -1472,14 +1472,14 @@ export default function CompareClient() {
       {/* ── 모바일 하단 고정 바 — 헤더가 사라질 때만 표시 ── */}
       {!loading && products.length >= 2 && showBottomBar && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border shadow-2xl">
-          <div className="flex overflow-x-auto px-3 py-2.5 gap-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="flex overflow-x-auto px-3 py-3 gap-2.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {products.map((p, pi) => {
               const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
               return (
-                <div key={p.id} className="flex items-center gap-2 flex-shrink-0 bg-surface-2 rounded-xl px-2.5 py-2" style={{ minWidth: 0, width: 'calc(50vw - 24px)', maxWidth: 200 }}>
+                <div key={p.id} className="flex items-center gap-2.5 flex-shrink-0 bg-surface-2 rounded-xl px-3 py-2.5" style={{ minWidth: 0, width: 'calc(50vw - 24px)', maxWidth: 200 }}>
                   {/* 썸네일 */}
                   <div
-                    className="w-9 h-9 flex-shrink-0 rounded-lg bg-surface border border-border overflow-hidden flex items-center justify-center"
+                    className="w-10 h-10 flex-shrink-0 rounded-lg bg-surface border border-border overflow-hidden flex items-center justify-center"
                     style={{ borderTopColor: color, borderTopWidth: 2 }}
                   >
                     {p.image_url
@@ -1488,18 +1488,18 @@ export default function CompareClient() {
                     }
                   </div>
                   {/* 제품명 + Amazon */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <p className="text-[11px] font-semibold text-white/70 leading-tight truncate">{p.name}</p>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <p className="text-[12px] font-semibold text-white/70 leading-tight truncate">{p.name}</p>
                     {p.raw.amazon_url && (
                       <a
                         href={p.raw.amazon_url}
                         target="_blank"
                         rel="noopener noreferrer sponsored"
-                        className="self-start flex items-center justify-center px-1.5 py-0.5 rounded"
+                        className="self-start flex items-center justify-center px-2 py-1 rounded"
                         style={{ backgroundColor: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/amazon-logo.svg" alt="Amazon" width={36} height={11} style={{ display: 'block' }} />
+                        <img src="/amazon-logo.svg" alt="Amazon" width={44} height={14} style={{ display: 'block' }} />
                       </a>
                     )}
                   </div>
