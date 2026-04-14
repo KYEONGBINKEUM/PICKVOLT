@@ -36,6 +36,8 @@ interface ProductSpecs {
   weight?: string | null
   weightG?: number | null
   ipRating?: string | null
+  wifi?: string | null
+  bluetooth?: string | null
 }
 
 interface Product {
@@ -977,6 +979,18 @@ export default function CompareClient() {
       nameLabels: pNames,
       values: products.map((p) => ({ primary: p.raw.os ?? p.specs.os ?? '—' })),
     }
+    const wifiRow: SpecRowData = {
+      label: t('spec.wifi'),
+      sublabel: t('spec.wifi_sub'),
+      nameLabels: pNames,
+      values: products.map((p) => ({ primary: p.raw.wifi_standard ?? p.specs.wifi ?? '—' })),
+    }
+    const bluetoothRow: SpecRowData = {
+      label: t('spec.bluetooth'),
+      sublabel: t('spec.bluetooth_sub'),
+      nameLabels: pNames,
+      values: products.map((p) => ({ primary: p.raw.bluetooth_version ?? p.specs.bluetooth ?? '—' })),
+    }
     const priceRow: SpecRowData = {
       label: t('spec.price'),
       sublabel: t('spec.price_sub'),
@@ -1016,6 +1030,8 @@ export default function CompareClient() {
           })),
         },
         osRow,
+        wifiRow,
+        bluetoothRow,
         priceRow,
         {
           label: t('spec.weight'),
@@ -1049,6 +1065,8 @@ export default function CompareClient() {
           })),
         },
         osRow,
+        wifiRow,
+        bluetoothRow,
         priceRow,
         {
           label: t('spec.weight'),
@@ -1091,6 +1109,8 @@ export default function CompareClient() {
           })),
         },
         osRow,
+        wifiRow,
+        bluetoothRow,
         priceRow,
       ]
     }

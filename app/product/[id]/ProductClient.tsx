@@ -18,6 +18,8 @@ interface Specs {
   batteryCapacity: string | null
   batteryLife:     string | null
   os:              string | null
+  wifi:            string | null
+  bluetooth:       string | null
   weight:          string | null
 }
 
@@ -430,8 +432,10 @@ ${priceHTML}
             <SpecRow label={t('product.spec_display')} value={product.specs.display} />
             <SpecRow label={t('product.spec_battery')} value={product.specs.batteryCapacity} />
             <SpecRow label={t('product.spec_camera')}  value={product.specs.camera} />
-            <SpecRow label={t('product.spec_os')}      value={product.specs.os} />
-            <SpecRow label={t('product.spec_weight')}  value={product.specs.weight} />
+            <SpecRow label={t('product.spec_os')}        value={product.specs.os} />
+            <SpecRow label={t('product.spec_wifi')}      value={product.specs.wifi} />
+            <SpecRow label={t('product.spec_bluetooth')} value={product.specs.bluetooth} />
+            <SpecRow label={t('product.spec_weight')}    value={product.specs.weight} />
           </div>
           <ReviewSection productId={product.id} />
         </div>
