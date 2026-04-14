@@ -67,6 +67,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8058893243087997"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="bg-background text-white antialiased">
         <I18nProvider>
