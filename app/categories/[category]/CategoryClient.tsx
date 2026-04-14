@@ -104,11 +104,13 @@ function ProductCard({
   wishlisted,
   onWishlistToggle,
   isAdmin,
+  maxScore,
 }: {
   product: Product
   wishlisted: boolean
   onWishlistToggle: (productId: string, e: React.MouseEvent) => void
   isAdmin: boolean
+  maxScore: number
 }) {
   const { t } = useI18n()
   const { cart, add, remove } = useCompareCart()
@@ -152,7 +154,7 @@ function ProductCard({
   ]
 
   const score = product.performance_score
-  const scorePercent = Math.min(100, Math.round((score / 1000) * 100))
+  const scorePercent = Math.min(100, Math.round((score / maxScore) * 100))
 
   return (
     <Link href={`/product/${product.id}`} className="group block h-full">
@@ -684,6 +686,7 @@ export default function CategoryClient({ category }: { category: string }) {
   const [allProducts,     setAllProducts]     = useState<Product[]>([])
   const [availableBrands, setAvailableBrands] = useState<string[]>([])
   const [availableOsList, setAvailableOsList] = useState<string[]>([])
+  const [categoryMaxScore, setCategoryMaxScore] = useState<number>(1)
   const [loading,         setLoading]         = useState(true)
   const [visibleCount,    setVisibleCount]    = useState(30)
   const [mobileSheet,     setMobileSheet]     = useState(false)
@@ -783,6 +786,8 @@ export default function CategoryClient({ category }: { category: string }) {
 
       const results: Product[] = json.results ?? []
       setAllProducts(results)
+      const maxScore = Math.max(1, ...results.map((p) => p.performance_score ?? 0))
+      setCategoryMaxScore(maxScore)
       setAvailableBrands(json.brands ?? [])
 
       // Extract unique OS values
@@ -928,6 +933,7 @@ export default function CategoryClient({ category }: { category: string }) {
                     wishlisted={wishlistedIds.has(product.id)}
                     onWishlistToggle={toggleWishlist}
                     isAdmin={isAdmin}
+                    maxScore={categoryMaxScore}
                   />
                 ))}
               </div>
