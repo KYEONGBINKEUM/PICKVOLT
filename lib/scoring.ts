@@ -151,6 +151,18 @@ export function scoreCamera(mp: number | null): number {
   return 40
 }
 
+/** 주사율(Hz) 점수 */
+export function scoreRefreshRate(hz: number | null): number {
+  if (!hz) return 0
+  if (hz >= 240) return 100
+  if (hz >= 165) return 90
+  if (hz >= 144) return 82
+  if (hz >= 120) return 72
+  if (hz >=  90) return 58
+  if (hz >=  60) return 40
+  return 20
+}
+
 /** PPI 기반 디스플레이 점수 */
 export function scorePPI(ppi: number | null): number {
   if (!ppi) return 0
@@ -199,6 +211,7 @@ export interface CategoryStats {
   batteryHours:  { min: number; max: number }
   cameraMP:      { min: number; max: number }
   ppi:           { min: number; max: number }
+  refreshHz:     { min: number; max: number }
   weightG:       { min: number; max: number }
   weightKg:      { min: number; max: number }
 }
@@ -302,19 +315,29 @@ export function computeRelativeScores(
         ? Math.min(100, Math.round(input.relativeScore / stats.relativeScore.max * 100))
         : 0)
   const ram  = relHigh(firstNum(input.ram_gb), stats.ram)
+  const ppi  = computePPI(input.display_resolution, input.display_inch)
+  const disp = stats.ppi?.max > 0 && ppi != null
+    ? relHigh(ppi, stats.ppi)
+    : 0
+  const refreshHz = input.refresh_hz ?? null
+  const refresh   = stats.refreshHz?.max > 0 && refreshHz != null
+    ? relHigh(refreshHz, stats.refreshHz)
+    : 0
 
   if (category === 'smartphone') {
     const bat = relHigh(input.battery_mah ?? null, stats.batteryMah)
 
     const overall = Math.round(
-      perf * 0.50 + ram * 0.30 + bat * 0.20
+      perf * 0.45 + ram * 0.25 + bat * 0.15 + disp * 0.10 + refresh * 0.05
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf, weight: 50 },
-        { label: 'RAM',         score: ram,  weight: 30 },
-        { label: 'Battery',     score: bat,  weight: 20 },
+        { label: 'Performance',  score: perf,    weight: 45 },
+        { label: 'RAM',          score: ram,     weight: 25 },
+        { label: 'Battery',      score: bat,     weight: 15 },
+        { label: 'Display',      score: disp,    weight: 10 },
+        { label: 'Refresh Rate', score: refresh, weight:  5 },
       ],
     }
   }
@@ -323,14 +346,16 @@ export function computeRelativeScores(
     const bat = relHigh(input.battery_wh ?? null, stats.batteryWh)
 
     const overall = Math.round(
-      perf * 0.50 + ram * 0.30 + bat * 0.20
+      perf * 0.45 + ram * 0.25 + bat * 0.15 + disp * 0.10 + refresh * 0.05
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf, weight: 50 },
-        { label: 'RAM',         score: ram,  weight: 30 },
-        { label: 'Battery',     score: bat,  weight: 20 },
+        { label: 'Performance',  score: perf,    weight: 45 },
+        { label: 'RAM',          score: ram,     weight: 25 },
+        { label: 'Battery',      score: bat,     weight: 15 },
+        { label: 'Display',      score: disp,    weight: 10 },
+        { label: 'Refresh Rate', score: refresh, weight:  5 },
       ],
     }
   }
@@ -339,14 +364,16 @@ export function computeRelativeScores(
     const bat = relHigh(input.battery_mah ?? null, stats.batteryMah)
 
     const overall = Math.round(
-      perf * 0.45 + ram * 0.30 + bat * 0.25
+      perf * 0.40 + ram * 0.25 + bat * 0.20 + disp * 0.10 + refresh * 0.05
     )
     return {
       overall,
       details: [
-        { label: 'Performance', score: perf, weight: 45 },
-        { label: 'RAM',         score: ram,  weight: 30 },
-        { label: 'Battery',     score: bat,  weight: 25 },
+        { label: 'Performance',  score: perf,    weight: 40 },
+        { label: 'RAM',          score: ram,     weight: 25 },
+        { label: 'Battery',      score: bat,     weight: 20 },
+        { label: 'Display',      score: disp,    weight: 10 },
+        { label: 'Refresh Rate', score: refresh, weight:  5 },
       ],
     }
   }
@@ -407,6 +434,7 @@ export interface ScoringInput {
   // Display
   display_inch?: number | null
   display_resolution?: string | null
+  refresh_hz?: number | null
 }
 
 export interface ScoreBreakdown {

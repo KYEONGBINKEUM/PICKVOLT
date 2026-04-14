@@ -262,11 +262,13 @@ function SpecRow({
         {values.map((v, i) => {
           const isWinner = winnerIndices.includes(i)
           const color = colors[i % colors.length] ?? '#FF6B2B'
+          const nameLabel = nameLabels[i] ?? ''
           return (
             <div key={i}
               className="p-4 border-l border-border transition-colors"
               style={isWinner ? { backgroundColor: `${color}12` } : {}}>
               <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
+              {nameLabel && <p className="text-[10px] text-white/35 mt-0.5 leading-tight truncate">{nameLabel}</p>}
               {v.secondary && <p className="text-xs text-white/40 mt-0.5">{v.secondary}</p>}
               {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={color} />}
             </div>
@@ -843,18 +845,21 @@ export default function CompareClient() {
     ? products.map((p) => {
         return computeRelativeScores({
           category,
-          relativeScore:    p.specs.performanceScore,
-          gb6Single:        p.specs.gb6Single,
-          gb6Multi:         p.specs.gb6Multi,
-          tdmark:           p.specs.tdmark,
-          antutu:           p.specs.antutu,
-          cinebenchSingle:  p.specs.cinebenchSingle,
-          cinebenchMulti:   p.specs.cinebenchMulti,
-          ram_gb:           p.raw.ram_gb,
-          battery_mah:      p.raw.battery_mah,
-          battery_wh:       p.raw.battery_wh,
-          battery_hours:    p.raw.battery_hours,
-          camera_main_mp:   p.raw.camera_main_mp,
+          relativeScore:      p.specs.performanceScore,
+          gb6Single:          p.specs.gb6Single,
+          gb6Multi:           p.specs.gb6Multi,
+          tdmark:             p.specs.tdmark,
+          antutu:             p.specs.antutu,
+          cinebenchSingle:    p.specs.cinebenchSingle,
+          cinebenchMulti:     p.specs.cinebenchMulti,
+          ram_gb:             p.raw.ram_gb,
+          battery_mah:        p.raw.battery_mah,
+          battery_wh:         p.raw.battery_wh,
+          battery_hours:      p.raw.battery_hours,
+          camera_main_mp:     p.raw.camera_main_mp,
+          display_resolution: p.raw.display_resolution,
+          display_inch:       p.raw.display_inch,
+          refresh_hz:         p.raw.display_hz != null ? Number(p.raw.display_hz) : null,
         }, categoryStats, cpuMaxes ?? undefined)
       })
     : null

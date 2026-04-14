@@ -43,10 +43,11 @@ function TextInput({ value, onChange, placeholder }: { value: string; onChange: 
   )
 }
 
-function NumberInput({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+function NumberInput({ value, onChange, step }: { value: number | null; onChange: (v: number | null) => void; step?: string }) {
   return (
     <input
       type="number"
+      step={step ?? '1'}
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
       className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
@@ -1036,7 +1037,7 @@ export default function ProductEditPage() {
                 <NumberInput value={gn(categorySpecs, 'charging_watt')} onChange={(v) => patchCat('charging_watt', v)} />
               </Field>
               <Field label="무선 충전 (W)">
-                <NumberInput value={gn(categorySpecs, 'wireless_charging_watt')} onChange={(v) => patchCat('wireless_charging_watt', v)} />
+                <NumberInput value={gn(categorySpecs, 'wireless_charging_watt')} onChange={(v) => patchCat('wireless_charging_watt', v)} step="any" />
               </Field>
               <Field label="IP 등급">
                 <TextInput value={g(categorySpecs, 'ip_rating')} onChange={(v) => patchCat('ip_rating', v)} placeholder="IP68" />

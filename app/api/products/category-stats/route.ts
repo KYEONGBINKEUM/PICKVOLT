@@ -36,9 +36,9 @@ export async function GET(req: NextRequest) {
     .from('products')
     .select(`
       specs_common ( cpu_id, ram_gb, storage_gb ),
-      specs_smartphone ( display_inch, display_resolution, battery_mah, camera_main_mp, weight_g ),
-      specs_laptop ( display_inch, display_resolution, battery_wh, battery_hours, weight_kg ),
-      specs_tablet ( display_inch, display_resolution, battery_mah, camera_main_mp )
+      specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, camera_main_mp, weight_g ),
+      specs_laptop ( display_inch, display_resolution, display_hz, battery_wh, battery_hours, weight_kg ),
+      specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, camera_main_mp )
     `)
     .eq('category', category)
     .eq('is_visible', true)
@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
     batteryHours:  [] as number[],
     cameraMP:      [] as number[],
     ppi:           [] as number[],
+    refreshHz:     [] as number[],
     weightG:       [] as number[],
     weightKg:      [] as number[],
   }
@@ -103,6 +104,9 @@ export async function GET(req: NextRequest) {
     const ppi = computePPI(specSrc.display_resolution, specSrc.display_inch)
     if (ppi) vals.ppi.push(ppi)
 
+    const hz = specSrc.display_hz != null ? Number(specSrc.display_hz) : null
+    if (hz && hz > 0) vals.refreshHz.push(hz)
+
     const wg = smartphone?.weight_g ?? tablet?.weight_g
     if (wg) vals.weightG.push(wg)
 
@@ -120,6 +124,7 @@ export async function GET(req: NextRequest) {
     batteryHours:  minMax(vals.batteryHours),
     cameraMP:      minMax(vals.cameraMP),
     ppi:           minMax(vals.ppi),
+    refreshHz:     minMax(vals.refreshHz),
     weightG:       minMax(vals.weightG),
     weightKg:      minMax(vals.weightKg),
   })
