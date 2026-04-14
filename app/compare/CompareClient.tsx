@@ -172,6 +172,7 @@ function SpecRow({
   rowIndex = 0,
   nameLabels = [],
   productImages = [],
+  showNameOnDesktop = false,
 }: {
   label: string
   sublabel: string
@@ -184,6 +185,7 @@ function SpecRow({
   productNames?: string[]
   nameLabels?: string[]
   productImages?: (string | null)[]
+  showNameOnDesktop?: boolean
 }) {
   const evenRow = rowIndex % 2 === 0
   return (
@@ -268,9 +270,9 @@ function SpecRow({
               className="p-4 border-l border-border transition-colors"
               style={isWinner ? { backgroundColor: `${color}12` } : {}}>
               <span className="text-2xl font-black text-white break-words leading-tight">{v.primary}</span>
-              {nameLabel && <p className="text-[10px] text-white/35 mt-0.5 leading-tight truncate">{nameLabel}</p>}
               {v.secondary && <p className="text-xs text-white/40 mt-0.5">{v.secondary}</p>}
               {v.bar !== undefined && <PerformanceBar score={v.bar} max={barMax} color={color} />}
+              {showNameOnDesktop && nameLabel && <p className="text-[10px] text-white/35 mt-1 leading-tight truncate">{nameLabel}</p>}
             </div>
           )
         })}
@@ -811,7 +813,7 @@ export default function CompareClient() {
       .catch(() => {})
   }, [products])
 
-  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[] }
+  type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[]; showNameOnDesktop?: boolean }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fmtDisplay = (raw: Record<string, any>) => {
@@ -887,6 +889,7 @@ export default function CompareClient() {
       barMax: 100,
       higherIsBetter: true,
       nameLabels: chipNames,
+      showNameOnDesktop: true,
       values: products.map((p, i) => {
         const score = productScores ? productScores[i].details.find((d) => d.label === 'Performance')?.score : null
         return {
@@ -1449,6 +1452,7 @@ export default function CompareClient() {
                     rowIndex={ri}
                     nameLabels={row.nameLabels ?? products.map((p) => p.name)}
                     productImages={products.map((p) => p.image_url ?? null)}
+                    showNameOnDesktop={row.showNameOnDesktop}
                   />
                 )
               })}
