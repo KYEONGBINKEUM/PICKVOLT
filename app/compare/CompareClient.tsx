@@ -840,10 +840,10 @@ export default function CompareClient() {
   }
 
   const category = products.length > 0 ? products[0].category.toLowerCase() : ''
+  const isSameCategory = products.length > 0 && products.every((p) => p.category.toLowerCase() === category)
 
   // 제품별 종합 점수 계산 (DB 전체 대비 상대 점수 — stats 로드 전엔 null)
-  // 반영 항목: Performance · RAM · Battery · Camera (무게/스토리지/디스플레이 제외)
-  const productScores = categoryStats
+  const rawScores = categoryStats
     ? products.map((p) => {
         return computeRelativeScores({
           category,
@@ -865,6 +865,25 @@ export default function CompareClient() {
         }, categoryStats, cpuMaxes ?? undefined)
       })
     : null
+
+  // 같은 카테고리끼리 비교 시 Performance를 해당 그룹 내 최고점 기준으로 재정규화
+  const productScores = rawScores && isSameCategory
+    ? (() => {
+        const maxPerf = Math.max(...rawScores.map((s) => s.details.find((d) => d.label === 'Performance')?.score ?? 0))
+        if (maxPerf <= 0) return rawScores
+        return rawScores.map((s) => {
+          const perfDetail = s.details.find((d) => d.label === 'Performance')
+          if (!perfDetail) return s
+          const newPerf    = Math.min(100, Math.round(perfDetail.score / maxPerf * 100))
+          const newOverall = Math.min(100, Math.round(s.overall + (newPerf - perfDetail.score) * (perfDetail.weight / 100)))
+          return {
+            ...s,
+            overall: newOverall,
+            details: s.details.map((d) => d.label === 'Performance' ? { ...d, score: newPerf } : d),
+          }
+        })
+      })()
+    : rawScores
 
   // 레이더 차트용 데이터
   const radarProducts: RadarProduct[] | null = productScores
