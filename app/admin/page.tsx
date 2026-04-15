@@ -158,7 +158,7 @@ export default function AdminPage() {
   const [aiCpuError, setAiCpuError] = useState<string | null>(null)
 
   // GPUs
-  const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; gb6_single: number | null; gb6_opencl: number | null; tdmark_score: number | null; gb6_ml_single: number | null; gb6_ml_half: number | null; gb6_ml_quantized: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [gpus, setGpus] = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; gb6_single: number | null; gb6_ml_single: number | null; gb6_ml_half: number | null; gb6_ml_quantized: number | null; relative_score: number | null; score_source: string | null }[]>([])
   const [gpusLoading, setGpusLoading] = useState(false)
   const [gpuSearch, setGpuSearch] = useState('')
   const [gpuError, setGpuError] = useState<string | null>(null)
@@ -168,8 +168,6 @@ export default function AdminPage() {
   const [newGpuType, setNewGpuType] = useState<'laptop' | 'desktop'>('laptop')
   const [newGpuCores, setNewGpuCores] = useState('')
   const [newGpuGb6Single, setNewGpuGb6Single] = useState('')
-  const [newGpuGb6Opencl, setNewGpuGb6Opencl] = useState('')
-  const [newGpuTdmark, setNewGpuTdmark] = useState('')
   const [newGpuGb6MlSingle, setNewGpuGb6MlSingle] = useState('')
   const [newGpuGb6MlHalf, setNewGpuGb6MlHalf] = useState('')
   const [newGpuGb6MlQuantized, setNewGpuGb6MlQuantized] = useState('')
@@ -455,8 +453,6 @@ export default function AdminPage() {
     setNewGpuType('laptop')
     setNewGpuCores('')
     setNewGpuGb6Single('')
-    setNewGpuGb6Opencl('')
-    setNewGpuTdmark('')
     setNewGpuGb6MlSingle('')
     setNewGpuGb6MlHalf('')
     setNewGpuGb6MlQuantized('')
@@ -480,8 +476,9 @@ export default function AdminPage() {
       if (specs.type && (specs.type === 'laptop' || specs.type === 'desktop')) setNewGpuType(specs.type as 'laptop' | 'desktop')
       if (specs.cores != null)       setNewGpuCores(String(specs.cores))
       if (specs.gb6_single != null)  setNewGpuGb6Single(String(specs.gb6_single))
-      if (specs.gb6_opencl != null)  setNewGpuGb6Opencl(String(specs.gb6_opencl))
-      if (specs.tdmark_score != null) setNewGpuTdmark(String(specs.tdmark_score))
+      if (specs.gb6_ml_single != null) setNewGpuGb6MlSingle(String(specs.gb6_ml_single))
+      if (specs.gb6_ml_half != null)   setNewGpuGb6MlHalf(String(specs.gb6_ml_half))
+      if (specs.gb6_ml_quantized != null) setNewGpuGb6MlQuantized(String(specs.gb6_ml_quantized))
     } catch (e) {
       setAiGpuError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -492,34 +489,34 @@ export default function AdminPage() {
   const handleAddGpu = async () => {
     if (!newGpuName.trim()) return
     setAddingGpu(true)
+    setGpuError(null)
     const body = {
-      name:             newGpuName.trim(),
-      brand:            newGpuBrand.trim() || null,
-      type:             newGpuType,
-      cores:            newGpuCores           ? Number(newGpuCores)           : null,
-      gb6_single:       newGpuGb6Single       ? Number(newGpuGb6Single)       : null,
-      gb6_opencl:       newGpuGb6Opencl       ? Number(newGpuGb6Opencl)       : null,
-      tdmark_score:     newGpuTdmark          ? Number(newGpuTdmark)          : null,
-      gb6_ml_single:    newGpuGb6MlSingle     ? Number(newGpuGb6MlSingle)     : null,
-      gb6_ml_half:      newGpuGb6MlHalf       ? Number(newGpuGb6MlHalf)       : null,
-      gb6_ml_quantized: newGpuGb6MlQuantized  ? Number(newGpuGb6MlQuantized)  : null,
+      name:         newGpuName.trim(),
+      brand:        newGpuBrand.trim() || null,
+      type:         newGpuType,
+      cores:            newGpuCores         ? Number(newGpuCores)         : null,
+      gb6_single:       newGpuGb6Single     ? Number(newGpuGb6Single)     : null,
+      gb6_ml_single:    newGpuGb6MlSingle   ? Number(newGpuGb6MlSingle)   : null,
+      gb6_ml_half:      newGpuGb6MlHalf     ? Number(newGpuGb6MlHalf)     : null,
+      gb6_ml_quantized: newGpuGb6MlQuantized ? Number(newGpuGb6MlQuantized) : null,
     }
-    if (editingGpuId) {
-      const res = await fetch(`/api/admin/gpus/${editingGpuId}`, {
-        method: 'PATCH',
+    try {
+      const url = editingGpuId ? `/api/admin/gpus/${editingGpuId}` : '/api/admin/gpus'
+      const method = editingGpuId ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       })
-      if (res.ok) { resetGpuForm(); fetchGpus(gpuSearch) }
-    } else {
-      const res = await fetch('/api/admin/gpus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      })
-      if (res.ok) { resetGpuForm(); fetchGpus(gpuSearch) }
+      const json = await res.json()
+      if (!res.ok) { setGpuError(json.error ?? `저장 실패 HTTP ${res.status}`); return }
+      resetGpuForm()
+      fetchGpus(gpuSearch)
+    } catch (e) {
+      setGpuError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAddingGpu(false)
     }
-    setAddingGpu(false)
   }
 
   const handleEditGpu = (g: typeof gpus[0]) => {
@@ -529,8 +526,6 @@ export default function AdminPage() {
     setNewGpuType((g.type as 'laptop' | 'desktop') ?? 'laptop')
     setNewGpuCores(g.cores != null ? String(g.cores) : '')
     setNewGpuGb6Single(g.gb6_single != null ? String(g.gb6_single) : '')
-    setNewGpuGb6Opencl(g.gb6_opencl != null ? String(g.gb6_opencl) : '')
-    setNewGpuTdmark(g.tdmark_score != null ? String(g.tdmark_score) : '')
     setNewGpuGb6MlSingle(g.gb6_ml_single != null ? String(g.gb6_ml_single) : '')
     setNewGpuGb6MlHalf(g.gb6_ml_half != null ? String(g.gb6_ml_half) : '')
     setNewGpuGb6MlQuantized(g.gb6_ml_quantized != null ? String(g.gb6_ml_quantized) : '')
@@ -1509,27 +1504,10 @@ export default function AdminPage() {
                 <span className="text-xs text-white/30 w-full">Geekbench GPU</span>
                 <input
                   type="number"
-                  placeholder="GB6 Compute/Metal/Vulkan"
+                  placeholder="GB6 Compute / Metal / OpenCL / Vulkan"
                   value={newGpuGb6Single}
                   onChange={(e) => setNewGpuGb6Single(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-                <input
-                  type="number"
-                  placeholder="GB6 OpenCL"
-                  value={newGpuGb6Opencl}
-                  onChange={(e) => setNewGpuGb6Opencl(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3 mb-4">
-                <span className="text-xs text-white/30 w-full">3DMark (선택)</span>
-                <input
-                  type="number"
-                  placeholder="3DMark 점수"
-                  value={newGpuTdmark}
-                  onChange={(e) => setNewGpuTdmark(e.target.value)}
-                  className="w-44 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                  className="w-56 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
               </div>
 

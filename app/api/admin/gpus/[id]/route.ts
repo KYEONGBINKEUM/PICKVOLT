@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-const GPU_FIELDS = 'id, name, brand, type, cores, gb6_single, gb6_opencl, tdmark_score, gb6_ml_single, gb6_ml_half, gb6_ml_quantized, relative_score, score_source'
+const GPU_FIELDS = 'id, name, brand, type, cores, gb6_single, gb6_ml_single, gb6_ml_half, gb6_ml_quantized, relative_score, score_source'
 
 function makeServiceClient() {
   return createClient(
@@ -36,7 +36,7 @@ export async function PATCH(
   const { id } = await params
   const body = await req.json()
 
-  const allowed = ['name', 'brand', 'type', 'cores', 'gb6_single', 'gb6_opencl', 'tdmark_score', 'gb6_ml_single', 'gb6_ml_half', 'gb6_ml_quantized', 'score_source']
+  const allowed = ['name', 'brand', 'type', 'cores', 'gb6_single', 'gb6_ml_single', 'gb6_ml_half', 'gb6_ml_quantized', 'score_source']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]
