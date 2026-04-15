@@ -844,11 +844,11 @@ export default function CompareClient() {
   const category = products.length > 0 ? products[0].category.toLowerCase() : ''
   const isSameCategory = products.length > 0 && products.every((p) => p.category.toLowerCase() === category)
 
-  // 제품별 종합 점수 계산 — 각 제품 고유 카테고리로 계산
+  // 제품별 종합 점수 계산 — 크로스 카테고리면 GB6 공통 공식, 같은 카테고리면 고유 공식
   const rawScores = categoryStats
     ? products.map((p) => {
         return computeRelativeScores({
-          category:           p.category.toLowerCase(),
+          category:           isSameCategory ? p.category.toLowerCase() : 'cross',
           relativeScore:      p.specs.performanceScore,
           gb6Single:          p.specs.gb6Single,
           gb6Multi:           p.specs.gb6Multi,
@@ -1002,6 +1002,60 @@ export default function CompareClient() {
       })),
     }
 
+    // 크로스 카테고리 비교 (laptop + smartphone/tablet 등 혼합)
+    if (!isSameCategory) {
+      return [
+        performanceRow,
+        ramRow,
+        storageRow,
+        displayRow,
+        resolutionRow,
+        refreshRateRow,
+        {
+          label: t('spec.battery'),
+          sublabel: t('spec.capacity'),
+          higherIsBetter: true,
+          nameLabels: pNames,
+          values: products.map((p) => {
+            const cat = p.category.toLowerCase()
+            if (cat === 'laptop') {
+              return {
+                primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
+                numericVal: p.raw.battery_wh ?? undefined,
+              }
+            }
+            return {
+              primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
+              numericVal: p.raw.battery_mah ?? undefined,
+            }
+          }),
+        },
+        osRow,
+        wifiRow,
+        bluetoothRow,
+        priceRow,
+        {
+          label: t('spec.weight'),
+          sublabel: t('spec.weight_body'),
+          higherIsBetter: false,
+          nameLabels: pNames,
+          values: products.map((p) => {
+            const cat = p.category.toLowerCase()
+            if (cat === 'laptop') {
+              return {
+                primary: p.raw.weight_kg ? `${p.raw.weight_kg} kg` : '—',
+                numericVal: p.raw.weight_kg ? p.raw.weight_kg * 1000 : undefined,
+              }
+            }
+            return {
+              primary: p.raw.weight_g ? `${p.raw.weight_g}g` : '—',
+              numericVal: p.raw.weight_g ?? undefined,
+            }
+          }),
+        },
+      ]
+    }
+
     if (category === 'smartphone') {
       return [
         performanceRow,
@@ -1115,57 +1169,8 @@ export default function CompareClient() {
       ]
     }
 
-    // 크로스 카테고리 (laptop + smartphone/tablet 혼합 등)
-    return [
-      performanceRow,
-      ramRow,
-      storageRow,
-      displayRow,
-      resolutionRow,
-      refreshRateRow,
-      {
-        label: t('spec.battery'),
-        sublabel: t('spec.capacity'),
-        higherIsBetter: true,
-        nameLabels: pNames,
-        values: products.map((p) => {
-          const cat = p.category.toLowerCase()
-          if (cat === 'laptop') {
-            return {
-              primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
-              numericVal: p.raw.battery_wh ?? undefined,
-            }
-          }
-          return {
-            primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
-            numericVal: p.raw.battery_mah ?? undefined,
-          }
-        }),
-      },
-      osRow,
-      wifiRow,
-      bluetoothRow,
-      priceRow,
-      {
-        label: t('spec.weight'),
-        sublabel: t('spec.weight_body'),
-        higherIsBetter: false,
-        nameLabels: pNames,
-        values: products.map((p) => {
-          const cat = p.category.toLowerCase()
-          if (cat === 'laptop') {
-            return {
-              primary: p.raw.weight_kg ? `${p.raw.weight_kg} kg` : '—',
-              numericVal: p.raw.weight_kg ? p.raw.weight_kg * 1000 : undefined,
-            }
-          }
-          return {
-            primary: p.raw.weight_g ? `${p.raw.weight_g}g` : '—',
-            numericVal: p.raw.weight_g ?? undefined,
-          }
-        }),
-      },
-    ]
+    // 기타 fallback (monitor 등)
+    return [performanceRow, ramRow, storageRow, displayRow, osRow]
   }
 
   const specRows = buildSpecRows()

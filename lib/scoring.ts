@@ -281,6 +281,24 @@ export interface RelativeScoreBreakdown {
  * maxes: DB 동적 최댓값 — 없거나 0이면 하드코딩 fallback 사용
  */
 function benchmarkPerf(input: ScoringInput, maxes?: CpuBenchmarkMaxes): number | null {
+  // 크로스 카테고리 비교 시 GB6 Single + Multi 만으로 계산 (공통 벤치마크)
+  if (input.category === 'cross') {
+    const GB6S_MAX = maxes?.gb6Single || 4200
+    const GB6M_MAX = maxes?.gb6Multi  || 20000
+    const configs = [
+      { value: input.gb6Single || null, max: GB6S_MAX, weight: 40 },
+      { value: input.gb6Multi  || null, max: GB6M_MAX, weight: 60 },
+    ]
+    const available = configs.filter((c) => c.value != null)
+    if (available.length === 0) {
+      if (input.relativeScore != null) return Math.min(100, Math.round(input.relativeScore / 10))
+      return 0
+    }
+    const totalW  = available.reduce((s, c) => s + c.weight, 0)
+    const weighted = available.reduce((s, c) => s + Math.min(1, c.value! / c.max) * c.weight, 0)
+    return Math.min(100, Math.round(weighted / totalW * 100))
+  }
+
   const isDesktop = input.category === 'laptop'
 
   if (isDesktop) {
