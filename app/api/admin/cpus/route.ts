@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-const CPU_FIELDS = 'id, name, brand, type, cores, clock_base, clock_boost, gpu_name, gb6_single, gb6_multi, igpu_gb6_single, tdmark_score, antutu_score, cinebench_single, cinebench_multi, relative_score, score_source'
+const CPU_FIELDS = 'id, name, brand, type, cores, clock_base, clock_boost, gpu_name, gb6_single, gb6_multi, igpu_gb6_single, tdmark_score, antutu_score, cinebench_single, cinebench_multi, passmark_single, passmark_multi, tdp, process_nm, gpu_id, gpus(name), relative_score, score_source'
 
 function makeServiceClient() {
   return createClient(
@@ -78,6 +78,11 @@ export async function POST(req: NextRequest) {
       antutu_score:      body.antutu_score      ?? null,
       cinebench_single:  body.cinebench_single  ?? null,
       cinebench_multi:   body.cinebench_multi   ?? null,
+      passmark_single:   body.passmark_single   ?? null,
+      passmark_multi:    body.passmark_multi    ?? null,
+      tdp:               body.tdp               ?? null,
+      process_nm:        body.process_nm        ?? null,
+      gpu_id:            body.gpu_id            ?? null,
       score_source:      body.score_source      ?? 'geekbench6',
     })
     .select(CPU_FIELDS)

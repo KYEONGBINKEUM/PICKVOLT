@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('cpus')
-    .select('gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi')
+    .select('gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, passmark_single, passmark_multi')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -30,5 +30,7 @@ export async function GET() {
     antutu:          maxOf('antutu_score'),
     cinebenchSingle: maxOf('cinebench_single'),
     cinebenchMulti:  maxOf('cinebench_multi'),
+    passmarkSingle:  maxOf('passmark_single'),
+    passmarkMulti:   maxOf('passmark_multi'),
   })
 }

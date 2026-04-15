@@ -18,6 +18,8 @@ export interface CpuBenchmarkMaxes {
   antutu?:          number | null
   cinebenchSingle?: number | null
   cinebenchMulti?:  number | null
+  passmarkSingle?:  number | null
+  passmarkMulti?:   number | null
 }
 
 // ─── 개별 스펙 점수 ───────────────────────────────────────────────────────────
@@ -59,24 +61,43 @@ export function scoreCPU(
 }
 
 /** 랩탑/데스크탑 CPU 성능 점수 (0–100)
- *  Cinebench Single 50% + Cinebench Multi 50%
+ *  CB Single 20% · CB Multi 25% · GB6 Single 15% · GB6 Multi 20%
+ *  Passmark Single 10% · Passmark Multi 10%
+ *  없는 항목의 가중치는 나머지에 비례 재배분
  *  최댓값은 DB 동적값(maxes) 우선, 없으면 fallback 사용 */
 export function scoreCPUDesktop(
   cbSingle: number | null,
   cbMulti: number | null,
+  gb6Single: number | null,
+  gb6Multi: number | null,
+  pmSingle: number | null,
+  pmMulti: number | null,
   relScore: number | null,
   maxes?: CpuBenchmarkMaxes,
 ): number {
-  if (cbSingle != null || cbMulti != null) {
-    const CB_SINGLE_MAX = maxes?.cinebenchSingle || 150
-    const CB_MULTI_MAX  = maxes?.cinebenchMulti  || 45000
-    const normSingle = cbSingle != null ? Math.min(1, cbSingle / CB_SINGLE_MAX) : 0
-    const normMulti  = cbMulti  != null ? Math.min(1, cbMulti  / CB_MULTI_MAX)  : 0
-    const weighted   = normSingle * 0.50 + normMulti * 0.50
-    return Math.min(100, Math.round(weighted * 100))
+  const CB_SINGLE_MAX = maxes?.cinebenchSingle || 200
+  const CB_MULTI_MAX  = maxes?.cinebenchMulti  || 45000
+  const GB6S_MAX      = maxes?.gb6Single       || 3500
+  const GB6M_MAX      = maxes?.gb6Multi        || 18000
+  const PM_SINGLE_MAX = maxes?.passmarkSingle  || 4500
+  const PM_MULTI_MAX  = maxes?.passmarkMulti   || 55000
+
+  const configs = [
+    { value: cbSingle  || null, max: CB_SINGLE_MAX, weight: 20 },
+    { value: cbMulti   || null, max: CB_MULTI_MAX,  weight: 25 },
+    { value: gb6Single || null, max: GB6S_MAX,       weight: 15 },
+    { value: gb6Multi  || null, max: GB6M_MAX,       weight: 20 },
+    { value: pmSingle  || null, max: PM_SINGLE_MAX,  weight: 10 },
+    { value: pmMulti   || null, max: PM_MULTI_MAX,   weight: 10 },
+  ]
+  const available = configs.filter((c) => c.value != null)
+  if (available.length === 0) {
+    if (relScore != null) return Math.min(100, Math.round(relScore / 10))
+    return 0
   }
-  if (relScore != null) return Math.min(100, Math.round(relScore / 10))
-  return 0
+  const totalWeight = available.reduce((s, c) => s + c.weight, 0)
+  const weightedSum = available.reduce((s, c) => s + Math.min(1, c.value! / c.max) * c.weight, 0)
+  return Math.min(100, Math.round(weightedSum / totalWeight * 100))
 }
 
 /** RAM 점수 */
@@ -263,20 +284,17 @@ function benchmarkPerf(input: ScoringInput, maxes?: CpuBenchmarkMaxes): number |
   const isDesktop = input.category === 'laptop'
 
   if (isDesktop) {
-    const CB_SINGLE_MAX = maxes?.cinebenchSingle || 150
-    const CB_MULTI_MAX  = maxes?.cinebenchMulti  || 45000
-    const GB6S_MAX      = maxes?.gb6Single       || 4200
-    const GB6M_MAX      = maxes?.gb6Multi        || 15000
-
-    const parts: number[] = []
-    if (input.cinebenchSingle != null) parts.push(Math.min(1, input.cinebenchSingle / CB_SINGLE_MAX))
-    if (input.cinebenchMulti  != null) parts.push(Math.min(1, input.cinebenchMulti  / CB_MULTI_MAX))
-    if (parts.length === 0) {
-      if (input.gb6Single != null) parts.push(Math.min(1, input.gb6Single / GB6S_MAX))
-      if (input.gb6Multi  != null) parts.push(Math.min(1, input.gb6Multi  / GB6M_MAX))
-    }
-    if (parts.length === 0) return null
-    return Math.min(100, Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100))
+    const score = scoreCPUDesktop(
+      input.cinebenchSingle ?? null,
+      input.cinebenchMulti  ?? null,
+      input.gb6Single       ?? null,
+      input.gb6Multi        ?? null,
+      input.passmarkSingle  ?? null,
+      input.passmarkMulti   ?? null,
+      input.relativeScore   ?? null,
+      maxes,
+    )
+    return score > 0 ? score : null
   }
 
   // 모바일 / 태블릿: 고정 가중치 (GB6S 30% · GB6M 30% · AnTuTu 25% · 3DMark 15%)
@@ -419,6 +437,8 @@ export interface ScoringInput {
   antutu?: number | null
   cinebenchSingle?: number | null
   cinebenchMulti?: number | null
+  passmarkSingle?: number | null
+  passmarkMulti?: number | null
   relativeScore?: number | null
   // Common
   ram_gb?: string | number | null
@@ -446,10 +466,19 @@ export interface ScoreBreakdown {
 export function computeScores(input: ScoringInput, maxes?: CpuBenchmarkMaxes): ScoreBreakdown {
   const { category } = input
 
-  // 랩탑/데스크탑은 Cinebench 우선, 없으면 GB6 fallback
   const isDesktopType = category === 'laptop'
-  const cpu = (isDesktopType && (input.cinebenchSingle != null || input.cinebenchMulti != null))
-    ? scoreCPUDesktop(input.cinebenchSingle ?? null, input.cinebenchMulti ?? null, input.relativeScore ?? null, maxes)
+  const hasDesktopBench = isDesktopType && (
+    input.cinebenchSingle != null || input.cinebenchMulti != null ||
+    input.gb6Single != null || input.gb6Multi != null ||
+    input.passmarkSingle != null || input.passmarkMulti != null
+  )
+  const cpu = hasDesktopBench
+    ? scoreCPUDesktop(
+        input.cinebenchSingle ?? null, input.cinebenchMulti ?? null,
+        input.gb6Single ?? null, input.gb6Multi ?? null,
+        input.passmarkSingle ?? null, input.passmarkMulti ?? null,
+        input.relativeScore ?? null, maxes,
+      )
     : scoreCPU(input.gb6Single ?? null, input.gb6Multi ?? null, input.relativeScore ?? null, input.tdmark ?? null, input.antutu ?? null, maxes)
   const ram  = scoreRAM(firstNum(input.ram_gb))
   const stor = scoreStorage(firstNum(input.storage_gb))
