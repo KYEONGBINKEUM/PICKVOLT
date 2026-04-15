@@ -844,11 +844,11 @@ export default function CompareClient() {
   const category = products.length > 0 ? products[0].category.toLowerCase() : ''
   const isSameCategory = products.length > 0 && products.every((p) => p.category.toLowerCase() === category)
 
-  // 제품별 종합 점수 계산 (DB 전체 대비 상대 점수 — stats 로드 전엔 null)
+  // 제품별 종합 점수 계산 — 각 제품 고유 카테고리로 계산
   const rawScores = categoryStats
     ? products.map((p) => {
         return computeRelativeScores({
-          category,
+          category:           p.category.toLowerCase(),
           relativeScore:      p.specs.performanceScore,
           gb6Single:          p.specs.gb6Single,
           gb6Multi:           p.specs.gb6Multi,
@@ -868,8 +868,8 @@ export default function CompareClient() {
       })
     : null
 
-  // 같은 카테고리끼리 비교 시 Performance를 해당 그룹 내 최고점 기준으로 재정규화
-  const productScores = rawScores && isSameCategory
+  // Performance 점수를 항상 그룹 내 최고점 기준으로 재정규화 (크로스 카테고리 포함)
+  const productScores = rawScores
     ? (() => {
         const maxPerf = Math.max(...rawScores.map((s) => s.details.find((d) => d.label === 'Performance')?.score ?? 0))
         if (maxPerf <= 0) return rawScores
@@ -1115,26 +1115,56 @@ export default function CompareClient() {
       ]
     }
 
-    // fallback (monitor 등 기타 카테고리)
+    // 크로스 카테고리 (laptop + smartphone/tablet 혼합 등)
     return [
       performanceRow,
       ramRow,
       storageRow,
       displayRow,
+      resolutionRow,
+      refreshRateRow,
       {
         label: t('spec.battery'),
         sublabel: t('spec.capacity'),
-        values: products.map((p) => ({
-          primary: p.specs.batteryCapacity ?? '—',
-          secondary: p.specs.batteryLife ?? undefined,
-        })),
-      },
-      {
-        label: t('spec.camera'),
-        sublabel: t('spec.main_sensor'),
-        values: products.map((p) => ({ primary: p.specs.camera ?? '—' })),
+        higherIsBetter: true,
+        nameLabels: pNames,
+        values: products.map((p) => {
+          const cat = p.category.toLowerCase()
+          if (cat === 'laptop') {
+            return {
+              primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
+              numericVal: p.raw.battery_wh ?? undefined,
+            }
+          }
+          return {
+            primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
+            numericVal: p.raw.battery_mah ?? undefined,
+          }
+        }),
       },
       osRow,
+      wifiRow,
+      bluetoothRow,
+      priceRow,
+      {
+        label: t('spec.weight'),
+        sublabel: t('spec.weight_body'),
+        higherIsBetter: false,
+        nameLabels: pNames,
+        values: products.map((p) => {
+          const cat = p.category.toLowerCase()
+          if (cat === 'laptop') {
+            return {
+              primary: p.raw.weight_kg ? `${p.raw.weight_kg} kg` : '—',
+              numericVal: p.raw.weight_kg ? p.raw.weight_kg * 1000 : undefined,
+            }
+          }
+          return {
+            primary: p.raw.weight_g ? `${p.raw.weight_g}g` : '—',
+            numericVal: p.raw.weight_g ?? undefined,
+          }
+        }),
+      },
     ]
   }
 
