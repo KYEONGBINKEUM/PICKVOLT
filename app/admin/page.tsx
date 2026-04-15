@@ -1580,13 +1580,16 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">타입</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Compute</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden lg:table-cell">ML Single</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden lg:table-cell">ML Half</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium hidden lg:table-cell">ML Quantized</th>
                     <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
                     <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {gpusLoading && gpus.length === 0 ? (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center">
+                    <tr><td colSpan={9} className="px-4 py-8 text-center">
                       <div className="flex gap-1.5 justify-center">
                         {[0, 1, 2].map((i) => (
                           <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -1607,6 +1610,9 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{g.gb6_single ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden lg:table-cell">{g.gb6_ml_single ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden lg:table-cell">{g.gb6_ml_half ?? '—'}</td>
+                      <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden lg:table-cell">{g.gb6_ml_quantized ?? '—'}</td>
                       <td className="px-4 py-3 text-right font-mono">
                         {g.relative_score !== null ? (
                           <span className={g.relative_score >= 800 ? 'text-emerald-400' : g.relative_score >= 500 ? 'text-amber-400' : 'text-white/50'}>
@@ -1627,7 +1633,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {!gpusLoading && gpus.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-white/30">GPU 없음</td></tr>
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-white/30">GPU 없음</td></tr>
                   )}
                 </tbody>
               </table>
