@@ -287,7 +287,8 @@ export default function AdminPage() {
       const json = await res.json()
       setCpus(json.cpus ?? [])
     } else {
-      setCpuError('CPU 목록을 불러올 수 없습니다')
+      const json = await res.json().catch(() => ({}))
+      setCpuError(json.error ?? `CPU 목록 오류 HTTP ${res.status}`)
     }
     setCpusLoading(false)
   }, [])
