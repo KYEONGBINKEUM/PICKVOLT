@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -42,6 +42,12 @@ export default function MyPage() {
   const [nicknameDupStatus, setNicknameDupStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
   const nicknameDupRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // 포인트 & 설정
+  const [points, setPoints] = useState<number | null>(null)
+  const [autoAiEnabled, setAutoAiEnabled] = useState(true)
+  const [autoAiSaving, setAutoAiSaving] = useState(false)
+  const [bonusToast, setBonusToast] = useState<{ points: number } | null>(null)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
@@ -57,7 +63,6 @@ export default function MyPage() {
         if (adminEmails.includes(email.toLowerCase())) {
           setIsPro(true)
         } else {
-          // 구독 상태 확인
           supabase
             .from('subscriptions')
             .select('status')
@@ -66,7 +71,6 @@ export default function MyPage() {
             .then(({ data: sub }) => setIsPro(sub?.status === 'pro'))
         }
 
-        // 실제 비교 횟수 조회
         supabase
           .from('comparison_history')
           .select('id', { count: 'exact', head: true })
@@ -83,18 +87,59 @@ export default function MyPage() {
             setAvatarUrl(p?.avatar_url ?? null)
           })
 
-        // 내 리뷰 + 찜 목록 (토큰 필요)
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (!session) return
           const token = session.access_token
+
           fetch('/api/reviews/my', { headers: { Authorization: `Bearer ${token}` } })
             .then((r) => r.json()).then((j) => setMyReviews(j.reviews ?? []))
           fetch('/api/wishlist', { headers: { Authorization: `Bearer ${token}` } })
             .then((r) => r.json()).then((j) => setWishlist(j.wishlist ?? []))
+
+          // 포인트 & 설정 로드
+          fetch('/api/user/points', { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json())
+            .then((d) => {
+              setPoints(d.points ?? 0)
+              setAutoAiEnabled(d.auto_ai_enabled ?? true)
+            })
+            .catch(() => {})
+
+          // 일일 로그인 보너스 수령 시도
+          fetch('/api/user/login-bonus', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.claimed) {
+                setPoints(d.points)
+                setBonusToast({ points: d.points })
+                setTimeout(() => setBonusToast(null), 3500)
+              }
+            })
+            .catch(() => {})
         })
       }
     })
   }, [])
+
+  const handleAutoAiToggle = async () => {
+    const next = !autoAiEnabled
+    setAutoAiEnabled(next)
+    setAutoAiSaving(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setAutoAiSaving(false); return }
+    await fetch('/api/user/settings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ auto_ai_enabled: next }),
+    })
+    setAutoAiSaving(false)
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -119,7 +164,6 @@ export default function MyPage() {
     }
   }
 
-  // Canvas로 이미지를 지정 크기로 리사이징해 WebP Blob 반환
   const resizeImage = (file: File, maxSize = 256): Promise<Blob> =>
     new Promise((resolve, reject) => {
       const img = document.createElement('img') as HTMLImageElement
@@ -156,7 +200,6 @@ export default function MyPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setAvatarUploading(false); return }
 
-    // 256×256 이하로 리사이징 후 WebP 변환
     let uploadBlob: Blob
     try {
       uploadBlob = await resizeImage(file, 256)
@@ -234,13 +277,22 @@ export default function MyPage() {
       <Navbar />
       <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
 
+        {/* 일일 로그인 보너스 토스트 */}
+        {bonusToast && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-slide-up">
+            <div className="bg-accent text-white rounded-2xl px-6 py-3 shadow-2xl flex items-center gap-2">
+              <Coins className="w-4 h-4" />
+              <p className="font-bold text-sm">오늘의 로그인 보너스 +5P 지급! 잔여 {bonusToast.points}P</p>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-xl mx-auto">
           <h1 className="text-4xl font-black text-white mb-8">{t('mypage.title')}</h1>
 
           {/* Profile card */}
           <div className="bg-surface border border-border rounded-card p-6 mb-4">
             <div className="flex items-center gap-4">
-              {/* Avatar with change button */}
               <div className="relative flex-shrink-0">
                 <div className="w-14 h-14 rounded-full overflow-hidden bg-accent/20 flex items-center justify-center">
                   {avatarUrl ? (
@@ -341,8 +393,9 @@ export default function MyPage() {
             </div>
           </div>
 
-          {/* Stats row */}
-          <div className="mb-4">
+          {/* Stats + Points row */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {/* 총 비교 횟수 */}
             <div className="bg-surface border border-border rounded-card p-4 flex items-center gap-3">
               <BarChart2 className="w-4 h-4 text-accent flex-shrink-0" />
               <div>
@@ -352,6 +405,24 @@ export default function MyPage() {
                 </p>
               </div>
             </div>
+
+            {/* 포인트 잔액 */}
+            <div className="bg-surface border border-accent/20 rounded-card p-4 flex items-center gap-3">
+              <Coins className="w-4 h-4 text-accent flex-shrink-0" />
+              <div>
+                <p className="text-xs text-white/40">포인트</p>
+                <p className="text-xl font-black text-accent">
+                  {points === null ? '...' : `${points}P`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 포인트 안내 */}
+          <div className="bg-surface border border-border rounded-card p-4 mb-4 text-xs text-white/40 leading-relaxed space-y-0.5">
+            <p>• 가입 시 10포인트 지급 · AI 비교 1회당 1포인트 차감</p>
+            <p>• 매일 첫 로그인 시 5포인트 자동 지급</p>
+            <p>• 히스토리에서 결과 재열람은 포인트 차감 없음</p>
           </div>
 
           {/* 찜 목록 */}
@@ -455,6 +526,32 @@ export default function MyPage() {
           <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
             <div className="px-5 py-3 border-b border-border">
               <p className="text-xs text-white/40 uppercase tracking-widest">{t('mypage.preferences')}</p>
+            </div>
+
+            {/* AI 자동 분석 토글 */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <Zap className="w-4 h-4 text-white/40" />
+                <div>
+                  <p className="text-sm text-white">AI 자동 분석</p>
+                  <p className="text-xs text-white/30 mt-0.5">
+                    {autoAiEnabled ? '비교 시 AI 결과 자동 표시 (-1P)' : '버튼 클릭 시에만 AI 결과 표시'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAutoAiToggle}
+                disabled={autoAiSaving}
+                className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 disabled:opacity-50 ${
+                  autoAiEnabled ? 'bg-accent' : 'bg-white/15'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                    autoAiEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
 
             {/* Language */}

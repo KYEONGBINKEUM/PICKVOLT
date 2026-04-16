@@ -9,7 +9,6 @@ import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle, shortenProductName } from '@/lib/utils'
-import { saveLocalHistory } from '@/lib/localHistory'
 import { computeRelativeScores, type CategoryStats, type CpuBenchmarkMaxes } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
@@ -57,7 +56,7 @@ interface AiResult {
   winner: string
   summary: string
   reasoning: string
-  remaining: number | null
+  points?: number | null
   isPro: boolean
   scores?: Record<string, { value: number; reason: string }>
 }
@@ -610,7 +609,9 @@ export default function CompareClient() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showReasoning, setShowReasoning] = useState(false)
-  const [remaining, setRemaining] = useState<number | null>(null)
+  const [userPoints, setUserPoints] = useState<number | null>(null)
+  const [autoAI, setAutoAI] = useState(true)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
@@ -637,6 +638,24 @@ export default function CompareClient() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // 유저 포인트 & 자동AI 설정 로드
+  useEffect(() => {
+    if (!session) {
+      setSettingsLoaded(true)
+      return
+    }
+    fetch('/api/user/points', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        setUserPoints(d.points ?? 0)
+        setAutoAI(d.auto_ai_enabled ?? true)
+        setSettingsLoaded(true)
+      })
+      .catch(() => setSettingsLoaded(true))
+  }, [session])
+
   // 모바일 헤더가 사라지면 하단 바 표시
   useEffect(() => {
     const el = mobileHeaderRef.current
@@ -657,7 +676,73 @@ export default function CompareClient() {
       .catch(() => {})
   }, [])
 
-  const runComparison = useCallback(async (ids: string[], fromHistoryId?: string) => {
+  // ── AI 비교 호출 (스펙 로드 완료 후 단독 실행 가능) ─────────────────────
+  const callAI = useCallback(async (loadedProducts: Product[], productIds: string[]) => {
+    if (!session) return
+    setLoadingAI(true)
+    setError(null)
+
+    try {
+      const comparePayload = JSON.stringify({
+        products: loadedProducts.map((p) => ({
+          name: p.name,
+          specs: {
+            cpu: p.specs.cpu,
+            ram: p.specs.ram,
+            storage: p.specs.storage,
+            display: p.specs.display,
+            camera: p.specs.camera,
+            battery: p.specs.batteryCapacity,
+            batteryLife: p.specs.batteryLife,
+            os: p.specs.os,
+            weight: p.specs.weight,
+          },
+        })),
+        productIds,
+        accessToken: session.access_token,
+        locale: locale as Locale,
+      })
+
+      let compareRes = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: comparePayload,
+      })
+
+      // 서버 오류 시 1회 재시도
+      if (compareRes.status >= 500) {
+        await new Promise((r) => setTimeout(r, 1500))
+        compareRes = await fetch('/api/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: comparePayload,
+        })
+      }
+
+      if (compareRes.status === 401) { setError('login_required'); return }
+      if (compareRes.status === 402) { setError('no_points'); return }
+
+      const compareData = await compareRes.json()
+      if (compareData.error) {
+        setError(t('compare.error_compare'))
+      } else {
+        setAiResult(compareData)
+        if (compareData.points !== undefined && compareData.points !== null) {
+          setUserPoints(compareData.points)
+        }
+        fetch('/api/compare/popular')
+          .then((r) => r.json())
+          .then((d) => setPopularItems(d.items ?? []))
+          .catch(() => {})
+      }
+    } catch {
+      setError(t('compare.error_compare'))
+    } finally {
+      setLoadingAI(false)
+    }
+  }, [session, locale, t])
+
+  const runComparison = useCallback(async (ids: string[], fromHistoryId?: string, skipAI = false) => {
     if (ids.length < 2) return
 
     setLoading(true)
@@ -685,9 +770,7 @@ export default function CompareClient() {
 
       // ── 히스토리에서 불러온 경우: 저장된 AI 결과 사용 (API 재호출 없음) ──
       if (fromHistoryId) {
-        // 로그인 유저: Supabase에서 저장된 결과 fetch
         if (fromHistoryId.startsWith('local_')) {
-          // 로컬 히스토리: localStorage에서 결과 읽기
           const { getLocalHistory } = await import('@/lib/localHistory')
           const localItems = getLocalHistory()
           const found = localItems.find((item) => item.id === fromHistoryId)
@@ -708,87 +791,27 @@ export default function CompareClient() {
         }
       }
 
-      setLoadingAI(true)   // 스펙 완료 즉시 AI 로딩 표시 시작
+      // ── 자동 AI 비활성화 시 여기서 중단 (수동 버튼 대기) ──────────────────
+      if (skipAI) return
 
       // ── 2단계: AI 비교 ────────────────────────────────────────────────────
-      const comparePayload = JSON.stringify({
-        products: validProducts.map((p) => ({
-          name: p.name,
-          specs: {
-            cpu: p.specs.cpu,
-            ram: p.specs.ram,
-            storage: p.specs.storage,
-            display: p.specs.display,
-            camera: p.specs.camera,
-            battery: p.specs.batteryCapacity,
-            batteryLife: p.specs.batteryLife,
-            os: p.specs.os,
-            weight: p.specs.weight,
-          },
-        })),
-        productIds: ids,
-        accessToken: session?.access_token ?? null,
-        locale: locale as Locale,
-      })
-
-      let compareRes = await fetch('/api/compare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: comparePayload,
-      })
-
-      // 서버 오류 시 1회 재시도
-      if (compareRes.status >= 500) {
-        await new Promise((r) => setTimeout(r, 1500))
-        compareRes = await fetch('/api/compare', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: comparePayload,
-        })
-      }
-
-      if (compareRes.status === 401) { setError('login_required'); return }
-      if (compareRes.status === 429) { setError('daily_limit'); setRemaining(0); return }
-
-      const compareData = await compareRes.json()
-      if (compareData.error && compareData.error !== 'login_required' && compareData.error !== 'daily_limit') {
-        setError(t('compare.error_compare'))
-      } else {
-        setAiResult(compareData)
-        if (compareData.remaining !== null) setRemaining(compareData.remaining)
-
-        // 비로그인 사용자: localStorage에 기록 저장
-        if (!session) {
-          const title = validProducts.map((p) => shortenProductName(p.name)).join(' vs ')
-          saveLocalHistory({
-            id: `local_${Date.now()}`,
-            title,
-            products: ids,
-            result: {
-              winner: compareData.winner,
-              summary: compareData.summary,
-              reasoning: compareData.reasoning,
-              scores: compareData.scores ?? {},
-            },
-            created_at: new Date().toISOString(),
-          })
-        }
-
-        fetch('/api/compare/popular')
-          .then((r) => r.json())
-          .then((d) => setPopularItems(d.items ?? []))
-          .catch(() => {})
-      }
+      await callAI(validProducts, ids)
     } catch {
       setError(t('compare.error_compare'))
     } finally {
       setLoading(false)
-      setLoadingAI(false)
     }
-  }, [t, session, locale])
+  }, [t, callAI])
+
+  // 수동 AI 실행 (autoAI=false일 때 버튼 클릭)
+  const handleManualAI = useCallback(() => {
+    if (!session || products.length < 2 || loadingAI) return
+    const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
+    callAI(products, ids)
+  }, [session, products, loadingAI, idsParam, callAI])
 
   useEffect(() => {
-    if (!sessionLoaded) return  // 세션 확인 전 실행 차단
+    if (!sessionLoaded || !settingsLoaded) return  // 세션 & 설정 확인 전 실행 차단
 
     const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
     if (ids.length < 2) return
@@ -798,8 +821,9 @@ export default function CompareClient() {
     if (ranKeyRef.current === key) return
 
     ranKeyRef.current = key
-    runComparison(ids, historyId || undefined)
-  }, [idsParam, historyId, runComparison, session, sessionLoaded])
+    // autoAI=false이고 로그인 상태면 AI 자동 실행 건너뜀
+    runComparison(ids, historyId || undefined, !autoAI && !!session)
+  }, [idsParam, historyId, runComparison, session, sessionLoaded, settingsLoaded, autoAI])
 
   // 카테고리 결정 후 DB 전체 min/max 범위 + CPU 벤치마크 최댓값 조회
   useEffect(() => {
@@ -1311,15 +1335,15 @@ export default function CompareClient() {
             </Link>
           </div>
         )}
-        {error === 'daily_limit' && !loading && (
+        {error === 'no_points' && !loading && (
           <div className="mt-8 p-6 bg-surface border border-amber-500/30 rounded-card flex items-center gap-4">
             <Zap className="w-5 h-5 text-amber-400 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-white font-bold text-sm mb-1">Daily limit reached</p>
-              <p className="text-white/40 text-xs">Upgrade to Pro for unlimited AI comparisons.</p>
+              <p className="text-white font-bold text-sm mb-1">포인트 부족</p>
+              <p className="text-white/40 text-xs">AI 비교에는 1포인트가 필요합니다. 매일 로그인하면 5포인트를 받을 수 있어요.</p>
             </div>
-            <Link href="/pricing" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
-              Upgrade
+            <Link href="/mypage" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
+              포인트 충전
             </Link>
           </div>
         )}
@@ -1334,6 +1358,27 @@ export default function CompareClient() {
           <div className="mt-8">
             {/* AI Pick 영역 */}
             {loadingAI && <AIPickLoading t={t} />}
+            {/* 자동 AI 비활성화 상태 + 미결과 + 로그인 → 수동 실행 버튼 */}
+            {!autoAI && !loadingAI && !aiResult && session && !error && products.length >= 2 && (
+              <div className="rounded-card border border-border bg-surface p-6 mb-8 text-center">
+                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                  <Zap className="w-5 h-5 text-accent" />
+                </div>
+                <p className="text-white font-bold mb-1">AI 자동 분석 꺼짐</p>
+                <p className="text-white/40 text-sm mb-4">버튼을 누르면 AI가 비교 결과를 분석합니다.</p>
+                <button
+                  onClick={handleManualAI}
+                  disabled={loadingAI}
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors disabled:opacity-50"
+                >
+                  <Zap className="w-4 h-4" />
+                  AI 분석 시작 (-1P)
+                </button>
+                {userPoints !== null && (
+                  <p className="text-xs text-white/30 mt-3">현재 포인트: {userPoints}P</p>
+                )}
+              </div>
+            )}
             {sessionLoaded && !session && !loadingAI && !aiResult && !error && <AIPickLocked t={t} />}
             {!loadingAI && aiResult && (
               <>
@@ -1343,9 +1388,9 @@ export default function CompareClient() {
                   onViewReasoning={() => setShowReasoning(true)}
                   t={t}
                 />
-                {session && aiResult.remaining !== null && (
+                {session && userPoints !== null && (
                   <p className="text-xs text-white/30 text-center -mt-4 mb-6">
-                    {aiResult.remaining} comparison{aiResult.remaining !== 1 ? 's' : ''} left today
+                    잔여 포인트: {userPoints}P
                   </p>
                 )}
               </>

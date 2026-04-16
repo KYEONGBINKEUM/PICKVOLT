@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { shortenProductName } from '@/lib/utils'
 
-const DAILY_LIMIT = 5
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
@@ -83,7 +82,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'login_required' }, { status: 401 })
     }
 
-    // 구독 상태 확인
+    // 구독 상태 / 어드민 확인
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('status')
@@ -92,23 +91,18 @@ export async function POST(req: NextRequest) {
     const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? '')
     const isPro = isAdmin || sub?.status === 'pro'
 
-    // 무료 유저 하루 5회 제한
-    let todayCount = 0
+    // 포인트 확인 (Pro / 어드민 제외)
+    let currentPoints = 0
     if (!isPro) {
-      const todayStart = new Date()
-      todayStart.setHours(0, 0, 0, 0)
-      const { count } = await supabase
-        .from('comparison_history')
-        .select('id', { count: 'exact', head: true })
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('points')
         .eq('user_id', user.id)
-        .gte('created_at', todayStart.toISOString())
-      todayCount = count ?? 0
+        .maybeSingle()
+      currentPoints = profile?.points ?? 0
 
-      if (todayCount >= DAILY_LIMIT) {
-        return NextResponse.json(
-          { error: 'daily_limit', remaining: 0 },
-          { status: 429 }
-        )
+      if (currentPoints < 1) {
+        return NextResponse.json({ error: 'no_points', points: 0 }, { status: 402 })
       }
     }
 
@@ -162,12 +156,18 @@ export async function POST(req: NextRequest) {
       pinned: false,
     })
 
-    const remaining = isPro ? null : Math.max(0, DAILY_LIMIT - (todayCount + 1))
+    // 포인트 차감 (Pro / 어드민 제외) — AI 성공 후 원자적으로 차감
+    let newPoints: number | null = null
+    if (!isPro) {
+      const { data: deductResult } = await supabase.rpc('use_ai_point')
+      // use_ai_point() 는 차감 후 잔여 포인트(INT) 또는 NULL(포인트 부족) 반환
+      newPoints = typeof deductResult === 'number' ? deductResult : currentPoints - 1
+    }
 
     return NextResponse.json({
       ...result,
       provider: process.env.GEMINI_API_KEY ? 'gemini' : 'claude',
-      remaining,
+      points: newPoints,
       isPro,
     })
   } catch (error) {
