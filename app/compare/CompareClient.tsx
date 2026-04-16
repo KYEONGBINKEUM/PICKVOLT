@@ -1004,6 +1004,11 @@ export default function CompareClient() {
 
     // 크로스 카테고리 비교 (laptop + smartphone/tablet 등 혼합)
     if (!isSameCategory) {
+      // 랩탑(Wh)과 모바일(mAh)이 섞이면 단위가 달라 수치 비교 불가 → 베스트 뱃지 없음
+      const hasLaptop    = products.some((p) => p.category.toLowerCase() === 'laptop')
+      const hasNonLaptop = products.some((p) => p.category.toLowerCase() !== 'laptop')
+      const mixedBatteryUnits = hasLaptop && hasNonLaptop
+
       return [
         performanceRow,
         ramRow,
@@ -1014,19 +1019,19 @@ export default function CompareClient() {
         {
           label: t('spec.battery'),
           sublabel: t('spec.capacity'),
-          higherIsBetter: true,
+          ...(mixedBatteryUnits ? {} : { higherIsBetter: true }),
           nameLabels: pNames,
           values: products.map((p) => {
             const cat = p.category.toLowerCase()
             if (cat === 'laptop') {
               return {
                 primary: p.raw.battery_wh ? `${p.raw.battery_wh} Wh` : '—',
-                numericVal: p.raw.battery_wh ?? undefined,
+                ...(mixedBatteryUnits ? {} : { numericVal: p.raw.battery_wh ?? undefined }),
               }
             }
             return {
               primary: p.raw.battery_mah ? `${p.raw.battery_mah} mAh` : '—',
-              numericVal: p.raw.battery_mah ?? undefined,
+              ...(mixedBatteryUnits ? {} : { numericVal: p.raw.battery_mah ?? undefined }),
             }
           }),
         },
