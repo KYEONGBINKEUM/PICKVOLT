@@ -828,16 +828,30 @@ export default function CompareClient() {
   // 카테고리 결정 후 DB 전체 min/max 범위 조회 (벤치마크 최댓값도 포함)
   useEffect(() => {
     if (products.length === 0) return
-    const cat = products[0].category.toLowerCase()
-    fetch(`/api/products/category-stats?category=${cat}`)
+    const cats = Array.from(new Set(products.map((p) => p.category.toLowerCase())))
+    const primaryCat = cats[0]
+    // 첫 번째 카테고리 stats (overall 레이아웃 기준)
+    fetch(`/api/products/category-stats?category=${primaryCat}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setCategoryStats(d) })
       .catch(() => {})
-    // 크로스 카테고리 비교를 위해 전체 DB CPU 최대값도 조회
-    fetch('/api/cpus/stats')
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setGlobalCpuMaxes(d) })
-      .catch(() => {})
+    // 크로스 카테고리: 비교에 포함된 카테고리들의 벤치마크 최대값만 합산
+    if (cats.length > 1) {
+      Promise.all(cats.map((c) => fetch(`/api/products/category-stats?category=${c}`).then((r) => r.json())))
+        .then((results) => {
+          const merged: CpuBenchmarkMaxes = {}
+          const keys = ['gb6Single','gb6Multi','tdmark','antutu','cinebenchSingle','cinebenchMulti','passmarkSingle','passmarkMulti'] as const
+          for (const r of results) {
+            if (r.error || !r.cpuBenchMaxes) continue
+            for (const k of keys) {
+              const v = r.cpuBenchMaxes[k] ?? 0
+              merged[k] = Math.max(merged[k] ?? 0, v)
+            }
+          }
+          setGlobalCpuMaxes(merged)
+        })
+        .catch(() => {})
+    }
   }, [products])
 
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[]; showNameOnDesktop?: boolean }
