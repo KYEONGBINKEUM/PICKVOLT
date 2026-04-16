@@ -9,7 +9,7 @@ import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle, shortenProductName } from '@/lib/utils'
-import { computeRelativeScores, type CategoryStats, type CpuBenchmarkMaxes } from '@/lib/scoring'
+import { computeRelativeScores, type CategoryStats } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
 
@@ -616,7 +616,6 @@ export default function CompareClient() {
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
-  const [cpuMaxes, setCpuMaxes] = useState<CpuBenchmarkMaxes | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
   const [showBottomBar, setShowBottomBar] = useState(false)
 
@@ -825,17 +824,13 @@ export default function CompareClient() {
     runComparison(ids, historyId || undefined, !autoAI && !!session)
   }, [idsParam, historyId, runComparison, session, sessionLoaded, settingsLoaded, autoAI])
 
-  // 카테고리 결정 후 DB 전체 min/max 범위 + CPU 벤치마크 최댓값 조회
+  // 카테고리 결정 후 DB 전체 min/max 범위 조회 (벤치마크 최댓값도 포함)
   useEffect(() => {
     if (products.length === 0) return
     const cat = products[0].category.toLowerCase()
     fetch(`/api/products/category-stats?category=${cat}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setCategoryStats(d) })
-      .catch(() => {})
-    fetch('/api/cpus/stats')
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setCpuMaxes(d) })
       .catch(() => {})
   }, [products])
 
@@ -888,7 +883,7 @@ export default function CompareClient() {
           display_resolution: p.raw.display_resolution,
           display_inch:       p.raw.display_inch,
           refresh_hz:         p.raw.display_hz != null ? Number(p.raw.display_hz) : null,
-        }, categoryStats, cpuMaxes ?? undefined)
+        }, categoryStats, categoryStats.cpuBenchMaxes ?? undefined)
       })
     : null
 

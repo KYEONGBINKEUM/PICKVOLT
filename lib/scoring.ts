@@ -235,6 +235,8 @@ export interface CategoryStats {
   refreshHz:     { min: number; max: number }
   weightG:       { min: number; max: number }
   weightKg:      { min: number; max: number }
+  /** 해당 카테고리 내 CPU들의 벤치마크 최대값 */
+  cpuBenchMaxes?: CpuBenchmarkMaxes
 }
 
 /** 높을수록 좋은 스펙: value / max × 100 (0을 바닥으로 고정) */

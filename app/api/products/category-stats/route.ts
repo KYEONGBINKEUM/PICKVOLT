@@ -45,17 +45,32 @@ export async function GET(req: NextRequest) {
 
   if (error || !data) return NextResponse.json({ error: error?.message }, { status: 500 })
 
-  // Fetch CPU relative scores
+  // Fetch CPU relative scores + benchmark maxes for this category only
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cpuIds = Array.from(new Set(data.map((p: any) => p.specs_common?.cpu_id).filter(Boolean)))
   let cpuMap: Record<string, number> = {}
+  const cpuBenchMaxes = {
+    gb6Single: 0, gb6Multi: 0, tdmark: 0, antutu: 0,
+    cinebenchSingle: 0, cinebenchMulti: 0, passmarkSingle: 0, passmarkMulti: 0,
+  }
   if (cpuIds.length > 0) {
     const { data: cpus } = await supabase
       .from('cpus')
-      .select('id, relative_score')
+      .select('id, relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, passmark_single, passmark_multi')
       .in('id', cpuIds as string[])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cpuMap = Object.fromEntries((cpus ?? []).map((c: any) => [c.id, c.relative_score ?? 0]))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const c of (cpus ?? []) as any[]) {
+      if (c.gb6_single)        cpuBenchMaxes.gb6Single       = Math.max(cpuBenchMaxes.gb6Single,       c.gb6_single)
+      if (c.gb6_multi)         cpuBenchMaxes.gb6Multi        = Math.max(cpuBenchMaxes.gb6Multi,        c.gb6_multi)
+      if (c.tdmark_score)      cpuBenchMaxes.tdmark          = Math.max(cpuBenchMaxes.tdmark,          c.tdmark_score)
+      if (c.antutu_score)      cpuBenchMaxes.antutu          = Math.max(cpuBenchMaxes.antutu,          c.antutu_score)
+      if (c.cinebench_single)  cpuBenchMaxes.cinebenchSingle = Math.max(cpuBenchMaxes.cinebenchSingle, c.cinebench_single)
+      if (c.cinebench_multi)   cpuBenchMaxes.cinebenchMulti  = Math.max(cpuBenchMaxes.cinebenchMulti,  c.cinebench_multi)
+      if (c.passmark_single)   cpuBenchMaxes.passmarkSingle  = Math.max(cpuBenchMaxes.passmarkSingle,  c.passmark_single)
+      if (c.passmark_multi)    cpuBenchMaxes.passmarkMulti   = Math.max(cpuBenchMaxes.passmarkMulti,   c.passmark_multi)
+    }
   }
 
   const vals = {
@@ -127,5 +142,6 @@ export async function GET(req: NextRequest) {
     refreshHz:     minMax(vals.refreshHz),
     weightG:       minMax(vals.weightG),
     weightKg:      minMax(vals.weightKg),
+    cpuBenchMaxes,
   })
 }
