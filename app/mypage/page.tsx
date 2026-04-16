@@ -444,7 +444,7 @@ export default function MyPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-white/40">{t('mypage.points')}</p>
                 <p className="text-xl font-black text-accent">
-                  {points === null ? '...' : `${points}P`}
+                  {points === null ? '...' : `${points}`}
                 </p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-white/30" />
@@ -686,7 +686,7 @@ export default function MyPage() {
                   <h2 className="text-sm font-bold text-white">{t('mypage.points_history_title')}</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-lg font-black text-accent">{points ?? 0}P</span>
+                  <span className="text-lg font-black text-accent">{points ?? 0}</span>
                   <button onClick={() => setShowPointsHistory(false)} className="text-white/30 hover:text-white transition-colors text-lg leading-none">✕</button>
                 </div>
               </div>
@@ -713,7 +713,7 @@ export default function MyPage() {
                           </p>
                         </div>
                         <span className={`text-sm font-bold ${tx.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {tx.amount > 0 ? `+${tx.amount}P` : `${tx.amount}P`}
+                          {tx.amount > 0 ? `+${tx.amount}` : `${tx.amount}`}
                         </span>
                       </div>
                     ))}

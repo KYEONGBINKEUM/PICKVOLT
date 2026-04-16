@@ -892,24 +892,8 @@ export default function CompareClient() {
       })
     : null
 
-  // Performance 점수를 항상 그룹 내 최고점 기준으로 재정규화 (크로스 카테고리 포함)
+  // 카테고리 전체 최고값 기준으로 이미 정규화된 rawScores를 그대로 사용
   const productScores = rawScores
-    ? (() => {
-        const maxPerf = Math.max(...rawScores.map((s) => s.details.find((d) => d.label === 'Performance')?.score ?? 0))
-        if (maxPerf <= 0) return rawScores
-        return rawScores.map((s) => {
-          const perfDetail = s.details.find((d) => d.label === 'Performance')
-          if (!perfDetail) return s
-          const newPerf    = Math.min(100, Math.round(perfDetail.score / maxPerf * 100))
-          const newOverall = Math.min(100, Math.round(s.overall + (newPerf - perfDetail.score) * (perfDetail.weight / 100)))
-          return {
-            ...s,
-            overall: newOverall,
-            details: s.details.map((d) => d.label === 'Performance' ? { ...d, score: newPerf } : d),
-          }
-        })
-      })()
-    : rawScores
 
   // 레이더 차트용 데이터
   const radarProducts: RadarProduct[] | null = productScores
