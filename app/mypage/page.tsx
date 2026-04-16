@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -47,6 +47,9 @@ export default function MyPage() {
   const [autoAiEnabled, setAutoAiEnabled] = useState(true)
   const [autoAiSaving, setAutoAiSaving] = useState(false)
   const [bonusToast, setBonusToast] = useState<{ points: number } | null>(null)
+  const [showPointsHistory, setShowPointsHistory] = useState(false)
+  const [transactions, setTransactions] = useState<{ id: string; amount: number; reason: string; created_at: string }[]>([])
+  const [txLoading, setTxLoading] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -119,10 +122,36 @@ export default function MyPage() {
               }
             })
             .catch(() => {})
+
+          // 포인트 내역 로드
+          fetch('/api/user/transactions', { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json())
+            .then((d) => setTransactions(d.transactions ?? []))
+            .catch(() => {})
         })
       }
     })
   }, [])
+
+  const handleOpenPointsHistory = async () => {
+    setShowPointsHistory(true)
+    if (transactions.length > 0) return  // already loaded
+    setTxLoading(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setTxLoading(false); return }
+    fetch('/api/user/transactions', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then((r) => r.json())
+      .then((d) => setTransactions(d.transactions ?? []))
+      .catch(() => {})
+      .finally(() => setTxLoading(false))
+  }
+
+  const reasonLabel = (reason: string) => {
+    if (reason === 'signup_bonus') return t('point.reason_signup_bonus')
+    if (reason === 'daily_login') return t('point.reason_daily_login')
+    if (reason === 'ai_comparison') return t('point.reason_ai_comparison')
+    return reason
+  }
 
   const handleAutoAiToggle = async () => {
     const next = !autoAiEnabled
@@ -282,7 +311,7 @@ export default function MyPage() {
           <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-slide-up">
             <div className="bg-accent text-white rounded-2xl px-6 py-3 shadow-2xl flex items-center gap-2">
               <Coins className="w-4 h-4" />
-              <p className="font-bold text-sm">오늘의 로그인 보너스 +5P 지급! 잔여 {bonusToast.points}P</p>
+              <p className="font-bold text-sm">{t('mypage.bonus_toast').replace('{points}', String(bonusToast.points))}</p>
             </div>
           </div>
         )}
@@ -406,23 +435,20 @@ export default function MyPage() {
               </div>
             </div>
 
-            {/* 포인트 잔액 */}
-            <div className="bg-surface border border-accent/20 rounded-card p-4 flex items-center gap-3">
+            {/* 포인트 잔액 — 클릭 시 내역 모달 */}
+            <button
+              onClick={handleOpenPointsHistory}
+              className="bg-surface border border-accent/20 rounded-card p-4 flex items-center gap-3 text-left hover:border-accent/50 transition-colors"
+            >
               <Coins className="w-4 h-4 text-accent flex-shrink-0" />
-              <div>
-                <p className="text-xs text-white/40">포인트</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-white/40">{t('mypage.points')}</p>
                 <p className="text-xl font-black text-accent">
                   {points === null ? '...' : `${points}P`}
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* 포인트 안내 */}
-          <div className="bg-surface border border-border rounded-card p-4 mb-4 text-xs text-white/40 leading-relaxed space-y-0.5">
-            <p>• 가입 시 10포인트 지급 · AI 비교 1회당 1포인트 차감</p>
-            <p>• 매일 첫 로그인 시 5포인트 자동 지급</p>
-            <p>• 히스토리에서 결과 재열람은 포인트 차감 없음</p>
+              <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+            </button>
           </div>
 
           {/* 찜 목록 */}
@@ -533,9 +559,9 @@ export default function MyPage() {
               <div className="flex items-center gap-3">
                 <Zap className="w-4 h-4 text-white/40" />
                 <div>
-                  <p className="text-sm text-white">AI 자동 분석</p>
+                  <p className="text-sm text-white">{t('mypage.auto_ai')}</p>
                   <p className="text-xs text-white/30 mt-0.5">
-                    {autoAiEnabled ? '비교 시 AI 결과 자동 표시 (-1P)' : '버튼 클릭 시에만 AI 결과 표시'}
+                    {autoAiEnabled ? t('mypage.auto_ai_on_desc') : t('mypage.auto_ai_off_desc')}
                   </p>
                 </div>
               </div>
@@ -642,6 +668,61 @@ export default function MyPage() {
             {t('mypage.delete_account')}
           </button>
         </div>
+
+        {/* 포인트 내역 모달 */}
+        {showPointsHistory && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 px-4 pb-0 sm:pb-6"
+            onClick={() => setShowPointsHistory(false)}
+          >
+            <div
+              className="bg-surface border border-border rounded-t-2xl sm:rounded-card w-full max-w-sm overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 헤더 */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-accent" />
+                  <h2 className="text-sm font-bold text-white">{t('mypage.points_history_title')}</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-black text-accent">{points ?? 0}P</span>
+                  <button onClick={() => setShowPointsHistory(false)} className="text-white/30 hover:text-white transition-colors text-lg leading-none">✕</button>
+                </div>
+              </div>
+              {/* 내역 목록 */}
+              <div className="max-h-80 overflow-y-auto">
+                {txLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="flex gap-1">
+                      {[0,1,2].map((i) => (
+                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
+                      ))}
+                    </div>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <p className="text-center text-white/30 text-sm py-10">{t('mypage.points_history_empty')}</p>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {transactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between px-5 py-3">
+                        <div>
+                          <p className="text-sm text-white">{reasonLabel(tx.reason)}</p>
+                          <p className="text-xs text-white/30 mt-0.5">
+                            {new Date(tx.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <span className={`text-sm font-bold ${tx.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {tx.amount > 0 ? `+${tx.amount}P` : `${tx.amount}P`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete confirm modal */}
         {showDeleteConfirm && (

@@ -1339,11 +1339,11 @@ export default function CompareClient() {
           <div className="mt-8 p-6 bg-surface border border-amber-500/30 rounded-card flex items-center gap-4">
             <Zap className="w-5 h-5 text-amber-400 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-white font-bold text-sm mb-1">포인트 부족</p>
-              <p className="text-white/40 text-xs">AI 비교에는 1포인트가 필요합니다. 매일 로그인하면 5포인트를 받을 수 있어요.</p>
+              <p className="text-white font-bold text-sm mb-1">{t('compare.no_points_title')}</p>
+              <p className="text-white/40 text-xs">{t('compare.no_points_desc')}</p>
             </div>
             <Link href="/mypage" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
-              포인트 충전
+              {t('compare.no_points_cta')}
             </Link>
           </div>
         )}
@@ -1364,18 +1364,18 @@ export default function CompareClient() {
                 <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
                   <Zap className="w-5 h-5 text-accent" />
                 </div>
-                <p className="text-white font-bold mb-1">AI 자동 분석 꺼짐</p>
-                <p className="text-white/40 text-sm mb-4">버튼을 누르면 AI가 비교 결과를 분석합니다.</p>
+                <p className="text-white font-bold mb-1">{t('compare.auto_ai_off_title')}</p>
+                <p className="text-white/40 text-sm mb-4">{t('compare.auto_ai_off_desc')}</p>
                 <button
                   onClick={handleManualAI}
                   disabled={loadingAI}
                   className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors disabled:opacity-50"
                 >
                   <Zap className="w-4 h-4" />
-                  AI 분석 시작 (-1P)
+                  {t('compare.start_ai')}
                 </button>
                 {userPoints !== null && (
-                  <p className="text-xs text-white/30 mt-3">현재 포인트: {userPoints}P</p>
+                  <p className="text-xs text-white/30 mt-3">{t('compare.points_remaining').replace('{points}', String(userPoints))}</p>
                 )}
               </div>
             )}
@@ -1390,7 +1390,7 @@ export default function CompareClient() {
                 />
                 {session && userPoints !== null && (
                   <p className="text-xs text-white/30 text-center -mt-4 mb-6">
-                    잔여 포인트: {userPoints}P
+                    {t('compare.points_remaining').replace('{points}', String(userPoints))}
                   </p>
                 )}
               </>
