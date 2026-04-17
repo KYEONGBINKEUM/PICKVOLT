@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase'
 
 interface Specs {
   cpu:             string | null
+  gpuName:         string | null
   ram:             string | null
   storage:         string | null
   display:         string | null
@@ -427,6 +428,9 @@ ${priceHTML}
         <div className="flex-1 min-w-0">
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
             <SpecRow label={t('product.spec_cpu')}     value={product.specs.cpu} />
+            {product.category === 'laptop' && (
+              <SpecRow label="GPU" value={product.specs.gpuName} />
+            )}
             <SpecRow label={t('product.spec_ram')}     value={product.specs.ram} />
             <SpecRow label={t('product.spec_storage')} value={product.specs.storage} />
             <SpecRow label={t('product.spec_display')} value={product.specs.display} />

@@ -73,6 +73,7 @@ async function getProduct(id: string) {
     amazon_url: common?.amazon_url ?? null,
     specs: {
       cpu:             common?.cpu_name ?? null,
+      gpuName:         common?.gpu_name ?? null,
       ram:             ramLabel,
       storage:         storageLabel,
       display:         displayParts.length ? displayParts.join(' ') : null,
