@@ -946,6 +946,24 @@ export default function CompareClient() {
         }
       }),
     }
+    const gpuNames = products.map((p) => p.specs.gpuName ?? '')
+    const graphicsRow: SpecRowData = {
+      label: 'GPU',
+      sublabel: t('spec.benchmark'),
+      barMax: 100,
+      higherIsBetter: true,
+      nameLabels: gpuNames,
+      showNameOnDesktop: true,
+      values: products.map((p, i) => {
+        if (p.category.toLowerCase() !== 'laptop') return { primary: '—' }
+        const score = productScores ? productScores[i].details.find((d) => d.label === 'Graphics')?.score : null
+        return {
+          primary: score != null ? score : '—',
+          bar: score ?? undefined,
+          numericVal: score ?? undefined,
+        }
+      }),
+    }
     const ramRow: SpecRowData = {
       label: t('spec.ram'),
       sublabel: t('spec.memory'),
@@ -1034,9 +1052,12 @@ export default function CompareClient() {
       const hasLaptop    = products.some((p) => p.category.toLowerCase() === 'laptop')
       const hasNonLaptop = products.some((p) => p.category.toLowerCase() !== 'laptop')
       const mixedBatteryUnits = hasLaptop && hasNonLaptop
+      // GPU 행: 크로스 시 higherIsBetter 없이 표시 (랩탑만 점수, 나머지 —)
+      const crossGraphicsRow: SpecRowData = { ...graphicsRow, higherIsBetter: undefined }
 
       return [
         performanceRow,
+        ...(hasLaptop ? [crossGraphicsRow] : []),
         ramRow,
         storageRow,
         displayRow,
@@ -1134,6 +1155,7 @@ export default function CompareClient() {
     if (category === 'laptop') {
       return [
         performanceRow,
+        graphicsRow,
         ramRow,
         storageRow,
         displayRow,
