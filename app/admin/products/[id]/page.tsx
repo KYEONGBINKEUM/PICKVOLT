@@ -131,11 +131,18 @@ export default function ProductEditPage() {
   })
   // CPU 검색 & 연결
   const [cpuQuery, setCpuQuery]       = useState('')
-  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; tdmark_score: number | null; antutu_score: number | null; cinebench_single: number | null; cinebench_multi: number | null; score_source: string | null }[]>([])
+  const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gpu_id: string | null; gpus: { name: string } | null; relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; tdmark_score: number | null; antutu_score: number | null; cinebench_single: number | null; cinebench_multi: number | null; score_source: string | null }[]>([])
   const [cpuSearchOpen, setCpuSearchOpen] = useState(false)
   const [cpuCreating, setCpuCreating] = useState(false)
   const [linkedCpuName, setLinkedCpuName] = useState('')
   const cpuSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // GPU 검색 & 연결
+  const [gpuQuery, setGpuQuery]       = useState('')
+  const [gpuResults, setGpuResults]   = useState<{ id: string; name: string; brand: string | null; type: string | null; cores: number | null; gb6_single: number | null; gb6_ml_single: number | null; gb6_ml_half: number | null; gb6_ml_quantized: number | null; relative_score: number | null; score_source: string | null }[]>([])
+  const [gpuSearchOpen, setGpuSearchOpen] = useState(false)
+  const [gpuCreating, setGpuCreating] = useState(false)
+  const [linkedGpuName, setLinkedGpuName] = useState('')
+  const gpuSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [imagePreview, setImagePreview] = useState('')
   const [saving, setSaving] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
@@ -252,6 +259,22 @@ export default function ProductEditPage() {
               }
             })
         }
+
+        // GPU 이름 로드 (gpu_id로 연결된 경우)
+        const gpuId = common?.gpu_id
+        if (gpuId) {
+          supabase
+            .from('gpus')
+            .select('name')
+            .eq('id', gpuId)
+            .single()
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .then(({ data: gpu }: { data: any }) => {
+              if (gpu) setLinkedGpuName(gpu.name ?? '')
+            })
+        } else if (common?.gpu_name) {
+          setLinkedGpuName(common.gpu_name)
+        }
       })
   }, [authed, id, isNew])
 
@@ -272,15 +295,19 @@ export default function ProductEditPage() {
         ? `${cpu.clock_base} GHz / ${cpu.clock_boost} GHz boost`
         : `${cpu.clock_base} GHz`
       : undefined
+    // CPU에 연결된 GPU 이름: 조인된 gpus 테이블 우선, 없으면 cpu 텍스트 필드 fallback
+    const resolvedGpuName = cpu.gpus?.name ?? cpu.gpu_name ?? null
     setCommonSpecs((p) => ({
       ...p,
       cpu_id:    cpu.id,
       cpu_name:  cpu.name,
-      ...(cpu.gpu_name  != null && { gpu_name:  cpu.gpu_name }),
-      ...(cpu.cores     != null && { cpu_cores: cpu.cores }),
-      ...(clockLabel             && { cpu_clock: clockLabel }),
+      ...(resolvedGpuName        != null && { gpu_name: resolvedGpuName }),
+      ...(cpu.gpu_id             != null && { gpu_id:   cpu.gpu_id }),
+      ...(cpu.cores              != null && { cpu_cores: cpu.cores }),
+      ...(clockLabel                      && { cpu_clock: clockLabel }),
     }))
     setLinkedCpuName(cpu.name)
+    if (resolvedGpuName) setLinkedGpuName(resolvedGpuName)
     // CPU의 모든 벤치마크 점수 자동 로드
     const full = cpu as Record<string, unknown>
     setCpuScores({
@@ -311,6 +338,45 @@ export default function ProductEditPage() {
       if (json.id) selectCpu(json)
     } finally {
       setCpuCreating(false)
+    }
+  }
+
+  // GPU 검색 (디바운스 300ms)
+  const searchGpus = useCallback((q: string) => {
+    if (gpuSearchRef.current) clearTimeout(gpuSearchRef.current)
+    if (!q.trim()) { setGpuResults([]); return }
+    gpuSearchRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/admin/gpus?q=${encodeURIComponent(q)}`)
+      const json = await res.json()
+      setGpuResults(json.gpus ?? [])
+    }, 300)
+  }, [])
+
+  const selectGpu = (gpu: typeof gpuResults[0]) => {
+    setCommonSpecs((p) => ({
+      ...p,
+      gpu_id:   gpu.id,
+      gpu_name: gpu.name,
+    }))
+    setLinkedGpuName(gpu.name)
+    setGpuSearchOpen(false)
+    setGpuQuery('')
+    setGpuResults([])
+  }
+
+  const createGpu = async () => {
+    if (!gpuQuery.trim()) return
+    setGpuCreating(true)
+    try {
+      const res = await fetch('/api/admin/gpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: gpuQuery.trim(), type: 'laptop' }),
+      })
+      const json = await res.json()
+      if (json.id) selectGpu(json)
+    } finally {
+      setGpuCreating(false)
     }
   }
 
@@ -789,6 +855,97 @@ export default function ProductEditPage() {
 
                   {!cpuQuery.trim() && (
                     <p className="text-xs text-white/20 text-center py-1">CPU 이름을 입력하면 검색됩니다</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* GPU 검색 & 연결 */}
+            <div className="md:col-span-2">
+              <label className="block text-xs text-white/40 mb-1.5">GPU 연결 (DB 직접 연결)</label>
+
+              {/* 현재 연결된 GPU */}
+              <div className="flex items-center gap-2 mb-2">
+                {commonSpecs.gpu_id ? (
+                  <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-lg px-3 py-2 flex-1">
+                    <Link2 size={13} className="text-purple-400 flex-shrink-0" />
+                    <span className="text-sm text-white font-semibold truncate">{linkedGpuName || (commonSpecs.gpu_id as string)}</span>
+                    <button onClick={() => { setCommonSpecs((p) => ({ ...p, gpu_id: undefined })); setLinkedGpuName('') }}
+                      className="ml-auto text-white/30 hover:text-red-400 transition-colors flex-shrink-0">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 bg-white/5 border border-border rounded-lg px-3 py-2 flex-1">
+                    <Link2 size={13} className="text-white/20 flex-shrink-0" />
+                    <span className="text-sm text-white/30">
+                      {linkedGpuName ? `"${linkedGpuName}" (CPU 자동 설정 · DB 미연결)` : '연결된 GPU 없음'}
+                    </span>
+                  </div>
+                )}
+                <button
+                  onClick={() => { setGpuSearchOpen(!gpuSearchOpen); setGpuQuery(''); setGpuResults([]) }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-border rounded-lg text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors"
+                >
+                  <Search size={13} />
+                  {gpuSearchOpen ? '닫기' : 'GPU 검색'}
+                </button>
+              </div>
+
+              {/* GPU 검색 패널 */}
+              {gpuSearchOpen && (
+                <div className="bg-background border border-border rounded-xl p-3">
+                  <input
+                    type="text"
+                    value={gpuQuery}
+                    placeholder="GPU 이름 검색 (예: RTX 4060, NVIDIA GeForce...)"
+                    onChange={(e) => { setGpuQuery(e.target.value); searchGpus(e.target.value) }}
+                    autoFocus
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent mb-2"
+                  />
+
+                  {/* 검색 결과 */}
+                  {gpuResults.length > 0 && (
+                    <div className="space-y-1 mb-2">
+                      {gpuResults.map((gpu) => (
+                        <button
+                          key={gpu.id}
+                          onClick={() => selectGpu(gpu)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-purple-500/30 transition-all text-left"
+                        >
+                          <div>
+                            <p className="text-sm text-white font-semibold">{gpu.name}</p>
+                            <p className="text-xs text-white/30 mt-0.5">
+                              {[
+                                gpu.brand && gpu.brand,
+                                gpu.type  && `(${gpu.type})`,
+                                gpu.gb6_single    != null && `GB6S: ${gpu.gb6_single}`,
+                                gpu.gb6_ml_single != null && `ML: ${gpu.gb6_ml_single}`,
+                              ].filter(Boolean).join(' · ')}
+                            </p>
+                          </div>
+                          {gpu.relative_score != null && (
+                            <span className="text-xs font-bold text-purple-400 ml-3 flex-shrink-0">score {gpu.relative_score}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 결과 없을 때 새 GPU 생성 */}
+                  {gpuQuery.trim() && gpuResults.length === 0 && (
+                    <button
+                      onClick={createGpu}
+                      disabled={gpuCreating}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-purple-500/40 text-purple-400 hover:bg-purple-500/10 transition-colors text-sm disabled:opacity-50"
+                    >
+                      {gpuCreating ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                      &quot;{gpuQuery.trim()}&quot; 으로 새 GPU 생성
+                    </button>
+                  )}
+
+                  {!gpuQuery.trim() && (
+                    <p className="text-xs text-white/20 text-center py-1">GPU 이름을 입력하면 검색됩니다</p>
                   )}
                 </div>
               )}

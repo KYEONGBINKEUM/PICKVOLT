@@ -19,7 +19,7 @@ export async function GET(
     .from('products')
     .select(`
       id, name, brand, category, price_usd, image_url, source_url,
-      specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version ),
+      specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version ),
       specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
       specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
       specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )
@@ -54,6 +54,7 @@ export async function GET(
   let cinebenchMulti: number | null = null
   let cpuType: string | null = null
   let scoreSource: string | null = null
+  let gpuRelativeScore: number | null = null
 
   if (common?.cpu_id) {
     const { data: cpu } = await supabase
@@ -71,6 +72,16 @@ export async function GET(
     cinebenchSingle = cpu?.cinebench_single  ?? null
     cinebenchMulti  = cpu?.cinebench_multi   ?? null
     scoreSource     = cpu?.score_source      ?? null
+  }
+
+  // GPU 벤치마크 점수 조회 (gpu_id로 연결된 경우)
+  if (common?.gpu_id) {
+    const { data: gpu } = await supabase
+      .from('gpus')
+      .select('relative_score')
+      .eq('id', common.gpu_id)
+      .single()
+    gpuRelativeScore = gpu?.relative_score ?? null
   }
 
   const specSrc = laptop ?? smartphone ?? tablet ?? {}
@@ -104,8 +115,10 @@ export async function GET(
 
   const specs = {
     cpu:             common?.cpu_name ?? null,
+    gpuName:         common?.gpu_name ?? null,
     // 비교 화면용 — 0~1000 상대 점수
     performanceScore: relativeScore,
+    gpuRelativeScore,
     // 제품 상세 화면용 — 벤치마크 절대값
     cpuType,
     gb6Single,

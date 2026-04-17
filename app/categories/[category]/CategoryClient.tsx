@@ -32,9 +32,11 @@ interface Product {
   image_url: string | null
   performance_score: number
   cpu_name: string | null
+  gpu_name: string | null
   ram_gb: number | null
   os: string | null
   display_inch: number | null
+  display_hz: number | null
   ppi: number | null
   battery_mah: number | null
   battery_wh: number | null
@@ -123,35 +125,66 @@ function ProductCard({
     else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
   }
 
-  // 2-column grid rows
-  const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] = [
-    [
-      { label: 'CPU', value: product.cpu_name ?? null },
-      { label: t('spec.ram'), value: product.ram_gb ? `${product.ram_gb}GB` : null },
-    ],
-    [
-      { label: t('cat.spec_display'), value: product.display_inch ? `${product.display_inch}"` : null },
-      { label: t('cat.spec_ppi'),     value: product.ppi           ? `${product.ppi} ppi`       : null },
-    ],
-    [
-      {
-        label: t('cat.spec_battery'),
-        value: product.battery_mah
-          ? `${product.battery_mah.toLocaleString()} mAh`
-          : product.battery_wh
-          ? `${product.battery_wh} Wh`
-          : null,
-      },
-      {
-        label: t('cat.spec_weight'),
-        value: product.weight_kg
-          ? `${product.weight_kg} kg`
-          : product.weight_g
-          ? `${product.weight_g} g`
-          : null,
-      },
-    ],
-  ]
+  // 2-column grid rows (카테고리별 분기)
+  const batteryCell = {
+    label: t('cat.spec_battery'),
+    value: product.battery_mah
+      ? `${product.battery_mah.toLocaleString()} mAh`
+      : product.battery_wh
+      ? `${product.battery_wh} Wh`
+      : null,
+  }
+  const weightCell = {
+    label: t('cat.spec_weight'),
+    value: product.weight_kg
+      ? `${product.weight_kg} kg`
+      : product.weight_g
+      ? `${product.weight_g} g`
+      : null,
+  }
+
+  const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] =
+    product.category === 'laptop'
+      ? [
+          // 랩탑: CPU | RAM / GPU | Display / Battery | Weight
+          [
+            { label: 'CPU', value: product.cpu_name ?? null },
+            { label: t('spec.ram'), value: product.ram_gb ? `${product.ram_gb}GB` : null },
+          ],
+          [
+            { label: 'GPU', value: product.gpu_name ?? null },
+            {
+              label: t('cat.spec_display'),
+              value: product.display_inch
+                ? [
+                    `${product.display_inch}"`,
+                    product.display_hz ? `${product.display_hz}Hz` : null,
+                  ].filter(Boolean).join(' ')
+                : null,
+            },
+          ],
+          [batteryCell, weightCell],
+        ]
+      : [
+          // 스마트폰 / 태블릿: CPU | RAM / Display inch(hz) | PPI / Battery | Weight
+          [
+            { label: 'CPU', value: product.cpu_name ?? null },
+            { label: t('spec.ram'), value: product.ram_gb ? `${product.ram_gb}GB` : null },
+          ],
+          [
+            {
+              label: t('cat.spec_display'),
+              value: product.display_inch
+                ? [
+                    `${product.display_inch}"`,
+                    product.display_hz ? `(${product.display_hz}Hz)` : null,
+                  ].filter(Boolean).join(' ')
+                : null,
+            },
+            { label: t('cat.spec_ppi'), value: product.ppi ? `${product.ppi} ppi` : null },
+          ],
+          [batteryCell, weightCell],
+        ]
 
   const score = product.performance_score
   const scorePercent = Math.min(100, Math.round((score / maxScore) * 100))

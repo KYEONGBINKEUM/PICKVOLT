@@ -383,6 +383,30 @@ export function computeRelativeScores(
   if (category === 'laptop') {
     const bat = relHigh(input.battery_wh ?? null, stats.batteryWh)
 
+    // GPU 점수: relative_score를 0–100으로 정규화 (0–1000 스케일 가정)
+    const gpuScore = input.gpuRelativeScore != null
+      ? Math.min(100, Math.round(input.gpuRelativeScore / 10))
+      : null
+
+    if (gpuScore != null) {
+      // GPU 데이터 있을 때: Graphics 축 추가
+      // CPU Perf 25% · Graphics 25% · RAM 20% · Battery 15% · Display 10% · Refresh 5%
+      const overall = Math.round(
+        perf * 0.25 + gpuScore * 0.25 + ram * 0.20 + bat * 0.15 + disp * 0.10 + refresh * 0.05
+      )
+      return {
+        overall,
+        details: [
+          { label: 'Performance',  score: perf,     weight: 25 },
+          { label: 'Graphics',     score: gpuScore, weight: 25 },
+          { label: 'RAM',          score: ram,      weight: 20 },
+          { label: 'Battery',      score: bat,      weight: 15 },
+          { label: 'Display',      score: disp,     weight: 10 },
+          { label: 'Refresh Rate', score: refresh,  weight:  5 },
+        ],
+      }
+    }
+
     const overall = Math.round(
       perf * 0.45 + ram * 0.25 + bat * 0.15 + disp * 0.10 + refresh * 0.05
     )
@@ -460,6 +484,8 @@ export interface ScoringInput {
   passmarkSingle?: number | null
   passmarkMulti?: number | null
   relativeScore?: number | null
+  // GPU (랩탑 전용)
+  gpuRelativeScore?: number | null
   // Common
   ram_gb?: string | number | null
   storage_gb?: string | number | null

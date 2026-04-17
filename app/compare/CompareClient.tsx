@@ -17,6 +17,8 @@ const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
 
 interface ProductSpecs {
   cpu?: string | null
+  gpuName?: string | null
+  gpuRelativeScore?: number | null
   cpuSpeedMHz?: number | null
   performanceScore?: number | null
   gb6Single?: number | null
@@ -889,6 +891,7 @@ export default function CompareClient() {
         return computeRelativeScores({
           category:           isSameCategory ? p.category.toLowerCase() : 'cross',
           relativeScore:      p.specs.performanceScore,
+          gpuRelativeScore:   p.specs.gpuRelativeScore,
           gb6Single:          p.specs.gb6Single,
           gb6Multi:           p.specs.gb6Multi,
           tdmark:             p.specs.tdmark,
