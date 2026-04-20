@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('products')
     .select(`
-      specs_common ( cpu_id, ram_gb, storage_gb ),
+      specs_common ( cpu_id, gpu_id, ram_gb, storage_gb ),
       specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, camera_main_mp, weight_g ),
       specs_laptop ( display_inch, display_resolution, display_hz, battery_wh, battery_hours, weight_kg ),
       specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, camera_main_mp )
@@ -70,6 +70,21 @@ export async function GET(req: NextRequest) {
       if (c.cinebench_multi)   cpuBenchMaxes.cinebenchMulti  = Math.max(cpuBenchMaxes.cinebenchMulti,  c.cinebench_multi)
       if (c.passmark_single)   cpuBenchMaxes.passmarkSingle  = Math.max(cpuBenchMaxes.passmarkSingle,  c.passmark_single)
       if (c.passmark_multi)    cpuBenchMaxes.passmarkMulti   = Math.max(cpuBenchMaxes.passmarkMulti,   c.passmark_multi)
+    }
+  }
+
+  // Fetch GPU relative score max for this category
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const gpuIds = Array.from(new Set(data.map((p: any) => p.specs_common?.gpu_id).filter(Boolean)))
+  let gpuRelativeMax = 0
+  if (gpuIds.length > 0) {
+    const { data: gpus } = await supabase
+      .from('gpus')
+      .select('relative_score')
+      .in('id', gpuIds as string[])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const g of (gpus ?? []) as any[]) {
+      if (g.relative_score) gpuRelativeMax = Math.max(gpuRelativeMax, g.relative_score)
     }
   }
 
@@ -143,5 +158,6 @@ export async function GET(req: NextRequest) {
     weightG:       minMax(vals.weightG),
     weightKg:      minMax(vals.weightKg),
     cpuBenchMaxes,
+    gpuRelativeMax,
   })
 }

@@ -237,6 +237,8 @@ export interface CategoryStats {
   weightKg:      { min: number; max: number }
   /** 해당 카테고리 내 CPU들의 벤치마크 최대값 */
   cpuBenchMaxes?: CpuBenchmarkMaxes
+  /** 해당 카테고리 내 GPU relative_score 최대값 */
+  gpuRelativeMax?: number
 }
 
 /** 높을수록 좋은 스펙: value / max × 100 (0을 바닥으로 고정) */
@@ -383,9 +385,12 @@ export function computeRelativeScores(
   if (category === 'laptop') {
     const bat = relHigh(input.battery_wh ?? null, stats.batteryWh)
 
-    // GPU 점수: relative_score를 0–100으로 정규화 (0–1000 스케일 가정)
+    // GPU 점수: 카테고리 내 최고 GPU 기준으로 정규화 (없으면 /10 fallback)
+    const gpuMax = stats.gpuRelativeMax && stats.gpuRelativeMax > 0 ? stats.gpuRelativeMax : null
     const gpuScore = input.gpuRelativeScore != null
-      ? Math.min(100, Math.round(input.gpuRelativeScore / 10))
+      ? gpuMax != null
+        ? Math.min(100, Math.round(input.gpuRelativeScore / gpuMax * 100))
+        : Math.min(100, Math.round(input.gpuRelativeScore / 10))
       : null
 
     if (gpuScore != null) {
