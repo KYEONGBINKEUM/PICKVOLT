@@ -1533,7 +1533,15 @@ export default function ProductEditPage() {
         </SectionCard>
 
         {/* ── 제품 옵션 (variants) ── */}
-        {!isNew && (
+        {isNew ? (
+          <div className="bg-surface border border-border rounded-card px-6 py-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Layers size={15} className="text-white/40" />
+              <h2 className="font-semibold text-white">제품 옵션 (variants)</h2>
+            </div>
+            <p className="text-xs text-white/30">제품을 먼저 저장하면 CPU·GPU·가격별 옵션을 추가할 수 있습니다.</p>
+          </div>
+        ) : (
           <VariantsSection
             productId={id}
             token={token}
