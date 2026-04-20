@@ -32,6 +32,7 @@ interface ProductVariant {
   ram_gb:       string | null
   storage_gb:   string | null
   price_usd:    number | null
+  amazon_url:   string | null
 }
 
 interface Product {
@@ -473,9 +474,9 @@ ${priceHTML}
               }
             </button>
 
-            {product.amazon_url && (
+            {(selectedVariant?.amazon_url ?? product.amazon_url) && (
               <a
-                href={product.amazon_url}
+                href={selectedVariant?.amazon_url ?? product.amazon_url ?? ''}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"

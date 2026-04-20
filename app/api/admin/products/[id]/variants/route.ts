@@ -37,7 +37,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('product_variants')
-    .select('id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, price_usd, source_url, sort_order, created_at')
+    .select('id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, price_usd, source_url, amazon_url, sort_order, created_at')
     .eq('product_id', id)
     .order('sort_order')
     .order('created_at')
@@ -71,6 +71,7 @@ export async function POST(
       storage_gb:   body.storage_gb   != null ? String(body.storage_gb) : null,
       price_usd:    body.price_usd    != null ? parseFloat(String(body.price_usd)) : null,
       source_url:   body.source_url   ?? null,
+      amazon_url:   body.amazon_url   ?? null,
       sort_order:   body.sort_order   ?? 0,
     })
     .select('id')
@@ -104,6 +105,7 @@ export async function PUT(
   if ('storage_gb'   in rest) updates.storage_gb   = rest.storage_gb   != null ? String(rest.storage_gb) : null
   if ('price_usd'    in rest) updates.price_usd    = rest.price_usd    != null ? parseFloat(String(rest.price_usd)) : null
   if ('source_url'   in rest) updates.source_url   = rest.source_url   ?? null
+  if ('amazon_url'   in rest) updates.amazon_url   = rest.amazon_url   ?? null
   if ('sort_order'   in rest) updates.sort_order   = rest.sort_order
 
   const supabase = makeServiceClient()

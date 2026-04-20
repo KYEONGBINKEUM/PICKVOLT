@@ -66,7 +66,7 @@ async function getProduct(id: string) {
   // variants 조회
   const { data: rawVariants } = await supabase
     .from('product_variants')
-    .select('id, variant_name, cpu_name, gpu_name, ram_gb, storage_gb, price_usd')
+    .select('id, variant_name, cpu_name, gpu_name, ram_gb, storage_gb, price_usd, amazon_url')
     .eq('product_id', product.id)
     .order('sort_order')
     .order('created_at')
@@ -80,6 +80,7 @@ async function getProduct(id: string) {
     ram_gb:       v.ram_gb       ?? null,
     storage_gb:   v.storage_gb   ?? null,
     price_usd:    v.price_usd    ?? null,
+    amazon_url:   v.amazon_url   ?? null,
   }))
 
   return {

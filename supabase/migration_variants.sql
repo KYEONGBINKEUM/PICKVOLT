@@ -13,8 +13,12 @@ create table if not exists product_variants (
   storage_gb    text,               -- "1024" or "512, 1024"
   price_usd     numeric,
   source_url    text,
+  amazon_url    text,
   sort_order    int     default 0,
   created_at    timestamptz default now()
 );
 
 create index if not exists idx_product_variants_product on product_variants(product_id);
+
+-- 이미 테이블이 존재하는 경우 컬럼 추가
+alter table product_variants add column if not exists amazon_url text;

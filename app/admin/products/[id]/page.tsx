@@ -113,6 +113,7 @@ interface Variant {
   storage_gb: string | null
   price_usd: number | null
   source_url: string | null
+  amazon_url: string | null
   sort_order: number
 }
 
@@ -121,7 +122,7 @@ type VariantForm = Omit<Variant, 'id' | 'sort_order'>
 const EMPTY_FORM: VariantForm = {
   variant_name: '', cpu_name: null, cpu_id: null,
   gpu_name: null, gpu_id: null, ram_gb: null, storage_gb: null,
-  price_usd: null, source_url: null,
+  price_usd: null, source_url: null, amazon_url: null,
 }
 
 function VariantsSection({ productId, token }: { productId: string; token: string }) {
@@ -186,6 +187,7 @@ function VariantsSection({ productId, token }: { productId: string; token: strin
       gpu_name: v.gpu_name, gpu_id: v.gpu_id,
       ram_gb: v.ram_gb, storage_gb: v.storage_gb,
       price_usd: v.price_usd, source_url: v.source_url,
+      amazon_url: v.amazon_url,
     })
     setCpuQuery(''); setGpuQuery(''); setCpuSearchOpen(false); setGpuSearchOpen(false)
     setCpuResults([]); setGpuResults([])
@@ -373,6 +375,31 @@ function VariantsSection({ productId, token }: { productId: string; token: strin
             placeholder="https://..."
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs text-white/40 mb-1">아마존 경유 링크 (affiliate)</label>
+          <div className="flex gap-2">
+            <input type="text" value={form.amazon_url ?? ''}
+              onChange={(e) => {
+                const raw = e.target.value.trim()
+                const asin = raw.toUpperCase()
+                if (/^[A-Z0-9]{10}$/.test(asin)) {
+                  pf('amazon_url', `https://www.amazon.com/dp/${asin}?tag=pickvolt-20`)
+                } else {
+                  pf('amazon_url', raw || null)
+                }
+              }}
+              placeholder="ASIN 또는 전체 URL"
+              className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+            />
+            {form.amazon_url && (
+              <a href={form.amazon_url} target="_blank" rel="noopener noreferrer"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-border text-white/40 hover:text-white text-xs rounded-lg transition-colors">
+                <ExternalLink size={12} />
+              </a>
+            )}
+          </div>
         </div>
       </div>
 

@@ -158,7 +158,7 @@ export async function GET(
     .from('product_variants')
     .select(`
       id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id,
-      ram_gb, storage_gb, price_usd, sort_order,
+      ram_gb, storage_gb, price_usd, amazon_url, sort_order,
       cpus ( relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, type ),
       gpus ( relative_score )
     `)
@@ -177,6 +177,7 @@ export async function GET(
     ram_gb:       v.ram_gb       ?? null,
     storage_gb:   v.storage_gb   ?? null,
     price_usd:    v.price_usd    ?? null,
+    amazon_url:   v.amazon_url   ?? null,
     cpuBenchmarks: v.cpus ? {
       relative_score:   v.cpus.relative_score   ?? null,
       gb6_single:       v.cpus.gb6_single       ?? null,

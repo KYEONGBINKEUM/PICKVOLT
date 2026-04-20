@@ -25,6 +25,7 @@ interface ProductVariant {
   ram_gb: string | null
   storage_gb: string | null
   price_usd: number | null
+  amazon_url: string | null
   cpuBenchmarks: {
     relative_score: number | null
     gb6_single: number | null
@@ -98,6 +99,12 @@ function applyVariant(product: Product, variantId: string | undefined): Product 
   return {
     ...product,
     price_usd: v.price_usd ?? product.price_usd,
+    raw: {
+      ...product.raw,
+      ...(v.ram_gb     && { ram_gb:     v.ram_gb }),
+      ...(v.storage_gb && { storage_gb: v.storage_gb }),
+      ...(v.amazon_url !== null && { amazon_url: v.amazon_url }),
+    },
     specs: {
       ...product.specs,
       ...(v.cpu_name     && { cpu:     v.cpu_name }),
@@ -114,11 +121,6 @@ function applyVariant(product: Product, variantId: string | undefined): Product 
         cinebenchMulti:   v.cpuBenchmarks.cinebench_multi  ?? product.specs.cinebenchMulti,
       }),
       ...(v.gpuRelativeScore != null && { gpuRelativeScore: v.gpuRelativeScore }),
-    },
-    raw: {
-      ...product.raw,
-      ...(v.ram_gb     && { ram_gb:     v.ram_gb }),
-      ...(v.storage_gb && { storage_gb: v.storage_gb }),
     },
   }
 }
