@@ -104,6 +104,25 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    // Variant counts (batch)
+    const allIds = products.map((p) => p.id)
+    let variantCountMap: Record<string, number> = {}
+    if (allIds.length > 0) {
+      const { data: varRows } = await supabase
+        .from('product_variants')
+        .select('product_id')
+        .in('product_id', allIds)
+      if (varRows) {
+        for (const row of varRows) {
+          variantCountMap[row.product_id] = (variantCountMap[row.product_id] ?? 0) + 1
+        }
+      }
+    }
+    for (const p of products) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p as any).variant_count = variantCountMap[p.id] ?? 0
+    }
+
     // RAM filter — ram_gb는 "8, 12, 16" 같은 다중 값일 수 있어 최대값 기준으로 비교
     const filtered = minRam
       ? products.filter((p) => {

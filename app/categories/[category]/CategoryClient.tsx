@@ -45,6 +45,7 @@ interface Product {
   weight_kg: number | null
   stylus_support: boolean | null
   launch_year: number | null
+  variant_count: number
 }
 
 interface ApiResponse {
@@ -212,6 +213,12 @@ function ProductCard({
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
               <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
+            </div>
+          )}
+          {/* Variant badge */}
+          {product.variant_count > 0 && (
+            <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-1.5 py-0.5">
+              <span className="text-[9px] font-bold text-white/70">+{product.variant_count}</span>
             </div>
           )}
         </div>
