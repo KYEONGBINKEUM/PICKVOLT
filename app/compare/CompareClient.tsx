@@ -1474,9 +1474,6 @@ export default function CompareClient() {
                   <Zap className="w-4 h-4" />
                   {t('compare.start_ai')}
                 </button>
-                {userPoints !== null && (
-                  <p className="text-xs text-white/30 mt-3">{t('compare.points_remaining').replace('{points}', String(userPoints))}</p>
-                )}
               </div>
             )}
             {sessionLoaded && !session && !loadingAI && !aiResult && !error && <AIPickLocked t={t} />}
@@ -1488,11 +1485,6 @@ export default function CompareClient() {
                   onViewReasoning={() => setShowReasoning(true)}
                   t={t}
                 />
-                {session && userPoints !== null && (
-                  <p className="text-xs text-white/30 text-center -mt-4 mb-6">
-                    {t('compare.points_remaining').replace('{points}', String(userPoints))}
-                  </p>
-                )}
               </>
             )}
 
@@ -1521,26 +1513,6 @@ export default function CompareClient() {
                         </Link>
                         {ep.price_usd && (
                           <p className="text-xs text-white/40 mb-2">${Number(ep.price_usd).toLocaleString()}</p>
-                        )}
-                        {/* Variant 선택 */}
-                        {hasVariants && (
-                          <div className="mb-2 flex flex-wrap gap-1">
-                            <button
-                              onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${!selectedVariantIds[pi] ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
-                            >
-                              기본
-                            </button>
-                            {p.variants!.map((v) => (
-                              <button
-                                key={v.id}
-                                onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
-                                className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${selectedVariantIds[pi] === v.id ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
-                              >
-                                {v.variant_name}
-                              </button>
-                            ))}
-                          </div>
                         )}
                         {p.raw.amazon_url && (
                           <a
@@ -1574,26 +1546,6 @@ export default function CompareClient() {
                   return (
                     <div key={p.id} className="p-2 lg:p-4 border-l border-border">
                       <ProductCard product={ep} />
-                      {/* Variant 선택 */}
-                      {hasVariants && (
-                        <div className="mt-2 flex flex-wrap gap-1" data-export-exclude="true">
-                          <button
-                            onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${!selectedVariantIds[pi] ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
-                          >
-                            기본
-                          </button>
-                          {p.variants!.map((v) => (
-                            <button
-                              key={v.id}
-                              onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${selectedVariantIds[pi] === v.id ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
-                            >
-                              {v.variant_name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                       {p.raw.amazon_url && (
                         <a
                           href={p.raw.amazon_url}
@@ -1613,6 +1565,93 @@ export default function CompareClient() {
                   )
                 })}
               </div>
+
+              {/* ── 모델 선택 행 (variant 있는 제품이 하나라도 있을 때만) ── */}
+              {products.some((p) => (p.variants?.length ?? 0) > 0) && (
+                <div className="border-t border-border" data-export-exclude="true">
+                  {/* 모바일 */}
+                  <div className="lg:hidden">
+                    <div className="px-4 pt-3 pb-1">
+                      <span className="text-[10px] uppercase tracking-wider text-white/25">모델 선택</span>
+                    </div>
+                    {products.map((p, pi) => {
+                      const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                      const ep = effectiveProducts[pi]
+                      const hasVariants = (p.variants?.length ?? 0) > 0
+                      return (
+                        <div key={pi} className="px-4 pt-2 pb-3 border-t border-border/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-6 h-6 rounded bg-surface-2 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ borderTopColor: color, borderTopWidth: 2 }}>
+                              {ep.image_url ? <img src={ep.image_url} alt={ep.name} className="w-full h-full object-contain" /> : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />}
+                            </div>
+                            <p className="text-[12px] text-white/50 truncate flex-1">{p.name}</p>
+                          </div>
+                          {hasVariants ? (
+                            <div className="flex flex-wrap gap-1">
+                              <button
+                                onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all"
+                                style={!selectedVariantIds[pi] ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
+                              >
+                                기본
+                              </button>
+                              {p.variants!.map((v) => (
+                                <button
+                                  key={v.id}
+                                  onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
+                                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all"
+                                  style={selectedVariantIds[pi] === v.id ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
+                                >
+                                  {v.variant_name}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-white/20">기본 옵션</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* 데스크탑 */}
+                  <div className="hidden lg:grid" style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}>
+                    <div className="p-4 flex items-center">
+                      <span className="text-xs text-white/40 font-semibold">모델 선택</span>
+                    </div>
+                    {products.map((p, pi) => {
+                      const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                      const hasVariants = (p.variants?.length ?? 0) > 0
+                      return (
+                        <div key={pi} className="p-4 border-l border-border">
+                          {hasVariants ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              <button
+                                onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all"
+                                style={!selectedVariantIds[pi] ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
+                              >
+                                기본
+                              </button>
+                              {p.variants!.map((v) => (
+                                <button
+                                  key={v.id}
+                                  onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
+                                  className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all"
+                                  style={selectedVariantIds[pi] === v.id ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
+                                >
+                                  {v.variant_name}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-white/20">기본 옵션</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Overall Score row — DB 전체 상대 점수 */}
               {productScores && productScores.length >= 2 && (() => {
