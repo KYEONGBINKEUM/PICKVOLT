@@ -73,15 +73,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Fetch GPU relative score max for this category
+  // Fetch GPU relative scores for this category
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gpuIds = Array.from(new Set(data.map((p: any) => p.specs_common?.gpu_id).filter(Boolean)))
+  let gpuMap: Record<string, number> = {}
   let gpuRelativeMax = 0
   if (gpuIds.length > 0) {
     const { data: gpus } = await supabase
       .from('gpus')
-      .select('relative_score')
+      .select('id, relative_score')
       .in('id', gpuIds as string[])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    gpuMap = Object.fromEntries((gpus ?? []).map((g: any) => [g.id, g.relative_score ?? 0]))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const g of (gpus ?? []) as any[]) {
       if (g.relative_score) gpuRelativeMax = Math.max(gpuRelativeMax, g.relative_score)
@@ -113,8 +116,14 @@ export async function GET(req: NextRequest) {
     const tablet     = p.specs_tablet     as any
     const specSrc    = smartphone ?? laptop ?? tablet ?? {}
 
-    const cpuId = common?.cpu_id
-    if (cpuId && cpuMap[cpuId]) vals.relativeScore.push(cpuMap[cpuId])
+    const cpuScore = common?.cpu_id ? (cpuMap[common.cpu_id] ?? 0) : 0
+    const gpuScore = common?.gpu_id ? (gpuMap[common.gpu_id] ?? 0) : 0
+    const hasCpu = cpuScore > 0
+    const hasGpu = gpuScore > 0
+    const combinedScore = hasCpu && hasGpu
+      ? Math.round(cpuScore * 0.6 + gpuScore * 0.4)
+      : hasCpu ? cpuScore : gpuScore
+    if (combinedScore > 0) vals.relativeScore.push(combinedScore)
 
     const ram = firstNum(common?.ram_gb)
     if (ram) vals.ram.push(ram)

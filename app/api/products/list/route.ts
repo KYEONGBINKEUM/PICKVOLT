@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       .from('products')
       .select(`
         id, name, brand, category, price_usd, image_url,
-        specs_common ( ram_gb, cpu_id, cpu_name, gpu_name, os, launch_year ),
+        specs_common ( ram_gb, cpu_id, gpu_id, cpu_name, gpu_name, os, launch_year ),
         specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, weight_g ),
         specs_laptop ( display_inch, display_resolution, display_hz, weight_kg, battery_wh, battery_hours ),
         specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support )
@@ -55,6 +55,20 @@ export async function GET(req: NextRequest) {
       cpuMap = Object.fromEntries((cpus ?? []).map((c: any) => [c.id, c.relative_score ?? 0]))
     }
 
+    // Fetch GPU scores
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gpuIds = Array.from(new Set((data ?? []).map((p: any) => p.specs_common?.gpu_id).filter(Boolean)))
+    let gpuMap: Record<string, number> = {}
+
+    if (gpuIds.length > 0) {
+      const { data: gpus } = await supabase
+        .from('gpus')
+        .select('id, relative_score')
+        .in('id', gpuIds as string[])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      gpuMap = Object.fromEntries((gpus ?? []).map((g: any) => [g.id, g.relative_score ?? 0]))
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const products = (data ?? []).map((p: any) => {
       const common     = p.specs_common
@@ -63,7 +77,13 @@ export async function GET(req: NextRequest) {
       const tablet     = p.specs_tablet
       const specSrc    = smartphone ?? laptop ?? tablet ?? {}
 
-      const performanceScore = common?.cpu_id ? (cpuMap[common.cpu_id] ?? 0) : 0
+      const cpuScore = common?.cpu_id ? (cpuMap[common.cpu_id] ?? 0) : 0
+      const gpuScore = common?.gpu_id ? (gpuMap[common.gpu_id] ?? 0) : 0
+      const hasCpu = cpuScore > 0
+      const hasGpu = gpuScore > 0
+      const performanceScore = hasCpu && hasGpu
+        ? Math.round(cpuScore * 0.6 + gpuScore * 0.4)
+        : hasCpu ? cpuScore : gpuScore
 
       // Calculate PPI from resolution string (e.g. "2596x1224")
       let ppi: number | null = null
