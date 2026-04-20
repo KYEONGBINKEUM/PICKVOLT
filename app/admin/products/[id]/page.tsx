@@ -125,11 +125,24 @@ const EMPTY_FORM: VariantForm = {
   price_usd: null, source_url: null, amazon_url: null,
 }
 
-function VariantsSection({ productId, token }: { productId: string; token: string }) {
+function VariantsSection({
+  productId, token, isLaptop, baseSpecs, onSaveBase,
+}: {
+  productId: string; token: string
+  isLaptop?: boolean
+  baseSpecs?: {
+    cpu_name: string | null; cpu_id: string | null
+    gpu_name: string | null; gpu_id: string | null
+    ram_gb: string | null; storage_gb: string | null
+    price_usd: number | null; amazon_url: string | null
+  }
+  onSaveBase?: (base: VariantForm) => Promise<{ ok: boolean; error?: string }>
+}) {
   const [variants, setVariants] = useState<Variant[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingBase, setEditingBase] = useState(false)
   const [addingNew, setAddingNew] = useState(false)
   const [form, setForm] = useState<VariantForm>(EMPTY_FORM)
   const [cpuQuery, setCpuQuery] = useState('')
@@ -194,18 +207,45 @@ function VariantsSection({ productId, token }: { productId: string; token: strin
   }
 
   const startAdd = () => {
-    setAddingNew(true); setEditingId(null)
+    setAddingNew(true); setEditingId(null); setEditingBase(false)
     setForm(EMPTY_FORM)
     setCpuQuery(''); setGpuQuery(''); setCpuSearchOpen(false); setGpuSearchOpen(false)
     setCpuResults([]); setGpuResults([])
   }
 
+  const startEditBase = () => {
+    if (!baseSpecs) return
+    setEditingBase(true); setEditingId(null); setAddingNew(false)
+    setForm({
+      variant_name: '기본 옵션',
+      cpu_name: baseSpecs.cpu_name, cpu_id: baseSpecs.cpu_id,
+      gpu_name: baseSpecs.gpu_name, gpu_id: baseSpecs.gpu_id,
+      ram_gb: baseSpecs.ram_gb, storage_gb: baseSpecs.storage_gb,
+      price_usd: baseSpecs.price_usd, source_url: null,
+      amazon_url: baseSpecs.amazon_url,
+    })
+    setCpuQuery(''); setGpuQuery(''); setCpuSearchOpen(false); setGpuSearchOpen(false)
+    setCpuResults([]); setGpuResults([])
+  }
+
   const cancelEdit = () => {
-    setEditingId(null); setAddingNew(false)
+    setEditingId(null); setAddingNew(false); setEditingBase(false)
     setCpuSearchOpen(false); setGpuSearchOpen(false)
   }
 
   const handleSave = async () => {
+    if (editingBase && onSaveBase) {
+      setErr(null)
+      setSaving('base')
+      try {
+        const result = await onSaveBase(form)
+        if (!result.ok) { setErr(result.error ?? '오류'); return }
+        cancelEdit()
+      } finally {
+        setSaving(null)
+      }
+      return
+    }
     if (!form.variant_name.trim()) { setErr('옵션 이름을 입력하세요'); return }
     setErr(null)
     setSaving(editingId ?? 'new')
@@ -246,22 +286,24 @@ function VariantsSection({ productId, token }: { productId: string; token: strin
   const pf = (field: keyof VariantForm, value: unknown) =>
     setForm((p) => ({ ...p, [field]: value }))
 
-  const isEditing = editingId !== null || addingNew
+  const isEditing = editingId !== null || addingNew || editingBase
 
   const VariantFormUI = (
     <div className="border border-border rounded-xl p-4 space-y-3 bg-background/50 mt-3">
       {err && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{err}</p>}
 
-      <div>
-        <label className="block text-xs text-white/40 mb-1">옵션 이름 *</label>
-        <input
-          type="text"
-          value={form.variant_name}
-          onChange={(e) => pf('variant_name', e.target.value)}
-          placeholder="예: Core Ultra 9 + RTX 4080 / 32GB"
-          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-        />
-      </div>
+      {!editingBase && (
+        <div>
+          <label className="block text-xs text-white/40 mb-1">옵션 이름 *</label>
+          <input
+            type="text"
+            value={form.variant_name}
+            onChange={(e) => pf('variant_name', e.target.value)}
+            placeholder="예: Core Ultra 9 + RTX 4080 / 32GB"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* CPU */}
@@ -368,14 +410,16 @@ function VariantsSection({ productId, token }: { productId: string; token: strin
           />
         </div>
 
-        <div>
-          <label className="block text-xs text-white/40 mb-1">소스 URL</label>
-          <input type="text" value={form.source_url ?? ''}
-            onChange={(e) => pf('source_url', e.target.value || null)}
-            placeholder="https://..."
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-          />
-        </div>
+        {!editingBase && (
+          <div>
+            <label className="block text-xs text-white/40 mb-1">소스 URL</label>
+            <input type="text" value={form.source_url ?? ''}
+              onChange={(e) => pf('source_url', e.target.value || null)}
+              placeholder="https://..."
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-xs text-white/40 mb-1">아마존 경유 링크 (affiliate)</label>
@@ -455,7 +499,36 @@ function VariantsSection({ productId, token }: { productId: string; token: strin
           </div>
         ) : (
           <>
-            {variants.length === 0 && !addingNew && (
+            {/* 기본 옵션 행 (랩탑 전용) */}
+            {isLaptop && baseSpecs && onSaveBase && (
+              <div>
+                {editingBase ? VariantFormUI : (
+                  <div className="flex items-start gap-3 py-2.5 border-b border-border/40">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-white">기본 옵션</p>
+                        <span className="text-[10px] text-white/30 bg-white/5 border border-border rounded px-1.5 py-0.5">기본</span>
+                      </div>
+                      <p className="text-xs text-white/30 mt-0.5">
+                        {[
+                          baseSpecs.cpu_name && `CPU: ${baseSpecs.cpu_name}`,
+                          baseSpecs.gpu_name && `GPU: ${baseSpecs.gpu_name}`,
+                          baseSpecs.ram_gb && `${baseSpecs.ram_gb}GB RAM`,
+                          baseSpecs.storage_gb && `${baseSpecs.storage_gb}GB Storage`,
+                          baseSpecs.price_usd && `$${Number(baseSpecs.price_usd).toLocaleString()}`,
+                        ].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <button onClick={startEditBase} disabled={isEditing}
+                      className="p-1.5 text-white/30 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-30 flex-shrink-0">
+                      <RefreshCw size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {variants.length === 0 && !addingNew && !isLaptop && (
               <p className="text-xs text-white/20 py-2 text-center">옵션 없음 — 기본 모델만 노출됩니다</p>
             )}
 
@@ -791,6 +864,45 @@ export default function ProductEditPage() {
   }
   const patchCommon = (field: string, value: unknown) => setCommonSpecs((p) => ({ ...p, [field]: value }))
   const patchCat = (field: string, value: unknown) => setCategorySpecs((p) => ({ ...p, [field]: value }))
+
+  const handleSaveBase = async (base: VariantForm): Promise<{ ok: boolean; error?: string }> => {
+    const updatedCommon = {
+      ...commonSpecs,
+      cpu_name: base.cpu_name ?? undefined,
+      cpu_id: base.cpu_id ?? undefined,
+      gpu_name: base.gpu_name ?? undefined,
+      gpu_id: base.gpu_id ?? undefined,
+      ram_gb: base.ram_gb ?? undefined,
+      storage_gb: base.storage_gb ?? undefined,
+      amazon_url: base.amazon_url ?? undefined,
+    }
+    const body: Record<string, unknown> = {
+      ...form,
+      price_usd: base.price_usd,
+      specs_common: updatedCommon,
+      [`specs_${category}`]: categorySpecs,
+      cpu_id: base.cpu_id,
+      cpu_scores: cpuScores,
+    }
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (res.ok) {
+        setCommonSpecs(updatedCommon)
+        if (base.price_usd !== null) patchForm('price_usd', base.price_usd)
+        if (base.cpu_name) setLinkedCpuName(base.cpu_name)
+        if (base.gpu_name) setLinkedGpuName(base.gpu_name)
+        return { ok: true }
+      }
+      return { ok: false, error: json.error ?? '오류' }
+    } catch (e) {
+      return { ok: false, error: String(e) }
+    }
+  }
 
   const handleTranslate = async () => {
     const name = (form.name as string)?.trim()
@@ -1170,8 +1282,14 @@ export default function ProductEditPage() {
         <SectionCard title="공통 스펙 (specs_common)">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+            {category === 'laptop' && (
+              <div className="md:col-span-2 text-xs text-white/40 bg-white/5 border border-border rounded-lg px-3 py-2">
+                노트북의 CPU · GPU · RAM · 스토리지는 아래 <span className="text-accent font-semibold">제품 옵션</span> 섹션의 기본 옵션에서 관리합니다.
+              </div>
+            )}
+
             {/* CPU 검색 & 연결 */}
-            <div className="md:col-span-2">
+            {category !== 'laptop' && <div className="md:col-span-2">
               <label className="block text-xs text-white/40 mb-1.5">CPU 연결 (벤치마크 점수용)</label>
 
               {/* 현재 연결된 CPU */}
@@ -1262,10 +1380,10 @@ export default function ProductEditPage() {
                   )}
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* GPU 검색 & 연결 */}
-            <div className="md:col-span-2">
+            {category !== 'laptop' && <div className="md:col-span-2">
               <label className="block text-xs text-white/40 mb-1.5">GPU 연결 (DB 직접 연결)</label>
 
               {/* 현재 연결된 GPU */}
@@ -1353,14 +1471,16 @@ export default function ProductEditPage() {
                   )}
                 </div>
               )}
-            </div>
+            </div>}
 
-            <Field label="CPU 이름">
-              <TextInput value={g(commonSpecs, 'cpu_name')} onChange={(v) => patchCommon('cpu_name', v)} placeholder="Apple M4 Pro" />
-            </Field>
-            <Field label="GPU 이름">
-              <TextInput value={g(commonSpecs, 'gpu_name')} onChange={(v) => patchCommon('gpu_name', v)} placeholder="Apple M4 Pro GPU" />
-            </Field>
+            {category !== 'laptop' && <>
+              <Field label="CPU 이름">
+                <TextInput value={g(commonSpecs, 'cpu_name')} onChange={(v) => patchCommon('cpu_name', v)} placeholder="Apple M4 Pro" />
+              </Field>
+              <Field label="GPU 이름">
+                <TextInput value={g(commonSpecs, 'gpu_name')} onChange={(v) => patchCommon('gpu_name', v)} placeholder="Apple M4 Pro GPU" />
+              </Field>
+            </>}
             <Field label="CPU 코어 수">
               <NumberInput value={gn(commonSpecs, 'cpu_cores')} onChange={(v) => patchCommon('cpu_cores', v)} />
             </Field>
@@ -1370,15 +1490,19 @@ export default function ProductEditPage() {
             <Field label="GPU 코어 수">
               <NumberInput value={gn(commonSpecs, 'gpu_cores')} onChange={(v) => patchCommon('gpu_cores', v)} />
             </Field>
-            <Field label="RAM 용량 (쉼표로 여러 옵션 가능)">
-              <TextInput value={g(commonSpecs, 'ram_gb')} onChange={(v) => patchCommon('ram_gb', v)} placeholder="8, 16, 32" />
-            </Field>
+            {category !== 'laptop' && <>
+              <Field label="RAM 용량 (쉼표로 여러 옵션 가능)">
+                <TextInput value={g(commonSpecs, 'ram_gb')} onChange={(v) => patchCommon('ram_gb', v)} placeholder="8, 16, 32" />
+              </Field>
+            </>}
             <Field label="RAM 타입 (쉼표로 여러 개 가능)">
               <TextInput value={g(commonSpecs, 'ram_type')} onChange={(v) => patchCommon('ram_type', v)} placeholder="LPDDR5X, Unified Memory" />
             </Field>
-            <Field label="스토리지 용량 (쉼표로 여러 옵션 가능)">
-              <TextInput value={g(commonSpecs, 'storage_gb')} onChange={(v) => patchCommon('storage_gb', v)} placeholder="256, 512, 1024" />
-            </Field>
+            {category !== 'laptop' && <>
+              <Field label="스토리지 용량 (쉼표로 여러 옵션 가능)">
+                <TextInput value={g(commonSpecs, 'storage_gb')} onChange={(v) => patchCommon('storage_gb', v)} placeholder="256, 512, 1024" />
+              </Field>
+            </>}
             <Field label="스토리지 타입 (쉼표로 여러 개 가능)">
               <TextInput value={g(commonSpecs, 'storage_type')} onChange={(v) => patchCommon('storage_type', v)} placeholder="SSD, HDD" />
             </Field>
@@ -1707,7 +1831,24 @@ export default function ProductEditPage() {
         )}
 
         {/* ── 제품 옵션 (variants) ── */}
-        {!isNew && <VariantsSection productId={id} token={token} />}
+        {!isNew && (
+          <VariantsSection
+            productId={id}
+            token={token}
+            isLaptop={category === 'laptop'}
+            baseSpecs={category === 'laptop' ? {
+              cpu_name: (commonSpecs.cpu_name as string | null) ?? null,
+              cpu_id:   (commonSpecs.cpu_id   as string | null) ?? null,
+              gpu_name: (commonSpecs.gpu_name as string | null) ?? null,
+              gpu_id:   (commonSpecs.gpu_id   as string | null) ?? null,
+              ram_gb:      (commonSpecs.ram_gb      as string | null) ?? null,
+              storage_gb:  (commonSpecs.storage_gb  as string | null) ?? null,
+              price_usd:   (form.price_usd           as number | null) ?? null,
+              amazon_url:  (commonSpecs.amazon_url   as string | null) ?? null,
+            } : undefined}
+            onSaveBase={category === 'laptop' ? handleSaveBase : undefined}
+          />
+        )}
 
         {/* 같은 카테고리 제품 목록 */}
         {sameProducts.length > 0 && (
