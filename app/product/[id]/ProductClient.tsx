@@ -416,38 +416,6 @@ ${priceHTML}
             {product.name}
           </h1>
 
-          {/* Variant selector */}
-          {product.variants && product.variants.length > 0 && (
-            <div className="mb-4">
-              <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">옵션 선택</p>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  onClick={() => setSelectedVariantId(null)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                    selectedVariantId === null
-                      ? 'bg-accent/15 border-accent/50 text-accent'
-                      : 'bg-white/5 border-border text-white/40 hover:text-white/70 hover:border-white/20'
-                  }`}
-                >
-                  기본
-                </button>
-                {product.variants.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setSelectedVariantId(v.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                      selectedVariantId === v.id
-                        ? 'bg-accent/15 border-accent/50 text-accent'
-                        : 'bg-white/5 border-border text-white/40 hover:text-white/70 hover:border-white/20'
-                    }`}
-                  >
-                    {v.variant_name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Price */}
           {effectivePrice && (
             <p className="text-2xl font-black text-accent mb-5">
@@ -492,6 +460,24 @@ ${priceHTML}
 
         {/* RIGHT — benchmark + specs */}
         <div className="flex-1 min-w-0">
+          {/* Variant selector */}
+          {product.variants && product.variants.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">{t('compare.select_model')}</p>
+              <select
+                value={selectedVariantId ?? ''}
+                onChange={(e) => setSelectedVariantId(e.target.value || null)}
+                className="w-full rounded-lg px-3 py-2 text-xs font-semibold border border-accent/50 bg-surface-2 text-accent outline-none cursor-pointer"
+              >
+                <option value="">
+                  {[product.specs.cpu, product.specs.gpuName].filter(Boolean).join(' + ') || product.name}
+                </option>
+                {product.variants.map((v) => (
+                  <option key={v.id} value={v.id}>{v.variant_name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
             <SpecRow label={t('product.spec_cpu')}     value={effectiveSpecs.cpu} />
             {product.category === 'laptop' && (
