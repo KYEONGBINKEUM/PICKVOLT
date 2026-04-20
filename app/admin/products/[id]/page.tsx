@@ -246,8 +246,11 @@ function VariantsSection({
       }
       return
     }
-    if (!form.variant_name.trim()) { setErr('옵션 이름을 입력하세요'); return }
     setErr(null)
+    const autoName = [form.cpu_name, form.gpu_name].filter(Boolean).join(' + ')
+      || (form.ram_gb ? `${form.ram_gb}GB RAM` : null)
+      || `옵션 ${variants.length + 1}`
+    const payload = { ...form, variant_name: autoName }
     setSaving(editingId ?? 'new')
     try {
       let res: Response
@@ -255,13 +258,13 @@ function VariantsSection({
         res = await fetch(`/api/admin/products/${productId}/variants`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ variantId: editingId, ...form }),
+          body: JSON.stringify({ variantId: editingId, ...payload }),
         })
       } else {
         res = await fetch(`/api/admin/products/${productId}/variants`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ ...form, sort_order: variants.length }),
+          body: JSON.stringify({ ...payload, sort_order: variants.length }),
         })
       }
       if (!res.ok) { const j = await res.json(); setErr(j.error ?? '오류'); return }
@@ -292,18 +295,6 @@ function VariantsSection({
     <div className="border border-border rounded-xl p-4 space-y-3 bg-background/50 mt-3">
       {err && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{err}</p>}
 
-      {!editingBase && (
-        <div>
-          <label className="block text-xs text-white/40 mb-1">옵션 이름 *</label>
-          <input
-            type="text"
-            value={form.variant_name}
-            onChange={(e) => pf('variant_name', e.target.value)}
-            placeholder="예: Core Ultra 9 + RTX 4080 / 32GB"
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-          />
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* CPU */}
