@@ -63,6 +63,25 @@ async function getProduct(id: string) {
     specSrc.display_type       ?? null,
   ].filter(Boolean)
 
+  // variants 조회
+  const { data: rawVariants } = await supabase
+    .from('product_variants')
+    .select('id, variant_name, cpu_name, gpu_name, ram_gb, storage_gb, price_usd')
+    .eq('product_id', product.id)
+    .order('sort_order')
+    .order('created_at')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const variants = (rawVariants ?? []).map((v: any) => ({
+    id:           v.id,
+    variant_name: v.variant_name,
+    cpu_name:     v.cpu_name     ?? null,
+    gpu_name:     v.gpu_name     ?? null,
+    ram_gb:       v.ram_gb       ?? null,
+    storage_gb:   v.storage_gb   ?? null,
+    price_usd:    v.price_usd    ?? null,
+  }))
+
   return {
     id:         product.id,
     name:       product.name,
@@ -71,6 +90,7 @@ async function getProduct(id: string) {
     price_usd:  product.price_usd,
     image_url:  product.image_url,
     amazon_url: common?.amazon_url ?? null,
+    variants,
     specs: {
       cpu:             common?.cpu_name ?? null,
       gpuName:         common?.gpu_name ?? null,

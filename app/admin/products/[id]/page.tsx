@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap, Copy } from 'lucide-react'
+import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap, Copy, Layers } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
@@ -96,6 +96,383 @@ function SectionCard({ title, children, defaultOpen = true }: { title: string; c
         {open ? <ChevronUp size={16} className="text-white/40" /> : <ChevronDown size={16} className="text-white/40" />}
       </button>
       {open && <div className="px-6 pb-6">{children}</div>}
+    </div>
+  )
+}
+
+// ── Variants Section ──────────────────────────────────────────────────────────
+
+interface Variant {
+  id: string
+  variant_name: string
+  cpu_name: string | null
+  cpu_id: string | null
+  gpu_name: string | null
+  gpu_id: string | null
+  ram_gb: string | null
+  storage_gb: string | null
+  price_usd: number | null
+  source_url: string | null
+  sort_order: number
+}
+
+type VariantForm = Omit<Variant, 'id' | 'sort_order'>
+
+const EMPTY_FORM: VariantForm = {
+  variant_name: '', cpu_name: null, cpu_id: null,
+  gpu_name: null, gpu_id: null, ram_gb: null, storage_gb: null,
+  price_usd: null, source_url: null,
+}
+
+function VariantsSection({ productId, token }: { productId: string; token: string }) {
+  const [variants, setVariants] = useState<Variant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [addingNew, setAddingNew] = useState(false)
+  const [form, setForm] = useState<VariantForm>(EMPTY_FORM)
+  const [cpuQuery, setCpuQuery] = useState('')
+  const [cpuResults, setCpuResults] = useState<{ id: string; name: string; relative_score: number | null }[]>([])
+  const [cpuSearchOpen, setCpuSearchOpen] = useState(false)
+  const [gpuQuery, setGpuQuery] = useState('')
+  const [gpuResults, setGpuResults] = useState<{ id: string; name: string; relative_score: number | null }[]>([])
+  const [gpuSearchOpen, setGpuSearchOpen] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const cpuTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const gpuTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetchVariants = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch(`/api/admin/products/${productId}/variants`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const json = await res.json()
+    setVariants(json.variants ?? [])
+    setLoading(false)
+  }, [productId, token])
+
+  useEffect(() => { fetchVariants() }, [fetchVariants])
+
+  const searchCpus = (q: string) => {
+    if (cpuTimer.current) clearTimeout(cpuTimer.current)
+    if (!q.trim()) { setCpuResults([]); return }
+    cpuTimer.current = setTimeout(async () => {
+      const res = await fetch(`/api/admin/cpus?q=${encodeURIComponent(q)}`)
+      const json = await res.json()
+      setCpuResults((json.cpus ?? []).map((c: { id: string; name: string; relative_score: number | null }) => ({
+        id: c.id, name: c.name, relative_score: c.relative_score
+      })))
+    }, 300)
+  }
+
+  const searchGpus = (q: string) => {
+    if (gpuTimer.current) clearTimeout(gpuTimer.current)
+    if (!q.trim()) { setGpuResults([]); return }
+    gpuTimer.current = setTimeout(async () => {
+      const res = await fetch(`/api/admin/gpus?q=${encodeURIComponent(q)}`)
+      const json = await res.json()
+      setGpuResults((json.gpus ?? []).map((g: { id: string; name: string; relative_score: number | null }) => ({
+        id: g.id, name: g.name, relative_score: g.relative_score
+      })))
+    }, 300)
+  }
+
+  const startEdit = (v: Variant) => {
+    setEditingId(v.id)
+    setAddingNew(false)
+    setForm({
+      variant_name: v.variant_name,
+      cpu_name: v.cpu_name, cpu_id: v.cpu_id,
+      gpu_name: v.gpu_name, gpu_id: v.gpu_id,
+      ram_gb: v.ram_gb, storage_gb: v.storage_gb,
+      price_usd: v.price_usd, source_url: v.source_url,
+    })
+    setCpuQuery(''); setGpuQuery(''); setCpuSearchOpen(false); setGpuSearchOpen(false)
+    setCpuResults([]); setGpuResults([])
+  }
+
+  const startAdd = () => {
+    setAddingNew(true); setEditingId(null)
+    setForm(EMPTY_FORM)
+    setCpuQuery(''); setGpuQuery(''); setCpuSearchOpen(false); setGpuSearchOpen(false)
+    setCpuResults([]); setGpuResults([])
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null); setAddingNew(false)
+    setCpuSearchOpen(false); setGpuSearchOpen(false)
+  }
+
+  const handleSave = async () => {
+    if (!form.variant_name.trim()) { setErr('옵션 이름을 입력하세요'); return }
+    setErr(null)
+    setSaving(editingId ?? 'new')
+    try {
+      let res: Response
+      if (editingId) {
+        res = await fetch(`/api/admin/products/${productId}/variants`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ variantId: editingId, ...form }),
+        })
+      } else {
+        res = await fetch(`/api/admin/products/${productId}/variants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ ...form, sort_order: variants.length }),
+        })
+      }
+      if (!res.ok) { const j = await res.json(); setErr(j.error ?? '오류'); return }
+      await fetchVariants()
+      cancelEdit()
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const handleDelete = async (variantId: string, name: string) => {
+    if (!confirm(`"${name}" 옵션을 삭제하시겠어요?`)) return
+    setSaving(variantId)
+    const res = await fetch(`/api/admin/products/${productId}/variants?variantId=${variantId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) await fetchVariants()
+    setSaving(null)
+  }
+
+  const pf = (field: keyof VariantForm, value: unknown) =>
+    setForm((p) => ({ ...p, [field]: value }))
+
+  const isEditing = editingId !== null || addingNew
+
+  const VariantFormUI = (
+    <div className="border border-border rounded-xl p-4 space-y-3 bg-background/50 mt-3">
+      {err && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{err}</p>}
+
+      <div>
+        <label className="block text-xs text-white/40 mb-1">옵션 이름 *</label>
+        <input
+          type="text"
+          value={form.variant_name}
+          onChange={(e) => pf('variant_name', e.target.value)}
+          placeholder="예: Core Ultra 9 + RTX 4080 / 32GB"
+          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* CPU */}
+        <div>
+          <label className="block text-xs text-white/40 mb-1">CPU</label>
+          <div className="flex gap-2 mb-1">
+            <div className="flex items-center gap-2 bg-white/5 border border-border rounded-lg px-3 py-1.5 flex-1 min-w-0">
+              {form.cpu_id
+                ? <><Link2 size={12} className="text-accent flex-shrink-0" /><span className="text-xs text-white truncate">{form.cpu_name}</span><button onClick={() => pf('cpu_id', null)} className="ml-auto text-white/20 hover:text-red-400 flex-shrink-0"><X size={11} /></button></>
+                : <span className="text-xs text-white/30">{form.cpu_name || '미연결'}</span>
+              }
+            </div>
+            <button onClick={() => { setCpuSearchOpen((o) => !o); setCpuQuery(''); setCpuResults([]) }}
+              className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 bg-white/5 border border-border rounded-lg text-xs text-white/50 hover:text-white transition-colors">
+              <Search size={11} />
+            </button>
+          </div>
+          {cpuSearchOpen && (
+            <div className="bg-background border border-border rounded-xl p-2 mb-1">
+              <input type="text" value={cpuQuery} placeholder="CPU 검색..."
+                onChange={(e) => { setCpuQuery(e.target.value); searchCpus(e.target.value) }}
+                autoFocus
+                className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent mb-1.5"
+              />
+              {cpuResults.map((c) => (
+                <button key={c.id} onClick={() => { pf('cpu_id', c.id); pf('cpu_name', c.name); setCpuSearchOpen(false); setCpuResults([]) }}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-left mb-0.5">
+                  <span className="text-xs text-white">{c.name}</span>
+                  {c.relative_score != null && <span className="text-[10px] text-accent">score {c.relative_score}</span>}
+                </button>
+              ))}
+              {!cpuQuery.trim() && <p className="text-[10px] text-white/20 text-center py-1">CPU 이름 입력</p>}
+            </div>
+          )}
+          <input type="text" value={form.cpu_name ?? ''}
+            onChange={(e) => pf('cpu_name', e.target.value || null)}
+            placeholder="CPU 이름 직접 입력 (선택)"
+            className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent/50"
+          />
+        </div>
+
+        {/* GPU */}
+        <div>
+          <label className="block text-xs text-white/40 mb-1">GPU</label>
+          <div className="flex gap-2 mb-1">
+            <div className="flex items-center gap-2 bg-white/5 border border-border rounded-lg px-3 py-1.5 flex-1 min-w-0">
+              {form.gpu_id
+                ? <><Link2 size={12} className="text-purple-400 flex-shrink-0" /><span className="text-xs text-white truncate">{form.gpu_name}</span><button onClick={() => pf('gpu_id', null)} className="ml-auto text-white/20 hover:text-red-400 flex-shrink-0"><X size={11} /></button></>
+                : <span className="text-xs text-white/30">{form.gpu_name || '미연결'}</span>
+              }
+            </div>
+            <button onClick={() => { setGpuSearchOpen((o) => !o); setGpuQuery(''); setGpuResults([]) }}
+              className="flex-shrink-0 flex items-center gap-1 px-2 py-1.5 bg-white/5 border border-border rounded-lg text-xs text-white/50 hover:text-white transition-colors">
+              <Search size={11} />
+            </button>
+          </div>
+          {gpuSearchOpen && (
+            <div className="bg-background border border-border rounded-xl p-2 mb-1">
+              <input type="text" value={gpuQuery} placeholder="GPU 검색..."
+                onChange={(e) => { setGpuQuery(e.target.value); searchGpus(e.target.value) }}
+                autoFocus
+                className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent mb-1.5"
+              />
+              {gpuResults.map((g) => (
+                <button key={g.id} onClick={() => { pf('gpu_id', g.id); pf('gpu_name', g.name); setGpuSearchOpen(false); setGpuResults([]) }}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-left mb-0.5">
+                  <span className="text-xs text-white">{g.name}</span>
+                  {g.relative_score != null && <span className="text-[10px] text-purple-400">score {g.relative_score}</span>}
+                </button>
+              ))}
+              {!gpuQuery.trim() && <p className="text-[10px] text-white/20 text-center py-1">GPU 이름 입력</p>}
+            </div>
+          )}
+          <input type="text" value={form.gpu_name ?? ''}
+            onChange={(e) => pf('gpu_name', e.target.value || null)}
+            placeholder="GPU 이름 직접 입력 (선택)"
+            className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent/50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-white/40 mb-1">RAM (GB, 쉼표로 옵션)</label>
+          <input type="text" value={form.ram_gb ?? ''}
+            onChange={(e) => pf('ram_gb', e.target.value || null)}
+            placeholder="예: 32 또는 32, 64"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-white/40 mb-1">Storage (GB, 쉼표로 옵션)</label>
+          <input type="text" value={form.storage_gb ?? ''}
+            onChange={(e) => pf('storage_gb', e.target.value || null)}
+            placeholder="예: 512 또는 512, 1024"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-white/40 mb-1">가격 (USD)</label>
+          <input type="number" step="1" value={form.price_usd ?? ''}
+            onChange={(e) => pf('price_usd', e.target.value ? Number(e.target.value) : null)}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-white/40 mb-1">소스 URL</label>
+          <input type="text" value={form.source_url ?? ''}
+            onChange={(e) => pf('source_url', e.target.value || null)}
+            placeholder="https://..."
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button onClick={cancelEdit}
+          className="px-3 py-1.5 text-sm text-white/40 hover:text-white border border-border rounded-lg transition-colors">
+          취소
+        </button>
+        <button onClick={handleSave} disabled={!!saving}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-accent hover:bg-accent/90 text-black text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors">
+          {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+          저장
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="bg-surface border border-border rounded-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => {}}
+        className="w-full flex items-center justify-between px-6 py-4"
+        style={{ cursor: 'default' }}
+      >
+        <div className="flex items-center gap-2">
+          <Layers size={15} className="text-white/40" />
+          <h2 className="font-semibold text-white">제품 옵션 (variants)</h2>
+          {variants.length > 0 && (
+            <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full font-bold">{variants.length}개</span>
+          )}
+        </div>
+        {!isEditing && (
+          <button
+            type="button"
+            onClick={startAdd}
+            className="flex items-center gap-1.5 text-xs bg-accent/10 border border-accent/30 text-accent px-3 py-1.5 rounded-lg hover:bg-accent/20 transition-colors"
+          >
+            <Plus size={12} />
+            옵션 추가
+          </button>
+        )}
+      </button>
+
+      <div className="px-6 pb-6">
+        <p className="text-xs text-white/30 mb-3">
+          같은 모델이지만 CPU·GPU·RAM·가격이 다른 구성을 옵션으로 등록합니다. 기본 모델 외에 추가 옵션으로 표시됩니다.
+        </p>
+
+        {loading ? (
+          <div className="flex gap-1.5 py-4 justify-center">
+            {[0,1,2].map((i) => <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+          </div>
+        ) : (
+          <>
+            {variants.length === 0 && !addingNew && (
+              <p className="text-xs text-white/20 py-2 text-center">옵션 없음 — 기본 모델만 노출됩니다</p>
+            )}
+
+            {variants.map((v) => (
+              <div key={v.id}>
+                {editingId === v.id ? VariantFormUI : (
+                  <div className="flex items-start gap-3 py-2.5 border-b border-border/40 last:border-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{v.variant_name}</p>
+                      <p className="text-xs text-white/30 mt-0.5 space-x-2">
+                        {v.cpu_name && <span>CPU: {v.cpu_name}</span>}
+                        {v.gpu_name && <span>· GPU: {v.gpu_name}</span>}
+                        {v.ram_gb && <span>· {v.ram_gb}GB RAM</span>}
+                        {v.storage_gb && <span>· {v.storage_gb}GB Storage</span>}
+                        {v.price_usd && <span>· ${Number(v.price_usd).toLocaleString()}</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => startEdit(v)} disabled={isEditing}
+                        className="p-1.5 text-white/30 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-30">
+                        <RefreshCw size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(v.id, v.variant_name)} disabled={!!saving}
+                        className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-30">
+                        {saving === v.id ? <RefreshCw size={13} className="animate-spin" /> : <X size={13} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {addingNew && VariantFormUI}
+
+            {!isEditing && variants.length > 0 && (
+              <button onClick={startAdd}
+                className="mt-3 flex items-center gap-1.5 text-xs text-white/30 hover:text-accent border border-dashed border-border hover:border-accent/40 px-3 py-2 rounded-lg transition-colors w-full justify-center">
+                <Plus size={12} />
+                옵션 추가
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -1301,6 +1678,9 @@ export default function ProductEditPage() {
             </div>
           </SectionCard>
         )}
+
+        {/* ── 제품 옵션 (variants) ── */}
+        {!isNew && <VariantsSection productId={id} token={token} />}
 
         {/* 같은 카테고리 제품 목록 */}
         {sameProducts.length > 0 && (

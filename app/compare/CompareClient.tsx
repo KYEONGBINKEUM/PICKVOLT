@@ -15,6 +15,29 @@ import ReviewSection from '@/components/ReviewSection'
 
 const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
 
+interface ProductVariant {
+  id: string
+  variant_name: string
+  cpu_name: string | null
+  cpu_id: string | null
+  gpu_name: string | null
+  gpu_id: string | null
+  ram_gb: string | null
+  storage_gb: string | null
+  price_usd: number | null
+  cpuBenchmarks: {
+    relative_score: number | null
+    gb6_single: number | null
+    gb6_multi: number | null
+    tdmark_score: number | null
+    antutu_score: number | null
+    cinebench_single: number | null
+    cinebench_multi: number | null
+    type: string | null
+  } | null
+  gpuRelativeScore: number | null
+}
+
 interface ProductSpecs {
   cpu?: string | null
   gpuName?: string | null
@@ -52,6 +75,52 @@ interface Product {
   specs: ProductSpecs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw: Record<string, any>
+  variants?: ProductVariant[]
+}
+
+function fmtVariantGB(val: string | null): string | null {
+  if (!val) return null
+  return String(val).split(',').map((s) => {
+    const n = parseFloat(s.trim())
+    if (isNaN(n)) return s.trim()
+    return n >= 1024 ? `${n / 1024}TB` : `${n}GB`
+  }).join(' / ')
+}
+
+function applyVariant(product: Product, variantId: string | undefined): Product {
+  if (!variantId || !product.variants?.length) return product
+  const v = product.variants.find((x) => x.id === variantId)
+  if (!v) return product
+
+  const ramLabel    = fmtVariantGB(v.ram_gb)
+  const storageParts = v.storage_gb ? [fmtVariantGB(v.storage_gb), product.raw.storage_type].filter(Boolean).join(' ') : null
+
+  return {
+    ...product,
+    price_usd: v.price_usd ?? product.price_usd,
+    specs: {
+      ...product.specs,
+      ...(v.cpu_name     && { cpu:     v.cpu_name }),
+      ...(v.gpu_name     && { gpuName: v.gpu_name }),
+      ...(ramLabel       && { ram:     ramLabel }),
+      ...(storageParts   && { storage: storageParts }),
+      ...(v.cpuBenchmarks && {
+        performanceScore: v.cpuBenchmarks.relative_score   ?? product.specs.performanceScore,
+        gb6Single:        v.cpuBenchmarks.gb6_single       ?? product.specs.gb6Single,
+        gb6Multi:         v.cpuBenchmarks.gb6_multi        ?? product.specs.gb6Multi,
+        tdmark:           v.cpuBenchmarks.tdmark_score     ?? product.specs.tdmark,
+        antutu:           v.cpuBenchmarks.antutu_score     ?? product.specs.antutu,
+        cinebenchSingle:  v.cpuBenchmarks.cinebench_single ?? product.specs.cinebenchSingle,
+        cinebenchMulti:   v.cpuBenchmarks.cinebench_multi  ?? product.specs.cinebenchMulti,
+      }),
+      ...(v.gpuRelativeScore != null && { gpuRelativeScore: v.gpuRelativeScore }),
+    },
+    raw: {
+      ...product.raw,
+      ...(v.ram_gb     && { ram_gb:     v.ram_gb }),
+      ...(v.storage_gb && { storage_gb: v.storage_gb }),
+    },
+  }
 }
 
 interface AiResult {
@@ -606,6 +675,7 @@ export default function CompareClient() {
   const { t, locale } = useI18n()
 
   const [products, setProducts] = useState<Product[]>([])
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Record<number, string>>({})
   const [aiResult, setAiResult] = useState<AiResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
@@ -768,6 +838,7 @@ export default function CompareClient() {
       }
 
       setProducts(validProducts)
+      setSelectedVariantIds({})
       setLoading(false)
 
       // ── 히스토리에서 불러온 경우: 저장된 AI 결과 사용 (API 재호출 없음) ──
@@ -856,6 +927,9 @@ export default function CompareClient() {
     }
   }, [products])
 
+  // variant 선택을 적용한 유효 제품 목록
+  const effectiveProducts = products.map((p, i) => applyVariant(p, selectedVariantIds[i]))
+
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[]; showNameOnDesktop?: boolean }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -882,12 +956,12 @@ export default function CompareClient() {
     return raw.storage_type ? `${size} ${raw.storage_type}` : size
   }
 
-  const category = products.length > 0 ? products[0].category.toLowerCase() : ''
-  const isSameCategory = products.length > 0 && products.every((p) => p.category.toLowerCase() === category)
+  const category = effectiveProducts.length > 0 ? effectiveProducts[0].category.toLowerCase() : ''
+  const isSameCategory = effectiveProducts.length > 0 && effectiveProducts.every((p) => p.category.toLowerCase() === category)
 
   // 제품별 종합 점수 계산 — 크로스 카테고리면 GB6 공통 공식, 같은 카테고리면 고유 공식
   const rawScores = categoryStats
-    ? products.map((p) => {
+    ? effectiveProducts.map((p) => {
         return computeRelativeScores({
           category:           isSameCategory ? p.category.toLowerCase() : 'cross',
           relativeScore:      p.specs.performanceScore,
@@ -915,7 +989,7 @@ export default function CompareClient() {
 
   // 레이더 차트용 데이터
   const radarProducts: RadarProduct[] | null = productScores
-    ? products.map((p, i) => ({
+    ? effectiveProducts.map((p, i) => ({
         name: p.name,
         color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
         dimensions: productScores[i].details.map((d) => ({ label: d.label, score: d.score })),
@@ -923,12 +997,12 @@ export default function CompareClient() {
     : null
 
   const buildSpecRows = (): SpecRowData[] => {
-    if (products.length === 0) return []
+    if (effectiveProducts.length === 0) return []
 
     // 기본: 제품명 레이블
-    const pNames = products.map((p) => p.name)
+    const pNames = effectiveProducts.map((p) => p.name)
     // 성능 행: 칩셋명 레이블
-    const chipNames = products.map((p) => p.specs.cpu ?? p.name)
+    const chipNames = effectiveProducts.map((p) => p.specs.cpu ?? p.name)
 
     const performanceRow: SpecRowData = {
       label: t('spec.performance'),
@@ -937,7 +1011,7 @@ export default function CompareClient() {
       higherIsBetter: true,
       nameLabels: chipNames,
       showNameOnDesktop: true,
-      values: products.map((p, i) => {
+      values: effectiveProducts.map((p, i) => {
         const score = productScores ? productScores[i].details.find((d) => d.label === 'Performance')?.score : null
         return {
           primary: score != null ? score : '—',
@@ -954,7 +1028,7 @@ export default function CompareClient() {
       higherIsBetter: true,
       nameLabels: gpuNames,
       showNameOnDesktop: true,
-      values: products.map((p, i) => {
+      values: effectiveProducts.map((p, i) => {
         if (p.category.toLowerCase() !== 'laptop') return { primary: '—' }
         const score = productScores ? productScores[i].details.find((d) => d.label === 'Graphics')?.score : null
         return {
@@ -969,7 +1043,7 @@ export default function CompareClient() {
       sublabel: t('spec.memory'),
       higherIsBetter: true,
       nameLabels: pNames,
-      values: products.map((p) => {
+      values: effectiveProducts.map((p) => {
         const opts = parseOptions(p.raw.ram_gb)
         const maxN = opts.length > 0 ? Math.max(...opts) : null
         const label = opts.length > 0 ? opts.map(fmtGB).join(' / ') : '—'
@@ -980,7 +1054,7 @@ export default function CompareClient() {
       label: t('spec.storage'),
       sublabel: t('spec.internal'),
       nameLabels: pNames,
-      values: products.map((p) => {
+      values: effectiveProducts.map((p) => {
         const opts = parseOptions(p.raw.storage_gb)
         if (opts.length > 0) {
           const label = opts.map((n) => fmtGB(n)).join(' / ')
@@ -1000,7 +1074,7 @@ export default function CompareClient() {
       sublabel: t('spec.resolution_sub'),
       higherIsBetter: true,
       nameLabels: pNames,
-      values: products.map((p) => {
+      values: effectiveProducts.map((p) => {
         const res = p.raw.display_resolution as string | null
         const match = res?.match(/(\d+)\s*[x×X]\s*(\d+)/)
         const numericVal = match ? parseInt(match[1]) * parseInt(match[2]) : undefined
@@ -1012,7 +1086,7 @@ export default function CompareClient() {
       sublabel: t('spec.refresh_rate_sub'),
       higherIsBetter: true,
       nameLabels: pNames,
-      values: products.map((p) => {
+      values: effectiveProducts.map((p) => {
         const hz = p.raw.display_hz != null ? Number(p.raw.display_hz) : null
         return { primary: hz && hz > 0 ? `${hz}Hz` : '—', numericVal: hz && hz > 0 ? hz : undefined }
       }),
@@ -1068,7 +1142,7 @@ export default function CompareClient() {
           sublabel: t('spec.capacity'),
           ...(mixedBatteryUnits ? {} : { higherIsBetter: true }),
           nameLabels: pNames,
-          values: products.map((p) => {
+          values: effectiveProducts.map((p) => {
             const cat = p.category.toLowerCase()
             if (cat === 'laptop') {
               return {
@@ -1091,7 +1165,7 @@ export default function CompareClient() {
           sublabel: t('spec.weight_body'),
           higherIsBetter: false,
           nameLabels: pNames,
-          values: products.map((p) => {
+          values: effectiveProducts.map((p) => {
             const cat = p.category.toLowerCase()
             if (cat === 'laptop') {
               return {
@@ -1231,7 +1305,7 @@ export default function CompareClient() {
   const handleExportHTML = async () => {
     const rows = specRows
     const colStyle = `border: 1px solid #2a2a2a; padding: 12px 16px; vertical-align: top;`
-    const headerCols = products.map((p) =>
+    const headerCols = effectiveProducts.map((p) =>
       `<th style="${colStyle} background:#1a1a1a; color:#fff; font-size:13px;">${p.name}</th>`
     ).join('')
     const bodyRows = rows.map((row) =>
@@ -1427,7 +1501,9 @@ export default function CompareClient() {
               <div ref={mobileHeaderRef} className="lg:hidden border-b border-border">
                 <div className="flex overflow-x-auto gap-3 px-4 py-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                   {products.map((p, pi) => {
+                    const ep = effectiveProducts[pi]
                     const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
+                    const hasVariants = (p.variants?.length ?? 0) > 0
                     return (
                       <div key={p.id} className="flex-shrink-0 snap-start w-[52vw] min-w-[180px]">
                         {/* 이미지 */}
@@ -1441,8 +1517,28 @@ export default function CompareClient() {
                         <Link href={`/product/${p.id}`} className="text-sm font-bold text-white/90 hover:text-accent line-clamp-2 leading-snug block mb-1">
                           {p.name}
                         </Link>
-                        {p.price_usd && (
-                          <p className="text-xs text-white/40 mb-2">${Number(p.price_usd).toLocaleString()}</p>
+                        {ep.price_usd && (
+                          <p className="text-xs text-white/40 mb-2">${Number(ep.price_usd).toLocaleString()}</p>
+                        )}
+                        {/* Variant 선택 */}
+                        {hasVariants && (
+                          <div className="mb-2 flex flex-wrap gap-1">
+                            <button
+                              onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${!selectedVariantIds[pi] ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
+                            >
+                              기본
+                            </button>
+                            {p.variants!.map((v) => (
+                              <button
+                                key={v.id}
+                                onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
+                                className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${selectedVariantIds[pi] === v.id ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
+                              >
+                                {v.variant_name}
+                              </button>
+                            ))}
+                          </div>
                         )}
                         {p.raw.amazon_url && (
                           <a
@@ -1471,9 +1567,31 @@ export default function CompareClient() {
                   <p className="text-[10px] lg:text-xs text-white/40 font-semibold">{t('compare.overview')}</p>
                 </div>
                 {products.map((p, pi) => {
+                  const ep = effectiveProducts[pi]
+                  const hasVariants = (p.variants?.length ?? 0) > 0
                   return (
                     <div key={p.id} className="p-2 lg:p-4 border-l border-border">
-                      <ProductCard product={p} />
+                      <ProductCard product={ep} />
+                      {/* Variant 선택 */}
+                      {hasVariants && (
+                        <div className="mt-2 flex flex-wrap gap-1" data-export-exclude="true">
+                          <button
+                            onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${!selectedVariantIds[pi] ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
+                          >
+                            기본
+                          </button>
+                          {p.variants!.map((v) => (
+                            <button
+                              key={v.id}
+                              onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${selectedVariantIds[pi] === v.id ? 'bg-accent/15 border-accent/50 text-accent' : 'border-border text-white/30 hover:text-white/60'}`}
+                            >
+                              {v.variant_name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {p.raw.amazon_url && (
                         <a
                           href={p.raw.amazon_url}
@@ -1507,7 +1625,7 @@ export default function CompareClient() {
                       {productScores.map((s, i) => {
                         const isWinner = s.overall === maxScore
                         const color = PRODUCT_COLORS[i % PRODUCT_COLORS.length]
-                        const p = products[i]
+                        const p = effectiveProducts[i]
                         return (
                           <div key={i} className="px-4 pt-2.5 pb-3 border-t border-border/20" style={isWinner ? { backgroundColor: `${color}08` } : {}}>
                             <div className="flex items-center gap-2 mb-2">
@@ -1598,8 +1716,8 @@ export default function CompareClient() {
                     winnerIndices={winnerIndices}
                     colors={PRODUCT_COLORS}
                     rowIndex={ri}
-                    nameLabels={row.nameLabels ?? products.map((p) => p.name)}
-                    productImages={products.map((p) => p.image_url ?? null)}
+                    nameLabels={row.nameLabels ?? effectiveProducts.map((p) => p.name)}
+                    productImages={effectiveProducts.map((p) => p.image_url ?? null)}
                     showNameOnDesktop={row.showNameOnDesktop}
                   />
                 )

@@ -153,6 +153,43 @@ export async function GET(
     ipRating:        null,
   }
 
+  // ── variants 조회 ────────────────────────────────────────────────────────
+  const { data: rawVariants } = await supabase
+    .from('product_variants')
+    .select(`
+      id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id,
+      ram_gb, storage_gb, price_usd, sort_order,
+      cpus ( relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, type ),
+      gpus ( relative_score )
+    `)
+    .eq('product_id', product.id)
+    .order('sort_order')
+    .order('created_at')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const variants = (rawVariants ?? []).map((v: any) => ({
+    id:           v.id,
+    variant_name: v.variant_name,
+    cpu_name:     v.cpu_name     ?? null,
+    cpu_id:       v.cpu_id       ?? null,
+    gpu_name:     v.gpu_name     ?? null,
+    gpu_id:       v.gpu_id       ?? null,
+    ram_gb:       v.ram_gb       ?? null,
+    storage_gb:   v.storage_gb   ?? null,
+    price_usd:    v.price_usd    ?? null,
+    cpuBenchmarks: v.cpus ? {
+      relative_score:   v.cpus.relative_score   ?? null,
+      gb6_single:       v.cpus.gb6_single       ?? null,
+      gb6_multi:        v.cpus.gb6_multi        ?? null,
+      tdmark_score:     v.cpus.tdmark_score     ?? null,
+      antutu_score:     v.cpus.antutu_score     ?? null,
+      cinebench_single: v.cpus.cinebench_single ?? null,
+      cinebench_multi:  v.cpus.cinebench_multi  ?? null,
+      type:             v.cpus.type             ?? null,
+    } : null,
+    gpuRelativeScore: v.gpus?.relative_score ?? null,
+  }))
+
   return NextResponse.json(
     {
       id:        product.id,
@@ -164,6 +201,7 @@ export async function GET(
       source_url: product.source_url,
       specs,
       raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
+      variants,
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

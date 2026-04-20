@@ -24,6 +24,16 @@ interface Specs {
   weight:          string | null
 }
 
+interface ProductVariant {
+  id:           string
+  variant_name: string
+  cpu_name:     string | null
+  gpu_name:     string | null
+  ram_gb:       string | null
+  storage_gb:   string | null
+  price_usd:    number | null
+}
+
 interface Product {
   id:         string
   name:       string
@@ -33,6 +43,15 @@ interface Product {
   image_url:  string | null
   amazon_url: string | null
   specs:      Specs
+  variants?:  ProductVariant[]
+}
+
+function fmtGB(val: string): string {
+  return String(val).split(',').map((s) => {
+    const n = parseFloat(s.trim())
+    if (isNaN(n)) return s.trim()
+    return n >= 1024 ? `${n / 1024}TB` : `${n}GB`
+  }).join(' / ')
 }
 
 function SpecRow({ label, value }: { label: string; value: string | null }) {
@@ -49,6 +68,20 @@ export default function ProductClient({ product }: { product: Product }) {
   const { cart, add, remove } = useCompareCart()
   const inCart   = cart.some((i) => i.id === product.id)
   const cartFull = cart.length >= 4
+
+  // variant 선택 상태 (null = 기본 모델)
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
+  const selectedVariant = product.variants?.find((v) => v.id === selectedVariantId) ?? null
+
+  // 선택된 variant 기준으로 표시할 스펙 계산
+  const effectiveSpecs: Specs = selectedVariant ? {
+    ...product.specs,
+    ...(selectedVariant.cpu_name     && { cpu:     selectedVariant.cpu_name }),
+    ...(selectedVariant.gpu_name     && { gpuName: selectedVariant.gpu_name }),
+    ...(selectedVariant.ram_gb       && { ram:     fmtGB(selectedVariant.ram_gb) }),
+    ...(selectedVariant.storage_gb   && { storage: fmtGB(selectedVariant.storage_gb) }),
+  } : product.specs
+  const effectivePrice = selectedVariant?.price_usd ?? product.price_usd
 
   const [shareCopied, setShareCopied] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -382,10 +415,42 @@ ${priceHTML}
             {product.name}
           </h1>
 
+          {/* Variant selector */}
+          {product.variants && product.variants.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">옵션 선택</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setSelectedVariantId(null)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    selectedVariantId === null
+                      ? 'bg-accent/15 border-accent/50 text-accent'
+                      : 'bg-white/5 border-border text-white/40 hover:text-white/70 hover:border-white/20'
+                  }`}
+                >
+                  기본
+                </button>
+                {product.variants.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => setSelectedVariantId(v.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all text-left ${
+                      selectedVariantId === v.id
+                        ? 'bg-accent/15 border-accent/50 text-accent'
+                        : 'bg-white/5 border-border text-white/40 hover:text-white/70 hover:border-white/20'
+                    }`}
+                  >
+                    {v.variant_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Price */}
-          {product.price_usd && (
+          {effectivePrice && (
             <p className="text-2xl font-black text-accent mb-5">
-              From ${Number(product.price_usd).toLocaleString()}
+              From ${Number(effectivePrice).toLocaleString()}
             </p>
           )}
 
@@ -427,19 +492,19 @@ ${priceHTML}
         {/* RIGHT — benchmark + specs */}
         <div className="flex-1 min-w-0">
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
-            <SpecRow label={t('product.spec_cpu')}     value={product.specs.cpu} />
+            <SpecRow label={t('product.spec_cpu')}     value={effectiveSpecs.cpu} />
             {product.category === 'laptop' && (
-              <SpecRow label="GPU" value={product.specs.gpuName} />
+              <SpecRow label="GPU" value={effectiveSpecs.gpuName} />
             )}
-            <SpecRow label={t('product.spec_ram')}     value={product.specs.ram} />
-            <SpecRow label={t('product.spec_storage')} value={product.specs.storage} />
-            <SpecRow label={t('product.spec_display')} value={product.specs.display} />
-            <SpecRow label={t('product.spec_battery')} value={product.specs.batteryCapacity} />
-            <SpecRow label={t('product.spec_camera')}  value={product.specs.camera} />
-            <SpecRow label={t('product.spec_os')}        value={product.specs.os} />
-            <SpecRow label={t('product.spec_wifi')}      value={product.specs.wifi} />
-            <SpecRow label={t('product.spec_bluetooth')} value={product.specs.bluetooth} />
-            <SpecRow label={t('product.spec_weight')}    value={product.specs.weight} />
+            <SpecRow label={t('product.spec_ram')}     value={effectiveSpecs.ram} />
+            <SpecRow label={t('product.spec_storage')} value={effectiveSpecs.storage} />
+            <SpecRow label={t('product.spec_display')} value={effectiveSpecs.display} />
+            <SpecRow label={t('product.spec_battery')} value={effectiveSpecs.batteryCapacity} />
+            <SpecRow label={t('product.spec_camera')}  value={effectiveSpecs.camera} />
+            <SpecRow label={t('product.spec_os')}        value={effectiveSpecs.os} />
+            <SpecRow label={t('product.spec_wifi')}      value={effectiveSpecs.wifi} />
+            <SpecRow label={t('product.spec_bluetooth')} value={effectiveSpecs.bluetooth} />
+            <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
           </div>
           <ReviewSection productId={product.id} />
         </div>
