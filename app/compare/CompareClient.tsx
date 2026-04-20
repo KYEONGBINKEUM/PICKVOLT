@@ -88,6 +88,11 @@ function fmtVariantGB(val: string | null): string | null {
   }).join(' / ')
 }
 
+function makeVariantKey(ids: string[], sels: Record<number, string>): string {
+  const vPart = Object.entries(sels).sort(([a], [b]) => Number(a) - Number(b)).map(([k, v]) => `${k}:${v}`).join(',')
+  return `${ids.join(',')}|${vPart}`
+}
+
 function applyVariant(product: Product, variantId: string | undefined): Product {
   if (!variantId || !product.variants?.length) return product
   const v = product.variants.find((x) => x.id === variantId)
@@ -698,6 +703,9 @@ export default function CompareClient() {
   const ranKeyRef = useRef<string>('')
   const compareTableRef = useRef<HTMLDivElement>(null)
   const mobileHeaderRef = useRef<HTMLDivElement>(null)
+  const aiCacheRef = useRef<Map<string, AiResult>>(new Map())
+  const sessionRef = useRef<{ access_token: string; user: { id: string } } | null>(null)
+  const loadingAIRef = useRef(false)
 
   // 세션 확인
   useEffect(() => {
@@ -750,8 +758,26 @@ export default function CompareClient() {
       .catch(() => {})
   }, [])
 
+  // ref sync
+  useEffect(() => { sessionRef.current = session }, [session])
+  useEffect(() => { loadingAIRef.current = loadingAI }, [loadingAI])
+
+  // 모델 선택 변경 시 AI 재실행 (캐시 우선)
+  useEffect(() => {
+    if (products.length < 2) return
+    const ids = products.map((p) => p.id)
+    const key = makeVariantKey(ids, selectedVariantIds)
+    const cached = aiCacheRef.current.get(key)
+    if (cached) { setAiResult(cached); return }
+    if (Object.keys(selectedVariantIds).length === 0) return
+    if (!sessionRef.current || loadingAIRef.current) return
+    const effective = products.map((p, i) => applyVariant(p, selectedVariantIds[i]))
+    callAI(effective, ids, key)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantIds])
+
   // ── AI 비교 호출 (스펙 로드 완료 후 단독 실행 가능) ─────────────────────
-  const callAI = useCallback(async (loadedProducts: Product[], productIds: string[]) => {
+  const callAI = useCallback(async (loadedProducts: Product[], productIds: string[], cacheKey?: string) => {
     if (!session) return
     setLoadingAI(true)
     setError(null)
@@ -801,6 +827,7 @@ export default function CompareClient() {
         setError(t('compare.error_compare'))
       } else {
         setAiResult(compareData)
+        if (cacheKey) aiCacheRef.current.set(cacheKey, compareData)
         if (compareData.points !== undefined && compareData.points !== null) {
           setUserPoints(compareData.points)
         }
@@ -843,6 +870,8 @@ export default function CompareClient() {
       setSelectedVariantIds({})
       setLoading(false)
 
+      const baseKey = makeVariantKey(ids, {})
+
       // ── 히스토리에서 불러온 경우: 저장된 AI 결과 사용 (API 재호출 없음) ──
       if (fromHistoryId) {
         if (fromHistoryId.startsWith('local_')) {
@@ -850,6 +879,7 @@ export default function CompareClient() {
           const localItems = getLocalHistory()
           const found = localItems.find((item) => item.id === fromHistoryId)
           if (found?.result) {
+            aiCacheRef.current.set(baseKey, found.result as AiResult)
             setAiResult(found.result as AiResult)
             return
           }
@@ -860,6 +890,7 @@ export default function CompareClient() {
             .eq('id', fromHistoryId)
             .single()
           if (data?.result) {
+            aiCacheRef.current.set(baseKey, data.result as AiResult)
             setAiResult(data.result as AiResult)
             return
           }
@@ -870,7 +901,7 @@ export default function CompareClient() {
       if (skipAI) return
 
       // ── 2단계: AI 비교 ────────────────────────────────────────────────────
-      await callAI(validProducts, ids)
+      await callAI(validProducts, ids, baseKey)
     } catch {
       setError(t('compare.error_compare'))
     } finally {
@@ -881,9 +912,11 @@ export default function CompareClient() {
   // 수동 AI 실행 (autoAI=false일 때 버튼 클릭)
   const handleManualAI = useCallback(() => {
     if (!session || products.length < 2 || loadingAI) return
-    const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
-    callAI(products, ids)
-  }, [session, products, loadingAI, idsParam, callAI])
+    const ids = products.map((p) => p.id)
+    const effective = products.map((p, i) => applyVariant(p, selectedVariantIds[i]))
+    const key = makeVariantKey(ids, selectedVariantIds)
+    callAI(effective, ids, key)
+  }, [session, products, loadingAI, selectedVariantIds, callAI])
 
   useEffect(() => {
     if (!sessionLoaded || !settingsLoaded) return  // 세션 & 설정 확인 전 실행 차단
@@ -1572,12 +1605,13 @@ export default function CompareClient() {
                   {/* 모바일 */}
                   <div className="lg:hidden">
                     <div className="px-4 pt-3 pb-1">
-                      <span className="text-[10px] uppercase tracking-wider text-white/25">모델 선택</span>
+                      <span className="text-[10px] font-semibold text-white/60">{t('compare.select_model')}</span>
                     </div>
                     {products.map((p, pi) => {
                       const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                       const ep = effectiveProducts[pi]
                       const hasVariants = (p.variants?.length ?? 0) > 0
+                      const baseLabel = [p.specs.cpu, p.specs.gpuName].filter(Boolean).join(' + ') || p.name
                       return (
                         <div key={pi} className="px-4 pt-2 pb-3 border-t border-border/20">
                           <div className="flex items-center gap-2 mb-2">
@@ -1587,25 +1621,23 @@ export default function CompareClient() {
                             <p className="text-[12px] text-white/50 truncate flex-1">{p.name}</p>
                           </div>
                           {hasVariants ? (
-                            <div className="flex flex-wrap gap-1">
-                              <button
-                                onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
-                                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all"
-                                style={!selectedVariantIds[pi] ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
-                              >
-                                기본
-                              </button>
+                            <select
+                              value={selectedVariantIds[pi] ?? ''}
+                              onChange={(e) => {
+                                if (e.target.value === '') {
+                                  setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })
+                                } else {
+                                  setSelectedVariantIds((prev) => ({ ...prev, [pi]: e.target.value }))
+                                }
+                              }}
+                              className="w-full rounded-lg px-2.5 py-1.5 text-[11px] font-semibold border bg-surface-2 outline-none cursor-pointer"
+                              style={{ borderColor: `${color}60`, color }}
+                            >
+                              <option value="">{baseLabel}</option>
                               {p.variants!.map((v) => (
-                                <button
-                                  key={v.id}
-                                  onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
-                                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all"
-                                  style={selectedVariantIds[pi] === v.id ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
-                                >
-                                  {v.variant_name}
-                                </button>
+                                <option key={v.id} value={v.id}>{v.variant_name}</option>
                               ))}
-                            </div>
+                            </select>
                           ) : (
                             <span className="text-xs text-white/20">—</span>
                           )}
@@ -1616,33 +1648,32 @@ export default function CompareClient() {
                   {/* 데스크탑 */}
                   <div className="hidden lg:grid" style={{ gridTemplateColumns: `160px repeat(${products.length}, 1fr)` }}>
                     <div className="p-4 flex items-center">
-                      <span className="text-xs text-white/40 font-semibold">모델 선택</span>
+                      <span className="text-sm font-semibold text-white">{t('compare.select_model')}</span>
                     </div>
                     {products.map((p, pi) => {
                       const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
                       const hasVariants = (p.variants?.length ?? 0) > 0
+                      const baseLabel = [p.specs.cpu, p.specs.gpuName].filter(Boolean).join(' + ') || p.name
                       return (
                         <div key={pi} className="p-4 border-l border-border">
                           {hasVariants ? (
-                            <div className="flex flex-wrap gap-1.5">
-                              <button
-                                onClick={() => setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })}
-                                className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all"
-                                style={!selectedVariantIds[pi] ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
-                              >
-                                기본
-                              </button>
+                            <select
+                              value={selectedVariantIds[pi] ?? ''}
+                              onChange={(e) => {
+                                if (e.target.value === '') {
+                                  setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })
+                                } else {
+                                  setSelectedVariantIds((prev) => ({ ...prev, [pi]: e.target.value }))
+                                }
+                              }}
+                              className="w-full rounded-lg px-2.5 py-1.5 text-xs font-semibold border bg-surface-2 outline-none cursor-pointer"
+                              style={{ borderColor: `${color}60`, color }}
+                            >
+                              <option value="">{baseLabel}</option>
                               {p.variants!.map((v) => (
-                                <button
-                                  key={v.id}
-                                  onClick={() => setSelectedVariantIds((prev) => ({ ...prev, [pi]: v.id }))}
-                                  className="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all"
-                                  style={selectedVariantIds[pi] === v.id ? { backgroundColor: `${color}18`, borderColor: `${color}60`, color } : { borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.3)' }}
-                                >
-                                  {v.variant_name}
-                                </button>
+                                <option key={v.id} value={v.id}>{v.variant_name}</option>
                               ))}
-                            </div>
+                            </select>
                           ) : (
                             <span className="text-xs text-white/20">—</span>
                           )}
