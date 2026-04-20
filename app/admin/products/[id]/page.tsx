@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap, Copy, Layers } from 'lucide-react'
+import { ArrowLeft, Save, Upload, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Link2, Plus, X, Zap, Copy, Layers, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
@@ -520,8 +520,9 @@ function VariantsSection({
                       </p>
                     </div>
                     <button onClick={startEditBase} disabled={isEditing}
-                      className="p-1.5 text-white/30 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-30 flex-shrink-0">
-                      <RefreshCw size={13} />
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-white/40 hover:text-accent hover:bg-accent/10 border border-border hover:border-accent/30 rounded-lg transition-colors disabled:opacity-30 flex-shrink-0">
+                      <Pencil size={11} />
+                      수정
                     </button>
                   </div>
                 )}
@@ -548,12 +549,14 @@ function VariantsSection({
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button onClick={() => startEdit(v)} disabled={isEditing}
-                        className="p-1.5 text-white/30 hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-30">
-                        <RefreshCw size={13} />
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-white/40 hover:text-accent hover:bg-accent/10 border border-border hover:border-accent/30 rounded-lg transition-colors disabled:opacity-30">
+                        <Pencil size={11} />
+                        수정
                       </button>
                       <button onClick={() => handleDelete(v.id, v.variant_name)} disabled={!!saving}
-                        className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-30">
-                        {saving === v.id ? <RefreshCw size={13} className="animate-spin" /> : <X size={13} />}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-white/30 hover:text-red-400 hover:bg-red-500/10 border border-border hover:border-red-500/20 rounded-lg transition-colors disabled:opacity-30">
+                        {saving === v.id ? <RefreshCw size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                        삭제
                       </button>
                     </div>
                   </div>
