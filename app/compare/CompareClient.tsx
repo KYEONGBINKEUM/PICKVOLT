@@ -1607,7 +1607,7 @@ export default function CompareClient() {
                               ))}
                             </div>
                           ) : (
-                            <span className="text-xs text-white/20">기본 옵션</span>
+                            <span className="text-xs text-white/20">—</span>
                           )}
                         </div>
                       )
@@ -1644,7 +1644,7 @@ export default function CompareClient() {
                               ))}
                             </div>
                           ) : (
-                            <span className="text-xs text-white/20">기본 옵션</span>
+                            <span className="text-xs text-white/20">—</span>
                           )}
                         </div>
                       )
