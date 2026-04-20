@@ -1001,7 +1001,7 @@ export default function ProductEditPage() {
         }
         setMessage({ type: 'ok', text: '저장됨' })
         await new Promise((r) => setTimeout(r, 800))
-        router.replace(backUrl)
+        router.replace(`/admin/products/${newId}${fromCategory ? `?category=${fromCategory}` : ''}`)
         return
       }
 
@@ -1532,6 +1532,26 @@ export default function ProductEditPage() {
           </div>
         </SectionCard>
 
+        {/* ── 제품 옵션 (variants) ── */}
+        {!isNew && (
+          <VariantsSection
+            productId={id}
+            token={token}
+            isLaptop={category === 'laptop'}
+            baseSpecs={category === 'laptop' ? {
+              cpu_name: (commonSpecs.cpu_name as string | null) ?? null,
+              cpu_id:   (commonSpecs.cpu_id   as string | null) ?? null,
+              gpu_name: (commonSpecs.gpu_name as string | null) ?? null,
+              gpu_id:   (commonSpecs.gpu_id   as string | null) ?? null,
+              ram_gb:      (commonSpecs.ram_gb      as string | null) ?? null,
+              storage_gb:  (commonSpecs.storage_gb  as string | null) ?? null,
+              price_usd:   (form.price_usd           as number | null) ?? null,
+              amazon_url:  (commonSpecs.amazon_url   as string | null) ?? null,
+            } : undefined}
+            onSaveBase={category === 'laptop' ? handleSaveBase : undefined}
+          />
+        )}
+
         {/* ── 벤치마크 점수 ── */}
         <SectionCard title="벤치마크 점수 (cpus 테이블)" defaultOpen={false}>
           {!commonSpecs.cpu_id ? (
@@ -1831,26 +1851,6 @@ export default function ProductEditPage() {
               </div>
             </div>
           </SectionCard>
-        )}
-
-        {/* ── 제품 옵션 (variants) ── */}
-        {!isNew && (
-          <VariantsSection
-            productId={id}
-            token={token}
-            isLaptop={category === 'laptop'}
-            baseSpecs={category === 'laptop' ? {
-              cpu_name: (commonSpecs.cpu_name as string | null) ?? null,
-              cpu_id:   (commonSpecs.cpu_id   as string | null) ?? null,
-              gpu_name: (commonSpecs.gpu_name as string | null) ?? null,
-              gpu_id:   (commonSpecs.gpu_id   as string | null) ?? null,
-              ram_gb:      (commonSpecs.ram_gb      as string | null) ?? null,
-              storage_gb:  (commonSpecs.storage_gb  as string | null) ?? null,
-              price_usd:   (form.price_usd           as number | null) ?? null,
-              amazon_url:  (commonSpecs.amazon_url   as string | null) ?? null,
-            } : undefined}
-            onSaveBase={category === 'laptop' ? handleSaveBase : undefined}
-          />
         )}
 
         {/* 같은 카테고리 제품 목록 */}
