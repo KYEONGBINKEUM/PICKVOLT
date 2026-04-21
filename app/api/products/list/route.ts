@@ -124,23 +124,33 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Variant counts (batch)
+    // Variant data (batch)
     const allIds = products.map((p) => p.id)
-    let variantCountMap: Record<string, number> = {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let variantMap: Record<string, any[]> = {}
     if (allIds.length > 0) {
       const { data: varRows } = await supabase
         .from('product_variants')
-        .select('product_id')
+        .select('product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, gpu_name')
         .in('product_id', allIds)
+        .order('sort_order')
       if (varRows) {
         for (const row of varRows) {
-          variantCountMap[row.product_id] = (variantCountMap[row.product_id] ?? 0) + 1
+          if (!variantMap[row.product_id]) variantMap[row.product_id] = []
+          variantMap[row.product_id].push({
+            variant_name: row.variant_name,
+            price_usd:    row.price_usd,
+            ram_gb:       row.ram_gb,
+            storage_gb:   row.storage_gb,
+            cpu_name:     row.cpu_name,
+            gpu_name:     row.gpu_name,
+          })
         }
       }
     }
     for (const p of products) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (p as any).variant_count = variantCountMap[p.id] ?? 0
+      (p as any).variants = variantMap[p.id] ?? []
     }
 
     // RAM filter — ram_gb는 "8, 12, 16" 같은 다중 값일 수 있어 최대값 기준으로 비교

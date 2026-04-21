@@ -6,6 +6,8 @@ import Image from 'next/image'
 import {
   SlidersHorizontal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Check,
   Smartphone,
@@ -16,7 +18,6 @@ import {
   ArrowUpDown,
   Heart,
   Pencil,
-  Layers,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
@@ -46,7 +47,14 @@ interface Product {
   weight_kg: number | null
   stylus_support: boolean | null
   launch_year: number | null
-  variant_count: number
+  variants: {
+    variant_name: string
+    price_usd: number | null
+    ram_gb: string | null
+    storage_gb: string | null
+    cpu_name: string | null
+    gpu_name: string | null
+  }[]
 }
 
 interface ApiResponse {
@@ -127,6 +135,24 @@ function ProductCard({
     else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
   }
 
+  // Variant carousel
+  const allVariants = [
+    { variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null },
+    ...product.variants,
+  ]
+  const [variantIdx, setVariantIdx] = useState(0)
+  const current = allVariants[variantIdx]
+  const hasVariants = allVariants.length > 1
+
+  const goPrev = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    setVariantIdx((i) => (i - 1 + allVariants.length) % allVariants.length)
+  }
+  const goNext = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    setVariantIdx((i) => (i + 1) % allVariants.length)
+  }
+
   // 2-column grid rows (카테고리별 분기)
   const batteryCell = {
     label: t('cat.spec_battery'),
@@ -148,39 +174,31 @@ function ProductCard({
   const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] =
     product.category === 'laptop'
       ? [
-          // 랩탑: CPU | RAM / GPU | Display / Battery | Weight
           [
-            { label: 'CPU', value: product.cpu_name ?? null },
-            { label: t('spec.ram'), value: product.ram_gb ? `${product.ram_gb}GB` : null },
+            { label: 'CPU', value: current.cpu_name ?? null },
+            { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
           ],
           [
-            { label: 'GPU', value: product.gpu_name ?? null },
+            { label: 'GPU', value: current.gpu_name ?? null },
             {
               label: t('cat.spec_display'),
               value: product.display_inch
-                ? [
-                    `${product.display_inch}"`,
-                    product.display_hz ? `${product.display_hz}Hz` : null,
-                  ].filter(Boolean).join(' ')
+                ? [`${product.display_inch}"`, product.display_hz ? `${product.display_hz}Hz` : null].filter(Boolean).join(' ')
                 : null,
             },
           ],
           [batteryCell, weightCell],
         ]
       : [
-          // 스마트폰 / 태블릿: CPU | RAM / Display inch(hz) | PPI / Battery | Weight
           [
-            { label: 'CPU', value: product.cpu_name ?? null },
-            { label: t('spec.ram'), value: product.ram_gb ? `${product.ram_gb}GB` : null },
+            { label: 'CPU', value: current.cpu_name ?? null },
+            { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
           ],
           [
             {
               label: t('cat.spec_display'),
               value: product.display_inch
-                ? [
-                    `${product.display_inch}"`,
-                    product.display_hz ? `(${product.display_hz}Hz)` : null,
-                  ].filter(Boolean).join(' ')
+                ? [`${product.display_inch}"`, product.display_hz ? `(${product.display_hz}Hz)` : null].filter(Boolean).join(' ')
                 : null,
             },
             { label: t('cat.spec_ppi'), value: product.ppi ? `${product.ppi} ppi` : null },
@@ -194,13 +212,13 @@ function ProductCard({
   return (
     <Link href={`/product/${product.id}`} className="group block h-full relative">
       {/* Stack effect — visible only when variants exist */}
-      {product.variant_count > 0 && (
+      {hasVariants && (
         <>
           <div className="absolute inset-x-4 bottom-[-6px] h-full rounded-2xl bg-surface border border-white/[0.04]" />
           <div className="absolute inset-x-2 bottom-[-3px] h-full rounded-2xl bg-surface border border-white/[0.07]" />
         </>
       )}
-      <div className={`relative z-10 bg-surface border rounded-2xl overflow-hidden transition-all duration-200 flex flex-row h-full ${product.variant_count > 0 ? 'border-white/10 hover:border-white/20' : 'border-border hover:border-white/15'} hover:shadow-lg hover:shadow-black/20`}>
+      <div className={`relative z-10 bg-surface border rounded-2xl overflow-hidden transition-all duration-200 flex flex-row h-full ${hasVariants ? 'border-white/10 hover:border-white/20' : 'border-border hover:border-white/15'} hover:shadow-lg hover:shadow-black/20`}>
 
         {/* Image — left */}
         <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden self-stretch min-h-[10rem]">
@@ -232,9 +250,9 @@ function ProductCard({
             <h3 className="text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
               {product.name}
             </h3>
-            {product.price_usd && (
+            {current.price_usd && (
               <p className="text-sm font-black text-accent mt-1">
-                From ${Number(product.price_usd).toLocaleString()}
+                ${Number(current.price_usd).toLocaleString()}
               </p>
             )}
           </div>
@@ -263,11 +281,35 @@ function ProductCard({
             </div>
           )}
 
-          {/* Variant indicator */}
-          {product.variant_count > 0 && (
-            <div className="flex items-center gap-1.5 text-white/40">
-              <Layers className="w-3 h-3 flex-shrink-0" />
-              <span className="text-[11px] font-medium">{product.variant_count + 1}가지 옵션</span>
+          {/* Variant navigator */}
+          {hasVariants && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={goPrev}
+                className="flex items-center justify-center w-5 h-5 rounded-md text-white/30 hover:text-white/80 hover:bg-white/5 transition-all flex-shrink-0"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-white/35 truncate text-center">
+                  {current.variant_name ?? product.name}
+                </p>
+                <div className="flex justify-center gap-1 mt-0.5">
+                  {allVariants.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVariantIdx(i) }}
+                      className={`w-1 h-1 rounded-full transition-colors ${i === variantIdx ? 'bg-accent' : 'bg-white/20 hover:bg-white/40'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={goNext}
+                className="flex items-center justify-center w-5 h-5 rounded-md text-white/30 hover:text-white/80 hover:bg-white/5 transition-all flex-shrink-0"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
