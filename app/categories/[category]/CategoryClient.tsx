@@ -16,6 +16,7 @@ import {
   ArrowUpDown,
   Heart,
   Pencil,
+  Layers,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
@@ -191,8 +192,15 @@ function ProductCard({
   const scorePercent = Math.min(100, Math.round((score / maxScore) * 100))
 
   return (
-    <Link href={`/product/${product.id}`} className="group block h-full">
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-white/15 transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-row h-full">
+    <Link href={`/product/${product.id}`} className="group block h-full relative">
+      {/* Stack effect — visible only when variants exist */}
+      {product.variant_count > 0 && (
+        <>
+          <div className="absolute inset-x-4 bottom-[-6px] h-full rounded-2xl bg-surface border border-white/[0.04]" />
+          <div className="absolute inset-x-2 bottom-[-3px] h-full rounded-2xl bg-surface border border-white/[0.07]" />
+        </>
+      )}
+      <div className={`relative z-10 bg-surface border rounded-2xl overflow-hidden transition-all duration-200 flex flex-row h-full ${product.variant_count > 0 ? 'border-white/10 hover:border-white/20' : 'border-border hover:border-white/15'} hover:shadow-lg hover:shadow-black/20`}>
 
         {/* Image — left */}
         <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden self-stretch min-h-[10rem]">
@@ -213,12 +221,6 @@ function ProductCard({
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
               <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
-            </div>
-          )}
-          {/* Variant badge */}
-          {product.variant_count > 0 && (
-            <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-1.5 py-0.5">
-              <span className="text-[9px] font-bold text-white/70">+{product.variant_count}</span>
             </div>
           )}
         </div>
@@ -258,6 +260,14 @@ function ProductCard({
                 className="h-full bg-accent rounded-full"
                 style={{ width: `${scorePercent}%` }}
               />
+            </div>
+          )}
+
+          {/* Variant indicator */}
+          {product.variant_count > 0 && (
+            <div className="flex items-center gap-1.5 text-white/40">
+              <Layers className="w-3 h-3 flex-shrink-0" />
+              <span className="text-[11px] font-medium">{product.variant_count + 1}가지 옵션</span>
             </div>
           )}
 
