@@ -141,17 +141,23 @@ function ProductCard({
     ...product.variants,
   ]
   const [variantIdx, setVariantIdx] = useState(0)
+  const [animating, setAnimating] = useState(false)
+  const [animDir, setAnimDir] = useState<'left' | 'right'>('left')
   const current = allVariants[variantIdx]
   const hasVariants = allVariants.length > 1
 
-  const goPrev = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation()
-    setVariantIdx((i) => (i - 1 + allVariants.length) % allVariants.length)
+  const switchVariant = (dir: 'prev' | 'next') => {
+    const d = dir === 'next' ? 'left' : 'right'
+    setAnimDir(d)
+    setAnimating(true)
+    setTimeout(() => {
+      setVariantIdx((i) => dir === 'next' ? (i + 1) % allVariants.length : (i - 1 + allVariants.length) % allVariants.length)
+      setAnimating(false)
+    }, 160)
   }
-  const goNext = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation()
-    setVariantIdx((i) => (i + 1) % allVariants.length)
-  }
+
+  const goPrev = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); switchVariant('prev') }
+  const goNext = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); switchVariant('next') }
 
   // 2-column grid rows (카테고리별 분기)
   const batteryCell = {
@@ -211,14 +217,42 @@ function ProductCard({
 
   return (
     <Link href={`/product/${product.id}`} className="group block h-full relative">
-      {/* Stack effect — visible only when variants exist */}
+      {/* Stack effect */}
       {hasVariants && (
         <>
           <div className="absolute inset-x-4 bottom-[-6px] h-full rounded-2xl bg-surface border border-white/[0.04]" />
           <div className="absolute inset-x-2 bottom-[-3px] h-full rounded-2xl bg-surface border border-white/[0.07]" />
         </>
       )}
-      <div className={`relative z-10 bg-surface border rounded-2xl overflow-hidden transition-all duration-200 flex flex-row h-full ${hasVariants ? 'border-white/10 hover:border-white/20' : 'border-border hover:border-white/15'} hover:shadow-lg hover:shadow-black/20`}>
+
+      {/* Variant arrows — on card edges */}
+      {hasVariants && (
+        <>
+          <button
+            onClick={goPrev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white transition-all shadow-lg"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={goNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white transition-all shadow-lg"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
+
+      <div
+        className={`relative z-10 bg-surface border rounded-2xl overflow-hidden flex flex-row h-full transition-all duration-[160ms] hover:shadow-lg hover:shadow-black/20
+          ${hasVariants ? 'border-white/10 hover:border-white/20' : 'border-border hover:border-white/15'}
+          ${animating
+            ? animDir === 'left'
+              ? '-translate-x-2 opacity-0 scale-[0.98]'
+              : 'translate-x-2 opacity-0 scale-[0.98]'
+            : 'translate-x-0 opacity-100 scale-100'
+          }`}
+      >
 
         {/* Image — left */}
         <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden self-stretch min-h-[10rem]">
@@ -278,38 +312,6 @@ function ProductCard({
                 className="h-full bg-accent rounded-full"
                 style={{ width: `${scorePercent}%` }}
               />
-            </div>
-          )}
-
-          {/* Variant navigator */}
-          {hasVariants && (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={goPrev}
-                className="flex items-center justify-center w-5 h-5 rounded-md text-white/30 hover:text-white/80 hover:bg-white/5 transition-all flex-shrink-0"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-white/35 truncate text-center">
-                  {current.variant_name ?? product.name}
-                </p>
-                <div className="flex justify-center gap-1 mt-0.5">
-                  {allVariants.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVariantIdx(i) }}
-                      className={`w-1 h-1 rounded-full transition-colors ${i === variantIdx ? 'bg-accent' : 'bg-white/20 hover:bg-white/40'}`}
-                    />
-                  ))}
-                </div>
-              </div>
-              <button
-                onClick={goNext}
-                className="flex items-center justify-center w-5 h-5 rounded-md text-white/30 hover:text-white/80 hover:bg-white/5 transition-all flex-shrink-0"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
             </div>
           )}
 
