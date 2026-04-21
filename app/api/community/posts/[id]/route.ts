@@ -28,10 +28,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const supabase = makeServiceClient()
 
   // 조회수 증가
-  await supabase.rpc('increment_view', { post_id: id }).catch(async () => {
+  const { error: rpcErr } = await supabase.rpc('increment_view', { post_id: id })
+  if (rpcErr) {
     const { data: cur } = await supabase.from('community_posts').select('view_count').eq('id', id).single()
     if (cur) await supabase.from('community_posts').update({ view_count: (cur.view_count ?? 0) + 1 }).eq('id', id)
-  })
+  }
 
   const { data: post, error } = await supabase
     .from('community_posts')
