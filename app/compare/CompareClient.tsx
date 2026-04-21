@@ -678,6 +678,7 @@ function fmtGB(n: number): string {
 export default function CompareClient() {
   const searchParams = useSearchParams()
   const idsParam = searchParams.get('ids') ?? ''
+  const variantsParam = searchParams.get('variants') ?? ''
   const historyId = searchParams.get('history') ?? ''
   const { t, locale } = useI18n()
 
@@ -867,7 +868,14 @@ export default function CompareClient() {
       }
 
       setProducts(validProducts)
-      setSelectedVariantIds({})
+      // URL의 variants 파라미터로 초기 variant 선택 복원
+      const initialVariants = variantsParam
+        ? variantsParam.split(',').reduce((acc, vid, idx) => {
+            if (vid) acc[idx] = vid
+            return acc
+          }, {} as Record<number, string>)
+        : {}
+      setSelectedVariantIds(initialVariants)
       setLoading(false)
 
       const baseKey = makeVariantKey(ids, {})
@@ -1055,7 +1063,7 @@ export default function CompareClient() {
         }
       }),
     }
-    const gpuNames = products.map((p) => p.specs.gpuName ?? '')
+    const gpuNames = effectiveProducts.map((p) => p.specs.gpuName ?? '')
     const graphicsRow: SpecRowData = {
       label: 'GPU',
       sublabel: t('spec.benchmark'),

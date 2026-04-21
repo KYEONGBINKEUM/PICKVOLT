@@ -48,6 +48,7 @@ interface Product {
   stylus_support: boolean | null
   launch_year: number | null
   variants: {
+    id: string
     variant_name: string
     price_usd: number | null
     ram_gb: string | null
@@ -132,12 +133,18 @@ function ProductCard({
   const toggleCart = (e: React.MouseEvent) => {
     e.preventDefault()
     if (inCart) remove(product.id)
-    else if (!cartFull) add({ id: product.id, name: product.name, brand: product.brand, category: product.category })
+    else if (!cartFull) add({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      category: product.category,
+      variantId: current.id ?? undefined,
+    })
   }
 
   // Variant carousel
   const allVariants = [
-    { variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null },
+    { id: undefined, variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null },
     ...product.variants,
   ]
   const [variantIdx, setVariantIdx] = useState(0)

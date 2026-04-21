@@ -18,8 +18,10 @@ export default function CompareTray() {
 
   const handleCompare = () => {
     const ids = cart.map((p) => p.id).join(',')
+    const variants = cart.map((p) => p.variantId ?? '').join(',')
+    const hasVariants = cart.some((p) => p.variantId)
     clear()
-    router.push(`/compare?ids=${ids}`)
+    router.push(`/compare?ids=${ids}${hasVariants ? `&variants=${variants}` : ''}`)
   }
 
   return (

@@ -7,6 +7,7 @@ export interface CartProduct {
   name: string
   brand: string
   category: string
+  variantId?: string
 }
 
 interface CompareCartContext {

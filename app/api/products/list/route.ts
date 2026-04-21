@@ -131,13 +131,14 @@ export async function GET(req: NextRequest) {
     if (allIds.length > 0) {
       const { data: varRows } = await supabase
         .from('product_variants')
-        .select('product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, gpu_name')
+        .select('id, product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, gpu_name')
         .in('product_id', allIds)
         .order('sort_order')
       if (varRows) {
         for (const row of varRows) {
           if (!variantMap[row.product_id]) variantMap[row.product_id] = []
           variantMap[row.product_id].push({
+            id:           row.id,
             variant_name: row.variant_name,
             price_usd:    row.price_usd,
             ram_gb:       row.ram_gb,
