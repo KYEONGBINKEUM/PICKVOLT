@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, Chevro
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
+import CommunityRelated from '@/components/CommunityRelated'
 import { supabase } from '@/lib/supabase'
 
 interface Specs {
@@ -494,6 +495,7 @@ ${priceHTML}
             <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
           </div>
           <ReviewSection productId={product.id} />
+          <CommunityRelated productId={product.id} />
         </div>
       </div>
     </>

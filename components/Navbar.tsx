@@ -58,6 +58,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
     { href: '/categories/smartphone', label: t('cat.smartphone') },
     { href: '/categories/laptop',     label: t('cat.laptop')     },
     { href: '/categories/tablet',     label: t('cat.tablet')     },
+    { href: '/community', label: '커뮤니티' },
     { href: '/history', label: t('nav.history') },
     { href: '/pricing', label: t('nav.pro') },
   ]
