@@ -61,8 +61,9 @@ export function scoreCPU(
 }
 
 /** 랩탑/데스크탑 CPU 성능 점수 (0–100)
- *  CB Single 20% · CB Multi 25% · GB6 Single 15% · GB6 Multi 20%
- *  Passmark Single 10% · Passmark Multi 10%
+ *  Cinebench(33%) · Geekbench6(33%) · Passmark(34%) — 세 벤치마크 균등 배분
+ *  CB Single 13% · CB Multi 20% · GB6 Single 13% · GB6 Multi 20%
+ *  Passmark Single 17% · Passmark Multi 17%
  *  없는 항목의 가중치는 나머지에 비례 재배분
  *  최댓값은 DB 동적값(maxes) 우선, 없으면 fallback 사용 */
 export function scoreCPUDesktop(
@@ -77,18 +78,18 @@ export function scoreCPUDesktop(
 ): number {
   const CB_SINGLE_MAX = maxes?.cinebenchSingle || 200
   const CB_MULTI_MAX  = maxes?.cinebenchMulti  || 45000
-  const GB6S_MAX      = maxes?.gb6Single       || 3500
-  const GB6M_MAX      = maxes?.gb6Multi        || 18000
-  const PM_SINGLE_MAX = maxes?.passmarkSingle  || 4500
-  const PM_MULTI_MAX  = maxes?.passmarkMulti   || 55000
+  const GB6S_MAX      = maxes?.gb6Single       || 4200
+  const GB6M_MAX      = maxes?.gb6Multi        || 40000
+  const PM_SINGLE_MAX = maxes?.passmarkSingle  || 5000
+  const PM_MULTI_MAX  = maxes?.passmarkMulti   || 60000
 
   const configs = [
-    { value: cbSingle  || null, max: CB_SINGLE_MAX, weight: 20 },
-    { value: cbMulti   || null, max: CB_MULTI_MAX,  weight: 25 },
-    { value: gb6Single || null, max: GB6S_MAX,       weight: 15 },
+    { value: cbSingle  || null, max: CB_SINGLE_MAX, weight: 13 },
+    { value: cbMulti   || null, max: CB_MULTI_MAX,  weight: 20 },
+    { value: gb6Single || null, max: GB6S_MAX,       weight: 13 },
     { value: gb6Multi  || null, max: GB6M_MAX,       weight: 20 },
-    { value: pmSingle  || null, max: PM_SINGLE_MAX,  weight: 10 },
-    { value: pmMulti   || null, max: PM_MULTI_MAX,   weight: 10 },
+    { value: pmSingle  || null, max: PM_SINGLE_MAX,  weight: 17 },
+    { value: pmMulti   || null, max: PM_MULTI_MAX,   weight: 17 },
   ]
   const available = configs.filter((c) => c.value != null)
   if (available.length === 0) {
