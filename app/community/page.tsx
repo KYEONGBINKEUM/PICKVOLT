@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ChevronUp, MessageSquare, Eye, Flame, Clock, BarChart2 } from 'lucide-react'
+import { ChevronUp, MessageSquare, Eye, Flame, Clock, BarChart2, LayoutList, LayoutGrid } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 
@@ -21,9 +21,17 @@ interface Post {
   my_vote: boolean
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  forum: '포럼', review: '리뷰', compare: '비교투표',
+const TYPE_LABEL: Record<string, { label: string; color: string }> = {
+  forum:   { label: '포럼',   color: 'text-blue-400' },
+  review:  { label: '리뷰',   color: 'text-amber-400' },
+  compare: { label: '비교',   color: 'text-purple-400' },
 }
+
+const SORT_TABS = [
+  { key: 'hot',    label: '인기',   icon: Flame },
+  { key: 'latest', label: '최신',   icon: Clock },
+  { key: 'top',    label: '댓글순', icon: BarChart2 },
+]
 
 function timeAgo(d: string) {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
@@ -33,15 +41,58 @@ function timeAgo(d: string) {
   return `${Math.floor(s / 86400)}일 전`
 }
 
-function PostRow({ post, token, onVote }: {
-  post: Post
-  token: string | null
-  onVote: (id: string) => void
-}) {
+/* ── Compact row (Reddit list style) ── */
+function CompactRow({ post, token, onVote }: { post: Post; token: string | null; onVote: (id: string) => void }) {
+  const meta = TYPE_LABEL[post.type]
   return (
-    <div className="flex group">
-      {/* 업보트 */}
-      <div className="flex flex-col items-center pt-2 px-2 w-10 flex-shrink-0">
+    <div className="flex items-center gap-2 py-1.5 px-2 hover:bg-white/[0.03] rounded-lg group transition-colors">
+      {/* upvote */}
+      <div className="flex items-center gap-0.5 flex-shrink-0 w-12">
+        <button
+          onClick={e => { e.preventDefault(); if (token) onVote(post.id) }}
+          className={`p-0.5 transition-colors ${post.my_vote ? 'text-accent' : 'text-white/20 hover:text-accent'}`}
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+        <span className={`text-[11px] font-bold tabular-nums ${post.my_vote ? 'text-accent' : 'text-white/25'}`}>
+          {post.upvotes}
+        </span>
+      </div>
+
+      {/* type badge */}
+      <span className={`text-[10px] font-semibold flex-shrink-0 w-8 ${meta?.color ?? 'text-white/30'}`}>
+        {meta?.label}
+      </span>
+
+      {/* title */}
+      <Link href={`/community/posts/${post.id}`} className="flex-1 min-w-0">
+        <span className="text-sm text-white/75 group-hover:text-white transition-colors leading-snug line-clamp-1">
+          {post.title}
+          {post.comment_count > 0 && (
+            <span className="ml-1.5 text-[11px] text-accent font-semibold">[{post.comment_count}]</span>
+          )}
+        </span>
+      </Link>
+
+      {/* meta right */}
+      <div className="flex items-center gap-3 flex-shrink-0 text-[10px] text-white/20">
+        {post.rating != null && <span className="text-amber-400 font-bold">{post.rating}/10</span>}
+        <span>{post.user_display_name}</span>
+        <span>{timeAgo(post.created_at)}</span>
+        <span className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" />{post.comment_count}</span>
+        {post.view_count > 0 && <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{post.view_count}</span>}
+      </div>
+    </div>
+  )
+}
+
+/* ── Card row (Reddit default style) ── */
+function CardRow({ post, token, onVote }: { post: Post; token: string | null; onVote: (id: string) => void }) {
+  const meta = TYPE_LABEL[post.type]
+  return (
+    <div className="flex group border-b border-border/40 py-3 px-2 hover:bg-white/[0.02] transition-colors rounded-lg">
+      {/* upvote col */}
+      <div className="flex flex-col items-center pt-0.5 px-2 w-10 flex-shrink-0">
         <button
           onClick={e => { e.preventDefault(); if (token) onVote(post.id) }}
           className={`p-0.5 transition-colors ${post.my_vote ? 'text-accent' : 'text-white/20 hover:text-accent'}`}
@@ -53,11 +104,11 @@ function PostRow({ post, token, onVote }: {
         </span>
       </div>
 
-      {/* 콘텐츠 */}
-      <Link href={`/community/posts/${post.id}`} className="flex-1 py-2.5 pr-3 min-w-0">
-        {/* 메타 */}
+      {/* content */}
+      <Link href={`/community/posts/${post.id}`} className="flex-1 min-w-0 pr-2">
+        {/* meta top */}
         <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-[10px] font-medium text-white/30">{TYPE_LABEL[post.type]}</span>
+          <span className={`text-[10px] font-semibold ${meta?.color ?? 'text-white/30'}`}>{meta?.label}</span>
           <span className="text-white/15 text-[10px]">·</span>
           <span className="text-[10px] text-white/25">{post.user_display_name}</span>
           <span className="text-white/15 text-[10px]">·</span>
@@ -70,7 +121,7 @@ function PostRow({ post, token, onVote }: {
           )}
         </div>
 
-        {/* 제목 */}
+        {/* title */}
         <p className="text-sm font-medium text-white/80 group-hover:text-white transition-colors leading-snug line-clamp-2 mb-1.5">
           {post.title}
           {post.comment_count > 0 && (
@@ -78,12 +129,12 @@ function PostRow({ post, token, onVote }: {
           )}
         </p>
 
-        {/* 본문 미리보기 */}
+        {/* body preview */}
         {post.body && !/<[a-z]/i.test(post.body) && (
           <p className="text-xs text-white/25 line-clamp-1 mb-1.5 leading-relaxed">{post.body}</p>
         )}
 
-        {/* 하단 메타 */}
+        {/* bottom meta */}
         <div className="flex items-center gap-3 text-[11px] text-white/20">
           <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{post.comment_count}개 댓글</span>
           {post.view_count > 0 && <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.view_count}</span>}
@@ -93,14 +144,24 @@ function PostRow({ post, token, onVote }: {
   )
 }
 
-function PostSkeleton() {
+function PostSkeleton({ compact }: { compact: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 py-1.5 px-2 animate-pulse">
+        <div className="w-12 h-3 bg-white/5 rounded" />
+        <div className="w-8 h-3 bg-white/5 rounded" />
+        <div className="flex-1 h-3 bg-white/5 rounded" />
+        <div className="w-32 h-3 bg-white/5 rounded" />
+      </div>
+    )
+  }
   return (
-    <div className="flex animate-pulse py-2">
-      <div className="w-10 flex-shrink-0 flex flex-col items-center pt-2 gap-1">
+    <div className="flex py-3 px-2 animate-pulse border-b border-border/40">
+      <div className="w-10 flex-shrink-0 flex flex-col items-center pt-1 gap-1">
         <div className="w-5 h-5 bg-white/5 rounded" />
         <div className="w-4 h-2.5 bg-white/5 rounded" />
       </div>
-      <div className="flex-1 py-0.5 space-y-2">
+      <div className="flex-1 space-y-2">
         <div className="h-2 w-32 bg-white/5 rounded" />
         <div className="h-3.5 w-3/4 bg-white/5 rounded" />
         <div className="h-2.5 w-full bg-white/5 rounded" />
@@ -110,26 +171,14 @@ function PostSkeleton() {
   )
 }
 
-const TYPE_TABS = [
-  { key: '',        label: '전체' },
-  { key: 'forum',   label: '포럼' },
-  { key: 'review',  label: '리뷰' },
-  { key: 'compare', label: '비교투표' },
-]
-const SORT_TABS = [
-  { key: 'hot',    label: '인기',   icon: Flame },
-  { key: 'latest', label: '최신',   icon: Clock },
-  { key: 'top',    label: '댓글순', icon: BarChart2 },
-]
-
 export default function CommunityPage() {
   const [posts, setPosts]     = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [type, setType]       = useState('')
   const [sort, setSort]       = useState('hot')
   const [page, setPage]       = useState(1)
   const [total, setTotal]     = useState(0)
   const [token, setToken]     = useState<string | null>(null)
+  const [compact, setCompact] = useState(false)
 
   const LIMIT = 25
 
@@ -140,16 +189,15 @@ export default function CommunityPage() {
   const load = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams({ sort, page: String(page), limit: String(LIMIT) })
-    if (type) params.set('type', type)
     const headers: Record<string, string> = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     fetch(`/api/community/posts?${params}`, { headers })
       .then(r => r.json())
       .then(d => { setPosts(d.posts ?? []); setTotal(d.total ?? 0) })
       .finally(() => setLoading(false))
-  }, [sort, page, type, token])
+  }, [sort, page, token])
 
-  useEffect(() => { setPage(1) }, [type, sort])
+  useEffect(() => { setPage(1) }, [sort])
   useEffect(() => { load() }, [load])
 
   const handleVote = async (postId: string) => {
@@ -175,37 +223,47 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-[740px] mx-auto px-4 pt-24 pb-20">
+      <div className="max-w-[740px] mx-auto px-4 pt-[88px] pb-20">
 
-        {/* 정렬 탭 */}
-        <div className="flex items-center gap-1 mb-1 border-b border-border/50">
-          {TYPE_TABS.map(t => (
-            <button key={t.key} onClick={() => setType(t.key)}
-              className={`px-3.5 py-2.5 text-xs font-semibold border-b-2 -mb-px transition-all ${
-                type === t.key ? 'border-accent text-white' : 'border-transparent text-white/30 hover:text-white/60'
-              }`}>
-              {t.label}
-            </button>
-          ))}
-          <div className="ml-auto flex items-center gap-0.5 mb-1">
+        {/* 필터 바 */}
+        <div className="flex items-center gap-1 mb-2 border-b border-border/50 pb-1">
+          <div className="flex items-center gap-0.5">
             {SORT_TABS.map(s => {
               const Icon = s.icon
               return (
                 <button key={s.key} onClick={() => setSort(s.key)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
-                    sort === s.key ? 'bg-white/8 text-white' : 'text-white/25 hover:text-white/60'
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    sort === s.key ? 'bg-white/8 text-white' : 'text-white/30 hover:text-white/60'
                   }`}>
                   <Icon className="w-3 h-3" />{s.label}
                 </button>
               )
             })}
           </div>
+
+          {/* 뷰 토글 */}
+          <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+            <button
+              onClick={() => setCompact(false)}
+              className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
+              title="카드 뷰"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setCompact(true)}
+              className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
+              title="컴팩트 뷰"
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* 게시물 목록 */}
-        <div className="divide-y divide-border/40">
+        <div className={compact ? 'divide-y divide-border/30' : ''}>
           {loading
-            ? Array.from({ length: 10 }).map((_, i) => <PostSkeleton key={i} />)
+            ? Array.from({ length: 12 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)
             : posts.length === 0
             ? (
               <div className="py-24 text-center">
@@ -213,7 +271,9 @@ export default function CommunityPage() {
               </div>
             )
             : posts.map(post => (
-              <PostRow key={post.id} post={post} token={token} onVote={handleVote} />
+              compact
+                ? <CompactRow key={post.id} post={post} token={token} onVote={handleVote} />
+                : <CardRow    key={post.id} post={post} token={token} onVote={handleVote} />
             ))
           }
         </div>

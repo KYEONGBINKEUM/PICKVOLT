@@ -101,16 +101,6 @@ export default function Navbar({ showSearch }: NavbarProps) {
         <div className="hidden md:flex items-center gap-1">
           {isCommunity ? (
             <>
-              {communityLinks.map(l => (
-                <Link key={l.href} href={l.href}
-                  className={clsx(
-                    'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                    isActive(l.href, l.exact) ? 'text-white' : 'text-white/35 hover:text-white/70'
-                  )}>
-                  {l.label}
-                </Link>
-              ))}
-              <div className="w-px h-4 bg-border mx-2" />
               <Link href="/community/write"
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-lg transition-colors">
                 <PenSquare className="w-3.5 h-3.5" /> {t('community.write')}

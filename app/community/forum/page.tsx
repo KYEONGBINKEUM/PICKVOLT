@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { MessageSquare, PenSquare, Pin, Eye, ThumbsUp, Flame, Clock, BarChart2 } from 'lucide-react'
+import { MessageSquare, Pin, Eye, ThumbsUp, Flame, Clock, BarChart2 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 
 interface Post {
@@ -73,24 +73,14 @@ export default function ForumPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-inner mx-auto px-6 pt-24 pb-20">
-        <div className="flex gap-5">
+      <main className="max-w-[740px] mx-auto px-4 pt-[88px] pb-20">
 
-          {/* ── 메인 게시판 ── */}
-          <div className="flex-1 min-w-0">
-
-            {/* 헤더 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-purple-400" />
-                <h1 className="text-lg font-black text-white">포럼</h1>
-                <span className="text-xs text-white/30">{total > 0 ? `${total.toLocaleString()}개` : ''}</span>
-              </div>
-              <Link href="/community/write?type=forum"
-                className="flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors">
-                <PenSquare className="w-3.5 h-3.5" /> 글 작성
-              </Link>
-            </div>
+          {/* 헤더 */}
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="w-4 h-4 text-purple-400" />
+            <h1 className="text-lg font-black text-white">포럼</h1>
+            <span className="text-xs text-white/30">{total > 0 ? `${total.toLocaleString()}개` : ''}</span>
+          </div>
 
             {/* 정렬 탭 */}
             <div className="flex gap-1 mb-0 border-b border-border">
@@ -230,39 +220,6 @@ export default function ForumPage() {
                 </button>
               </div>
             )}
-          </div>
-
-          {/* ── 사이드바 ── */}
-          <aside className="w-56 flex-shrink-0 hidden lg:flex flex-col gap-4">
-            {/* 게시판 이동 */}
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">게시판</p>
-              <div className="space-y-0.5">
-                {[
-                  { href: '/community', label: '전체 피드' },
-                  { href: '/community/forum', label: '포럼', active: true },
-                  { href: '/community/reviews', label: '리뷰' },
-                  { href: '/community/compare', label: '비교투표' },
-                ].map(item => (
-                  <Link key={item.href} href={item.href}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
-                      item.active ? 'bg-white/8 text-white font-semibold' : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* 글쓰기 */}
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <Link href="/community/write?type=forum"
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-accent/10 border border-accent/20 text-accent text-sm font-bold rounded-lg hover:bg-accent/15 transition-colors">
-                <PenSquare className="w-4 h-4" /> 글 작성하기
-              </Link>
-            </div>
-          </aside>
-        </div>
       </main>
     </div>
   )

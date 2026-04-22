@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Star, PenSquare, Eye, Flame, Clock } from 'lucide-react'
+import { Star, Eye, Flame, Clock } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 
 interface Post {
@@ -86,24 +86,14 @@ export default function ReviewsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-inner mx-auto px-6 pt-24 pb-20">
-        <div className="flex gap-5">
+      <main className="max-w-[740px] mx-auto px-4 pt-[88px] pb-20">
 
-          {/* ── 메인 게시판 ── */}
-          <div className="flex-1 min-w-0">
-
-            {/* 헤더 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-blue-400" />
-                <h1 className="text-lg font-black text-white">리뷰</h1>
-                <span className="text-xs text-white/30">{total > 0 ? `${total.toLocaleString()}개` : ''}</span>
-              </div>
-              <Link href="/community/write?type=review"
-                className="flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors">
-                <PenSquare className="w-3.5 h-3.5" /> 리뷰 작성
-              </Link>
-            </div>
+          {/* 헤더 */}
+          <div className="flex items-center gap-2 mb-4">
+            <Star className="w-4 h-4 text-blue-400" />
+            <h1 className="text-lg font-black text-white">리뷰</h1>
+            <span className="text-xs text-white/30">{total > 0 ? `${total.toLocaleString()}개` : ''}</span>
+          </div>
 
             {/* 카테고리 + 정렬 탭 */}
             <div className="flex items-center gap-1 mb-0 border-b border-border">
@@ -246,36 +236,6 @@ export default function ReviewsPage() {
                   className="px-2.5 py-1.5 text-xs bg-surface border border-border rounded-lg text-white/35 hover:text-white disabled:opacity-30 transition-colors">»</button>
               </div>
             )}
-          </div>
-
-          {/* ── 사이드바 ── */}
-          <aside className="w-56 flex-shrink-0 hidden lg:flex flex-col gap-4">
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">게시판</p>
-              <div className="space-y-0.5">
-                {[
-                  { href: '/community', label: '전체 피드' },
-                  { href: '/community/forum', label: '포럼' },
-                  { href: '/community/reviews', label: '리뷰', active: true },
-                  { href: '/community/compare', label: '비교투표' },
-                ].map(item => (
-                  <Link key={item.href} href={item.href}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
-                      item.active ? 'bg-white/8 text-white font-semibold' : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}>
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-            <div className="bg-surface border border-border rounded-xl p-4">
-              <Link href="/community/write?type=review"
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-bold rounded-lg hover:bg-blue-500/15 transition-colors">
-                <Star className="w-4 h-4" /> 리뷰 작성하기
-              </Link>
-            </div>
-          </aside>
-        </div>
       </main>
     </div>
   )
