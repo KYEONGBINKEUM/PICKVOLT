@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
-import { User, Menu, X } from 'lucide-react'
+import { User, Menu, X, PenSquare } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
@@ -22,7 +22,6 @@ export default function Navbar({ showSearch }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    // getSession reads from localStorage — no network round-trip, resolves almost instantly
     let settled = false
     supabase.auth.getSession().then(({ data }) => {
       settled = true
@@ -30,76 +29,110 @@ export default function Navbar({ showSearch }: NavbarProps) {
       setAuthReady(true)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      // Ignore events that arrive before the initial session check completes
-      // to prevent the login button from flashing for logged-in users
       if (!settled) return
       setLoggedIn(!!session)
     })
     return () => subscription.unsubscribe()
   }, [])
 
-  // 라우트 변경 시 모바일 메뉴 닫기
+  useEffect(() => { setMobileOpen(false) }, [pathname])
   useEffect(() => {
-    setMobileOpen(false)
-  }, [pathname])
-
-  // 메뉴 열릴 때 스크롤 막기
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const navLinks = [
-    { href: '/', label: t('nav.compare') },
-    { href: '/categories/smartphone', label: t('cat.smartphone') },
-    { href: '/categories/laptop',     label: t('cat.laptop')     },
-    { href: '/categories/tablet',     label: t('cat.tablet')     },
-    { href: '/community', label: '커뮤니티' },
-    { href: '/history', label: t('nav.history') },
-    { href: '/pricing', label: t('nav.pro') },
+  const isCommunity = pathname.startsWith('/community')
+
+  // 커뮤니티 섹션 우측 링크
+  const communityLinks = [
+    { href: '/community/forum',   label: t('community.forum') },
+    { href: '/community/reviews', label: t('community.reviews') },
+    { href: '/community',         label: t('community.all'), exact: true },
   ]
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + '/')
+  // Compare 섹션 우측 링크
+  const compareLinks = [
+    { href: '/categories/smartphone', label: t('cat.smartphone') },
+    { href: '/categories/laptop',     label: t('cat.laptop') },
+    { href: '/categories/tablet',     label: t('cat.tablet') },
+    { href: '/history',               label: t('nav.history') },
+  ]
+
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
 
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border/50 bg-background/80 backdrop-blur-md">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse-dot" />
-          <span className="font-bold text-white text-base tracking-tight">pickvolt</span>
-        </Link>
 
-        {/* Center search — desktop only */}
-        {showSearch && (
+        {/* ── 좌측: 로고 + 메인 탭 ── */}
+        <div className="flex items-center gap-1">
+          <Link href="/" className="flex items-center gap-2 mr-4 flex-shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse-dot" />
+            <span className="font-bold text-white text-base tracking-tight">pickvolt</span>
+          </Link>
+
+          <div className="hidden md:flex items-center">
+            <Link href="/"
+              className={clsx(
+                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
+                !isCommunity ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
+              )}>
+              Compare
+            </Link>
+            <Link href="/community"
+              className={clsx(
+                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
+                isCommunity ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
+              )}>
+              {t('nav.community')}
+            </Link>
+          </div>
+        </div>
+
+        {/* ── 중앙: 검색 (Compare 섹션, showSearch 시) ── */}
+        {showSearch && !isCommunity && (
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <SearchBar />
           </div>
         )}
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-5">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={clsx(
-                'text-sm font-semibold capitalize transition-colors',
-                isActive(link.href) ? 'text-white' : 'text-white/50 hover:text-white/80'
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+        {/* ── 우측: 섹션별 링크 + 글쓰기/유저 ── */}
+        <div className="hidden md:flex items-center gap-1">
+          {isCommunity ? (
+            <>
+              {communityLinks.map(l => (
+                <Link key={l.href} href={l.href}
+                  className={clsx(
+                    'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
+                    isActive(l.href, l.exact) ? 'text-white' : 'text-white/35 hover:text-white/70'
+                  )}>
+                  {l.label}
+                </Link>
+              ))}
+              <div className="w-px h-4 bg-border mx-2" />
+              <Link href="/community/write"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-lg transition-colors">
+                <PenSquare className="w-3.5 h-3.5" /> {t('community.write')}
+              </Link>
+            </>
+          ) : (
+            compareLinks.map(l => (
+              <Link key={l.href} href={l.href}
+                className={clsx(
+                  'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
+                  isActive(l.href) ? 'text-white' : 'text-white/35 hover:text-white/70'
+                )}>
+                {l.label}
+              </Link>
+            ))
+          )}
+
+          <div className="w-px h-4 bg-border mx-2" />
 
           {authReady && (
             loggedIn ? (
-              <Link href="/mypage" className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors">
+              <Link href="/mypage" className="text-white/40 hover:text-white transition-colors p-1.5">
                 <User className="w-4 h-4" />
               </Link>
             ) : (
@@ -108,94 +141,93 @@ export default function Navbar({ showSearch }: NavbarProps) {
               </Link>
             )
           )}
-
           <LocalePopup />
         </div>
 
-        {/* Mobile right side */}
+        {/* ── 모바일 우측 ── */}
         <div className="flex md:hidden items-center gap-3">
           <LocalePopup />
           {authReady && loggedIn && (
             <Link href="/mypage" className="text-white/50 hover:text-white transition-colors">
-              <User className="w-4.5 h-4.5" />
+              <User className="w-4 h-4" />
             </Link>
           )}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
+          <button onClick={() => setMobileOpen(!mobileOpen)}
             className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-            aria-label="메뉴 열기"
-          >
+            aria-label="메뉴 열기">
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </nav>
 
-      {/* Mobile drawer overlay */}
+      {/* 모바일 오버레이 */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Mobile drawer — slides down from top */}
-      <div
-        className={clsx(
-          'fixed top-0 left-0 right-0 z-40 md:hidden bg-background border-b border-border shadow-2xl transition-transform duration-300 ease-in-out',
-          mobileOpen ? 'translate-y-0' : '-translate-y-full'
-        )}
-      >
-        {/* drawer header (같은 높이로 맞춤) */}
+      {/* 모바일 드로어 */}
+      <div className={clsx(
+        'fixed top-0 left-0 right-0 z-40 md:hidden bg-background border-b border-border shadow-2xl transition-transform duration-300 ease-in-out',
+        mobileOpen ? 'translate-y-0' : '-translate-y-full'
+      )}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
           <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
             <span className="w-2.5 h-2.5 rounded-full bg-accent" />
             <span className="font-bold text-white text-base tracking-tight">pickvolt</span>
           </Link>
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-          >
+          <button onClick={() => setMobileOpen(false)}
+            className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Nav links */}
         <div className="px-4 py-3 space-y-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className={clsx(
-                'flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
-                isActive(link.href)
-                  ? 'bg-accent/10 text-accent'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
-              )}
-            >
-              {link.label}
+          <Link href="/" onClick={() => setMobileOpen(false)}
+            className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
+              !isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
+            Compare
+          </Link>
+          <Link href="/community" onClick={() => setMobileOpen(false)}
+            className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
+              isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
+            {t('nav.community')}
+          </Link>
+
+          <div className="pt-2 pb-1 px-3">
+            <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest">
+              {isCommunity ? t('nav.community') : t('nav.compare')}
+            </p>
+          </div>
+
+          {(isCommunity ? communityLinks : compareLinks).map(l => (
+            <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
+              className={clsx('flex items-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors',
+                isActive(l.href, (l as { exact?: boolean }).exact)
+                  ? 'bg-white/8 text-white'
+                  : 'text-white/50 hover:text-white hover:bg-white/5')}>
+              {l.label}
             </Link>
           ))}
+
+          {isCommunity && (
+            <Link href="/community/write" onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-accent hover:bg-accent/10 transition-colors">
+              <PenSquare className="w-4 h-4" /> 글쓰기
+            </Link>
+          )}
         </div>
 
-        {/* Auth */}
         {authReady && (
           <div className="px-4 pb-6 pt-2 border-t border-border/50">
             {loggedIn ? (
-              <Link
-                href="/mypage"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-              >
-                <User className="w-4 h-4" />
-                My Page
+              <Link href="/mypage" onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                <User className="w-4 h-4" /> My Page
               </Link>
             ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center w-full py-3 rounded-xl text-sm font-semibold bg-accent text-black hover:bg-accent/90 transition-colors"
-              >
+              <Link href="/login" onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 transition-colors">
                 {t('auth.signin')}
               </Link>
             )}
