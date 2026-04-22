@@ -73,7 +73,7 @@ export default function ForumPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-[1080px] mx-auto px-4 py-6">
+      <main className="max-w-inner mx-auto px-6 pt-24 pb-20">
         <div className="flex gap-5">
 
           {/* ── 메인 게시판 ── */}
@@ -239,16 +239,16 @@ export default function ForumPage() {
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">게시판</p>
               <div className="space-y-0.5">
                 {[
-                  { href: '/community', label: '전체 피드', emoji: '🏠' },
-                  { href: '/community/forum', label: '포럼', emoji: '💬', active: true },
-                  { href: '/community/reviews', label: '리뷰', emoji: '⭐' },
-                  { href: '/community/compare', label: '비교투표', emoji: '⚖️' },
+                  { href: '/community', label: '전체 피드' },
+                  { href: '/community/forum', label: '포럼', active: true },
+                  { href: '/community/reviews', label: '리뷰' },
+                  { href: '/community/compare', label: '비교투표' },
                 ].map(item => (
                   <Link key={item.href} href={item.href}
                     className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-colors ${
                       item.active ? 'bg-white/8 text-white font-semibold' : 'text-white/40 hover:text-white hover:bg-white/5'
                     }`}>
-                    <span className="text-sm">{item.emoji}</span> {item.label}
+                    {item.label}
                   </Link>
                 ))}
               </div>

@@ -4,16 +4,26 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X, Plus, Search, Bold, Italic, Quote, Code, List, Link2, ChevronLeft } from 'lucide-react'
+import {
+  X, Plus, Search, Bold, Italic, Quote, Code, List, Link2,
+  ChevronLeft, ImageIcon, Loader2,
+} from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 
 type PostType = 'review' | 'forum' | 'compare'
+
 const CATEGORIES = [
   { key: 'laptop', label: '랩탑' },
   { key: 'mobile', label: '모바일' },
   { key: 'tablet', label: '태블릿' },
   { key: 'other',  label: '기타' },
+]
+
+const TYPE_OPTIONS: { key: PostType; label: string; desc: string }[] = [
+  { key: 'forum',   label: '포럼',    desc: '자유로운 정보 공유 및 질문' },
+  { key: 'review',  label: '리뷰',    desc: '제품 사용 후기 작성' },
+  { key: 'compare', label: '비교투표', desc: '제품 A/B 비교 투표 만들기' },
 ]
 
 interface ProductResult { id: string; name: string; brand: string; image_url: string | null }
@@ -42,7 +52,7 @@ function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => 
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="제품 검색 (선택사항)"
           className="flex-1 bg-transparent text-sm text-white placeholder-white/25 outline-none" />
-        {loading && <div className="w-3 h-3 border border-white/20 border-t-white/60 rounded-full animate-spin" />}
+        {loading && <Loader2 className="w-3 h-3 text-white/30 animate-spin" />}
       </div>
       {results.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-surface-2 border border-border rounded-xl overflow-hidden z-10 shadow-2xl">
@@ -66,11 +76,14 @@ function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => 
   )
 }
 
-// 마크다운 툴바 - textarea ref에 직접 삽입
-function EditorToolbar({ textareaRef, onChange }: {
+function EditorToolbar({ textareaRef, onChange, token }: {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
   onChange: (val: string) => void
+  token: string | null
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
   const wrap = (before: string, after = before, placeholder = '텍스트') => {
     const el = textareaRef.current
     if (!el) return
@@ -79,10 +92,7 @@ function EditorToolbar({ textareaRef, onChange }: {
     const sel   = el.value.slice(start, end) || placeholder
     const newVal = el.value.slice(0, start) + before + sel + after + el.value.slice(end)
     onChange(newVal)
-    setTimeout(() => {
-      el.focus()
-      el.setSelectionRange(start + before.length, start + before.length + sel.length)
-    }, 0)
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + before.length, start + before.length + sel.length) }, 0)
   }
 
   const linePrefix = (prefix: string) => {
@@ -95,13 +105,44 @@ function EditorToolbar({ textareaRef, onChange }: {
     setTimeout(() => { el.focus(); el.setSelectionRange(start + prefix.length, start + prefix.length) }, 0)
   }
 
+  const insertText = (text: string) => {
+    const el = textareaRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const newVal = el.value.slice(0, start) + text + el.value.slice(start)
+    onChange(newVal)
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + text.length, start + text.length) }, 0)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !token) return
+    if (file.size > 10 * 1024 * 1024) { alert('10MB 이하 이미지만 업로드할 수 있습니다'); return }
+
+    setUploading(true)
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage
+        .from('community-images')
+        .upload(path, file, { upsert: false })
+      if (error) { alert('이미지 업로드 실패: ' + error.message); return }
+
+      const { data } = supabase.storage.from('community-images').getPublicUrl(path)
+      insertText(`![이미지](${data.publicUrl})\n`)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const tools = [
-    { icon: Bold,   title: '굵게',    action: () => wrap('**', '**', '굵은 텍스트') },
-    { icon: Italic, title: '기울임',  action: () => wrap('_', '_', '기울임 텍스트') },
-    { icon: Quote,  title: '인용',    action: () => linePrefix('> ') },
-    { icon: Code,   title: '코드',    action: () => wrap('`', '`', '코드') },
-    { icon: List,   title: '목록',    action: () => linePrefix('- ') },
-    { icon: Link2,  title: '링크',    action: () => wrap('[', '](https://)', '링크 텍스트') },
+    { icon: Bold,   title: '굵게',   action: () => wrap('**', '**', '굵은 텍스트') },
+    { icon: Italic, title: '기울임', action: () => wrap('_', '_', '기울임 텍스트') },
+    { icon: Quote,  title: '인용',   action: () => linePrefix('> ') },
+    { icon: Code,   title: '코드',   action: () => wrap('`', '`', '코드') },
+    { icon: List,   title: '목록',   action: () => linePrefix('- ') },
+    { icon: Link2,  title: '링크',   action: () => wrap('[', '](https://)', '링크 텍스트') },
   ]
 
   return (
@@ -112,6 +153,15 @@ function EditorToolbar({ textareaRef, onChange }: {
           <Icon className="w-3.5 h-3.5" />
         </button>
       ))}
+      <div className="w-px h-4 bg-border mx-1" />
+      {/* 이미지 업로드 */}
+      <button type="button" title="이미지 첨부"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors disabled:opacity-30">
+        {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+      </button>
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
       <span className="ml-auto text-[9px] text-white/20 pr-1">마크다운 지원</span>
     </div>
   )
@@ -200,8 +250,9 @@ function WritePageInner() {
 
   if (authed === false) {
     return (
-      <div className="min-h-screen bg-background"><Navbar />
-        <div className="flex flex-col items-center justify-center py-32 gap-4">
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center py-40 gap-4">
           <p className="text-white/40 text-sm">로그인이 필요합니다</p>
           <Link href="/login" className="bg-accent text-white text-sm font-bold px-6 py-2.5 rounded-xl">로그인</Link>
         </div>
@@ -209,40 +260,34 @@ function WritePageInner() {
     )
   }
 
-  const TYPE_OPTIONS: { key: PostType; label: string; desc: string }[] = [
-    { key: 'forum',   label: '💬 포럼',    desc: '자유로운 정보 공유 및 질문' },
-    { key: 'review',  label: '⭐ 리뷰',    desc: '제품 사용 후기 작성' },
-    { key: 'compare', label: '⚖️ 비교투표', desc: '제품 A/B 비교 투표 만들기' },
-  ]
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-[720px] mx-auto px-4 py-6">
+      <div className="max-w-[720px] mx-auto px-6 pt-24 pb-20">
 
         {/* 헤더 */}
-        <div className="flex items-center gap-3 mb-6">
-          <Link href="/community" className="text-white/30 hover:text-white/60 transition-colors">
+        <div className="flex items-center gap-3 mb-8">
+          <Link href="/community" className="text-white/25 hover:text-white/60 transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <h1 className="text-xl font-black text-white">글 작성</h1>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
 
           {/* 유형 선택 */}
           <div>
-            <p className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">유형 선택</p>
+            <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">유형</p>
             <div className="grid grid-cols-3 gap-2">
               {TYPE_OPTIONS.map(t => (
                 <button key={t.key} onClick={() => setType(t.key)}
                   className={`py-3 px-3 rounded-xl text-left transition-all border ${
                     type === t.key
-                      ? 'bg-accent/10 border-accent/40 shadow-sm'
-                      : 'bg-surface border-border hover:border-white/15'
+                      ? 'bg-white/5 border-white/20'
+                      : 'bg-surface border-border hover:border-white/10'
                   }`}>
-                  <p className="text-xs font-bold text-white mb-0.5">{t.label}</p>
-                  <p className={`text-[10px] leading-relaxed ${type === t.key ? 'text-white/50' : 'text-white/25'}`}>{t.desc}</p>
+                  <p className={`text-xs font-bold mb-0.5 ${type === t.key ? 'text-white' : 'text-white/50'}`}>{t.label}</p>
+                  <p className="text-[10px] text-white/25 leading-relaxed">{t.desc}</p>
                 </button>
               ))}
             </div>
@@ -251,7 +296,7 @@ function WritePageInner() {
           {/* 카테고리 (리뷰만) */}
           {type === 'review' && (
             <div>
-              <p className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">카테고리</p>
+              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">카테고리</p>
               <div className="flex gap-2 flex-wrap">
                 {CATEGORIES.map(c => (
                   <button key={c.key} onClick={() => setCategory(c.key)}
@@ -269,42 +314,42 @@ function WritePageInner() {
 
           {/* 제목 */}
           <div>
-            <p className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">제목</p>
+            <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">제목</p>
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120}
               placeholder={type === 'compare' ? '예: 맥북 M5 vs 갤럭시북 5 어떤게 나아요?' : '제목을 입력하세요'}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none focus:border-white/25 transition-colors" />
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
             <p className="text-[10px] text-white/20 text-right mt-1">{title.length} / 120</p>
           </div>
 
           {/* 비교투표 옵션 */}
           {type === 'compare' && (
             <div>
-              <p className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">투표 항목</p>
+              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">투표 항목</p>
               <div className="space-y-3">
                 {options.map((opt, i) => (
                   <div key={i} className="bg-surface border border-border rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black text-white/60">
+                      <span className="w-5 h-5 rounded-full bg-white/8 flex items-center justify-center text-[10px] font-black text-white/50">
                         {String.fromCharCode(65 + i)}
                       </span>
-                      <p className="text-xs font-semibold text-white/50">{i + 1}번 항목</p>
+                      <p className="text-xs text-white/40">{i + 1}번 항목</p>
                     </div>
                     <input value={opt.label}
                       onChange={e => setOptions(prev => prev.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
                       placeholder={`항목 ${i + 1} 이름`}
-                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors" />
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
                     <ProductSearch
                       onSelect={p => handleOptionProductSelect(p, i)}
                       exclude={options.map(o => o.product_id).filter(Boolean) as string[]}
                     />
                     {opt.product_id && (
-                      <p className="text-[10px] text-accent flex items-center gap-1">✓ 제품 연결됨</p>
+                      <p className="text-[10px] text-accent/70">제품 연결됨</p>
                     )}
                   </div>
                 ))}
                 {options.length < 4 && (
                   <button onClick={() => setOptions(p => [...p, { label: '', product_id: null, image_url: null }])}
-                    className="w-full py-3 border border-dashed border-border rounded-xl text-xs text-white/30 hover:text-white/60 hover:border-white/20 transition-colors flex items-center justify-center gap-1.5">
+                    className="w-full py-3 border border-dashed border-border rounded-xl text-xs text-white/25 hover:text-white/50 hover:border-white/15 transition-colors flex items-center justify-center gap-1.5">
                     <Plus className="w-3.5 h-3.5" /> 항목 추가 (최대 4개)
                   </button>
                 )}
@@ -312,20 +357,20 @@ function WritePageInner() {
             </div>
           )}
 
-          {/* 본문 에디터 (비교투표 외) */}
+          {/* 본문 에디터 */}
           {type !== 'compare' && (
             <div>
-              <p className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">본문</p>
-              <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/25 transition-colors">
-                <EditorToolbar textareaRef={textareaRef} onChange={setBody} />
+              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">본문</p>
+              <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
+                <EditorToolbar textareaRef={textareaRef} onChange={setBody} token={token} />
                 <textarea ref={textareaRef} value={body} onChange={e => setBody(e.target.value)}
-                  rows={10} maxLength={5000}
+                  rows={12} maxLength={5000}
                   placeholder={
                     type === 'review'
                       ? '제품을 사용해본 솔직한 후기를 남겨주세요.\n\n장점:\n단점:\n총평:'
                       : '자유롭게 의견이나 정보를 공유해보세요.'
                   }
-                  className="w-full bg-surface px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none leading-relaxed font-mono" />
+                  className="w-full bg-surface px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none leading-relaxed" />
               </div>
               <p className="text-[10px] text-white/20 text-right mt-1">{body.length} / 5000</p>
             </div>
@@ -334,17 +379,17 @@ function WritePageInner() {
           {/* 평점 (리뷰만) */}
           {type === 'review' && (
             <div>
-              <p className="text-xs text-white/40 mb-2 font-semibold uppercase tracking-wider">평점</p>
+              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">평점</p>
               <div className="bg-surface border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 flex-wrap mb-3">
                   {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                     <button key={n} onClick={() => setRating(n)}
                       className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border ${
                         rating === n
-                          ? 'bg-accent border-accent text-white shadow-sm'
+                          ? 'bg-accent border-accent text-white'
                           : rating > n
-                          ? 'bg-accent/20 border-accent/30 text-accent'
-                          : 'bg-white/5 border-border text-white/30 hover:bg-white/10'
+                          ? 'bg-accent/15 border-accent/20 text-accent/70'
+                          : 'bg-white/5 border-border text-white/25 hover:bg-white/8'
                       }`}>
                       {n}
                     </button>
@@ -352,28 +397,28 @@ function WritePageInner() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-3xl font-black text-accent">{rating}</span>
-                  <span className="text-sm text-white/30">/10</span>
-                  <span className="text-xs text-white/40 ml-1">
-                    {rating >= 9 ? '완벽해요!' : rating >= 7 ? '좋아요' : rating >= 5 ? '보통이에요' : '아쉬워요'}
+                  <span className="text-sm text-white/25">/10</span>
+                  <span className="text-xs text-white/35 ml-1">
+                    {rating >= 9 ? '완벽해요' : rating >= 7 ? '좋아요' : rating >= 5 ? '보통이에요' : '아쉬워요'}
                   </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 제품 태그 (비교투표 제외) */}
+          {/* 제품 태그 */}
           {type !== 'compare' && (
             <div>
-              <p className="text-xs text-white/40 mb-1 font-semibold uppercase tracking-wider">
-                제품 태그 <span className="text-white/20 normal-case font-normal">(선택 · 제품 상세 페이지에 노출)</span>
+              <p className="text-[10px] text-white/30 mb-1 font-semibold uppercase tracking-widest">
+                제품 태그 <span className="text-white/15 normal-case font-normal">(선택)</span>
               </p>
               {products.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {products.map(p => (
                     <div key={p.id} className="flex items-center gap-1.5 bg-surface border border-border rounded-full px-2.5 py-1">
-                      <span className="text-xs text-white/60 truncate max-w-[160px]">{p.name}</span>
+                      <span className="text-xs text-white/55 truncate max-w-[160px]">{p.name}</span>
                       <button onClick={() => setProducts(prev => prev.filter(x => x.id !== p.id))}
-                        className="text-white/30 hover:text-white/70 transition-colors">
+                        className="text-white/25 hover:text-white/60 transition-colors">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -386,14 +431,15 @@ function WritePageInner() {
             </div>
           )}
 
-          {/* 에러 + 제출 */}
+          {/* 에러 */}
           {error && (
-            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
+            <p className="text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-4 py-3">{error}</p>
           )}
 
-          <div className="flex gap-3">
+          {/* 버튼 */}
+          <div className="flex gap-3 pt-2">
             <Link href="/community"
-              className="flex-none px-6 py-3 rounded-xl border border-border text-white/40 text-sm hover:text-white hover:border-white/20 transition-colors">
+              className="px-6 py-3 rounded-xl border border-border text-white/35 text-sm hover:text-white/70 hover:border-white/15 transition-colors">
               취소
             </Link>
             <button onClick={handleSubmit} disabled={submitting || !canSubmit() || authed === null}
@@ -402,7 +448,7 @@ function WritePageInner() {
             </button>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
