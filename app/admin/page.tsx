@@ -1355,34 +1355,37 @@ export default function AdminPage() {
               })}
             </div>
 
-            <div className="bg-surface border border-border rounded-card overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-surface border border-border rounded-card overflow-x-auto">
+              <table className="w-full text-sm min-w-max">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-white/40 font-medium">이름</th>
-                    <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium whitespace-nowrap">이름</th>
+                    <th className="text-left px-4 py-3 text-white/40 font-medium">브랜드</th>
                     {cpuTypeTab === 'mobile' ? (
                       <>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Single</th>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">3DMark</th>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">AnTuTu</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium whitespace-nowrap">GB6 Single</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium whitespace-nowrap">GB6 Multi</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium whitespace-nowrap">3DMark</th>
+                        <th className="text-right px-4 py-3 text-white/40 font-medium whitespace-nowrap">AnTuTu</th>
                       </>
                     ) : (
                       <>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">CB Multi</th>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">GB6 Multi</th>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">PM Multi</th>
-                        <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">TDP</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">CB Single</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">CB Multi</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">GB6 Single</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">GB6 Multi</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">PM Single</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">PM Multi</th>
+                        <th className="text-right px-3 py-3 text-white/40 font-medium whitespace-nowrap text-xs">TDP</th>
                       </>
                     )}
-                    <th className="text-right px-4 py-3 text-white/40 font-medium">상대점수</th>
+                    <th className="text-right px-4 py-3 text-white/40 font-medium whitespace-nowrap">상대점수</th>
                     <th className="px-4 py-3 w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {cpusLoading && cpus.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center">
+                    <tr><td colSpan={12} className="px-4 py-8 text-center">
                       <div className="flex gap-1.5 justify-center">
                         {[0, 1, 2].map((i) => (
                           <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -1395,24 +1398,41 @@ export default function AdminPage() {
                         <div className="truncate">{c.name}</div>
                         {c.gpu_name && <div className="text-xs text-white/30 truncate">{c.gpu_name}</div>}
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
+                      <td className="px-4 py-3">
                         {c.brand && <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/50">{c.brand}</span>}
                       </td>
                       {cpuTypeTab === 'mobile' ? (
                         <>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_single ?? '—'}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.tdmark_score ?? '—'}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs">{c.gb6_single ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs">{c.gb6_multi ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs">{c.tdmark_score ?? '—'}</td>
+                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs">
                             {c.antutu_score != null ? c.antutu_score.toLocaleString() : '—'}
                           </td>
                         </>
                       ) : (
                         <>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.cinebench_multi ?? '—'}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.gb6_multi ?? '—'}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.passmark_multi != null ? c.passmark_multi.toLocaleString() : '—'}</td>
-                          <td className="px-4 py-3 text-right font-mono text-white/50 text-xs hidden md:table-cell">{c.tdp != null ? `${c.tdp}W` : '—'}</td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.cinebench_single != null ? <span className="text-white/60">{c.cinebench_single.toLocaleString()}</span> : <span className="text-white/20">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.cinebench_multi != null ? <span className="text-white/60">{c.cinebench_multi.toLocaleString()}</span> : <span className="text-white/20">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.gb6_single != null ? <span className="text-white/60">{c.gb6_single.toLocaleString()}</span> : <span className="text-white/20">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.gb6_multi != null ? <span className="text-white/60">{c.gb6_multi.toLocaleString()}</span> : <span className="text-white/20">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.passmark_single != null ? <span className="text-white/60">{c.passmark_single.toLocaleString()}</span> : <span className="text-white/20">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.passmark_multi != null ? <span className="text-white/60">{c.passmark_multi.toLocaleString()}</span> : <span className="text-white/20">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono text-xs whitespace-nowrap">
+                            {c.tdp != null ? <span className="text-blue-400/70">{c.tdp}W</span> : <span className="text-white/20">—</span>}
+                          </td>
                         </>
                       )}
                       <td className="px-4 py-3 text-right font-mono">
