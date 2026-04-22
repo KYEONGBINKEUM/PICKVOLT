@@ -82,12 +82,19 @@ export default function MyPage() {
 
         supabase
           .from('profiles')
-          .select('nickname, avatar_url')
+          .select('nickname, avatar_url, locale, currency')
           .eq('user_id', data.user.id)
           .maybeSingle()
           .then(({ data: p }) => {
             setNickname(p?.nickname ?? null)
             setAvatarUrl(p?.avatar_url ?? null)
+            // 저장된 언어/통화 적용
+            if (p?.locale) {
+              try { setLocale(p.locale as import('@/lib/i18n').Locale) } catch {}
+            }
+            if (p?.currency) {
+              try { setCurrency(p.currency as import('@/lib/currency').CurrencyCode) } catch {}
+            }
           })
 
         supabase.auth.getSession().then(({ data: { session } }) => {

@@ -56,7 +56,7 @@ export default function SetupAvatarPage() {
   const handleUpload = async () => {
     if (!file) {
       // 사진 없이 저장 (기본값 유지)
-      router.replace('/mypage')
+      router.replace('/setup-preferences')
       return
     }
 
@@ -81,11 +81,11 @@ export default function SetupAvatarPage() {
       return
     }
 
-    router.replace('/mypage')
+    router.replace('/setup-preferences')
   }
 
   const handleSkip = () => {
-    router.replace('/mypage')
+    router.replace('/setup-preferences')
   }
 
   const initial = nickname?.[0]?.toUpperCase() ?? 'U'

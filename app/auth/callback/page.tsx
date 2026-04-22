@@ -26,14 +26,20 @@ function AuthCallbackInner() {
 
       if (!userId) { router.replace('/login'); return }
 
-      // 닉네임 설정 여부 확인
+      // 프로필 설정 여부 확인
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('user_id, country')
         .eq('user_id', userId)
         .maybeSingle()
 
-      router.replace(profile ? '/mypage' : '/setup-nickname')
+      if (!profile) {
+        router.replace('/setup-nickname')
+      } else if (!profile.country) {
+        router.replace('/setup-preferences')
+      } else {
+        router.replace('/mypage')
+      }
     }
 
     handleCallback()
