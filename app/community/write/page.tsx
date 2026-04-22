@@ -167,20 +167,6 @@ function EditorToolbar({ textareaRef, onChange, token }: {
   )
 }
 
-function renderMarkdownPreview(text: string): string {
-  return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/_(.+?)_/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code style="background:rgba(255,255,255,0.08);color:#FF4D00;padding:1px 4px;border-radius:4px;font-size:0.85em;font-family:monospace">$1</code>')
-    .replace(/^> (.+)$/gm, '<blockquote style="border-left:2px solid rgba(255,255,255,0.15);padding-left:12px;color:rgba(255,255,255,0.4);font-style:italic">$1</blockquote>')
-    .replace(/^- (.+)$/gm, '<li style="margin-left:16px;list-style:disc">$1</li>')
-    .replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:10px;margin:8px 0;border:1px solid rgba(255,255,255,0.08);max-height:600px;object-fit:contain;" />')
-    .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#FF4D00;text-decoration:underline">$1</a>')
-    .replace(/\n\n/g, '</p><p style="margin-bottom:12px">')
-    .replace(/\n/g, '<br />')
-}
-
 function WritePageInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
@@ -196,7 +182,6 @@ function WritePageInner() {
     { label: '', product_id: null as string | null, image_url: null as string | null },
     { label: '', product_id: null as string | null, image_url: null as string | null },
   ])
-  const [preview, setPreview]       = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
   const [token, setToken]           = useState<string | null>(null)
@@ -375,44 +360,38 @@ function WritePageInner() {
           {/* 본문 에디터 */}
           {type !== 'compare' && (
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] text-white/30 font-semibold uppercase tracking-widest">본문</p>
-                <div className="flex gap-0.5 bg-black/30 rounded-lg p-0.5">
-                  <button type="button" onClick={() => setPreview(false)}
-                    className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${
-                      !preview ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
-                    }`}>작성</button>
-                  <button type="button" onClick={() => setPreview(true)}
-                    className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all ${
-                      preview ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
-                    }`}>미리보기</button>
-                </div>
-              </div>
-              <div className="border border-border rounded-xl overflow-hidden">
-                {!preview ? (
-                  <>
-                    <EditorToolbar textareaRef={textareaRef} onChange={setBody} token={token} />
-                    <textarea ref={textareaRef} value={body} onChange={e => setBody(e.target.value)}
-                      rows={12} maxLength={5000}
-                      placeholder={
-                        type === 'review'
-                          ? '제품을 사용해본 솔직한 후기를 남겨주세요.\n\n장점:\n단점:\n총평:'
-                          : '자유롭게 의견이나 정보를 공유해보세요.'
-                      }
-                      className="w-full bg-surface px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none leading-relaxed" />
-                  </>
-                ) : (
-                  <div className="bg-surface px-4 py-4 min-h-[200px]">
-                    {body.trim() ? (
-                      <div
-                        className="text-sm text-white/75 leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: `<p class="mb-3">${renderMarkdownPreview(body)}</p>` }}
-                      />
-                    ) : (
-                      <p className="text-sm text-white/20">본문이 비어있습니다.</p>
-                    )}
-                  </div>
-                )}
+              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">본문</p>
+              <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
+                <EditorToolbar textareaRef={textareaRef} onChange={setBody} token={token} />
+                <textarea ref={textareaRef} value={body} onChange={e => setBody(e.target.value)}
+                  rows={12} maxLength={5000}
+                  placeholder={
+                    type === 'review'
+                      ? '제품을 사용해본 솔직한 후기를 남겨주세요.\n\n장점:\n단점:\n총평:'
+                      : '자유롭게 의견이나 정보를 공유해보세요.'
+                  }
+                  className="w-full bg-surface px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none leading-relaxed" />
+                {/* 업로드된 이미지 썸네일 미리보기 */}
+                {(() => {
+                  const imgs = [...body.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/g)].map(m => m[1])
+                  if (imgs.length === 0) return null
+                  return (
+                    <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                      {imgs.map((url, i) => (
+                        <div key={i} className="relative group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="h-24 w-auto rounded-lg border border-border object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setBody(b => b.replace(new RegExp(`!\\[[^\\]]*\\]\\(${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)\\n?`), ''))}
+                            className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
               <p className="text-[10px] text-white/20 text-right mt-1">{body.length} / 5000</p>
             </div>
