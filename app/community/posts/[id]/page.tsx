@@ -61,6 +61,8 @@ function renderMarkdown(text: string): string {
     .replace(/`(.+?)`/g, '<code class="bg-white/10 text-accent px-1 py-0.5 rounded text-[0.85em] font-mono">$1</code>')
     .replace(/^> (.+)$/gm, '<blockquote class="border-l-2 border-white/20 pl-3 text-white/50 italic">$1</blockquote>')
     .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+    // 이미지 (링크보다 먼저 처리)
+    .replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-xl my-3 border border-white/10" style="max-height:600px;object-fit:contain;" />')
     .replace(/\[(.+?)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">$1</a>')
     .replace(/\n\n/g, '</p><p class="mb-3">')
     .replace(/\n/g, '<br />')
