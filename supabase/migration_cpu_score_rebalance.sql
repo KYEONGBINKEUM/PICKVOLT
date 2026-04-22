@@ -4,10 +4,11 @@
 --
 -- 기존: CB(45%) · GB6(35%) · Passmark(20%)  — 불균형
 -- 변경: CB(33%) · GB6(33%) · Passmark(34%)  — 세 벤치마크 균등
+--       Single 35% · Multi 65%  — 멀티코어 비중 강화
 --
---   CB Single 13% · CB Multi 20%
---   GB6 Single 13% · GB6 Multi 20%
---   PM Single 17% · PM Multi 17%
+--   CB Single 11% · CB Multi 22%
+--   GB6 Single 11% · GB6 Multi 22%
+--   PM Single 13% · PM Multi 21%
 --
 -- 없는 항목의 가중치는 나머지에 비례 재배분
 -- 실행: Supabase SQL Editor에 붙여넣고 실행
@@ -56,8 +57,8 @@ begin
    where type = 'mobile';
 
   -- ── 랩탑/데스크탑 ──
-  -- CB Single 13% · CB Multi 20% · GB6 Single 13% · GB6 Multi 20%
-  -- PM Single 17% · PM Multi 17%
+  -- CB Single 11% · CB Multi 22% · GB6 Single 11% · GB6 Multi 22%
+  -- PM Single 13% · PM Multi 21%  (Single 35% · Multi 65%)
   -- 없는 항목은 해당 비율 제외 후 나머지 합산으로 나눔 (비례 재배분)
   update cpus
      set relative_score = round(
@@ -67,19 +68,19 @@ begin
                    passmark_single is null and passmark_multi is null)
                then null
              else (
-               coalesce(cinebench_single::numeric / nullif(max_cbs,   0), 0) * 0.13
-             + coalesce(cinebench_multi::numeric  / nullif(max_cbm,   0), 0) * 0.20
-             + coalesce(gb6_single::numeric       / nullif(max_gb6ls, 0), 0) * 0.13
-             + coalesce(gb6_multi::numeric        / nullif(max_gb6lm, 0), 0) * 0.20
-             + coalesce(passmark_single::numeric  / nullif(max_pms,   0), 0) * 0.17
-             + coalesce(passmark_multi::numeric   / nullif(max_pmm,   0), 0) * 0.17
+               coalesce(cinebench_single::numeric / nullif(max_cbs,   0), 0) * 0.11
+             + coalesce(cinebench_multi::numeric  / nullif(max_cbm,   0), 0) * 0.22
+             + coalesce(gb6_single::numeric       / nullif(max_gb6ls, 0), 0) * 0.11
+             + coalesce(gb6_multi::numeric        / nullif(max_gb6lm, 0), 0) * 0.22
+             + coalesce(passmark_single::numeric  / nullif(max_pms,   0), 0) * 0.13
+             + coalesce(passmark_multi::numeric   / nullif(max_pmm,   0), 0) * 0.21
              ) / nullif(
-               case when cinebench_single is not null then 0.13 else 0 end
-             + case when cinebench_multi  is not null then 0.20 else 0 end
-             + case when gb6_single       is not null then 0.13 else 0 end
-             + case when gb6_multi        is not null then 0.20 else 0 end
-             + case when passmark_single  is not null then 0.17 else 0 end
-             + case when passmark_multi   is not null then 0.17 else 0 end
+               case when cinebench_single is not null then 0.11 else 0 end
+             + case when cinebench_multi  is not null then 0.22 else 0 end
+             + case when gb6_single       is not null then 0.11 else 0 end
+             + case when gb6_multi        is not null then 0.22 else 0 end
+             + case when passmark_single  is not null then 0.13 else 0 end
+             + case when passmark_multi   is not null then 0.21 else 0 end
              , 0) * 1000
            end
          , 1)

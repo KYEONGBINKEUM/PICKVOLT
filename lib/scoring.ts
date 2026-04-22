@@ -62,8 +62,9 @@ export function scoreCPU(
 
 /** 랩탑/데스크탑 CPU 성능 점수 (0–100)
  *  Cinebench(33%) · Geekbench6(33%) · Passmark(34%) — 세 벤치마크 균등 배분
- *  CB Single 13% · CB Multi 20% · GB6 Single 13% · GB6 Multi 20%
- *  Passmark Single 17% · Passmark Multi 17%
+ *  Single 35% · Multi 65% — 멀티코어 성능에 더 높은 가중치
+ *  CB Single 11% · CB Multi 22% · GB6 Single 11% · GB6 Multi 22%
+ *  Passmark Single 13% · Passmark Multi 21%
  *  없는 항목의 가중치는 나머지에 비례 재배분
  *  최댓값은 DB 동적값(maxes) 우선, 없으면 fallback 사용 */
 export function scoreCPUDesktop(
@@ -76,20 +77,20 @@ export function scoreCPUDesktop(
   relScore: number | null,
   maxes?: CpuBenchmarkMaxes,
 ): number {
-  const CB_SINGLE_MAX = maxes?.cinebenchSingle || 200
-  const CB_MULTI_MAX  = maxes?.cinebenchMulti  || 45000
-  const GB6S_MAX      = maxes?.gb6Single       || 4200
-  const GB6M_MAX      = maxes?.gb6Multi        || 40000
-  const PM_SINGLE_MAX = maxes?.passmarkSingle  || 5000
+  const CB_SINGLE_MAX = maxes?.cinebenchSingle || 250
+  const CB_MULTI_MAX  = maxes?.cinebenchMulti  || 2500
+  const GB6S_MAX      = maxes?.gb6Single       || 4500
+  const GB6M_MAX      = maxes?.gb6Multi        || 35000
+  const PM_SINGLE_MAX = maxes?.passmarkSingle  || 7000
   const PM_MULTI_MAX  = maxes?.passmarkMulti   || 60000
 
   const configs = [
-    { value: cbSingle  || null, max: CB_SINGLE_MAX, weight: 13 },
-    { value: cbMulti   || null, max: CB_MULTI_MAX,  weight: 20 },
-    { value: gb6Single || null, max: GB6S_MAX,       weight: 13 },
-    { value: gb6Multi  || null, max: GB6M_MAX,       weight: 20 },
-    { value: pmSingle  || null, max: PM_SINGLE_MAX,  weight: 17 },
-    { value: pmMulti   || null, max: PM_MULTI_MAX,   weight: 17 },
+    { value: cbSingle  || null, max: CB_SINGLE_MAX, weight: 11 },
+    { value: cbMulti   || null, max: CB_MULTI_MAX,  weight: 22 },
+    { value: gb6Single || null, max: GB6S_MAX,       weight: 11 },
+    { value: gb6Multi  || null, max: GB6M_MAX,       weight: 22 },
+    { value: pmSingle  || null, max: PM_SINGLE_MAX,  weight: 13 },
+    { value: pmMulti   || null, max: PM_MULTI_MAX,   weight: 21 },
   ]
   const available = configs.filter((c) => c.value != null)
   if (available.length === 0) {
