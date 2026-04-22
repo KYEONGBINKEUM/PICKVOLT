@@ -78,7 +78,7 @@ function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => 
 
 // WYSIWYG 에디터 툴바 + contenteditable 에디터
 function RichEditor({ editorRef, onChange, token, placeholder }: {
-  editorRef: React.RefObject<HTMLDivElement | null>
+  editorRef: React.MutableRefObject<HTMLDivElement | null>
   onChange: (html: string) => void
   token: string | null
   placeholder: string
@@ -164,7 +164,7 @@ function RichEditor({ editorRef, onChange, token, placeholder }: {
 
       {/* contenteditable 에디터 */}
       <div
-        ref={editorRef}
+        ref={el => { editorRef.current = el }}
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(editorRef.current?.innerHTML ?? '')}
@@ -198,7 +198,7 @@ function WritePageInner() {
   const [avatarUrl, setAvatarUrl]   = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
 
-  const editorRef = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
