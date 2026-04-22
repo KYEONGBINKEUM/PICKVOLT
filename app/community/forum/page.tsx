@@ -75,7 +75,7 @@ export default function ForumPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-[740px] mx-auto px-4 pt-[88px] pb-20">
+      <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
 
         {/* 헤더 */}
         <div className="flex items-center gap-2 mb-4">

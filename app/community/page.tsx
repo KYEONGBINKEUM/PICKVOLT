@@ -238,7 +238,7 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-[740px] mx-auto px-4 pt-[88px] pb-20">
+      <div className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
 
         {/* 필터 바 */}
         <div className="flex items-center gap-1 mb-2 border-b border-border/50 pb-1">
