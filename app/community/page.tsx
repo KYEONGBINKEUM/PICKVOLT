@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronUp, MessageSquare, Eye, Flame, Clock, BarChart2, LayoutList, LayoutGrid } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
+import { useI18n } from '@/lib/i18n'
 
 interface Post {
   id: string
@@ -21,29 +22,28 @@ interface Post {
   my_vote: boolean
 }
 
-const TYPE_LABEL: Record<string, { label: string; color: string }> = {
-  forum:   { label: '포럼',   color: 'text-blue-400' },
-  review:  { label: '리뷰',   color: 'text-amber-400' },
-  compare: { label: '비교',   color: 'text-purple-400' },
+const TYPE_COLOR: Record<string, string> = {
+  forum:   'text-blue-400',
+  review:  'text-amber-400',
+  compare: 'text-purple-400',
 }
 
-const SORT_TABS = [
-  { key: 'hot',    label: '인기',   icon: Flame },
-  { key: 'latest', label: '최신',   icon: Clock },
-  { key: 'top',    label: '댓글순', icon: BarChart2 },
-]
-
-function timeAgo(d: string) {
+function timeAgo(d: string, t: (k: string) => string) {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
-  if (s < 60) return '방금'
-  if (s < 3600) return `${Math.floor(s / 60)}분 전`
-  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`
-  return `${Math.floor(s / 86400)}일 전`
+  if (s < 60) return t('time.just')
+  if (s < 3600) return `${Math.floor(s / 60)}${t('time.min')}`
+  if (s < 86400) return `${Math.floor(s / 3600)}${t('time.hour')}`
+  return `${Math.floor(s / 86400)}${t('time.day')}`
 }
 
-/* ── Compact row (Reddit list style) ── */
-function CompactRow({ post, token, onVote }: { post: Post; token: string | null; onVote: (id: string) => void }) {
-  const meta = TYPE_LABEL[post.type]
+/* ── Compact row ── */
+function CompactRow({ post, token, onVote, t }: {
+  post: Post; token: string | null
+  onVote: (id: string) => void
+  t: (k: string) => string
+}) {
+  const typeLabel = t(`community.${post.type}`)
+  const color = TYPE_COLOR[post.type] ?? 'text-white/30'
   return (
     <div className="flex items-center gap-2 py-1.5 px-2 hover:bg-white/[0.03] rounded-lg group transition-colors">
       {/* upvote */}
@@ -60,8 +60,8 @@ function CompactRow({ post, token, onVote }: { post: Post; token: string | null;
       </div>
 
       {/* type badge */}
-      <span className={`text-[10px] font-semibold flex-shrink-0 w-8 ${meta?.color ?? 'text-white/30'}`}>
-        {meta?.label}
+      <span className={`text-[10px] font-semibold flex-shrink-0 w-10 ${color}`}>
+        {typeLabel}
       </span>
 
       {/* title */}
@@ -78,7 +78,7 @@ function CompactRow({ post, token, onVote }: { post: Post; token: string | null;
       <div className="flex items-center gap-3 flex-shrink-0 text-[10px] text-white/20">
         {post.rating != null && <span className="text-amber-400 font-bold">{post.rating}/10</span>}
         <span>{post.user_display_name}</span>
-        <span>{timeAgo(post.created_at)}</span>
+        <span>{timeAgo(post.created_at, t)}</span>
         <span className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" />{post.comment_count}</span>
         {post.view_count > 0 && <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{post.view_count}</span>}
       </div>
@@ -86,9 +86,14 @@ function CompactRow({ post, token, onVote }: { post: Post; token: string | null;
   )
 }
 
-/* ── Card row (Reddit default style) ── */
-function CardRow({ post, token, onVote }: { post: Post; token: string | null; onVote: (id: string) => void }) {
-  const meta = TYPE_LABEL[post.type]
+/* ── Card row ── */
+function CardRow({ post, token, onVote, t }: {
+  post: Post; token: string | null
+  onVote: (id: string) => void
+  t: (k: string) => string
+}) {
+  const typeLabel = t(`community.${post.type}`)
+  const color = TYPE_COLOR[post.type] ?? 'text-white/30'
   return (
     <div className="flex group border-b border-border/40 py-3 px-2 hover:bg-white/[0.02] transition-colors rounded-lg">
       {/* upvote col */}
@@ -108,11 +113,11 @@ function CardRow({ post, token, onVote }: { post: Post; token: string | null; on
       <Link href={`/community/posts/${post.id}`} className="flex-1 min-w-0 pr-2">
         {/* meta top */}
         <div className="flex items-center gap-1.5 mb-1">
-          <span className={`text-[10px] font-semibold ${meta?.color ?? 'text-white/30'}`}>{meta?.label}</span>
+          <span className={`text-[10px] font-semibold ${color}`}>{typeLabel}</span>
           <span className="text-white/15 text-[10px]">·</span>
           <span className="text-[10px] text-white/25">{post.user_display_name}</span>
           <span className="text-white/15 text-[10px]">·</span>
-          <span className="text-[10px] text-white/20">{timeAgo(post.created_at)}</span>
+          <span className="text-[10px] text-white/20">{timeAgo(post.created_at, t)}</span>
           {post.rating != null && (
             <>
               <span className="text-white/15 text-[10px]">·</span>
@@ -136,7 +141,10 @@ function CardRow({ post, token, onVote }: { post: Post; token: string | null; on
 
         {/* bottom meta */}
         <div className="flex items-center gap-3 text-[11px] text-white/20">
-          <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{post.comment_count}개 댓글</span>
+          <span className="flex items-center gap-1">
+            <MessageSquare className="w-3 h-3" />
+            {post.comment_count} {t('community.comments')}
+          </span>
           {post.view_count > 0 && <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.view_count}</span>}
         </div>
       </Link>
@@ -149,7 +157,7 @@ function PostSkeleton({ compact }: { compact: boolean }) {
     return (
       <div className="flex items-center gap-2 py-1.5 px-2 animate-pulse">
         <div className="w-12 h-3 bg-white/5 rounded" />
-        <div className="w-8 h-3 bg-white/5 rounded" />
+        <div className="w-10 h-3 bg-white/5 rounded" />
         <div className="flex-1 h-3 bg-white/5 rounded" />
         <div className="w-32 h-3 bg-white/5 rounded" />
       </div>
@@ -172,6 +180,7 @@ function PostSkeleton({ compact }: { compact: boolean }) {
 }
 
 export default function CommunityPage() {
+  const { t } = useI18n()
   const [posts, setPosts]     = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [sort, setSort]       = useState('hot')
@@ -181,6 +190,12 @@ export default function CommunityPage() {
   const [compact, setCompact] = useState(false)
 
   const LIMIT = 25
+
+  const SORT_TABS = [
+    { key: 'hot',    label: t('sort.hot'),    icon: Flame },
+    { key: 'latest', label: t('sort.latest'), icon: Clock },
+    { key: 'top',    label: t('sort.top'),    icon: BarChart2 },
+  ]
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null))
@@ -246,14 +261,12 @@ export default function CommunityPage() {
             <button
               onClick={() => setCompact(false)}
               className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
-              title="카드 뷰"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setCompact(true)}
               className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
-              title="컴팩트 뷰"
             >
               <LayoutList className="w-3.5 h-3.5" />
             </button>
@@ -267,13 +280,13 @@ export default function CommunityPage() {
             : posts.length === 0
             ? (
               <div className="py-24 text-center">
-                <p className="text-sm text-white/20">게시물이 없습니다</p>
+                <p className="text-sm text-white/20">{t('board.empty')}</p>
               </div>
             )
             : posts.map(post => (
               compact
-                ? <CompactRow key={post.id} post={post} token={token} onVote={handleVote} />
-                : <CardRow    key={post.id} post={post} token={token} onVote={handleVote} />
+                ? <CompactRow key={post.id} post={post} token={token} onVote={handleVote} t={t} />
+                : <CardRow    key={post.id} post={post} token={token} onVote={handleVote} t={t} />
             ))
           }
         </div>

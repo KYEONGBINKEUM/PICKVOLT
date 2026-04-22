@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -142,8 +142,8 @@ function CommentItem({ c, depth = 0, onVote, onReply, currentUserId, token, onDe
   )
 }
 
-export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function PostDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const router  = useRouter()
 
   const [post, setPost]       = useState<Post | null>(null)
