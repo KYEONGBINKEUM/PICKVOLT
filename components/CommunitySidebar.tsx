@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { Home, Flame, MessageSquare, Star, GitCompare } from 'lucide-react'
+import { Home, Flame, MessageSquare, Star, LayoutList, HelpCircle } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 export default function CommunitySidebar() {
@@ -14,14 +14,15 @@ export default function CommunitySidebar() {
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
 
   const mainLinks = [
-    { href: '/community',         label: t('community.all'),     icon: Home,         exact: true },
-    { href: '/community?sort=hot',label: t('community.popular'), icon: Flame,        exact: true, sortLink: true },
+    { href: '/community',          label: t('community.all'),     icon: Home,  exact: true },
+    { href: '/community?sort=hot', label: t('community.popular'), icon: Flame, exact: true, sortLink: true },
   ]
 
   const boardLinks = [
     { href: '/community/forum',   label: t('community.forum'),   icon: MessageSquare },
     { href: '/community/reviews', label: t('community.reviews'), icon: Star },
-    { href: '/community/compare', label: 'Compare',              icon: GitCompare },
+    { href: '/community/free',    label: t('community.free'),    icon: LayoutList },
+    { href: '/community/qa',      label: t('community.qa'),      icon: HelpCircle },
   ]
 
   const NavItem = ({ href, label, icon: Icon, exact, sortLink }: {

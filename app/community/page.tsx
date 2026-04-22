@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ChevronUp, MessageSquare, Eye, Flame, Clock, BarChart2, LayoutList, LayoutGrid } from 'lucide-react'
+import { ChevronUp, MessageSquare, Eye, LayoutList, LayoutGrid } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
 interface Post {
   id: string
-  type: 'review' | 'forum' | 'compare'
+  type: 'review' | 'forum' | 'compare' | 'free' | 'qa'
   category: string | null
   title: string
   body: string
@@ -26,6 +26,8 @@ const TYPE_COLOR: Record<string, string> = {
   forum:   'text-blue-400',
   review:  'text-amber-400',
   compare: 'text-purple-400',
+  free:    'text-green-400',
+  qa:      'text-cyan-400',
 }
 
 function timeAgo(d: string, t: (k: string) => string) {
@@ -86,6 +88,17 @@ function CompactRow({ post, token, onVote, t }: {
   )
 }
 
+/** Extract first <img src> from HTML body; returns null if none */
+function extractFirstImage(body: string): string | null {
+  const m = body.match(/<img[^>]+src=["']([^"']+)["']/i)
+  return m ? m[1] : null
+}
+
+/** Strip HTML tags and return plain text */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 /* ── Card row ── */
 function CardRow({ post, token, onVote, t }: {
   post: Post; token: string | null
@@ -94,8 +107,15 @@ function CardRow({ post, token, onVote, t }: {
 }) {
   const typeLabel = t(`community.${post.type}`)
   const color = TYPE_COLOR[post.type] ?? 'text-white/30'
+
+  const isHtml = /<[a-z]/i.test(post.body ?? '')
+  const thumbUrl = isHtml ? extractFirstImage(post.body) : null
+  const plainText = isHtml ? stripHtml(post.body) : (post.body ?? '')
+  // Determine if body is image-only (no meaningful text after stripping)
+  const isImageOnly = thumbUrl !== null && plainText.length < 10
+
   return (
-    <div className="flex group border-b border-border/40 py-3 px-2 hover:bg-white/[0.02] transition-colors rounded-lg">
+    <div className="flex group border-b border-border/40 py-3 px-2 hover:bg-white/[0.02] transition-colors">
       {/* upvote col */}
       <div className="flex flex-col items-center pt-0.5 px-2 w-10 flex-shrink-0">
         <button
@@ -134,9 +154,22 @@ function CardRow({ post, token, onVote, t }: {
           )}
         </p>
 
-        {/* body preview */}
-        {post.body && !/<[a-z]/i.test(post.body) && (
-          <p className="text-xs text-white/25 line-clamp-1 mb-1.5 leading-relaxed">{post.body}</p>
+        {/* body preview — image-only: show image full width */}
+        {isImageOnly && (
+          <div className="mb-2 rounded-lg overflow-hidden max-h-48">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumbUrl!} alt="" className="w-full object-cover max-h-48" />
+          </div>
+        )}
+
+        {/* body preview — text only (no image): show up to 10 lines */}
+        {!thumbUrl && plainText && (
+          <p className="text-xs text-white/30 line-clamp-10 mb-1.5 leading-relaxed">{plainText}</p>
+        )}
+
+        {/* body preview — has image + text: show text (thumbnail shown on right) */}
+        {thumbUrl && !isImageOnly && plainText && (
+          <p className="text-xs text-white/30 line-clamp-3 mb-1.5 leading-relaxed pr-2">{plainText}</p>
         )}
 
         {/* bottom meta */}
@@ -148,6 +181,14 @@ function CardRow({ post, token, onVote, t }: {
           {post.view_count > 0 && <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.view_count}</span>}
         </div>
       </Link>
+
+      {/* thumbnail (right side) — only when has image + text */}
+      {thumbUrl && !isImageOnly && (
+        <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 ml-3 self-start mt-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumbUrl} alt="" className="w-20 h-20 object-cover rounded-lg bg-surface-2" />
+        </Link>
+      )}
     </div>
   )
 }
@@ -191,10 +232,10 @@ export default function CommunityPage() {
 
   const LIMIT = 25
 
-  const SORT_TABS = [
-    { key: 'hot',    label: t('sort.hot'),    icon: Flame },
-    { key: 'latest', label: t('sort.latest'), icon: Clock },
-    { key: 'top',    label: t('sort.top'),    icon: BarChart2 },
+  const SORT_OPTIONS = [
+    { key: 'hot',    label: t('sort.hot') },
+    { key: 'latest', label: t('sort.latest') },
+    { key: 'top',    label: t('sort.top') },
   ]
 
   useEffect(() => {
@@ -241,20 +282,16 @@ export default function CommunityPage() {
       <div className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
 
         {/* 필터 바 */}
-        <div className="flex items-center gap-1 mb-2 border-b border-border/50 pb-1">
-          <div className="flex items-center gap-0.5">
-            {SORT_TABS.map(s => {
-              const Icon = s.icon
-              return (
-                <button key={s.key} onClick={() => setSort(s.key)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    sort === s.key ? 'bg-white/8 text-white' : 'text-white/30 hover:text-white/60'
-                  }`}>
-                  <Icon className="w-3 h-3" />{s.label}
-                </button>
-              )
-            })}
-          </div>
+        <div className="flex items-center gap-2 mb-3">
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value)}
+            className="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white/60 outline-none cursor-pointer hover:border-white/20 transition-colors"
+          >
+            {SORT_OPTIONS.map(s => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
 
           {/* 뷰 토글 */}
           <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">

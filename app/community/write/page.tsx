@@ -11,7 +11,7 @@ import {
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 
-type PostType = 'review' | 'forum' | 'compare'
+type PostType = 'review' | 'forum' | 'compare' | 'free' | 'qa'
 
 const CATEGORIES = [
   { key: 'laptop', label: '랩탑' },
@@ -21,9 +21,11 @@ const CATEGORIES = [
 ]
 
 const TYPE_OPTIONS: { key: PostType; label: string; desc: string }[] = [
-  { key: 'forum',   label: '포럼',    desc: '자유로운 정보 공유 및 질문' },
-  { key: 'review',  label: '리뷰',    desc: '제품 사용 후기 작성' },
-  { key: 'compare', label: '비교투표', desc: '제품 A/B 비교 투표 만들기' },
+  { key: 'forum',   label: '포럼',     desc: '정보 공유 및 토론' },
+  { key: 'review',  label: '리뷰',     desc: '제품 사용 후기 작성' },
+  { key: 'free',    label: '자유게시판', desc: '자유로운 이야기' },
+  { key: 'qa',      label: 'Q&A',      desc: '질문하고 답변받기' },
+  { key: 'compare', label: '비교투표',  desc: '제품 A/B 비교 투표 만들기' },
 ]
 
 interface ProductResult { id: string; name: string; brand: string; image_url: string | null }

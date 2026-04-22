@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Pin, Eye, ThumbsUp } from 'lucide-react'
+import { Eye, MessageSquare } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n } from '@/lib/i18n'
 
 interface Post {
   id: string; title: string; body: string
   upvotes: number; comment_count: number; view_count: number
-  created_at: string; user_display_name: string; is_pinned: boolean
-  community_post_products: { products: { id: string; name: string } | null }[]
+  created_at: string; user_display_name: string
 }
 
 function formatDate(d: string) {
@@ -26,15 +25,7 @@ function formatDate(d: string) {
   return `${String(dt.getMonth() + 1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`
 }
 
-function timeAgo(d: string, t: (k: string) => string) {
-  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
-  if (s < 60) return t('time.just')
-  if (s < 3600) return `${Math.floor(s / 60)}${t('time.min')}`
-  if (s < 86400) return `${Math.floor(s / 3600)}${t('time.hour')}`
-  return `${Math.floor(s / 86400)}${t('time.day')}`
-}
-
-export default function ForumPage() {
+export default function QnAPage() {
   const { t } = useI18n()
   const [posts, setPosts]     = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,7 +43,7 @@ export default function ForumPage() {
 
   const load = useCallback(() => {
     setLoading(true)
-    fetch(`/api/community/posts?type=forum&sort=${sort}&page=${page}&limit=${LIMIT}`)
+    fetch(`/api/community/posts?type=qa&sort=${sort}&page=${page}&limit=${LIMIT}`)
       .then(r => r.json())
       .then(d => { setPosts(d.posts ?? []); setTotal(d.total ?? 0) })
       .finally(() => setLoading(false))
@@ -77,26 +68,23 @@ export default function ForumPage() {
       <Navbar />
       <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
 
-        {/* 헤더 */}
-        <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-lg font-black text-white">{t('community.forum')}</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <h1 className="text-lg font-black text-white">{t('community.qa')}</h1>
           {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}
           <div className="ml-auto">
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value)}
-            className="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white/60 outline-none cursor-pointer hover:border-white/20 transition-colors"
-          >
-            {SORTS.map(s => (
-              <option key={s.key} value={s.key}>{s.label}</option>
-            ))}
-          </select>
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              className="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white/60 outline-none cursor-pointer hover:border-white/20 transition-colors"
+            >
+              {SORTS.map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* 테이블 */}
         <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          {/* 헤더 행 */}
           <div className="hidden sm:grid grid-cols-[3rem_1fr_7rem_5rem_4rem] gap-0 border-b border-border bg-black/20">
             <div className="px-3 py-2.5 text-[10px] text-white/30 font-semibold text-center">{t('col.num')}</div>
             <div className="px-3 py-2.5 text-[10px] text-white/30 font-semibold">{t('col.title')}</div>
@@ -117,7 +105,7 @@ export default function ForumPage() {
           ) : posts.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-sm text-white/20 mb-3">{t('board.empty')}</p>
-              <Link href="/community/write?type=forum" className="text-xs text-accent hover:underline">
+              <Link href="/community/write?type=qa" className="text-xs text-accent hover:underline">
                 {t('board.write_first')}
               </Link>
             </div>
@@ -127,56 +115,34 @@ export default function ForumPage() {
                 <Link key={post.id} href={`/community/posts/${post.id}`}
                   className="group sm:grid sm:grid-cols-[3rem_1fr_7rem_5rem_4rem] gap-0 flex flex-col px-0 hover:bg-white/[0.02] transition-colors">
 
-                  {/* 번호 */}
                   <div className="hidden sm:flex items-center justify-center px-3 py-3">
-                    {post.is_pinned
-                      ? <Pin className="w-3 h-3 text-accent" />
-                      : <span className="text-[11px] text-white/25 tabular-nums">{total - offset - idx}</span>
-                    }
+                    <span className="text-[11px] text-white/25 tabular-nums">{total - offset - idx}</span>
                   </div>
 
-                  {/* 제목 영역 */}
                   <div className="px-3 py-3 sm:py-2.5 flex flex-col justify-center min-w-0">
-                    <div className="flex items-start gap-1.5">
-                      {post.is_pinned && <Pin className="w-3 h-3 text-accent mt-0.5 flex-shrink-0 sm:hidden" />}
-                      <div className="min-w-0">
-                        <p className="text-sm text-white/80 group-hover:text-white transition-colors leading-snug line-clamp-1 font-medium">
-                          {post.title}
-                          {post.comment_count > 0 && (
-                            <span className="ml-1.5 text-[10px] text-accent font-bold">
-                              [{post.comment_count}]
-                            </span>
-                          )}
-                        </p>
-                        {post.community_post_products?.length > 0 && (
-                          <span className="text-[10px] text-white/30 truncate block mt-0.5">
-                            {post.community_post_products[0].products?.name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {/* 모바일 메타 */}
+                    <p className="text-sm text-white/80 group-hover:text-white transition-colors leading-snug line-clamp-1 font-medium">
+                      {post.title}
+                      {post.comment_count > 0 && (
+                        <span className="ml-1.5 text-[10px] text-accent font-bold">[{post.comment_count}]</span>
+                      )}
+                    </p>
                     <div className="flex items-center gap-2 mt-1 sm:hidden text-[10px] text-white/25">
                       <span>{post.user_display_name}</span>
-                      <span>{timeAgo(post.created_at, t)}</span>
-                      <span className="flex items-center gap-0.5"><ThumbsUp className="w-2.5 h-2.5" />{post.upvotes}</span>
+                      <span className="flex items-center gap-0.5"><MessageSquare className="w-2.5 h-2.5" />{post.comment_count}</span>
                       <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{post.view_count}</span>
                     </div>
                   </div>
 
-                  {/* 작성자 */}
                   <div className="hidden sm:flex items-center justify-center px-2 py-2.5">
                     <span className="text-[11px] text-white/40 truncate max-w-full">{post.user_display_name}</span>
                   </div>
 
-                  {/* 조회 */}
-                  <div className="hidden sm:flex items-center justify-center px-2 py-2.5 gap-3">
+                  <div className="hidden sm:flex items-center justify-center px-2 py-2.5">
                     <span className="flex items-center gap-1 text-[11px] text-white/30">
                       <Eye className="w-3 h-3" />{post.view_count}
                     </span>
                   </div>
 
-                  {/* 날짜 */}
                   <div className="hidden sm:flex items-center justify-center px-2 py-2.5">
                     <span className="text-[11px] text-white/30 tabular-nums">{formatDate(post.created_at)}</span>
                   </div>
@@ -186,7 +152,6 @@ export default function ForumPage() {
           )}
         </div>
 
-        {/* 페이지네이션 */}
         {totalPages > 1 && (
           <div className="flex justify-center gap-1 mt-5">
             <button disabled={page === 1} onClick={() => setPage(1)}

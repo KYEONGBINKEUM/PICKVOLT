@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Star, Eye, Flame, Clock } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n } from '@/lib/i18n'
 
@@ -57,8 +57,9 @@ export default function ReviewsPage() {
     { key: 'other',   label: t('cat.other') },
   ]
   const SORTS = [
-    { key: 'latest', label: t('sort.latest'), icon: Clock },
-    { key: 'hot',    label: t('sort.hot'),    icon: Flame },
+    { key: 'latest', label: t('sort.latest') },
+    { key: 'hot',    label: t('sort.hot') },
+    { key: 'top',    label: t('sort.top') },
   ]
 
   const [posts, setPosts]       = useState<Post[]>([])
@@ -100,12 +101,23 @@ export default function ReviewsPage() {
       <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
 
         {/* 헤더 */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-3">
           <h1 className="text-lg font-black text-white">{t('community.reviews')}</h1>
           {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}
+          <div className="ml-auto flex items-center gap-2">
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              className="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white/60 outline-none cursor-pointer hover:border-white/20 transition-colors"
+            >
+              {SORTS.map(s => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* 카테고리 + 정렬 탭 */}
+        {/* 카테고리 탭 */}
         <div className="flex items-center gap-1 mb-0 border-b border-border">
           {CATEGORIES.map(c => (
             <button key={c.key} onClick={() => setCategory(c.key)}
@@ -117,19 +129,6 @@ export default function ReviewsPage() {
               {c.label}
             </button>
           ))}
-          <div className="ml-auto flex gap-1 pr-1">
-            {SORTS.map(s => {
-              const Icon = s.icon
-              return (
-                <button key={s.key} onClick={() => setSort(s.key)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    sort === s.key ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/60'
-                  }`}>
-                  <Icon className="w-3 h-3" /> {s.label}
-                </button>
-              )
-            })}
-          </div>
         </div>
 
         {/* 테이블 */}
