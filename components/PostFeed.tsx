@@ -161,7 +161,7 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
       {thumbUrl && (
         <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 self-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={thumbUrl} alt="" className="w-10 h-10 object-contain rounded-md bg-surface-2 p-0.5" />
+          <img src={thumbUrl} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
         </Link>
       )}
 
