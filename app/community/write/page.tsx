@@ -194,21 +194,14 @@ function WritePageInner() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
   const [token, setToken]           = useState<string | null>(null)
-  const [displayName, setDisplayName] = useState('')
-  const [avatarUrl, setAvatarUrl]   = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
 
   const editorRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user
       setToken(data.session?.access_token ?? null)
-      setAuthed(!!u)
-      if (u) {
-        setDisplayName(u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split('@')[0] ?? '')
-        setAvatarUrl(u.user_metadata?.avatar_url ?? null)
-      }
+      setAuthed(!!data.session?.user)
     })
   }, [])
 
@@ -243,8 +236,6 @@ function WritePageInner() {
           rating: type === 'review' ? rating : null,
           product_ids: products.map(p => p.id),
           compare_options: type === 'compare' ? options : undefined,
-          display_name: displayName,
-          avatar_url: avatarUrl,
         }),
       })
       const json = await res.json()

@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { type, category, title, body: postBody, rating, product_ids, compare_options, display_name, avatar_url } = body
+  const { type, category, title, body: postBody, rating, product_ids, compare_options } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
   if (type === 'review' && !category) return NextResponse.json({ error: 'category required for review' }, { status: 400 })
@@ -130,12 +130,22 @@ export async function POST(req: NextRequest) {
 
   const supabase = makeServiceClient()
 
+  // 닉네임과 아바타는 profiles 테이블에서 직접 조회 (클라이언트 값 무시)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nickname, avatar_url')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const userDisplayName = profile?.nickname ?? user.email?.split('@')[0] ?? 'user'
+  const userAvatarUrl   = profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null
+
   const { data: post, error } = await supabase
     .from('community_posts')
     .insert({
       user_id: user.id,
-      user_display_name: display_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'user',
-      user_avatar_url: avatar_url ?? user.user_metadata?.avatar_url ?? null,
+      user_display_name: userDisplayName,
+      user_avatar_url: userAvatarUrl,
       type,
       category: category || null,
       title: title.trim(),
