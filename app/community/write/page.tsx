@@ -10,27 +10,15 @@ import {
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
+import { useI18n } from '@/lib/i18n'
 
 type PostType = 'review' | 'forum' | 'compare' | 'free' | 'qa'
 
-const CATEGORIES = [
-  { key: 'laptop', label: '랩탑' },
-  { key: 'mobile', label: '모바일' },
-  { key: 'tablet', label: '태블릿' },
-  { key: 'other',  label: '기타' },
-]
-
-const TYPE_OPTIONS: { key: PostType; label: string; desc: string }[] = [
-  { key: 'forum',   label: '포럼',     desc: '정보 공유 및 토론' },
-  { key: 'review',  label: '리뷰',     desc: '제품 사용 후기 작성' },
-  { key: 'free',    label: '자유게시판', desc: '자유로운 이야기' },
-  { key: 'qa',      label: 'Q&A',      desc: '질문하고 답변받기' },
-  { key: 'compare', label: '비교투표',  desc: '제품 A/B 비교 투표 만들기' },
-]
-
 interface ProductResult { id: string; name: string; brand: string; image_url: string | null }
 
-function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => void; exclude: string[] }) {
+function ProductSearch({ onSelect, exclude, placeholder }: {
+  onSelect: (p: ProductResult) => void; exclude: string[]; placeholder: string
+}) {
   const [q, setQ]             = useState('')
   const [results, setResults] = useState<ProductResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -52,7 +40,7 @@ function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => 
       <div className="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
         <Search className="w-4 h-4 text-white/30 flex-shrink-0" />
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="제품 검색 (선택사항)"
+          placeholder={placeholder}
           className="flex-1 bg-transparent text-sm text-white placeholder-white/25 outline-none" />
         {loading && <Loader2 className="w-3 h-3 text-white/30 animate-spin" />}
       </div>
@@ -78,12 +66,14 @@ function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => 
   )
 }
 
-// WYSIWYG 에디터 툴바 + contenteditable 에디터
-function RichEditor({ editorRef, onChange, token, placeholder }: {
+function RichEditor({ editorRef, onChange, token, placeholder, uploadSizeError, uploadFailText, urlPrompt }: {
   editorRef: React.MutableRefObject<HTMLDivElement | null>
   onChange: (html: string) => void
   token: string | null
   placeholder: string
+  uploadSizeError: string
+  uploadFailText: string
+  urlPrompt: string
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -97,7 +87,6 @@ function RichEditor({ editorRef, onChange, token, placeholder }: {
     editorRef.current?.focus()
     const sel = window.getSelection()
     if (!sel || sel.rangeCount === 0) {
-      // 포커스 없으면 끝에 추가
       const el = editorRef.current
       if (!el) return
       el.focus()
@@ -114,17 +103,13 @@ function RichEditor({ editorRef, onChange, token, placeholder }: {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !token) return
-    if (file.size > 10 * 1024 * 1024) { alert('10MB 이하 이미지만 업로드할 수 있습니다'); return }
-
+    if (file.size > 10 * 1024 * 1024) { alert(uploadSizeError); return }
     setUploading(true)
     try {
       const ext  = file.name.split('.').pop() ?? 'jpg'
       const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage
-        .from('community-images')
-        .upload(path, file, { upsert: false })
-      if (error) { alert('이미지 업로드 실패: ' + error.message); return }
-
+      const { error } = await supabase.storage.from('community-images').upload(path, file, { upsert: false })
+      if (error) { alert(uploadFailText + error.message); return }
       const { data } = supabase.storage.from('community-images').getPublicUrl(path)
       insertHtml(`<img src="${data.publicUrl}" style="max-width:100%;border-radius:10px;margin:6px 0;display:block;border:1px solid rgba(255,255,255,0.08)" /><br />`)
     } finally {
@@ -134,28 +119,27 @@ function RichEditor({ editorRef, onChange, token, placeholder }: {
   }
 
   const tools = [
-    { icon: Bold,   title: '굵게',   action: () => exec('bold') },
-    { icon: Italic, title: '기울임', action: () => exec('italic') },
-    { icon: List,   title: '목록',   action: () => exec('insertUnorderedList') },
-    { icon: Quote,  title: '인용',   action: () => insertHtml('<blockquote style="border-left:2px solid rgba(255,255,255,0.2);padding-left:12px;color:rgba(255,255,255,0.45);margin:4px 0">인용</blockquote><br />') },
-    { icon: Link2,  title: '링크',   action: () => {
-      const url = prompt('URL 입력:')
+    { icon: Bold,   title: 'B',   action: () => exec('bold') },
+    { icon: Italic, title: 'I',   action: () => exec('italic') },
+    { icon: List,   title: '•',   action: () => exec('insertUnorderedList') },
+    { icon: Quote,  title: '"',   action: () => insertHtml('<blockquote style="border-left:2px solid rgba(255,255,255,0.2);padding-left:12px;color:rgba(255,255,255,0.45);margin:4px 0">Quote</blockquote><br />') },
+    { icon: Link2,  title: '🔗',  action: () => {
+      const url = prompt(urlPrompt)
       if (url) exec('createLink', url)
     }},
   ]
 
   return (
     <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
-      {/* 툴바 */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 bg-black/20 border-b border-border">
         {tools.map(({ icon: Icon, title, action }) => (
-          <button key={title} type="button" onMouseDown={e => { e.preventDefault(); action() }} title={title}
+          <button key={title} type="button" onMouseDown={e => { e.preventDefault(); action() }}
             className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors">
             <Icon className="w-3.5 h-3.5" />
           </button>
         ))}
         <div className="w-px h-4 bg-border mx-1" />
-        <button type="button" title="이미지 첨부"
+        <button type="button"
           onMouseDown={e => { e.preventDefault(); fileInputRef.current?.click() }}
           disabled={uploading}
           className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors disabled:opacity-30">
@@ -163,8 +147,6 @@ function RichEditor({ editorRef, onChange, token, placeholder }: {
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
       </div>
-
-      {/* contenteditable 에디터 */}
       <div
         ref={el => { editorRef.current = el }}
         contentEditable
@@ -181,12 +163,28 @@ function RichEditor({ editorRef, onChange, token, placeholder }: {
 function WritePageInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
+  const { t }        = useI18n()
   const defaultType  = (searchParams.get('type') as PostType) ?? 'forum'
+
+  const CATEGORIES = [
+    { key: 'laptop', label: t('cat.laptop') },
+    { key: 'mobile', label: t('cat.mobile') },
+    { key: 'tablet', label: t('cat.tablet') },
+    { key: 'other',  label: t('cat.other') },
+  ]
+
+  const TYPE_OPTIONS: { key: PostType; label: string; desc: string }[] = [
+    { key: 'forum',   label: t('community.forum'),   desc: t('write.type.forum.desc') },
+    { key: 'review',  label: t('community.reviews'), desc: t('write.type.review.desc') },
+    { key: 'free',    label: t('community.free'),    desc: t('write.type.free.desc') },
+    { key: 'qa',      label: t('community.qa'),      desc: t('write.type.qa.desc') },
+    { key: 'compare', label: t('community.compare'), desc: t('write.type.compare.desc') },
+  ]
 
   const [type, setType]         = useState<PostType>(defaultType)
   const [category, setCategory] = useState('laptop')
   const [title, setTitle]       = useState('')
-  const [body, setBody]         = useState('')        // HTML 내용
+  const [body, setBody]         = useState('')
   const [rating, setRating]     = useState(7)
   const [products, setProducts] = useState<ProductResult[]>([])
   const [options, setOptions]   = useState([
@@ -250,22 +248,38 @@ function WritePageInner() {
         }),
       })
       const json = await res.json()
-      if (!res.ok) { setError(json.error ?? '오류가 발생했습니다'); return }
+      if (!res.ok) { setError(json.error ?? t('write.error_network')); return }
       router.push(`/community/posts/${json.id}`)
     } catch {
-      setError('네트워크 오류가 발생했습니다')
+      setError(t('write.error_network'))
     } finally {
       setSubmitting(false)
     }
   }
+
+  const ratingLabel = (r: number) =>
+    r >= 9 ? t('post.rating.excellent')
+    : r >= 7 ? t('post.rating.good')
+    : r >= 5 ? t('post.rating.average')
+    : t('post.rating.poor')
+
+  const bodyPlaceholder =
+    type === 'review' ? t('write.placeholder.review')
+    : type === 'qa'   ? t('write.placeholder.qa')
+    : t('write.placeholder.forum')
+
+  // Section label style
+  const labelCls = 'text-xs font-bold text-white/40 mb-2 uppercase tracking-widest'
 
   if (authed === false) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="flex flex-col items-center justify-center py-40 gap-4">
-          <p className="text-white/40 text-sm">로그인이 필요합니다</p>
-          <Link href="/login" className="bg-accent text-white text-sm font-bold px-6 py-2.5 rounded-xl">로그인</Link>
+          <p className="text-white/40 text-sm">{t('write.login_required')}</p>
+          <Link href="/login" className="bg-accent text-white text-sm font-bold px-6 py-2.5 rounded-xl">
+            {t('auth.signin')}
+          </Link>
         </div>
       </div>
     )
@@ -281,31 +295,29 @@ function WritePageInner() {
           <Link href="/community" className="text-white/25 hover:text-white/60 transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-xl font-black text-white">글 작성</h1>
+          <h1 className="text-xl font-black text-white">{t('write.heading')}</h1>
         </div>
 
         <div className="space-y-6">
 
-          {/* 유형 선택 */}
+          {/* 유형 선택 — select */}
           <div>
-            <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">유형</p>
-            <div className="grid grid-cols-3 gap-2">
-              {TYPE_OPTIONS.map(t => (
-                <button key={t.key} onClick={() => setType(t.key)}
-                  className={`py-3 px-3 rounded-xl text-left transition-all border ${
-                    type === t.key ? 'bg-white/5 border-white/20' : 'bg-surface border-border hover:border-white/10'
-                  }`}>
-                  <p className={`text-xs font-bold mb-0.5 ${type === t.key ? 'text-white' : 'text-white/50'}`}>{t.label}</p>
-                  <p className="text-[10px] text-white/25 leading-relaxed">{t.desc}</p>
-                </button>
+            <p className={labelCls}>{t('write.type')}</p>
+            <select
+              value={type}
+              onChange={e => setType(e.target.value as PostType)}
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors cursor-pointer"
+            >
+              {TYPE_OPTIONS.map(opt => (
+                <option key={opt.key} value={opt.key}>{opt.label} — {opt.desc}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* 카테고리 (리뷰만) */}
           {type === 'review' && (
             <div>
-              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">카테고리</p>
+              <p className={labelCls}>{t('write.category')}</p>
               <div className="flex gap-2 flex-wrap">
                 {CATEGORIES.map(c => (
                   <button key={c.key} onClick={() => setCategory(c.key)}
@@ -323,16 +335,16 @@ function WritePageInner() {
 
           {/* 제목 */}
           <div>
-            <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">제목</p>
+            <p className={labelCls}>{t('write.post_title')}</p>
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120}
-              placeholder={type === 'compare' ? '예: 맥북 M5 vs 갤럭시북 5 어떤게 나아요?' : '제목을 입력하세요'}
+              placeholder={type === 'compare' ? t('write.placeholder.title_compare') : t('write.placeholder.title')}
               className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
           </div>
 
           {/* 비교투표 옵션 */}
           {type === 'compare' && (
             <div>
-              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">투표 항목</p>
+              <p className={labelCls}>{t('write.vote_options')}</p>
               <div className="space-y-3">
                 {options.map((opt, i) => (
                   <div key={i} className="bg-surface border border-border rounded-xl p-4 space-y-3">
@@ -340,42 +352,44 @@ function WritePageInner() {
                       <span className="w-5 h-5 rounded-full bg-white/8 flex items-center justify-center text-[10px] font-black text-white/50">
                         {String.fromCharCode(65 + i)}
                       </span>
-                      <p className="text-xs text-white/40">{i + 1}번 항목</p>
+                      <p className="text-xs text-white/40">
+                        {t('write.option_label').replace('{n}', String(i + 1))}
+                      </p>
                     </div>
                     <input value={opt.label}
                       onChange={e => setOptions(prev => prev.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
-                      placeholder={`항목 ${i + 1} 이름`}
+                      placeholder={t('write.option_name').replace('{n}', String(i + 1))}
                       className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
                     <ProductSearch
                       onSelect={p => handleOptionProductSelect(p, i)}
                       exclude={options.map(o => o.product_id).filter(Boolean) as string[]}
+                      placeholder={t('write.product_search')}
                     />
-                    {opt.product_id && <p className="text-[10px] text-accent/70">제품 연결됨</p>}
+                    {opt.product_id && <p className="text-[10px] text-accent/70">{t('write.product_linked')}</p>}
                   </div>
                 ))}
                 {options.length < 4 && (
                   <button onClick={() => setOptions(p => [...p, { label: '', product_id: null, image_url: null }])}
                     className="w-full py-3 border border-dashed border-border rounded-xl text-xs text-white/25 hover:text-white/50 hover:border-white/15 transition-colors flex items-center justify-center gap-1.5">
-                    <Plus className="w-3.5 h-3.5" /> 항목 추가 (최대 4개)
+                    <Plus className="w-3.5 h-3.5" /> {t('write.add_option')}
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* 본문 에디터 (WYSIWYG) */}
+          {/* 본문 에디터 */}
           {type !== 'compare' && (
             <div>
-              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">본문</p>
+              <p className={labelCls}>{t('write.body')}</p>
               <RichEditor
                 editorRef={editorRef}
                 onChange={setBody}
                 token={token}
-                placeholder={
-                  type === 'review'
-                    ? '제품을 사용해본 솔직한 후기를 남겨주세요.'
-                    : '자유롭게 의견이나 정보를 공유해보세요.'
-                }
+                placeholder={bodyPlaceholder}
+                uploadSizeError={t('write.img_size_error')}
+                uploadFailText={t('write.img_upload_fail')}
+                urlPrompt={t('write.toolbar.url')}
               />
             </div>
           )}
@@ -383,7 +397,7 @@ function WritePageInner() {
           {/* 평점 (리뷰만) */}
           {type === 'review' && (
             <div>
-              <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">평점</p>
+              <p className={labelCls}>{t('write.rating')}</p>
               <div className="bg-surface border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 flex-wrap mb-3">
                   {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
@@ -402,9 +416,7 @@ function WritePageInner() {
                 <div className="flex items-center gap-2">
                   <span className="text-3xl font-black text-accent">{rating}</span>
                   <span className="text-sm text-white/25">/10</span>
-                  <span className="text-xs text-white/35 ml-1">
-                    {rating >= 9 ? '완벽해요' : rating >= 7 ? '좋아요' : rating >= 5 ? '보통이에요' : '아쉬워요'}
-                  </span>
+                  <span className="text-xs text-white/35 ml-1">{ratingLabel(rating)}</span>
                 </div>
               </div>
             </div>
@@ -413,8 +425,9 @@ function WritePageInner() {
           {/* 제품 태그 */}
           {type !== 'compare' && (
             <div>
-              <p className="text-[10px] text-white/30 mb-1 font-semibold uppercase tracking-widest">
-                제품 태그 <span className="text-white/15 normal-case font-normal">(선택)</span>
+              <p className={labelCls}>
+                {t('write.product_tag')}
+                <span className="text-white/20 normal-case font-normal ml-1">({t('write.optional')})</span>
               </p>
               {products.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -430,7 +443,11 @@ function WritePageInner() {
                 </div>
               )}
               {products.length < 5 && (
-                <ProductSearch onSelect={handleProductSelect} exclude={products.map(p => p.id)} />
+                <ProductSearch
+                  onSelect={handleProductSelect}
+                  exclude={products.map(p => p.id)}
+                  placeholder={t('write.product_search')}
+                />
               )}
             </div>
           )}
@@ -442,11 +459,11 @@ function WritePageInner() {
           <div className="flex gap-3 pt-2">
             <Link href="/community"
               className="px-6 py-3 rounded-xl border border-border text-white/35 text-sm hover:text-white/70 hover:border-white/15 transition-colors">
-              취소
+              {t('write.cancel')}
             </Link>
             <button onClick={handleSubmit} disabled={submitting || !canSubmit() || authed === null}
               className="flex-1 py-3 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-40 text-white font-bold text-sm transition-all">
-              {submitting ? '등록 중...' : '게시하기'}
+              {submitting ? t('write.submitting') : t('write.submit')}
             </button>
           </div>
         </div>
@@ -456,5 +473,9 @@ function WritePageInner() {
 }
 
 export default function WritePage() {
-  return <Suspense><WritePageInner /></Suspense>
+  return (
+    <Suspense>
+      <WritePageInner />
+    </Suspense>
+  )
 }

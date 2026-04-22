@@ -26,16 +26,26 @@ function AuthCallbackInner() {
 
       if (!userId) { router.replace('/login'); return }
 
-      // 프로필 설정 여부 확인
-      const { data: profile } = await supabase
+      // 프로필 존재 여부 확인
+      const { data: profileBase } = await supabase
         .from('profiles')
-        .select('user_id, country')
+        .select('user_id')
         .eq('user_id', userId)
         .maybeSingle()
 
-      if (!profile) {
+      if (!profileBase) {
         router.replace('/setup-nickname')
-      } else if (!profile.country) {
+        return
+      }
+
+      // country 컬럼 확인 (마이그레이션 여부 무관하게 안전하게 처리)
+      const { data: profileFull } = await supabase
+        .from('profiles')
+        .select('country')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!profileFull?.country) {
         router.replace('/setup-preferences')
       } else {
         router.replace('/mypage')

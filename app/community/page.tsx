@@ -156,9 +156,9 @@ function CardRow({ post, token, onVote, t }: {
 
         {/* body preview — image-only: show image full width */}
         {isImageOnly && (
-          <div className="mb-2 rounded-lg overflow-hidden max-h-48">
+          <div className="mb-2 rounded-lg overflow-hidden bg-surface-2 flex items-center justify-center max-h-64">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumbUrl!} alt="" className="w-full object-cover max-h-48" />
+            <img src={thumbUrl!} alt="" className="w-full max-h-64 object-contain" />
           </div>
         )}
 
@@ -186,7 +186,7 @@ function CardRow({ post, token, onVote, t }: {
       {thumbUrl && !isImageOnly && (
         <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 ml-3 self-start mt-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={thumbUrl} alt="" className="w-20 h-20 object-cover rounded-lg bg-surface-2" />
+          <img src={thumbUrl} alt="" className="w-20 h-20 object-contain rounded-lg bg-surface-2 p-1" />
         </Link>
       )}
     </div>

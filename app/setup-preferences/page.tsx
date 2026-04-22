@@ -81,13 +81,17 @@ export default function SetupPreferencesPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_id, country')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (!data) { router.replace('/setup-nickname'); return }
-      if (data.country) { router.replace('/mypage'); return }  // already set
+
+      // 프로필 존재 확인
+      const { data: base } = await supabase
+        .from('profiles').select('user_id').eq('user_id', user.id).maybeSingle()
+      if (!base) { router.replace('/setup-nickname'); return }
+
+      // country 설정 여부 확인 (컬럼 없어도 안전하게)
+      const { data: full } = await supabase
+        .from('profiles').select('country').eq('user_id', user.id).maybeSingle()
+      if (full?.country) { router.replace('/mypage'); return }
+
       setUserId(user.id)
       setChecking(false)
     })
