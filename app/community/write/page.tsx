@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  X, Plus, Search, Bold, Italic, Quote, Code, List, Link2,
+  X, Plus, Search, Bold, Italic, Quote, List, Link2,
   ChevronLeft, ImageIcon, Loader2,
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
@@ -76,42 +76,37 @@ function ProductSearch({ onSelect, exclude }: { onSelect: (p: ProductResult) => 
   )
 }
 
-function EditorToolbar({ textareaRef, onChange, token }: {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>
-  onChange: (val: string) => void
+// WYSIWYG 에디터 툴바 + contenteditable 에디터
+function RichEditor({ editorRef, onChange, token, placeholder }: {
+  editorRef: React.RefObject<HTMLDivElement | null>
+  onChange: (html: string) => void
   token: string | null
+  placeholder: string
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
-  const wrap = (before: string, after = before, placeholder = '텍스트') => {
-    const el = textareaRef.current
-    if (!el) return
-    const start = el.selectionStart
-    const end   = el.selectionEnd
-    const sel   = el.value.slice(start, end) || placeholder
-    const newVal = el.value.slice(0, start) + before + sel + after + el.value.slice(end)
-    onChange(newVal)
-    setTimeout(() => { el.focus(); el.setSelectionRange(start + before.length, start + before.length + sel.length) }, 0)
+  const exec = (cmd: string, value?: string) => {
+    document.execCommand(cmd, false, value)
+    editorRef.current?.focus()
   }
 
-  const linePrefix = (prefix: string) => {
-    const el = textareaRef.current
-    if (!el) return
-    const start = el.selectionStart
-    const lineStart = el.value.lastIndexOf('\n', start - 1) + 1
-    const newVal = el.value.slice(0, lineStart) + prefix + el.value.slice(lineStart)
-    onChange(newVal)
-    setTimeout(() => { el.focus(); el.setSelectionRange(start + prefix.length, start + prefix.length) }, 0)
-  }
-
-  const insertText = (text: string) => {
-    const el = textareaRef.current
-    if (!el) return
-    const start = el.selectionStart
-    const newVal = el.value.slice(0, start) + text + el.value.slice(start)
-    onChange(newVal)
-    setTimeout(() => { el.focus(); el.setSelectionRange(start + text.length, start + text.length) }, 0)
+  const insertHtml = (html: string) => {
+    editorRef.current?.focus()
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0) {
+      // 포커스 없으면 끝에 추가
+      const el = editorRef.current
+      if (!el) return
+      el.focus()
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      range.collapse(false)
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+    }
+    document.execCommand('insertHTML', false, html)
+    onChange(editorRef.current?.innerHTML ?? '')
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,7 +124,7 @@ function EditorToolbar({ textareaRef, onChange, token }: {
       if (error) { alert('이미지 업로드 실패: ' + error.message); return }
 
       const { data } = supabase.storage.from('community-images').getPublicUrl(path)
-      insertText(`![이미지](${data.publicUrl})\n`)
+      insertHtml(`<img src="${data.publicUrl}" style="max-width:100%;border-radius:10px;margin:6px 0;display:block;border:1px solid rgba(255,255,255,0.08)" /><br />`)
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -137,32 +132,46 @@ function EditorToolbar({ textareaRef, onChange, token }: {
   }
 
   const tools = [
-    { icon: Bold,   title: '굵게',   action: () => wrap('**', '**', '굵은 텍스트') },
-    { icon: Italic, title: '기울임', action: () => wrap('_', '_', '기울임 텍스트') },
-    { icon: Quote,  title: '인용',   action: () => linePrefix('> ') },
-    { icon: Code,   title: '코드',   action: () => wrap('`', '`', '코드') },
-    { icon: List,   title: '목록',   action: () => linePrefix('- ') },
-    { icon: Link2,  title: '링크',   action: () => wrap('[', '](https://)', '링크 텍스트') },
+    { icon: Bold,   title: '굵게',   action: () => exec('bold') },
+    { icon: Italic, title: '기울임', action: () => exec('italic') },
+    { icon: List,   title: '목록',   action: () => exec('insertUnorderedList') },
+    { icon: Quote,  title: '인용',   action: () => insertHtml('<blockquote style="border-left:2px solid rgba(255,255,255,0.2);padding-left:12px;color:rgba(255,255,255,0.45);margin:4px 0">인용</blockquote><br />') },
+    { icon: Link2,  title: '링크',   action: () => {
+      const url = prompt('URL 입력:')
+      if (url) exec('createLink', url)
+    }},
   ]
 
   return (
-    <div className="flex items-center gap-0.5 px-2 py-1.5 bg-black/20 border-b border-border rounded-t-xl">
-      {tools.map(({ icon: Icon, title, action }) => (
-        <button key={title} type="button" onClick={action} title={title}
-          className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors">
-          <Icon className="w-3.5 h-3.5" />
+    <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
+      {/* 툴바 */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-black/20 border-b border-border">
+        {tools.map(({ icon: Icon, title, action }) => (
+          <button key={title} type="button" onMouseDown={e => { e.preventDefault(); action() }} title={title}
+            className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors">
+            <Icon className="w-3.5 h-3.5" />
+          </button>
+        ))}
+        <div className="w-px h-4 bg-border mx-1" />
+        <button type="button" title="이미지 첨부"
+          onMouseDown={e => { e.preventDefault(); fileInputRef.current?.click() }}
+          disabled={uploading}
+          className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors disabled:opacity-30">
+          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
         </button>
-      ))}
-      <div className="w-px h-4 bg-border mx-1" />
-      {/* 이미지 업로드 */}
-      <button type="button" title="이미지 첨부"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors disabled:opacity-30">
-        {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-      </button>
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-      <span className="ml-auto text-[9px] text-white/20 pr-1">마크다운 지원</span>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+      </div>
+
+      {/* contenteditable 에디터 */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={() => onChange(editorRef.current?.innerHTML ?? '')}
+        data-placeholder={placeholder}
+        className="min-h-[280px] px-4 py-3 text-sm text-white/85 leading-relaxed outline-none bg-surface empty:before:content-[attr(data-placeholder)] empty:before:text-white/20"
+        style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+      />
     </div>
   )
 }
@@ -175,7 +184,7 @@ function WritePageInner() {
   const [type, setType]         = useState<PostType>(defaultType)
   const [category, setCategory] = useState('laptop')
   const [title, setTitle]       = useState('')
-  const [body, setBody]         = useState('')
+  const [body, setBody]         = useState('')        // HTML 내용
   const [rating, setRating]     = useState(7)
   const [products, setProducts] = useState<ProductResult[]>([])
   const [options, setOptions]   = useState([
@@ -189,7 +198,7 @@ function WritePageInner() {
   const [avatarUrl, setAvatarUrl]   = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -282,9 +291,7 @@ function WritePageInner() {
               {TYPE_OPTIONS.map(t => (
                 <button key={t.key} onClick={() => setType(t.key)}
                   className={`py-3 px-3 rounded-xl text-left transition-all border ${
-                    type === t.key
-                      ? 'bg-white/5 border-white/20'
-                      : 'bg-surface border-border hover:border-white/10'
+                    type === t.key ? 'bg-white/5 border-white/20' : 'bg-surface border-border hover:border-white/10'
                   }`}>
                   <p className={`text-xs font-bold mb-0.5 ${type === t.key ? 'text-white' : 'text-white/50'}`}>{t.label}</p>
                   <p className="text-[10px] text-white/25 leading-relaxed">{t.desc}</p>
@@ -318,7 +325,6 @@ function WritePageInner() {
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120}
               placeholder={type === 'compare' ? '예: 맥북 M5 vs 갤럭시북 5 어떤게 나아요?' : '제목을 입력하세요'}
               className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
-            <p className="text-[10px] text-white/20 text-right mt-1">{title.length} / 120</p>
           </div>
 
           {/* 비교투표 옵션 */}
@@ -342,9 +348,7 @@ function WritePageInner() {
                       onSelect={p => handleOptionProductSelect(p, i)}
                       exclude={options.map(o => o.product_id).filter(Boolean) as string[]}
                     />
-                    {opt.product_id && (
-                      <p className="text-[10px] text-accent/70">제품 연결됨</p>
-                    )}
+                    {opt.product_id && <p className="text-[10px] text-accent/70">제품 연결됨</p>}
                   </div>
                 ))}
                 {options.length < 4 && (
@@ -357,43 +361,20 @@ function WritePageInner() {
             </div>
           )}
 
-          {/* 본문 에디터 */}
+          {/* 본문 에디터 (WYSIWYG) */}
           {type !== 'compare' && (
             <div>
               <p className="text-[10px] text-white/30 mb-2 font-semibold uppercase tracking-widest">본문</p>
-              <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
-                <EditorToolbar textareaRef={textareaRef} onChange={setBody} token={token} />
-                <textarea ref={textareaRef} value={body} onChange={e => setBody(e.target.value)}
-                  rows={12} maxLength={5000}
-                  placeholder={
-                    type === 'review'
-                      ? '제품을 사용해본 솔직한 후기를 남겨주세요.\n\n장점:\n단점:\n총평:'
-                      : '자유롭게 의견이나 정보를 공유해보세요.'
-                  }
-                  className="w-full bg-surface px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none leading-relaxed" />
-                {/* 업로드된 이미지 썸네일 미리보기 */}
-                {(() => {
-                  const imgs = [...body.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/g)].map(m => m[1])
-                  if (imgs.length === 0) return null
-                  return (
-                    <div className="px-4 pb-3 flex flex-wrap gap-2 border-t border-border pt-3">
-                      {imgs.map((url, i) => (
-                        <div key={i} className="relative group">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt="" className="h-24 w-auto rounded-lg border border-border object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setBody(b => b.replace(new RegExp(`!\\[[^\\]]*\\]\\(${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)\\n?`), ''))}
-                            className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-3 h-3 text-white" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-              <p className="text-[10px] text-white/20 text-right mt-1">{body.length} / 5000</p>
+              <RichEditor
+                editorRef={editorRef}
+                onChange={setBody}
+                token={token}
+                placeholder={
+                  type === 'review'
+                    ? '제품을 사용해본 솔직한 후기를 남겨주세요.'
+                    : '자유롭게 의견이나 정보를 공유해보세요.'
+                }
+              />
             </div>
           )}
 
@@ -452,12 +433,10 @@ function WritePageInner() {
             </div>
           )}
 
-          {/* 에러 */}
           {error && (
             <p className="text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-4 py-3">{error}</p>
           )}
 
-          {/* 버튼 */}
           <div className="flex gap-3 pt-2">
             <Link href="/community"
               className="px-6 py-3 rounded-xl border border-border text-white/35 text-sm hover:text-white/70 hover:border-white/15 transition-colors">

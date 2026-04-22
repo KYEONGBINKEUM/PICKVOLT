@@ -69,10 +69,17 @@ function renderMarkdown(text: string): string {
 }
 
 function MarkdownBody({ text }: { text: string }) {
+  // HTML 태그가 포함돼 있으면 WYSIWYG 저장 내용 → 그대로 렌더링
+  // 아니면 기존 마크다운 파싱
+  const isHtml = /<[a-z][\s\S]*>/i.test(text)
   return (
     <div
       className="text-sm text-white/75 leading-relaxed prose-custom"
-      dangerouslySetInnerHTML={{ __html: `<p class="mb-3">${renderMarkdown(text)}</p>` }}
+      dangerouslySetInnerHTML={{
+        __html: isHtml
+          ? text
+          : `<p class="mb-3">${renderMarkdown(text)}</p>`
+      }}
     />
   )
 }
