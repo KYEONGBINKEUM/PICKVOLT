@@ -206,8 +206,18 @@ function WritePageInner() {
   }, [])
 
   const handleProductSelect = useCallback((p: ProductResult) => {
-    setProducts(prev => prev.length < 5 ? [...prev, p] : prev)
-  }, [])
+    if (type === 'review') {
+      setProducts([p])
+    } else {
+      setProducts(prev => prev.length < 5 ? [...prev, p] : prev)
+    }
+  }, [type])
+
+  useEffect(() => {
+    if (type === 'review' && products.length > 1) {
+      setProducts(prev => prev.slice(0, 1))
+    }
+  }, [type, products.length])
 
   const handleOptionProductSelect = useCallback((p: ProductResult, idx: number) => {
     setOptions(prev => prev.map((o, i) => i === idx ? { ...o, label: o.label || p.name, product_id: p.id, image_url: p.image_url } : o))
@@ -433,7 +443,7 @@ function WritePageInner() {
                   ))}
                 </div>
               )}
-              {products.length < 5 && (
+              {products.length < (type === 'review' ? 1 : 5) && (
                 <ProductSearch
                   onSelect={handleProductSelect}
                   exclude={products.map(p => p.id)}

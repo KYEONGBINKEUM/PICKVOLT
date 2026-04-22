@@ -9,6 +9,7 @@ import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
 import CommunityRelated from '@/components/CommunityRelated'
 import { supabase } from '@/lib/supabase'
+import { extractFirstImage, stripHtml, timeAgo } from '@/components/PostFeed'
 
 interface Specs {
   cpu:             string | null
@@ -46,6 +47,74 @@ interface Product {
   amazon_url: string | null
   specs:      Specs
   variants?:  ProductVariant[]
+}
+
+interface CommunityPost {
+  id: string; type: string; title: string; body: string; rating: number | null
+  upvotes: number; comment_count: number; created_at: string; user_display_name: string
+  community_post_products?: { products: { id: string; name: string } | null }[]
+}
+
+function CommunityReviewsSection({ productId }: { productId: string }) {
+  const { t } = useI18n()
+  const [posts, setPosts] = useState<CommunityPost[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/community/posts?product_id=${productId}&type=review&sort=hot&limit=5`)
+      .then(r => r.json())
+      .then(d => setPosts(d.posts ?? []))
+      .finally(() => setLoading(false))
+  }, [productId])
+
+  if (!loading && posts.length === 0) return null
+
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-bold text-white/60 mb-3">{t('community.reviews')}</h3>
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center py-6">
+            <div className="flex gap-1.5">{[0,1,2].map(i => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/20 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
+            ))}</div>
+          </div>
+        ) : posts.map(post => {
+          const isHtml = /<[a-z]/i.test(post.body ?? '')
+          const thumbUrl = isHtml ? extractFirstImage(post.body) : null
+          const plainText = isHtml ? stripHtml(post.body) : (post.body ?? '')
+          return (
+            <Link key={post.id} href={`/community/posts/${post.id}`}
+              className="group flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors border-b border-border last:border-0">
+              {thumbUrl && (
+                <div className="flex-shrink-0 mt-0.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={thumbUrl} alt="" className="w-14 h-14 object-contain rounded-lg bg-surface-2 p-0.5" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white/80 group-hover:text-white line-clamp-2 transition-colors mb-0.5">
+                  {post.title}
+                </p>
+                {!thumbUrl && plainText && (
+                  <p className="text-xs text-white/30 line-clamp-2 leading-relaxed mb-1">{plainText}</p>
+                )}
+                <div className="flex items-center gap-2.5 text-[11px] text-white/25">
+                  <span>{post.user_display_name}</span>
+                  <span>{timeAgo(post.created_at, t)}</span>
+                  {post.rating != null && <span className="text-amber-400 font-bold">★ {post.rating}</span>}
+                </div>
+              </div>
+            </Link>
+          )
+        })}
+        <Link href={`/community?product=${productId}&type=review`}
+          className="block text-center text-[11px] text-white/25 hover:text-white/50 py-2.5 border-t border-border transition-colors">
+          {t('community.more')}
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 function fmtGB(val: string): string {
@@ -495,6 +564,7 @@ ${priceHTML}
             <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
           </div>
           <ReviewSection productId={product.id} />
+          <CommunityReviewsSection productId={product.id} />
           <CommunityRelated productId={product.id} />
         </div>
       </div>
