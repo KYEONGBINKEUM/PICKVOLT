@@ -42,69 +42,62 @@ function ProductThumb({ product }: { product: Product }) {
 
 /* ── 트렌딩 캐러셀 (clone-based infinite · center mode) ── */
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
-  const router = useRouter()
-  const CARD_W = 300   // card width px (+ px-2 padding = 316 total slot)
-  const GAP    = 16    // px-2 on each side
-  const SLOT   = CARD_W + GAP
+  const router  = useRouter()
+  const CARD_W  = 300
+  const GAP     = 16
+  const SLOT    = CARD_W + GAP
+  const SPEED   = 0.35  // px per ms
 
-  // Triple clone: [copy1, original, copy2] → start from original(middle) set
-  const slides = [...items, ...items, ...items]
-  const totalSets = 3
-  const setLen = items.length
+  const slides  = [...items, ...items, ...items]
+  const setLen  = items.length
 
-  const trackRef   = useRef<HTMLDivElement>(null)
-  const offsetRef  = useRef(setLen * SLOT)   // start at middle set
-  const dragging   = useRef(false)
-  const didDrag    = useRef(false)
-  const dragStart  = useRef(0)
-  const dragOffset = useRef(0)
-  const animFrame  = useRef<number | null>(null)
-  const [renderOffset, setRenderOffset] = useState(setLen * SLOT)
+  const trackRef    = useRef<HTMLDivElement>(null)
+  const offsetRef   = useRef(setLen * SLOT)
+  const dragging    = useRef(false)
+  const didDrag     = useRef(false)
+  const hovered     = useRef(false)
+  const dragStart   = useRef(0)
+  const dragOffset  = useRef(0)
+  const lastTime    = useRef<number | null>(null)
+  const rafRef      = useRef<number | null>(null)
 
-  // Apply offset to DOM directly for snappy performance
-  const applyOffset = useCallback((px: number, animate: boolean) => {
-    if (!trackRef.current) return
-    trackRef.current.style.transition = animate ? 'transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none'
-    trackRef.current.style.transform = `translateX(${-px}px)`
-    offsetRef.current = px
-  }, [])
+  const setTransform = useCallback((px: number) => {
+    // silent infinite loop: stay within middle set bounds
+    let o = px
+    if (o >= setLen * 2 * SLOT) o -= setLen * SLOT
+    if (o <  setLen * SLOT * 0.001) o += setLen * SLOT
+    offsetRef.current = o
+    if (trackRef.current) trackRef.current.style.transform = `translateX(${-o}px)`
+  }, [setLen, SLOT])
 
-  // After animated transition, silently reposition to middle set
-  const normalize = useCallback(() => {
-    const min = SLOT
-    const max = (totalSets - 1) * setLen * SLOT - SLOT
-    let o = offsetRef.current
-    if (o < min) {
-      o += setLen * SLOT
-    } else if (o > max) {
-      o -= setLen * SLOT
+  // RAF continuous scroll loop
+  const tick = useCallback((time: number) => {
+    if (!hovered.current && !dragging.current) {
+      const dt = lastTime.current !== null ? time - lastTime.current : 0
+      lastTime.current = time
+      setTransform(offsetRef.current + SPEED * dt)
+    } else {
+      lastTime.current = null
     }
-    if (o !== offsetRef.current) {
-      applyOffset(o, false)
-      setRenderOffset(o)
-    }
-  }, [applyOffset, setLen])
+    rafRef.current = requestAnimationFrame(tick)
+  }, [setTransform])
 
-  // Auto-advance
   useEffect(() => {
-    const id = setInterval(() => {
-      if (dragging.current) return
-      const next = offsetRef.current + SLOT
-      applyOffset(next, true)
-      setRenderOffset(next)
-      // Normalize after transition
-      setTimeout(normalize, 420)
-    }, 2800)
-    return () => clearInterval(id)
-  }, [applyOffset, normalize])
+    setTransform(setLen * SLOT)
+    rafRef.current = requestAnimationFrame(tick)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [tick, setTransform, setLen, SLOT])
 
-  // Touch / pointer drag
+  // Hover pause
+  const onMouseEnter = useCallback(() => { hovered.current = true }, [])
+  const onMouseLeave = useCallback(() => { hovered.current = false }, [])
+
+  // Drag
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragging.current = true
-    didDrag.current = false
-    dragStart.current = e.clientX
+    didDrag.current  = false
+    dragStart.current  = e.clientX
     dragOffset.current = offsetRef.current
-    if (animFrame.current) cancelAnimationFrame(animFrame.current)
     if (trackRef.current) trackRef.current.style.transition = 'none'
   }, [])
 
@@ -112,25 +105,25 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
     if (!dragging.current) return
     const delta = dragStart.current - e.clientX
     if (Math.abs(delta) > 4) didDrag.current = true
-    applyOffset(dragOffset.current + delta, false)
-  }, [applyOffset])
+    setTransform(dragOffset.current + delta)
+  }, [setTransform])
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return
     dragging.current = false
-    const delta = dragStart.current - e.clientX
-    // Snap to nearest card
-    const raw = dragOffset.current + delta
+    const delta  = dragStart.current - e.clientX
+    const raw    = dragOffset.current + delta
     const snapped = Math.round(raw / SLOT) * SLOT
-    applyOffset(snapped, true)
-    setRenderOffset(snapped)
-    setTimeout(normalize, 420)
-  }, [applyOffset, normalize])
-
-  // Init position
-  useEffect(() => {
-    applyOffset(setLen * SLOT, false)
-  }, [applyOffset, setLen])
+    // brief snap animation then resume linear
+    if (trackRef.current) {
+      trackRef.current.style.transition = 'transform 0.28s ease'
+      trackRef.current.style.transform  = `translateX(${-snapped}px)`
+      offsetRef.current = snapped
+    }
+    setTimeout(() => {
+      if (trackRef.current) trackRef.current.style.transition = 'none'
+    }, 300)
+  }, [SLOT])
 
   if (items.length === 0) return null
 
@@ -141,9 +134,10 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
       </div>
 
-      {/* Viewport: overflow-hidden + side gradient mask */}
       <div
         className="overflow-hidden w-full cursor-grab active:cursor-grabbing select-none"
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -153,25 +147,16 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
           maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
         }}
       >
-        {/* Track: starts shifted so center card is centered */}
         <div
           ref={trackRef}
           className="flex will-change-transform"
-          style={{
-            // Offset by half-viewport minus half-card so first visible card is centered
-            paddingLeft: `calc(50% - ${CARD_W / 2}px)`,
-            transform: `translateX(-${setLen * SLOT}px)`,
-          }}
+          style={{ paddingLeft: `calc(50% - ${CARD_W / 2}px)` }}
         >
           {slides.map((item, i) => (
-            <div
-              key={i}
-              className="flex-shrink-0 px-2"
-              style={{ width: CARD_W }}
-            >
+            <div key={i} className="flex-shrink-0 px-2" style={{ width: CARD_W }}>
               <div
                 onPointerUp={() => { if (!didDrag.current) router.push(item.href) }}
-                className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all cursor-pointer"
+                className="bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <ProductThumb product={item.productA} />
