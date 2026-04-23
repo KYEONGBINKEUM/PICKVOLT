@@ -404,7 +404,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
   if (loading) return (
     <div className="min-h-screen bg-background"><Navbar />
-      <div className="max-w-[960px] mx-auto px-4 py-8 space-y-4">
+      <div className="max-w-[900px] mx-auto px-4 py-8 space-y-4">
         <div className="h-6 w-48 bg-surface border border-border rounded animate-pulse" />
         <div className="h-64 bg-surface border border-border rounded-xl animate-pulse" />
         <div className="h-32 bg-surface border border-border rounded-xl animate-pulse" />
@@ -441,7 +441,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
+      <main className="max-w-[900px] mx-auto px-4 pt-[88px] pb-20">
 
         {/* 뒤로가기 */}
         <Link href={backHref}

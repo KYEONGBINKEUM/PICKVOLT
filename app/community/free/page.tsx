@@ -63,7 +63,7 @@ export default function FreeBoardPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
+      <main className="max-w-[900px] mx-auto px-4 pt-[88px] pb-20">
         <div className="flex items-center gap-2 mb-3">
           <h1 className="text-lg font-black text-white">{t('community.free')}</h1>
           {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}

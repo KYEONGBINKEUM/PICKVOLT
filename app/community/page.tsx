@@ -63,7 +63,7 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
+      <div className="max-w-[900px] mx-auto px-4 pt-[88px] pb-20">
 
         <div className="flex items-center gap-2 mb-3">
           <select
