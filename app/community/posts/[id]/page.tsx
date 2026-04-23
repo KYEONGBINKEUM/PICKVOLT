@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  ChevronUp, MessageSquare, Star, Tag,
-  Send, Trash2, Eye, ArrowLeft, CornerDownRight
+  ThumbsUp, ThumbsDown, MessageSquare, Star, Tag,
+  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
@@ -36,6 +36,7 @@ interface Comment {
   user_display_name: string; user_avatar_url: string | null
   parent_id: string | null; body: string; upvotes: number
   created_at: string; my_vote: boolean
+  downvotes?: number; my_downvote?: boolean
 }
 
 function timeAgo(d: string, t: (k: string) => string) {
@@ -88,9 +89,10 @@ function Avatar({ url, name, size = 7 }: { url: string | null; name: string; siz
   )
 }
 
-function CommentItem({ c, depth = 0, onVote, onReply, currentUserId, token, onDelete, t }: {
+function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, currentUserId, token, onDelete, t }: {
   c: Comment; depth?: number
   onVote: (id: string) => void
+  onDownvote: (id: string) => void
   onReply: (id: string, name: string) => void
   currentUserId: string | null; token: string | null
   onDelete: (id: string) => void
@@ -109,11 +111,20 @@ function CommentItem({ c, depth = 0, onVote, onReply, currentUserId, token, onDe
             </button>
           )}
         </div>
-        <p className="text-sm text-white/65 leading-relaxed ml-8 whitespace-pre-wrap">{c.body}</p>
+        {c.body.includes('![') ? (
+          <div className="text-sm text-white/65 leading-relaxed ml-8"
+            dangerouslySetInnerHTML={{ __html: `<p class="mb-3">${renderMarkdown(c.body)}</p>` }} />
+        ) : (
+          <p className="text-sm text-white/65 leading-relaxed ml-8 whitespace-pre-wrap">{c.body}</p>
+        )}
         <div className="flex items-center gap-3 mt-2 ml-8">
           <button onClick={() => onVote(c.id)}
             className={`flex items-center gap-1 text-[11px] transition-colors ${c.my_vote ? 'text-accent' : 'text-white/25 hover:text-white/50'}`}>
-            <ChevronUp className="w-3.5 h-3.5" />{c.upvotes}
+            <ThumbsUp className="w-3.5 h-3.5" /><span className="tabular-nums">{c.upvotes}</span>
+          </button>
+          <button onClick={() => onDownvote(c.id)}
+            className={`flex items-center gap-1 text-[11px] transition-colors ${c.my_downvote ? 'text-red-400' : 'text-white/25 hover:text-white/50'}`}>
+            <ThumbsDown className="w-3.5 h-3.5" />{(c.downvotes ?? 0) > 0 && <span className="tabular-nums">{c.downvotes}</span>}
           </button>
           <button onClick={() => onReply(c.id, c.user_display_name)}
             className="flex items-center gap-1 text-[11px] text-white/25 hover:text-white/50 transition-colors">
@@ -143,6 +154,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [submittingComment, setSubmittingComment]   = useState(false)
   const [voting, setVoting]                         = useState(false)
   const [compareVoting, setCompareVoting]           = useState(false)
+  const [commentImages, setCommentImages]           = useState<string[]>([])
+  const [uploadingImage, setUploadingImage]         = useState(false)
+  const fileInputRef                                = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -171,7 +185,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     const tok = (await supabase.auth.getSession()).data.session?.access_token
     if (tok) headers['Authorization'] = `Bearer ${tok}`
     const res = await fetch(`/api/community/posts/${id}/comments`, { headers })
-    if (res.ok) setComments((await res.json()).comments ?? [])
+    if (res.ok) {
+      const data = await res.json()
+      setComments((data.comments ?? []).map((c: Comment) => ({ downvotes: 0, my_downvote: false, ...c })))
+    }
   }, [id])
 
   useEffect(() => { loadPost(); loadComments() }, [loadPost, loadComments])
@@ -230,14 +247,32 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     setPost(p => p ? { ...p, comment_count: Math.max(0, p.comment_count - 1) } : p)
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !token) return
+    setUploadingImage(true)
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `comments/${id}/${Date.now()}.${ext}`
+    const { data, error } = await supabase.storage.from('product-images').upload(path, file, { upsert: false })
+    if (!error && data) {
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${data.path}`
+      setCommentImages(prev => [...prev, url])
+    }
+    setUploadingImage(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleSubmitComment = async () => {
-    if (!token || !commentText.trim() || submittingComment) return
+    if (!token || (!commentText.trim() && commentImages.length === 0) || submittingComment) return
     setSubmittingComment(true)
+    const fullBody = commentImages.length > 0
+      ? [commentText.trim(), ...commentImages.map(url => `![image](${url})`)].filter(Boolean).join('\n')
+      : commentText.trim()
     const res = await fetch(`/api/community/posts/${id}/comments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        body: commentText.trim(),
+        body: fullBody,
         parent_id: replyTo?.id ?? null,
         display_name: displayName,
         avatar_url: avatarUrl,
@@ -248,9 +283,21 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
       setComments(cs => [...cs, d.comment])
       setPost(p => p ? { ...p, comment_count: p.comment_count + 1 } : p)
       setCommentText('')
+      setCommentImages([])
       setReplyTo(null)
     }
     setSubmittingComment(false)
+  }
+
+  const handleCommentDownvote = async (commentId: string) => {
+    if (!token) return
+    const res = await fetch(`/api/community/posts/${id}/comments/${commentId}/downvote`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      const d = await res.json()
+      setComments(cs => cs.map(c => c.id === commentId ? { ...c, downvotes: d.downvotes, my_downvote: d.voted } : c))
+    }
   }
 
   const handleDeletePost = async () => {
@@ -311,23 +358,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
         {/* 게시물 카드 */}
         <div className="bg-surface border border-border rounded-xl overflow-hidden mb-4">
-          <div className="flex">
-            {/* 업보트 컬럼 */}
-            <div className="flex flex-col items-center gap-1 px-3 py-4 bg-black/20 border-r border-border min-w-[52px]">
-              <button onClick={handleVote} disabled={voting || !token}
-                title={!token ? t('post.login_vote') : undefined}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  post.my_vote ? 'text-accent bg-accent/10' : 'text-white/25 hover:text-white/70 hover:bg-white/5'
-                }`}>
-                <ChevronUp className="w-5 h-5" />
-              </button>
-              <span className={`text-sm font-black tabular-nums ${post.my_vote ? 'text-accent' : 'text-white/50'}`}>
-                {post.upvotes}
-              </span>
-            </div>
-
+          <div>
             {/* 본문 */}
-            <div className="flex-1 p-5 min-w-0">
+            <div className="p-5">
               {/* 삭제 버튼 */}
               {userId === post.user_id && (
                 <div className="flex justify-end mb-2">
@@ -441,6 +474,20 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
+              {/* 하단 추천 */}
+              <div className={`flex items-center gap-3 ${post.community_post_products.length > 0 ? 'mt-4' : 'mt-4 pt-4 border-t border-border'}`}>
+                <button onClick={handleVote} disabled={voting || !token}
+                  title={!token ? t('post.login_vote') : undefined}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                    post.my_vote
+                      ? 'bg-accent/15 text-accent border-accent/30'
+                      : 'text-white/40 border-border hover:text-white/70 hover:border-white/20'
+                  }`}>
+                  <ThumbsUp className="w-4 h-4" />
+                  <span className="tabular-nums">{post.upvotes}</span>
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -464,22 +511,43 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               </div>
             )}
             {token ? (
-              <div className="flex items-center gap-2">
-                <Avatar url={avatarUrl} name={displayName || 'U'} size={7} />
-                <div className="flex-1 flex gap-2">
-                  <input
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitComment() } }}
-                    placeholder={replyTo ? `@${replyTo.name}...` : t('comment.placeholder')}
-                    maxLength={500}
-                    className="flex-1 bg-surface-2 border border-border rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
-                  />
-                  <button onClick={handleSubmitComment}
-                    disabled={!commentText.trim() || submittingComment}
-                    className="bg-accent hover:bg-accent/90 disabled:opacity-40 text-white rounded-xl px-3 transition-all">
-                    <Send className="w-4 h-4" />
-                  </button>
+              <div>
+                {/* 이미지 미리보기 */}
+                {commentImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {commentImages.map((url, i) => (
+                      <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button onClick={() => setCommentImages(prev => prev.filter((_, j) => j !== i))}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/70 rounded-full flex items-center justify-center text-white text-[10px]">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Avatar url={avatarUrl} name={displayName || 'U'} size={7} />
+                  <div className="flex-1 flex gap-2">
+                    <input
+                      value={commentText}
+                      onChange={e => setCommentText(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitComment() } }}
+                      placeholder={replyTo ? `@${replyTo.name}...` : t('comment.placeholder')}
+                      maxLength={500}
+                      className="flex-1 bg-surface-2 border border-border rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
+                    />
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <button onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="flex items-center justify-center w-10 h-10 bg-surface-2 border border-border rounded-xl text-white/30 hover:text-white/60 hover:border-white/20 transition-all disabled:opacity-40">
+                      {uploadingImage ? <span className="text-[10px]">...</span> : <ImagePlus className="w-4 h-4" />}
+                    </button>
+                    <button onClick={handleSubmitComment}
+                      disabled={(!commentText.trim() && commentImages.length === 0) || submittingComment}
+                      className="bg-accent hover:bg-accent/90 disabled:opacity-40 text-white rounded-xl px-3 transition-all">
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -499,6 +567,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 <div key={c.id}>
                   <CommentItem c={c} t={t}
                     onVote={handleCommentVote}
+                    onDownvote={handleCommentDownvote}
                     onReply={(pid, name) => setReplyTo({ id: pid, name })}
                     currentUserId={userId}
                     token={token}
@@ -507,6 +576,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   {childComments(c.id).map(child => (
                     <CommentItem key={child.id} c={child} depth={1} t={t}
                       onVote={handleCommentVote}
+                      onDownvote={handleCommentDownvote}
                       onReply={(pid, name) => setReplyTo({ id: pid, name })}
                       currentUserId={userId}
                       token={token}

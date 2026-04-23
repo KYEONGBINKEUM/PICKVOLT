@@ -42,8 +42,11 @@ function ProductThumb({ product }: { product: Product }) {
 
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const cardRefs = useRef<(HTMLAnchorElement | null)[]>([])
+  const cardWrapRefs = useRef<(HTMLDivElement | null)[]>([])
   const isPaused = useRef(false)
+  const isDragging = useRef(false)
+  const dragStartX = useRef(0)
+  const dragScrollLeft = useRef(0)
   const [activeIdx, setActiveIdx] = useState(0)
 
   useEffect(() => {
@@ -53,10 +56,10 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
       setActiveIdx(prev => {
         const next = (prev + 1) % items.length
         const el = scrollRef.current
-        const card = cardRefs.current[next]
-        if (el && card) {
+        const wrap = cardWrapRefs.current[next]
+        if (el && wrap) {
           const containerCenter = el.clientWidth / 2
-          const cardCenter = card.offsetLeft + card.offsetWidth / 2
+          const cardCenter = wrap.offsetLeft + wrap.offsetWidth / 2
           el.scrollTo({ left: cardCenter - containerCenter, behavior: 'smooth' })
         }
         return next
@@ -64,6 +67,31 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
     }, 2500)
     return () => clearInterval(interval)
   }, [items.length])
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = scrollRef.current
+    if (!el) return
+    isDragging.current = true
+    isPaused.current = true
+    dragStartX.current = e.pageX - el.offsetLeft
+    dragScrollLeft.current = el.scrollLeft
+    el.style.cursor = 'grabbing'
+    el.style.userSelect = 'none'
+  }
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return
+    const el = scrollRef.current
+    if (!el) return
+    e.preventDefault()
+    const x = e.pageX - el.offsetLeft
+    el.scrollLeft = dragScrollLeft.current - (x - dragStartX.current) * 1.5
+  }
+  const onMouseUp = () => {
+    isDragging.current = false
+    const el = scrollRef.current
+    if (el) { el.style.cursor = ''; el.style.userSelect = '' }
+    setTimeout(() => { isPaused.current = false }, 1000)
+  }
 
   if (items.length === 0) return null
   return (
@@ -75,28 +103,36 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
       </div>
       <div
         ref={scrollRef}
-        onMouseEnter={() => { isPaused.current = true }}
-        onMouseLeave={() => { isPaused.current = false }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
         onTouchStart={() => { isPaused.current = true }}
         onTouchEnd={() => { setTimeout(() => { isPaused.current = false }, 1500) }}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 cursor-grab"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         {/* center-mode left spacer */}
         <div className="flex-shrink-0 w-[calc(50vw-140px)] sm:w-[calc(50vw-150px)]" aria-hidden="true" />
         {items.map((item, i) => (
-          <Link
+          <div
             key={i}
-            href={item.href}
-            ref={(el) => { cardRefs.current[i] = el }}
-            className="snap-center flex-shrink-0 w-[280px] sm:w-[300px] bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
+            ref={(el) => { cardWrapRefs.current[i] = el }}
+            className="snap-center flex-shrink-0 w-[280px] sm:w-[300px]"
           >
-            <div className="flex items-center gap-2">
-              <ProductThumb product={item.productA} />
-              <span className="flex-shrink-0 text-xs font-black text-white/20 px-1">vs</span>
-              <ProductThumb product={item.productB} />
-            </div>
-          </Link>
+            <Link
+              href={item.href}
+              draggable={false}
+              onClick={(e) => { if (isDragging.current) e.preventDefault() }}
+              className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
+            >
+              <div className="flex items-center gap-2">
+                <ProductThumb product={item.productA} />
+                <span className="flex-shrink-0 text-xs font-black text-white/20 px-1">vs</span>
+                <ProductThumb product={item.productB} />
+              </div>
+            </Link>
+          </div>
         ))}
         {/* center-mode right spacer */}
         <div className="flex-shrink-0 w-[calc(50vw-140px)] sm:w-[calc(50vw-150px)]" aria-hidden="true" />
