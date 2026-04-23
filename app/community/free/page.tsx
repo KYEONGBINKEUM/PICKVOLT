@@ -14,8 +14,9 @@ export default function FreeBoardPage() {
   const [sort, setSort]       = useState('latest')
   const [page, setPage]       = useState(1)
   const [total, setTotal]     = useState(0)
-  const [token, setToken]     = useState<string | null>(null)
-  const [compact, setCompact] = useState(false)
+  const [token, setToken]           = useState<string | null>(null)
+  const [tokenReady, setTokenReady] = useState(false)
+  const [compact, setCompact]       = useState(false)
 
   const LIMIT = 25
 
@@ -26,7 +27,10 @@ export default function FreeBoardPage() {
   ]
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setToken(data.session?.access_token ?? null))
+    supabase.auth.getSession().then(({ data }) => {
+      setToken(data.session?.access_token ?? null)
+      setTokenReady(true)
+    })
   }, [])
 
   const load = useCallback(() => {
@@ -41,7 +45,7 @@ export default function FreeBoardPage() {
   }, [sort, page, token])
 
   useEffect(() => { setPage(1) }, [sort])
-  useEffect(() => { load() }, [load])
+  useEffect(() => { if (tokenReady) load() }, [load, tokenReady])
 
   const handleVote = async (postId: string) => {
     if (!token) return

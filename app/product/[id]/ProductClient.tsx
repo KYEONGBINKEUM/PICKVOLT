@@ -377,10 +377,10 @@ ${priceHTML}
           <div className="relative">
             <button
               onClick={() => setExportOpen((o) => !o)}
-              className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+              title={t('export.label')}
+              className="inline-flex items-center gap-1 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-2.5 py-1.5 rounded-full transition-all"
             >
               {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              {t('export.label')}
               <ChevronDown className="w-3 h-3" />
             </button>
             {exportOpen && (
@@ -418,24 +418,23 @@ ${priceHTML}
           {/* 공유 */}
           <button
             onClick={handleShare}
-            className="inline-flex items-center gap-1.5 text-white/40 hover:text-white/70 text-xs font-semibold border border-border hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+            title={shareCopied ? 'Copied!' : t('compare.share')}
+            className="inline-flex items-center justify-center text-white/40 hover:text-white/70 border border-border hover:border-white/20 w-8 h-8 rounded-full transition-all"
           >
             <Share2 className="w-3.5 h-3.5" />
-            {shareCopied ? 'Copied!' : t('compare.share')}
           </button>
           {/* 찜 */}
           <button
             onClick={handleWishlist}
             disabled={wishlistLoading}
             title={wishlisted ? t('wishlist.remove') : t('wishlist.add')}
-            className={`inline-flex items-center gap-1.5 text-xs font-semibold border px-3 py-1.5 rounded-full transition-all disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center border w-8 h-8 rounded-full transition-all disabled:opacity-50 ${
               wishlisted
                 ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
                 : 'border-border text-white/40 hover:text-white/70 hover:border-white/20'
             }`}
           >
             <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-red-400' : ''}`} />
-            {wishlisted ? t('wishlist.saved') : t('wishlist.unsaved')}
           </button>
           {/* 관리자 수정 */}
           {isAdmin && (

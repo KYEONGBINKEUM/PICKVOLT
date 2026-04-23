@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
+// 모듈 레벨 캐싱
+let _service: SupabaseClient | null = null
+let _anon: SupabaseClient | null = null
 function makeServiceClient() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  if (!_service) _service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  return _service
 }
 function makeAnonClient() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  if (!_anon) _anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  return _anon
 }
 
 async function getUser(req: NextRequest) {
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
   if (!token) return null
-  const anon = makeAnonClient()
-  const { data: { user } } = await anon.auth.getUser(token)
+  const { data: { user } } = await makeAnonClient().auth.getUser(token)
   return user ?? null
 }
 
@@ -21,7 +25,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type       = searchParams.get('type')       ?? ''
   const category   = searchParams.get('category')   ?? ''
-  const sort       = searchParams.get('sort')        ?? 'latest'   // latest | hot | top
+  const sort       = searchParams.get('sort')        ?? 'latest'
   const page       = Math.max(1, parseInt(searchParams.get('page')  ?? '1'))
   const limit      = Math.min(50, parseInt(searchParams.get('limit') ?? '20'))
   const product_id = searchParams.get('product_id') ?? ''
@@ -29,8 +33,7 @@ export async function GET(req: NextRequest) {
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
   let userId: string | null = null
   if (token) {
-    const anon = makeAnonClient()
-    const { data: { user } } = await anon.auth.getUser(token)
+    const { data: { user } } = await makeAnonClient().auth.getUser(token)
     userId = user?.id ?? null
   }
 
@@ -51,7 +54,6 @@ export async function GET(req: NextRequest) {
   if (category) query = query.eq('category', category)
 
   if (product_id) {
-    // 특정 제품에 연결된 게시물만 (제품 상세 페이지용)
     const { data: linked } = await supabase
       .from('community_post_products')
       .select('post_id')
@@ -73,34 +75,28 @@ export async function GET(req: NextRequest) {
 
   query = query.range(offset, offset + limit - 1)
 
-  const { data, error, count } = await query
-
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 내 upvote 여부
+  // 내 vote 여부 — 병렬로 조회
   let myVotedIds = new Set<string>()
-  if (userId && data && data.length > 0) {
-    const ids = data.map((p: { id: string }) => p.id)
-    const { data: votes } = await supabase
-      .from('community_post_votes')
-      .select('post_id')
-      .eq('user_id', userId)
-      .in('post_id', ids)
-    myVotedIds = new Set((votes ?? []).map((v: { post_id: string }) => v.post_id))
-  }
-
-  // 내 비교투표 선택
   let myCompareVotes: Record<string, string> = {}
+
   if (userId && data && data.length > 0) {
-    const ids = data.filter((p: { type: string }) => p.type === 'compare').map((p: { id: string }) => p.id)
-    if (ids.length > 0) {
-      const { data: cvotes } = await supabase
-        .from('community_compare_votes')
-        .select('post_id, option_id')
-        .eq('user_id', userId)
-        .in('post_id', ids)
-      myCompareVotes = Object.fromEntries((cvotes ?? []).map((v: { post_id: string; option_id: string }) => [v.post_id, v.option_id]))
-    }
+    const postIds = data.map((p: { id: string }) => p.id)
+    const compareIds = data.filter((p: { type: string }) => p.type === 'compare').map((p: { id: string }) => p.id)
+
+    const [votesRes, compareRes] = await Promise.all([
+      supabase.from('community_post_votes').select('post_id').eq('user_id', userId).in('post_id', postIds),
+      compareIds.length > 0
+        ? supabase.from('community_compare_votes').select('post_id, option_id').eq('user_id', userId).in('post_id', compareIds)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    myVotedIds = new Set((votesRes.data ?? []).map((v: { post_id: string }) => v.post_id))
+    myCompareVotes = Object.fromEntries(
+      ((compareRes.data ?? []) as { post_id: string; option_id: string }[]).map((v) => [v.post_id, v.option_id])
+    )
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,7 +107,10 @@ export async function GET(req: NextRequest) {
     community_compare_options: (p.community_compare_options ?? []).sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order),
   }))
 
-  return NextResponse.json({ posts, total: count ?? posts.length })
+  const res = NextResponse.json({ posts, total: data?.length ?? 0 })
+  // 비로그인 응답은 짧게 캐시
+  if (!userId) res.headers.set('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=30')
+  return res
 }
 
 // POST /api/community/posts
@@ -130,7 +129,6 @@ export async function POST(req: NextRequest) {
 
   const supabase = makeServiceClient()
 
-  // 닉네임과 아바타는 profiles 테이블에서 직접 조회 (클라이언트 값 무시)
   const { data: profile } = await supabase
     .from('profiles')
     .select('nickname, avatar_url')
@@ -157,26 +155,23 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 제품 연결
-  if (product_ids?.length > 0) {
-    await supabase.from('community_post_products').insert(
-      product_ids.map((pid: string) => ({ post_id: post.id, product_id: pid }))
-    )
-  }
-
-  // 비교투표 옵션
-  if (type === 'compare' && compare_options?.length >= 2) {
-    await supabase.from('community_compare_options').insert(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      compare_options.map((opt: any, i: number) => ({
-        post_id:    post.id,
-        product_id: opt.product_id ?? null,
-        label:      opt.label,
-        image_url:  opt.image_url ?? null,
-        sort_order: i,
-      }))
-    )
-  }
+  // 제품 연결 + 비교투표 옵션 — 병렬 insert
+  await Promise.all([
+    product_ids?.length > 0
+      ? supabase.from('community_post_products').insert(
+          product_ids.map((pid: string) => ({ post_id: post.id, product_id: pid }))
+        )
+      : Promise.resolve(),
+    type === 'compare' && compare_options?.length >= 2
+      ? supabase.from('community_compare_options').insert(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          compare_options.map((opt: any, i: number) => ({
+            post_id: post.id, product_id: opt.product_id ?? null,
+            label: opt.label, image_url: opt.image_url ?? null, sort_order: i,
+          }))
+        )
+      : Promise.resolve(),
+  ])
 
   return NextResponse.json({ id: post.id }, { status: 201 })
 }
