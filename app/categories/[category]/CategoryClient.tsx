@@ -319,7 +319,7 @@ function ProductCard({
         </div>
 
         {/* Content — right */}
-        <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2">
+        <div className="flex flex-col justify-between flex-1 min-w-0 p-4 sm:p-5 gap-3">
           <div>
             {/* Always pad right to avoid overlap with the 2 icon buttons (7×2 + gap = ~62px) */}
             <h3 className="text-sm md:text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors pr-16">
