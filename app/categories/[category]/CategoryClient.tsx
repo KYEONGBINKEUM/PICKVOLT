@@ -327,7 +327,7 @@ function ProductCard({
               {product.name}
             </h3>
             {current.price_usd && (
-              <p className="text-xs md:text-sm font-black text-accent mt-1">
+              <p className="text-[13px] md:text-sm font-black text-accent mt-1">
                 ${Number(current.price_usd).toLocaleString()}
               </p>
             )}
