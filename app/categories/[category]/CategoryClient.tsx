@@ -283,50 +283,44 @@ function ProductCard({
           ) : (
             <span className="text-3xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
           )}
-          {/* Score badge — top-left of image */}
+          {/* Score badge — top-left on mobile, bottom-center on desktop */}
           {score > 0 && (
-            <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
+            <div className="absolute top-2 left-2 md:top-auto md:left-1/2 md:bottom-2 md:-translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
               <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
             </div>
           )}
         </div>
 
-        {/* Action buttons — absolute top-right */}
+        {/* Action buttons — icon-only, absolute top-right */}
         <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
           {/* Add to Compare */}
           <button
             onClick={toggleCart}
             disabled={!inCart && cartFull}
             title={inCart ? t('cat.in_compare') : cartFull ? t('cat.compare_full') : t('cat.add_compare')}
-            className={`flex items-center gap-1 rounded-lg text-[11px] font-semibold transition-all px-1.5 py-1.5 md:px-2.5 md:py-1.5 ${
+            className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all ${
               inCart
-                ? 'bg-accent/15 border border-accent/40 text-accent'
+                ? 'bg-accent/20 border border-accent/50 text-accent'
                 : cartFull
                 ? 'bg-surface-2/90 border border-border text-white/20 cursor-not-allowed'
-                : 'bg-surface-2/90 border border-border text-white/50 hover:border-white/20 hover:text-white'
+                : 'bg-accent/20 border border-accent/50 text-accent hover:bg-accent/35'
             }`}
           >
-            {inCart ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-            <span className="hidden md:inline ml-0.5">
-              {inCart ? t('cat.in_compare') : cartFull ? t('cat.compare_full') : t('cat.add_compare')}
-            </span>
+            {inCart ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
           </button>
 
           {/* Wishlist */}
           <button
             onClick={(e) => onWishlistToggle(product.id, e)}
             title={wishlisted ? t('wishlist.remove') : t('wishlist.add')}
-            className={`flex items-center gap-1 rounded-lg text-[11px] font-semibold border transition-all px-1.5 py-1.5 md:px-2.5 md:py-1.5 ${
+            className={`flex items-center justify-center w-7 h-7 rounded-lg border transition-all ${
               wishlisted
                 ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
                 : 'bg-surface-2/90 border-border text-white/40 hover:text-white/70 hover:border-white/20'
             }`}
           >
-            <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-400' : ''}`} />
-            <span className="hidden md:inline ml-0.5">
-              {wishlisted ? t('wishlist.saved') : t('wishlist.unsaved')}
-            </span>
+            <Heart className={`w-3.5 h-3.5 ${wishlisted ? 'fill-red-400' : ''}`} />
           </button>
 
           {/* Admin edit */}
@@ -334,33 +328,33 @@ function ProductCard({
             <button
               onClick={(e) => { e.preventDefault(); window.location.href = `/admin/products/${product.id}` }}
               title={t('admin.edit')}
-              className="flex items-center gap-1 rounded-lg text-[11px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all px-1.5 py-1.5 md:px-2.5 md:py-1.5"
+              className="flex items-center justify-center w-7 h-7 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all"
             >
-              <Pencil className="w-3 h-3" />
-              <span className="hidden md:inline ml-0.5">{t('admin.edit')}</span>
+              <Pencil className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
         {/* Content — right */}
-        <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2 pr-3 md:pr-4">
+        <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2">
           <div>
-            <h3 className="text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors pr-16 md:pr-0">
+            {/* Always pad right to avoid overlap with the 2 icon buttons (7×2 + gap = ~62px) */}
+            <h3 className="text-sm md:text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors pr-16">
               {product.name}
             </h3>
             {current.price_usd && (
-              <p className="text-sm font-black text-accent mt-1">
+              <p className="text-xs md:text-sm font-black text-accent mt-1">
                 ${Number(current.price_usd).toLocaleString()}
               </p>
             )}
           </div>
 
           {/* Mobile spec grid: CPU, RAM, display, battery (2×2) */}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 md:hidden">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 md:hidden">
             {mobileCells.map((s, i) => (
               <div key={i}>
-                <p className="text-xs text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                <p className={`text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                <p className={`text-xs font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                   {s.value ?? '–'}
                 </p>
               </div>
@@ -372,7 +366,7 @@ function ProductCard({
             {specGrid.map((row, ri) =>
               row.map((s, ci) => (
                 <div key={`${ri}-${ci}`}>
-                  <p className="text-xs text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
                   <p className={`text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                     {s.value ?? '–'}
                   </p>
