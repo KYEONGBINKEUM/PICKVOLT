@@ -14,10 +14,11 @@ export default function CompareTray() {
   const pathname = usePathname()
   const { t } = useI18n()
 
-  // 카테고리 페이지 모바일에서는 하단 바에 통합되므로 숨김
+  // 카테고리 페이지 모바일에서는 하단 바에 통합, 커뮤니티에서는 미표시
   const isCategory = pathname.startsWith('/categories/')
+  const isCommunity = pathname.startsWith('/community')
 
-  if (cart.length === 0) return null
+  if (isCommunity || cart.length === 0) return null
 
   const canCompare = cart.length >= 2
 

@@ -25,15 +25,15 @@ interface TrendingCard {
 function ProductThumb({ product }: { product: Product }) {
   return (
     <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-      <div className="w-16 h-16 rounded-xl bg-surface-2 flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="w-20 h-20 rounded-xl bg-surface-2 flex items-center justify-center overflow-hidden flex-shrink-0">
         {product.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-contain p-1.5" />
+          <img src={product.image_url} alt={product.name} className="w-full h-full object-contain p-2" />
         ) : (
-          <span className="text-xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
+          <span className="text-2xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
         )}
       </div>
-      <p className="text-[11px] text-white/55 text-center line-clamp-2 leading-tight w-full px-1">
+      <p className="text-xs text-white/55 text-center line-clamp-2 leading-tight w-full px-1">
         {product.name}
       </p>
     </div>
@@ -83,13 +83,13 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
         {/* center-mode left spacer */}
-        <div className="flex-shrink-0 w-[calc(50vw-120px)] sm:w-[calc(50vw-130px)]" aria-hidden="true" />
+        <div className="flex-shrink-0 w-[calc(50vw-140px)] sm:w-[calc(50vw-150px)]" aria-hidden="true" />
         {items.map((item, i) => (
           <Link
             key={i}
             href={item.href}
             ref={(el) => { cardRefs.current[i] = el }}
-            className="snap-center flex-shrink-0 w-[240px] sm:w-[260px] bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
+            className="snap-center flex-shrink-0 w-[280px] sm:w-[300px] bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
           >
             <div className="flex items-center gap-2">
               <ProductThumb product={item.productA} />
@@ -99,7 +99,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
           </Link>
         ))}
         {/* center-mode right spacer */}
-        <div className="flex-shrink-0 w-[calc(50vw-120px)] sm:w-[calc(50vw-130px)]" aria-hidden="true" />
+        <div className="flex-shrink-0 w-[calc(50vw-140px)] sm:w-[calc(50vw-150px)]" aria-hidden="true" />
       </div>
     </div>
   )
