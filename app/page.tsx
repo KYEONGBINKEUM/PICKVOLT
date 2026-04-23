@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
@@ -41,34 +41,65 @@ function ProductThumb({ product }: { product: Product }) {
 }
 
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const cardRefs = useRef<(HTMLAnchorElement | null)[]>([])
+  const isPaused = useRef(false)
+  const [activeIdx, setActiveIdx] = useState(0)
+
+  useEffect(() => {
+    if (items.length <= 1) return
+    const interval = setInterval(() => {
+      if (isPaused.current) return
+      setActiveIdx(prev => {
+        const next = (prev + 1) % items.length
+        const el = scrollRef.current
+        const card = cardRefs.current[next]
+        if (el && card) {
+          const containerCenter = el.clientWidth / 2
+          const cardCenter = card.offsetLeft + card.offsetWidth / 2
+          el.scrollTo({ left: cardCenter - containerCenter, behavior: 'smooth' })
+        }
+        return next
+      })
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [items.length])
+
   if (items.length === 0) return null
   return (
     <div className="w-full">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center justify-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-accent" />
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
         <span className="text-xs text-white/30 ml-1">{t('compare.trending_sub')}</span>
       </div>
       <div
+        ref={scrollRef}
+        onMouseEnter={() => { isPaused.current = true }}
+        onMouseLeave={() => { isPaused.current = false }}
+        onTouchStart={() => { isPaused.current = true }}
+        onTouchEnd={() => { setTimeout(() => { isPaused.current = false }, 1500) }}
         className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
+        {/* center-mode left spacer */}
+        <div className="flex-shrink-0 w-[calc(50vw-120px)] sm:w-[calc(50vw-130px)]" aria-hidden="true" />
         {items.map((item, i) => (
           <Link
             key={i}
             href={item.href}
-            className="snap-start flex-shrink-0 w-[240px] sm:w-[260px] bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
+            ref={(el) => { cardRefs.current[i] = el }}
+            className="snap-center flex-shrink-0 w-[240px] sm:w-[260px] bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
           >
             <div className="flex items-center gap-2">
               <ProductThumb product={item.productA} />
               <span className="flex-shrink-0 text-xs font-black text-white/20 px-1">vs</span>
               <ProductThumb product={item.productB} />
             </div>
-            {item.cnt > 1 && (
-              <p className="text-[10px] text-white/20 text-center mt-3 tabular-nums">{item.cnt}×</p>
-            )}
           </Link>
         ))}
+        {/* center-mode right spacer */}
+        <div className="flex-shrink-0 w-[calc(50vw-120px)] sm:w-[calc(50vw-130px)]" aria-hidden="true" />
       </div>
     </div>
   )
