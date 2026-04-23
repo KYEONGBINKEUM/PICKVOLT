@@ -338,7 +338,7 @@ function ProductCard({
             {mobileCells.map((s, i) => (
               <div key={i}>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                <p className={`text-[13px] font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                <p className={`text-[12px] md:text-[13px] font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                   {s.value ?? '–'}
                 </p>
               </div>
