@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
-import useEmblaCarousel from 'embla-carousel-react'
-import Autoplay from 'embla-carousel-autoplay'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import { useI18n } from '@/lib/i18n'
@@ -43,25 +41,94 @@ function ProductThumb({ product }: { product: Product }) {
   )
 }
 
-/* ── 트렌딩 캐러셀 (Embla · infinite · center) ── */
+/* ── 트렌딩 캐러셀 (clone-based infinite · center mode) ── */
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
-  const [isDragging, setIsDragging] = useState(false)
+  const CARD_W = 300   // card width px (+ px-2 padding = 316 total slot)
+  const GAP    = 16    // px-2 on each side
+  const SLOT   = CARD_W + GAP
 
-  const autoplay = Autoplay({ delay: 2800, stopOnInteraction: false, stopOnMouseEnter: true })
+  // Triple clone: [copy1, original, copy2] → start from original(middle) set
+  const slides = [...items, ...items, ...items]
+  const totalSets = 3
+  const setLen = items.length
 
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: 'center', containScroll: false, dragFree: false },
-    [autoplay],
-  )
+  const trackRef   = useRef<HTMLDivElement>(null)
+  const offsetRef  = useRef(setLen * SLOT)   // start at middle set
+  const dragging   = useRef(false)
+  const dragStart  = useRef(0)
+  const dragOffset = useRef(0)
+  const animFrame  = useRef<number | null>(null)
+  const [renderOffset, setRenderOffset] = useState(setLen * SLOT)
 
-  const onPointerDown = useCallback(() => setIsDragging(false), [])
-  const onPointerUp   = useCallback(() => setIsDragging(false), [])
+  // Apply offset to DOM directly for snappy performance
+  const applyOffset = useCallback((px: number, animate: boolean) => {
+    if (!trackRef.current) return
+    trackRef.current.style.transition = animate ? 'transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none'
+    trackRef.current.style.transform = `translateX(${-px}px)`
+    offsetRef.current = px
+  }, [])
 
+  // After animated transition, silently reposition to middle set
+  const normalize = useCallback(() => {
+    const min = SLOT
+    const max = (totalSets - 1) * setLen * SLOT - SLOT
+    let o = offsetRef.current
+    if (o < min) {
+      o += setLen * SLOT
+    } else if (o > max) {
+      o -= setLen * SLOT
+    }
+    if (o !== offsetRef.current) {
+      applyOffset(o, false)
+      setRenderOffset(o)
+    }
+  }, [applyOffset, setLen])
+
+  // Auto-advance
   useEffect(() => {
-    if (!emblaApi) return
-    emblaApi.on('pointerDown', () => setIsDragging(true))
-    emblaApi.on('pointerUp',   () => setTimeout(() => setIsDragging(false), 100))
-  }, [emblaApi])
+    const id = setInterval(() => {
+      if (dragging.current) return
+      const next = offsetRef.current + SLOT
+      applyOffset(next, true)
+      setRenderOffset(next)
+      // Normalize after transition
+      setTimeout(normalize, 420)
+    }, 2800)
+    return () => clearInterval(id)
+  }, [applyOffset, normalize])
+
+  // Touch / pointer drag
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    dragging.current = true
+    dragStart.current = e.clientX
+    dragOffset.current = offsetRef.current
+    if (animFrame.current) cancelAnimationFrame(animFrame.current)
+    if (trackRef.current) trackRef.current.style.transition = 'none'
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }, [])
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return
+    const delta = dragStart.current - e.clientX
+    applyOffset(dragOffset.current + delta, false)
+  }, [applyOffset])
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return
+    dragging.current = false
+    const delta = dragStart.current - e.clientX
+    // Snap to nearest card
+    const raw = dragOffset.current + delta
+    const snapped = Math.round(raw / SLOT) * SLOT
+    applyOffset(snapped, true)
+    setRenderOffset(snapped)
+    setTimeout(normalize, 420)
+  }, [applyOffset, normalize])
+
+  // Init position
+  useEffect(() => {
+    applyOffset(setLen * SLOT, false)
+  }, [applyOffset, setLen])
 
   if (items.length === 0) return null
 
@@ -72,22 +139,34 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
       </div>
 
-      {/* Embla viewport — peek padding shows adjacent cloned slides */}
+      {/* Viewport: overflow-hidden, no padding – width drives the peek */}
       <div
-        ref={emblaRef}
-        className="overflow-hidden w-full cursor-grab active:cursor-grabbing"
-        style={{ paddingLeft: '10%', paddingRight: '10%' }}
+        className="overflow-hidden w-full cursor-grab active:cursor-grabbing select-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
       >
-        <div className="flex">
-          {items.map((item, i) => (
+        {/* Track: starts shifted so center card is centered */}
+        <div
+          ref={trackRef}
+          className="flex will-change-transform"
+          style={{
+            // Offset by half-viewport minus half-card so first visible card is centered
+            paddingLeft: `calc(50% - ${CARD_W / 2}px)`,
+            transform: `translateX(-${setLen * SLOT}px)`,
+          }}
+        >
+          {slides.map((item, i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-[280px] sm:w-[300px] px-2"
+              className="flex-shrink-0 px-2"
+              style={{ width: CARD_W }}
             >
               <Link
                 href={item.href}
                 draggable={false}
-                onClick={(e) => { if (isDragging) e.preventDefault() }}
+                onClick={(e) => { if (Math.abs(dragStart.current - (e.clientX || 0)) > 5) e.preventDefault() }}
                 className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
               >
                 <div className="flex items-center gap-2">
@@ -122,22 +201,23 @@ function HomeContent() {
     <main className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      {/* 히어로 영역: 항상 수직 중앙 */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-12">
+      {/* 히어로 + 캐러셀: 수직 중앙 정렬 */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-12 gap-10">
+        {/* 검색 영역 */}
         <div className="w-full max-w-3xl flex flex-col items-center gap-10 animate-slide-up">
           <h1 className="text-5xl md:text-7xl font-black text-white text-center leading-[1.05] tracking-tight">
             {t('home.heading')}
           </h1>
           <SearchBar initialQuery={initialQuery} />
         </div>
-      </div>
 
-      {/* 트렌딩 캐러셀: 페이지 하단 */}
-      {trending.length > 0 && (
-        <div className="w-full pb-12">
-          <TrendingCarousel items={trending} t={t} />
-        </div>
-      )}
+        {/* 트렌딩 캐러셀: 검색 바로 아래 */}
+        {trending.length > 0 && (
+          <div className="w-full max-w-4xl">
+            <TrendingCarousel items={trending} t={t} />
+          </div>
+        )}
+      </div>
     </main>
   )
 }
