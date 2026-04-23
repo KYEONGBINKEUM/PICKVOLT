@@ -44,7 +44,7 @@ export default function CommunitySidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-[65px] w-52 h-[calc(100vh-65px)] border-r border-border/40 bg-background flex flex-col z-30 overflow-y-auto">
+    <aside className="hidden md:flex fixed left-0 top-[65px] w-52 h-[calc(100vh-65px)] border-r border-border/40 bg-background flex-col z-30 overflow-y-auto">
       <div className="py-3 px-2">
         {/* 메인 */}
         <div className="space-y-0.5 mb-4">

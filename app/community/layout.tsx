@@ -4,7 +4,7 @@ export default function CommunityLayout({ children }: { children: React.ReactNod
   return (
     <>
       <CommunitySidebar />
-      <div className="pl-52">
+      <div className="md:pl-52">
         {children}
       </div>
     </>

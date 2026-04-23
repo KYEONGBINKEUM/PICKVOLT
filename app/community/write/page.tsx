@@ -289,7 +289,7 @@ function WritePageInner() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-[720px] mx-auto px-6 pt-24 pb-20">
+      <div className="max-w-[720px] mx-auto px-4 md:px-6 pt-24 pb-20">
 
         {/* 헤더 */}
         <div className="flex items-center gap-3 mb-8">
