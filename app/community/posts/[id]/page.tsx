@@ -441,13 +441,6 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {/* 액션 바 */}
-              <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border text-[11px] text-white/30">
-                <span className="flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  {post.comment_count} {t('community.comments')}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -471,7 +464,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               </div>
             )}
             {token ? (
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Avatar url={avatarUrl} name={displayName || 'U'} size={7} />
                 <div className="flex-1 flex gap-2">
                   <input
