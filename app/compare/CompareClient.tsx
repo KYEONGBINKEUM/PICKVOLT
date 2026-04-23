@@ -140,8 +140,9 @@ interface AiResult {
 }
 
 interface PopularItem {
-  title: string
-  products: string[]
+  productA: { id: string; name: string; brand: string; image_url: string | null }
+  productB: { id: string; name: string; brand: string; image_url: string | null }
+  href: string
   cnt: number
 }
 
@@ -599,12 +600,14 @@ function PopularComparisons({ items, t }: { items: PopularItem[]; t: (k: string)
         {items.map((item, i) => (
           <Link
             key={i}
-            href={`/compare?ids=${item.products.join(',')}`}
+            href={item.href}
             className="flex items-center justify-between px-5 py-3.5 bg-surface border border-border rounded-xl hover:border-white/15 transition-colors group"
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xs text-white/20 font-bold w-4 flex-shrink-0">{i + 1}</span>
-              <p className="text-sm text-white/70 group-hover:text-white transition-colors truncate">{shortenCompareTitle(item.title)}</p>
+              <p className="text-sm text-white/70 group-hover:text-white transition-colors truncate">
+                {item.productA.name} vs {item.productB.name}
+              </p>
             </div>
             {item.cnt > 1 && (
               <span className="flex-shrink-0 ml-3 text-xs text-white/20">{item.cnt}×</span>
