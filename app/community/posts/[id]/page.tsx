@@ -11,6 +11,7 @@ import {
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
+import RichEditor from '@/components/RichEditor'
 
 interface CompareOption {
   id: string; label: string; vote_count: number
@@ -168,6 +169,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [editBody, setEditBody]     = useState('')
   const [editRating, setEditRating] = useState<number | null>(null)
   const [savingEdit, setSavingEdit] = useState(false)
+  const editEditorRef = useRef<HTMLDivElement | null>(null)
 
   // 신고 모달
   const [reportTarget, setReportTarget]   = useState<{ type: 'post' | 'comment'; id: string } | null>(null)
@@ -499,20 +501,28 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                     placeholder={t('write.title')}
                   />
                   {post.type === 'review' && editRating !== null && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-white/40">Rating:</span>
-                      <input type="number" min={1} max={10} value={editRating ?? ''}
-                        onChange={e => setEditRating(Number(e.target.value))}
-                        className="w-16 bg-surface-2 border border-border rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:border-white/20 transition-colors" />
-                      <span className="text-xs text-white/30">/10</span>
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                        <button key={n} onClick={() => setEditRating(n)}
+                          className={`w-8 h-8 rounded-xl text-xs font-bold transition-all border ${
+                            editRating === n
+                              ? 'bg-accent border-accent text-white'
+                              : 'bg-white/5 border-border text-white/25 hover:bg-white/8'
+                          }`}>{n}</button>
+                      ))}
                     </div>
                   )}
-                  <textarea
-                    value={editBody.replace(/<[^>]+>/g, '')}
-                    onChange={e => setEditBody(e.target.value)}
-                    rows={10}
-                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-white/85 outline-none focus:border-white/20 transition-colors resize-none leading-relaxed"
+                  <RichEditor
+                    editorRef={editEditorRef}
+                    initialHtml={editBody}
+                    onChange={setEditBody}
+                    token={token}
                     placeholder={t('write.body')}
+                    uploadSizeError={t('write.img_size_error')}
+                    uploadFailText={t('write.img_upload_fail')}
+                    urlPrompt={t('write.toolbar.url')}
+                    minHeight={240}
                   />
                   <div className="flex items-center gap-2 justify-end">
                     <button onClick={() => setIsEditing(false)}
