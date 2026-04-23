@@ -190,7 +190,7 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
                 >
                   {p.image_url && (
                     <div className="w-4 h-4 relative flex-shrink-0">
-                      <Image src={p.image_url} alt={p.name} fill className="object-contain" unoptimized />
+                      <Image src={p.image_url} alt={p.name} fill className="object-contain" sizes="16px" />
                     </div>
                   )}
                   <span className="text-xs text-white/60">{p.name}</span>

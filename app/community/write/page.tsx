@@ -51,7 +51,7 @@ function ProductSearch({ onSelect, exclude, placeholder }: {
               className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left">
               {p.image_url && (
                 <div className="w-8 h-8 rounded-lg bg-surface-2 flex-shrink-0 overflow-hidden relative">
-                  <Image src={p.image_url} alt={p.name} fill className="object-contain p-1" unoptimized />
+                  <Image src={p.image_url} alt={p.name} fill className="object-contain p-1" sizes="32px" />
                 </div>
               )}
               <div className="flex-1 min-w-0">

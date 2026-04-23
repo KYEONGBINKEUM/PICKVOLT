@@ -473,7 +473,7 @@ export default function MyPage() {
                     <Link key={w.id} href={`/product/${p.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors">
                       <div className="w-10 h-10 rounded-xl bg-surface-2 flex-shrink-0 overflow-hidden flex items-center justify-center">
                         {p.image_url ? (
-                          <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" unoptimized />
+                          <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" />
                         ) : (
                           <span className="text-white/20 text-xs font-bold">{p.brand?.[0]}</span>
                         )}
@@ -506,7 +506,7 @@ export default function MyPage() {
                     <Link key={r.id} href={`/product/${p.id}`} className="flex items-start gap-3 px-5 py-3.5 hover:bg-surface-2 transition-colors">
                       <div className="w-10 h-10 rounded-xl bg-surface-2 flex-shrink-0 overflow-hidden flex items-center justify-center">
                         {p.image_url ? (
-                          <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" unoptimized />
+                          <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" />
                         ) : (
                           <span className="text-white/20 text-xs font-bold">{p.brand?.[0]}</span>
                         )}

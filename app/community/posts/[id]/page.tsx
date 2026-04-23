@@ -80,7 +80,7 @@ function Avatar({ url, name, size = 7 }: { url: string | null; name: string; siz
   const sz = AVATAR_SZ[size] ?? 'w-7 h-7'
   if (url) return (
     <div className={`${sz} rounded-full overflow-hidden relative flex-shrink-0`}>
-      <Image src={url} alt={name} fill className="object-cover" unoptimized />
+      <Image src={url} alt={name} fill className="object-cover" sizes="64px" />
     </div>
   )
   return (
@@ -570,7 +570,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                         <div className="relative flex items-center gap-3">
                           {opt.products?.image_url && (
                             <div className="w-10 h-10 rounded-lg bg-surface overflow-hidden relative flex-shrink-0">
-                              <Image src={opt.products.image_url} alt={opt.label} fill className="object-contain p-1" unoptimized />
+                              <Image src={opt.products.image_url} alt={opt.label} fill className="object-contain p-1" sizes="64px" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
@@ -615,7 +615,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                         className="flex items-center gap-2 bg-surface-2 border border-border rounded-full px-2.5 py-1 hover:border-white/20 transition-colors">
                         {pp.products.image_url && (
                           <div className="w-4 h-4 relative">
-                            <Image src={pp.products.image_url} alt={pp.products.name} fill className="object-contain" unoptimized />
+                            <Image src={pp.products.image_url} alt={pp.products.name} fill className="object-contain" sizes="64px" />
                           </div>
                         )}
                         <span className="text-xs text-white/60">{pp.products.name}</span>

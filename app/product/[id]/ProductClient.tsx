@@ -464,7 +464,7 @@ ${priceHTML}
                 fill
                 className="object-contain p-8"
                 sizes="(max-width: 1024px) 100vw, 384px"
-                unoptimized
+                quality={85}
               />
             ) : (
               <span className="text-6xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>

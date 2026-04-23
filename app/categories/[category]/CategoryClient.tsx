@@ -262,7 +262,6 @@ function ProductCard({
               fill
               className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
               sizes="144px"
-              unoptimized
             />
           ) : (
             <span className="text-3xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
