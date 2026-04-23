@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Bold, Italic, Quote, List, Link2, ImageIcon, Loader2 } from 'lucide-react'
+import { Bold, Italic, List, Link2, ImageIcon, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface RichEditorProps {
@@ -51,9 +51,28 @@ export default function RichEditor({
     onChange(editorRef.current?.innerHTML ?? '')
   }
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault()
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    // 이미지 파일 붙여넣기 허용
+    const imageItem = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'))
+    if (imageItem) {
+      e.preventDefault()
+      const file = imageItem.getAsFile()
+      if (!file || !token) return
+      setUploading(true)
+      try {
+        const ext  = file.type.split('/')[1] ?? 'png'
+        const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error } = await supabase.storage.from('community-images').upload(path, file, { upsert: false })
+        if (error) return
+        const { data } = supabase.storage.from('community-images').getPublicUrl(path)
+        insertHtml(`<img src="${data.publicUrl}" style="max-width:100%;border-radius:10px;margin:6px 0;display:block;border:1px solid rgba(255,255,255,0.08)" /><br />`)
+      } finally {
+        setUploading(false)
+      }
+      return
+    }
     // HTML 붙여넣기 차단: plain text만 허용
+    e.preventDefault()
     const text = e.clipboardData.getData('text/plain')
     if (text) {
       document.execCommand('insertText', false, text)
@@ -83,7 +102,6 @@ export default function RichEditor({
     { icon: Bold,   title: 'B',  action: () => exec('bold') },
     { icon: Italic, title: 'I',  action: () => exec('italic') },
     { icon: List,   title: '•',  action: () => exec('insertUnorderedList') },
-    { icon: Quote,  title: '"',  action: () => insertHtml('<blockquote style="border-left:2px solid rgba(255,255,255,0.2);padding-left:12px;color:rgba(255,255,255,0.45);margin:4px 0">Quote</blockquote><br />') },
     { icon: Link2,  title: '🔗', action: () => {
       const url = prompt(urlPrompt)
       if (url) exec('createLink', url)
