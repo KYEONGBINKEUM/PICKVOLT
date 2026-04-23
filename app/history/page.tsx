@@ -71,7 +71,7 @@ function HistoryCard({
           className={`p-2 rounded-full transition-all ${
             item.pinned
               ? 'text-accent bg-accent/10'
-              : 'text-white/20 hover:text-white/50 opacity-0 group-hover:opacity-100'
+              : 'text-white/40 hover:text-white/70'
           }`}
         >
           <Pin className="w-3.5 h-3.5" />
