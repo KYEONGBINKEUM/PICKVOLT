@@ -187,19 +187,26 @@ function ProductCard({
   const displayCell = {
     label: t('cat.spec_display'),
     value: product.display_inch
-      ? [`${product.display_inch}"`, product.display_hz
-          ? (product.category === 'laptop' ? `${product.display_hz}Hz` : `(${product.display_hz}Hz)`)
-          : null].filter(Boolean).join(' ')
+      ? [`${product.display_inch}"`, product.display_hz ? `(${product.display_hz}Hz)` : null].filter(Boolean).join(' ')
       : null,
   }
 
-  // Mobile: show only CPU, RAM, display, battery (4 cells)
-  const mobileCells = [
-    { label: 'CPU', value: current.cpu_name ?? null },
-    { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
-    displayCell,
-    batteryCell,
-  ]
+  const gpuCell = { label: 'GPU', value: current.gpu_name ?? null }
+
+  // Mobile: laptop → CPU, RAM, GPU, Display / others → CPU, RAM, Display, Battery
+  const mobileCells = product.category === 'laptop'
+    ? [
+        { label: 'CPU', value: current.cpu_name ?? null },
+        { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
+        gpuCell,
+        displayCell,
+      ]
+    : [
+        { label: 'CPU', value: current.cpu_name ?? null },
+        { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
+        displayCell,
+        batteryCell,
+      ]
 
   // Desktop: full grid (6 cells)
   const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] =
@@ -283,9 +290,9 @@ function ProductCard({
           ) : (
             <span className="text-3xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
           )}
-          {/* Score badge — top-left on mobile, bottom-center on desktop */}
+          {/* Score badge — bottom-center */}
           {score > 0 && (
-            <div className="absolute top-2 left-2 md:top-auto md:left-1/2 md:bottom-2 md:-translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
               <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
             </div>
