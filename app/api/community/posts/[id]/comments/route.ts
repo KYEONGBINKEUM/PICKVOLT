@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { decodeUserId } from '@/lib/auth'
 
 function makeServiceClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -15,12 +16,7 @@ async function getUser(req: NextRequest) {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
-  let userId: string | null = null
-  if (token) {
-    const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-    const { data: { user } } = await anon.auth.getUser(token)
-    userId = user?.id ?? null
-  }
+  const userId = decodeUserId(token)
 
   const supabase = makeServiceClient()
   const { data: comments, error } = await supabase

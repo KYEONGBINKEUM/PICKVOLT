@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { decodeUserId } from '@/lib/auth'
 
 // 모듈 레벨 캐싱
 let _service: SupabaseClient | null = null
@@ -31,11 +32,7 @@ export async function GET(req: NextRequest) {
   const product_id = searchParams.get('product_id') ?? ''
 
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
-  let userId: string | null = null
-  if (token) {
-    const { data: { user } } = await makeAnonClient().auth.getUser(token)
-    userId = user?.id ?? null
-  }
+  const userId = decodeUserId(token)
 
   const supabase = makeServiceClient()
 
