@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import {
   SlidersHorizontal,
   ChevronDown,
@@ -15,9 +16,9 @@ import {
   Tablet,
   Search,
   X,
-  ArrowUpDown,
   Heart,
   Pencil,
+  GitCompare,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
@@ -801,8 +802,19 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
 
 export default function CategoryClient({ category }: { category: string }) {
   const { t } = useI18n()
+  const router = useRouter()
   const Icon = CATEGORY_ICON[category]
   const categoryLabel = t(`cat.${category}` as Parameters<typeof t>[0])
+
+  // Compare cart (for mobile bottom tray)
+  const { cart: compareCart, clear: clearCart } = useCompareCart()
+  const handleMobileCompare = () => {
+    const ids = compareCart.map((p) => p.id).join(',')
+    const variants = compareCart.map((p) => p.variantId ?? '').join(',')
+    const hasVariants = compareCart.some((p) => p.variantId)
+    clearCart()
+    router.push(`/compare?ids=${ids}${hasVariants ? `&variants=${variants}` : ''}`)
+  }
 
   const [allProducts,     setAllProducts]     = useState<Product[]>([])
   const [availableBrands, setAvailableBrands] = useState<string[]>([])
@@ -813,7 +825,6 @@ export default function CategoryClient({ category }: { category: string }) {
   const [hasMoreServer,   setHasMoreServer]   = useState(false)
   const [isLoadingMore,   setIsLoadingMore]   = useState(false)
   const [mobileSheet,     setMobileSheet]     = useState(false)
-  const [mobileSortOpen,  setMobileSortOpen]  = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // ── Auth / Wishlist ──────────────────────────────────────────────────────────
@@ -967,14 +978,6 @@ export default function CategoryClient({ category }: { category: string }) {
     filters.displayMin > DEFAULT_FILTERS.displayMin || filters.displayMax < DEFAULT_FILTERS.displayMax ||
     filters.batteryMin > DEFAULT_FILTERS.batteryMin || filters.batteryMax < DEFAULT_FILTERS.batteryMax
 
-  const SORT_OPTIONS = [
-    { value: 'performance', label: t('cat.sort_performance') },
-    { value: 'newest',      label: t('cat.sort_newest')      },
-    { value: 'price_asc',   label: t('cat.sort_price_asc')   },
-    { value: 'price_desc',  label: t('cat.sort_price_desc')  },
-  ]
-  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === filters.sort)?.label ?? ''
-
   if (!Icon) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -1119,46 +1122,36 @@ export default function CategoryClient({ category }: { category: string }) {
       {/* ── 모바일 하단 고정 바 ── */}
       <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 flex items-center gap-3">
 
-        {/* 정렬 토글 버튼 (좌측) */}
-        <div className="relative flex-1">
-          <button
-            onClick={() => setMobileSortOpen((v) => !v)}
-            className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
-              filters.sort !== 'performance'
-                ? 'bg-accent/10 border-accent/40 text-accent'
-                : 'bg-surface border-border text-white/70 hover:text-white'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{currentSortLabel}</span>
+        {/* 비교 트레이 (좌측) */}
+        <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
+          {compareCart.length === 0 ? (
+            <div className="flex items-center gap-2 text-white/25">
+              <GitCompare className="w-4 h-4 flex-shrink-0" />
+              <span className="text-xs truncate">{t('tray.add_product')}</span>
             </div>
-            <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${mobileSortOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* 정렬 드롭업 */}
-          {mobileSortOpen && (
+          ) : (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setMobileSortOpen(false)} />
-              <div className="absolute bottom-full left-0 right-0 mb-2 z-20 bg-surface border border-border rounded-2xl overflow-hidden shadow-2xl">
-                {SORT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => {
-                      setFilters((f) => ({ ...f, sort: opt.value }))
-                      setMobileSortOpen(false)
-                    }}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors ${
-                      filters.sort === opt.value
-                        ? 'bg-accent/10 text-accent'
-                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {opt.label}
-                    {filters.sort === opt.value && <Check className="w-3.5 h-3.5" />}
-                  </button>
+              <div className="flex gap-1 flex-1 min-w-0 overflow-hidden">
+                {compareCart.slice(0, 3).map((p) => (
+                  <span key={p.id} className="flex-shrink-0 text-[10px] bg-accent/10 border border-accent/30 text-accent rounded-full px-2 py-0.5 max-w-[80px] truncate block">
+                    {p.name}
+                  </span>
                 ))}
+                {compareCart.length > 3 && (
+                  <span className="flex-shrink-0 text-[10px] text-white/30 self-center">+{compareCart.length - 3}</span>
+                )}
               </div>
+              {compareCart.length >= 2 ? (
+                <button
+                  onClick={handleMobileCompare}
+                  className="flex-shrink-0 flex items-center gap-1.5 text-xs font-bold bg-accent text-black px-3 py-1.5 rounded-lg"
+                >
+                  <GitCompare className="w-3.5 h-3.5" />
+                  {t('tray.compare_n').replace('{n}', String(compareCart.length))}
+                </button>
+              ) : (
+                <span className="flex-shrink-0 text-[11px] text-white/30">{t('tray.add_more')}</span>
+              )}
             </>
           )}
         </div>
