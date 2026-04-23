@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   SlidersHorizontal,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -337,7 +338,7 @@ function ProductCard({
             {mobileCells.map((s, i) => (
               <div key={i}>
                 <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                <p className={`text-xs md:text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                <p className={`text-[11px] md:text-xs font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                   {s.value ?? '–'}
                 </p>
               </div>
@@ -768,7 +769,7 @@ export default function CategoryClient({ category }: { category: string }) {
   const categoryLabel = t(`cat.${category}` as Parameters<typeof t>[0])
 
   // Compare cart (for mobile bottom tray)
-  const { cart: compareCart, clear: clearCart } = useCompareCart()
+  const { cart: compareCart, clear: clearCart, remove: removeFromCart } = useCompareCart()
   const handleMobileCompare = () => {
     const ids = compareCart.map((p) => p.id).join(',')
     const variants = compareCart.map((p) => p.variantId ?? '').join(',')
@@ -786,6 +787,7 @@ export default function CategoryClient({ category }: { category: string }) {
   const [hasMoreServer,   setHasMoreServer]   = useState(false)
   const [isLoadingMore,   setIsLoadingMore]   = useState(false)
   const [mobileSheet,     setMobileSheet]     = useState(false)
+  const [mobileTrayOpen,  setMobileTrayOpen]  = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // ── Auth / Wishlist ──────────────────────────────────────────────────────────
@@ -1080,42 +1082,70 @@ export default function CategoryClient({ category }: { category: string }) {
         </div>
       </div>
 
-      {/* ── 모바일 하단 고정 바 ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 flex items-center gap-3">
-
-        {/* 비교 트레이 (좌측) */}
-        <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
-          {compareCart.length === 0 ? (
-            <div className="flex items-center gap-2 text-white/25">
-              <GitCompare className="w-4 h-4 flex-shrink-0" />
-              <span className="text-xs truncate">{t('tray.add_product')}</span>
-            </div>
-          ) : (
-            <>
-              <div className="flex gap-1 flex-1 min-w-0 overflow-hidden">
-                {compareCart.slice(0, 3).map((p) => (
-                  <span key={p.id} className="flex-shrink-0 text-[10px] bg-accent/10 border border-accent/30 text-accent rounded-full px-2 py-0.5 max-w-[80px] truncate block">
-                    {p.name}
-                  </span>
-                ))}
-                {compareCart.length > 3 && (
-                  <span className="flex-shrink-0 text-[10px] text-white/30 self-center">+{compareCart.length - 3}</span>
-                )}
+      {/* ── 모바일 미니 트레이 (하단 바 위에 슬라이드업) ── */}
+      {mobileTrayOpen && compareCart.length > 0 && (
+        <div className="fixed bottom-16 left-0 right-0 z-40 lg:hidden mx-4 animate-slide-up">
+          <div className="bg-surface-2/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <GitCompare className="w-3.5 h-3.5 text-accent" />
+                <span className="text-xs font-bold text-white">
+                  {t('tray.comparing').replace('{n}', String(compareCart.length))}
+                </span>
               </div>
-              {compareCart.length >= 2 ? (
-                <button
-                  onClick={handleMobileCompare}
-                  className="flex-shrink-0 flex items-center gap-1.5 text-xs font-bold bg-accent text-black px-3 py-1.5 rounded-lg"
-                >
-                  <GitCompare className="w-3.5 h-3.5" />
-                  {t('tray.compare_n').replace('{n}', String(compareCart.length))}
-                </button>
-              ) : (
-                <span className="flex-shrink-0 text-[11px] text-white/30">{t('tray.add_more')}</span>
-              )}
-            </>
-          )}
+              <button onClick={clearCart} className="text-xs text-white/30 hover:text-white/60 transition-colors">
+                {t('tray.clear_all')}
+              </button>
+            </div>
+            <div className="p-3 space-y-2">
+              {compareCart.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 bg-surface rounded-xl px-3 py-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{p.name}</p>
+                    <p className="text-[10px] text-white/30">{p.brand}</p>
+                  </div>
+                  <button onClick={() => removeFromCart(p.id)} className="text-white/30 hover:text-white transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="px-3 pb-3">
+              <button
+                onClick={handleMobileCompare}
+                disabled={compareCart.length < 2}
+                className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  compareCart.length >= 2
+                    ? 'bg-accent hover:bg-accent/90 text-white'
+                    : 'bg-white/5 text-white/20 cursor-not-allowed'
+                }`}
+              >
+                {compareCart.length >= 2
+                  ? t('tray.compare_n').replace('{n}', String(compareCart.length))
+                  : t('tray.add_more')}
+              </button>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* ── 모바일 하단 고정 바 ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 flex items-center gap-2">
+
+        {/* 비교 트레이 토글 버튼 (좌측) */}
+        <button
+          onClick={() => setMobileTrayOpen((v) => !v)}
+          className="flex-1 flex items-center gap-2 bg-surface-2/80 border border-border rounded-full px-4 py-2 hover:border-white/20 transition-all"
+        >
+          <GitCompare className="w-4 h-4 text-accent flex-shrink-0" />
+          <span className="text-sm font-bold text-white">{compareCart.length}</span>
+          <span className="text-xs text-white/40 flex-1 text-left">{t('tray.in_tray')}</span>
+          {mobileTrayOpen
+            ? <ChevronDown className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+            : <ChevronUp className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+          }
+        </button>
 
         {/* 필터 버튼 (우측) */}
         <button

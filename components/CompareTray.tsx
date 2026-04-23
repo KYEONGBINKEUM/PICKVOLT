@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { X, ChevronUp, ChevronDown, GitCompare } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
@@ -10,7 +11,11 @@ export default function CompareTray() {
   const { cart, remove, clear } = useCompareCart()
   const [expanded, setExpanded] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const { t } = useI18n()
+
+  // 카테고리 페이지 모바일에서는 하단 바에 통합되므로 숨김
+  const isCategory = pathname.startsWith('/categories/')
 
   if (cart.length === 0) return null
 
@@ -25,7 +30,7 @@ export default function CompareTray() {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex flex-col items-end gap-2">
+    <div className={`fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex flex-col items-end gap-2 ${isCategory ? 'hidden lg:flex' : ''}`}>
       {/* 펼쳐진 트레이 */}
       {expanded && (
         <div className="bg-surface-2/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl w-72 overflow-hidden animate-slide-up">
