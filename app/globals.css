@@ -53,3 +53,17 @@ body {
     text-wrap: balance;
   }
 }
+
+/* 게시물 본문 / 에디터 내 링크 스타일 */
+.prose-custom a,
+[contenteditable] a {
+  color: #FF4D00;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(255, 77, 0, 0.4);
+  transition: text-decoration-color 0.15s;
+}
+.prose-custom a:hover,
+[contenteditable] a:hover {
+  text-decoration-color: #FF4D00;
+}
