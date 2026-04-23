@@ -9,7 +9,7 @@ import { useI18n } from '@/lib/i18n'
 
 export default function CompareTray() {
   const { cart, remove, clear } = useCompareCart()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024)
   const router = useRouter()
   const pathname = usePathname()
   const { t } = useI18n()
