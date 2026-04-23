@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronUp, ChevronLeft, ChevronRight, MessageSquare, Eye } from 'lucide-react'
+import Image from 'next/image'
+import { ChevronUp, ChevronLeft, ChevronRight, MessageSquare, Eye, Tag } from 'lucide-react'
 
 export interface FeedPost {
   id: string
@@ -17,7 +18,7 @@ export interface FeedPost {
   created_at: string
   user_display_name: string
   my_vote?: boolean
-  community_post_products?: { products: { id: string; name: string } | null }[]
+  community_post_products?: { products: { id: string; name: string; image_url?: string | null } | null }[]
   community_compare_options?: { vote_count: number }[]
 }
 
@@ -167,6 +168,37 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
         <Link href={href} className="block px-4 pb-3">
           <p className="text-sm text-white/35 line-clamp-4 leading-relaxed">{plainText}</p>
         </Link>
+      )}
+
+      {/* Related products */}
+      {post.community_post_products && post.community_post_products.length > 0 && (
+        <div className="px-4 pt-3 pb-1 border-t border-border/30">
+          <div className="flex items-center gap-1.5 mb-2 text-[10px] text-white/30">
+            <Tag className="w-3 h-3" />
+            <span>Related products</span>
+          </div>
+          <div className="flex flex-wrap gap-2 pb-2">
+            {post.community_post_products.map((pp, i) => {
+              const p = pp.products
+              if (!p) return null
+              return (
+                <Link
+                  key={i}
+                  href={`/product/${p.id}`}
+                  onClick={e => e.stopPropagation()}
+                  className="flex items-center gap-2 bg-surface-2 border border-border rounded-full px-2.5 py-1 hover:border-white/20 transition-colors"
+                >
+                  {p.image_url && (
+                    <div className="w-4 h-4 relative flex-shrink-0">
+                      <Image src={p.image_url} alt={p.name} fill className="object-contain" unoptimized />
+                    </div>
+                  )}
+                  <span className="text-xs text-white/60">{p.name}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {/* Footer */}
