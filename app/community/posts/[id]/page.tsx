@@ -424,10 +424,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const total = post.community_compare_options.reduce((s, o) => s + o.vote_count, 0)
   const backHref = post.type === 'review' ? '/community/reviews'
     : post.type === 'forum' ? '/community/forum'
+    : post.type === 'compare' ? '/community/compare'
+    : post.type === 'free' ? '/community/free'
+    : post.type === 'qa' ? '/community/qa'
     : '/community'
-  const backLabel = post.type === 'review' ? t('community.reviews')
-    : post.type === 'forum' ? t('community.forum')
-    : t('community.compare')
 
   const topComments   = comments.filter(c => !c.parent_id)
   const childComments = (parentId: string) => comments.filter(c => c.parent_id === parentId)
@@ -447,7 +447,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
         <Link href={backHref}
           className="inline-flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors mb-4">
           <ArrowLeft className="w-3.5 h-3.5" />
-          {backLabel}
+          {t('post.back_community')}
         </Link>
 
         {/* 게시물 카드 */}
