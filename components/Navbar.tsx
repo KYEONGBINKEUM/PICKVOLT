@@ -78,7 +78,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
                 'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
                 !isCommunity ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
               )}>
-              Compare
+              {t('nav.compare')}
             </Link>
             <Link href="/community"
               className={clsx(
