@@ -53,17 +53,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { body, parent_id, display_name, avatar_url } = await req.json()
+  const { body, parent_id } = await req.json()
   if (!body?.trim() || body.trim().length < 2) return NextResponse.json({ error: 'body too short' }, { status: 400 })
 
   const supabase = makeServiceClient()
+
+  // 실명 노출 방지: profiles 테이블의 nickname + avatar 우선 사용
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nickname, avatar_url')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const userDisplayName = profile?.nickname ?? user.email?.split('@')[0] ?? 'user'
+  const userAvatarUrl   = profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null
+
   const { data, error } = await supabase
     .from('community_comments')
     .insert({
       post_id:           id,
       user_id:           user.id,
-      user_display_name: display_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'user',
-      user_avatar_url:   avatar_url ?? user.user_metadata?.avatar_url ?? null,
+      user_display_name: userDisplayName,
+      user_avatar_url:   userAvatarUrl,
       parent_id:         parent_id ?? null,
       body:              body.trim(),
     })

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ThumbsUp, ThumbsDown, MessageSquare, Star, Tag,
-  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus
+  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
@@ -24,12 +24,12 @@ interface PostProduct {
 interface Post {
   id: string; type: 'review' | 'forum' | 'compare'; category: string | null
   title: string; body: string; rating: number | null
-  upvotes: number; comment_count: number; view_count: number
+  upvotes: number; downvotes?: number; comment_count: number; view_count: number
   is_pinned: boolean; created_at: string; updated_at: string
   user_id: string; user_display_name: string; user_avatar_url: string | null
   community_post_products: PostProduct[]
   community_compare_options: CompareOption[]
-  my_vote: boolean; my_compare_option: string | null
+  my_vote: boolean; my_downvote?: boolean; my_compare_option: string | null
 }
 interface Comment {
   id: string; post_id: string; user_id: string
@@ -153,10 +153,18 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [replyTo, setReplyTo]                       = useState<{ id: string; name: string } | null>(null)
   const [submittingComment, setSubmittingComment]   = useState(false)
   const [voting, setVoting]                         = useState(false)
+  const [downvoting, setDownvoting]                 = useState(false)
   const [compareVoting, setCompareVoting]           = useState(false)
   const [commentImages, setCommentImages]           = useState<string[]>([])
   const [uploadingImage, setUploadingImage]         = useState(false)
   const fileInputRef                                = useRef<HTMLInputElement>(null)
+
+  // 수정 모드
+  const [isEditing, setIsEditing]   = useState(false)
+  const [editTitle, setEditTitle]   = useState('')
+  const [editBody, setEditBody]     = useState('')
+  const [editRating, setEditRating] = useState<number | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -206,6 +214,42 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     setVoting(false)
   }
 
+  const handleDownvote = async () => {
+    if (!token || downvoting) return
+    setDownvoting(true)
+    const res = await fetch(`/api/community/posts/${id}/downvote`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      const d = await res.json()
+      setPost(p => p ? { ...p, downvotes: d.downvotes, my_downvote: d.voted } : p)
+    }
+    setDownvoting(false)
+  }
+
+  const handleStartEdit = () => {
+    if (!post) return
+    setEditTitle(post.title)
+    setEditBody(post.body)
+    setEditRating(post.rating)
+    setIsEditing(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!token || !post || !editTitle.trim() || savingEdit) return
+    setSavingEdit(true)
+    const res = await fetch(`/api/community/posts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title: editTitle.trim(), body: editBody, rating: editRating }),
+    })
+    if (res.ok) {
+      setPost(p => p ? { ...p, title: editTitle.trim(), body: editBody, rating: editRating, updated_at: new Date().toISOString() } : p)
+      setIsEditing(false)
+    }
+    setSavingEdit(false)
+  }
+
   const handleCompareVote = async (optionId: string) => {
     if (!token || compareVoting) return
     setCompareVoting(true)
@@ -251,15 +295,22 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     const file = e.target.files?.[0]
     if (!file || !token) return
     setUploadingImage(true)
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `comments/${id}/${Date.now()}.${ext}`
-    const { data, error } = await supabase.storage.from('product-images').upload(path, file, { upsert: false })
-    if (!error && data) {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${data.path}`
-      setCommentImages(prev => [...prev, url])
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload/comment-image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.ok) {
+        const { url } = await res.json()
+        setCommentImages(prev => [...prev, url])
+      }
+    } finally {
+      setUploadingImage(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
-    setUploadingImage(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleSubmitComment = async () => {
@@ -361,9 +412,13 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
           <div>
             {/* 본문 */}
             <div className="p-5">
-              {/* 삭제 버튼 */}
-              {userId === post.user_id && (
-                <div className="flex justify-end mb-2">
+              {/* 삭제/수정 버튼 */}
+              {userId === post.user_id && !isEditing && (
+                <div className="flex justify-end gap-3 mb-2">
+                  <button onClick={handleStartEdit}
+                    className="text-white/20 hover:text-white/60 transition-colors flex items-center gap-1 text-xs">
+                    <Pencil className="w-3.5 h-3.5" /> {t('post.edit')}
+                  </button>
                   <button onClick={handleDeletePost}
                     className="text-white/20 hover:text-red-400 transition-colors flex items-center gap-1 text-xs">
                     <Trash2 className="w-3.5 h-3.5" /> {t('post.delete')}
@@ -372,11 +427,18 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               )}
 
               {/* 메타 */}
-              <div className="flex items-center gap-2 mb-3 text-[11px] text-white/30">
+              <div className="flex items-center gap-2 mb-3 text-[11px] text-white/30 flex-wrap">
                 <Avatar url={post.user_avatar_url} name={post.user_display_name} size={5} />
                 <span className="font-medium text-white/50">{post.user_display_name}</span>
                 <span>·</span>
                 <span>{timeAgo(post.created_at, t)}</span>
+                {post.updated_at && post.created_at &&
+                  Math.abs(new Date(post.updated_at).getTime() - new Date(post.created_at).getTime()) > 5000 && (
+                  <>
+                    <span>·</span>
+                    <span className="text-white/20">{t('post.edited')} {timeAgo(post.updated_at, t)}</span>
+                  </>
+                )}
                 {post.category && (
                   <>
                     <span>·</span>
@@ -386,8 +448,46 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 <span className="flex items-center gap-1 ml-auto"><Eye className="w-3 h-3" />{post.view_count}</span>
               </div>
 
-              {/* 제목 */}
-              <h1 className="text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
+              {/* 수정 모드 */}
+              {isEditing ? (
+                <div className="space-y-3 mb-4">
+                  <input
+                    value={editTitle}
+                    onChange={e => setEditTitle(e.target.value)}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-base font-bold text-white outline-none focus:border-white/20 transition-colors"
+                    placeholder={t('write.title')}
+                  />
+                  {post.type === 'review' && editRating !== null && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-white/40">Rating:</span>
+                      <input type="number" min={1} max={10} value={editRating ?? ''}
+                        onChange={e => setEditRating(Number(e.target.value))}
+                        className="w-16 bg-surface-2 border border-border rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:border-white/20 transition-colors" />
+                      <span className="text-xs text-white/30">/10</span>
+                    </div>
+                  )}
+                  <textarea
+                    value={editBody.replace(/<[^>]+>/g, '')}
+                    onChange={e => setEditBody(e.target.value)}
+                    rows={10}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-white/85 outline-none focus:border-white/20 transition-colors resize-none leading-relaxed"
+                    placeholder={t('write.body')}
+                  />
+                  <div className="flex items-center gap-2 justify-end">
+                    <button onClick={() => setIsEditing(false)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 border border-border hover:border-white/20 transition-all">
+                      <X className="w-3.5 h-3.5" /> {t('comment.cancel')}
+                    </button>
+                    <button onClick={handleSaveEdit} disabled={savingEdit || !editTitle.trim()}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-accent hover:bg-accent/90 text-white transition-all disabled:opacity-40">
+                      <Check className="w-3.5 h-3.5" /> {t('post.save')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* 제목 */}
+                  <h1 className="text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
 
               {/* 평점 (리뷰) */}
               {post.type === 'review' && post.rating != null && (
@@ -486,7 +586,19 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   <ThumbsUp className="w-4 h-4" />
                   <span className="tabular-nums">{post.upvotes}</span>
                 </button>
+                <button onClick={handleDownvote} disabled={downvoting || !token}
+                  title={!token ? t('post.login_vote') : undefined}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                    post.my_downvote
+                      ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                      : 'text-white/40 border-border hover:text-white/70 hover:border-white/20'
+                  }`}>
+                  <ThumbsDown className="w-4 h-4" />
+                  {(post.downvotes ?? 0) > 0 && <span className="tabular-nums">{post.downvotes}</span>}
+                </button>
               </div>
+                </>
+              )}
 
             </div>
           </div>

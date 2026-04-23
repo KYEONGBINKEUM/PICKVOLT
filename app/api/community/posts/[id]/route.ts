@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data: post, error } = await supabase
     .from('community_posts')
     .select(`
-      id, type, category, title, body, rating, upvotes, comment_count, view_count,
+      id, type, category, title, body, rating, upvotes, downvotes, comment_count, view_count,
       is_pinned, created_at, updated_at,
       user_id, user_display_name, user_avatar_url,
       community_post_products ( product_id, products ( id, name, brand, image_url, category ) ),
@@ -49,21 +49,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error || !post) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
   let my_vote = false
+  let my_downvote = false
   let my_compare_option: string | null = null
 
   if (userId) {
-    const [{ data: pv }, { data: cv }] = await Promise.all([
+    const [{ data: pv }, { data: dv }, { data: cv }] = await Promise.all([
       supabase.from('community_post_votes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
+      supabase.from('community_post_downvotes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
       supabase.from('community_compare_votes').select('option_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
     ])
     my_vote = !!pv
+    my_downvote = !!dv
     my_compare_option = cv?.option_id ?? null
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const options = ((post as any).community_compare_options ?? []).sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
 
-  return NextResponse.json({ ...post, community_compare_options: options, my_vote, my_compare_option })
+  return NextResponse.json({ ...post, community_compare_options: options, my_vote, my_downvote, my_compare_option })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
