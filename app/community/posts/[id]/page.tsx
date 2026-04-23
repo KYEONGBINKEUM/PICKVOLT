@@ -167,13 +167,20 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user
-      setToken(data.session?.access_token ?? null)
+    supabase.auth.getSession().then(async ({ data }) => {
+      const u   = data.session?.user
+      const tok = data.session?.access_token ?? null
+      setToken(tok)
       setUserId(u?.id ?? null)
       if (u) {
-        setDisplayName(u.user_metadata?.full_name ?? u.user_metadata?.name ?? u.email?.split('@')[0] ?? '')
-        setAvatarUrl(u.user_metadata?.avatar_url ?? null)
+        // profiles 테이블에서 nickname + avatar 우선 사용 (실명/구글이미지 노출 방지)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nickname, avatar_url')
+          .eq('user_id', u.id)
+          .maybeSingle()
+        setDisplayName(profile?.nickname ?? u.email?.split('@')[0] ?? 'user')
+        setAvatarUrl(profile?.avatar_url ?? null)
       }
     })
   }, [])
@@ -325,8 +332,6 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
       body: JSON.stringify({
         body: fullBody,
         parent_id: replyTo?.id ?? null,
-        display_name: displayName,
-        avatar_url: avatarUrl,
       }),
     })
     if (res.ok) {
