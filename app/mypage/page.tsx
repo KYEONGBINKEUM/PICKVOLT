@@ -257,7 +257,7 @@ export default function MyPage() {
       setAvatarError(t('avatar.error_upload'))
     } else {
       const json = await res.json()
-      setAvatarUrl(json.avatar_url + `?t=${Date.now()}`)
+      setAvatarUrl(json.avatar_url)
     }
     setAvatarUploading(false)
     if (e.target) e.target.value = ''

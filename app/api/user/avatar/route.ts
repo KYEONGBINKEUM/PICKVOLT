@@ -54,16 +54,17 @@ export async function PUT(req: NextRequest) {
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+  const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
 
-  // profiles 테이블에 avatar_url 저장
+  // profiles 테이블에 avatar_url 저장 (캐시 버스팅 포함)
   const { error: dbError } = await supabase
     .from('profiles')
-    .update({ avatar_url: publicUrl })
+    .update({ avatar_url: cacheBustedUrl })
     .eq('user_id', user.id)
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
 
-  return NextResponse.json({ ok: true, avatar_url: publicUrl })
+  return NextResponse.json({ ok: true, avatar_url: cacheBustedUrl })
 }
 
 // DELETE: 아바타 제거

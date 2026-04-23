@@ -139,13 +139,17 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
       </div>
 
-      {/* Viewport: overflow-hidden, no padding – width drives the peek */}
+      {/* Viewport: overflow-hidden + side gradient mask */}
       <div
         className="overflow-hidden w-full cursor-grab active:cursor-grabbing select-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
+        style={{
+          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+          maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+        }}
       >
         {/* Track: starts shifted so center card is centered */}
         <div
@@ -202,18 +206,18 @@ function HomeContent() {
       <Navbar />
 
       {/* 히어로 + 캐러셀: 수직 중앙 정렬 */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-12 gap-10">
+      <div className="flex-1 flex flex-col items-center justify-center pt-16 pb-12 gap-10">
         {/* 검색 영역 */}
-        <div className="w-full max-w-3xl flex flex-col items-center gap-10 animate-slide-up">
+        <div className="w-full max-w-3xl px-6 flex flex-col items-center gap-10 animate-slide-up">
           <h1 className="text-5xl md:text-7xl font-black text-white text-center leading-[1.05] tracking-tight">
             {t('home.heading')}
           </h1>
           <SearchBar initialQuery={initialQuery} />
         </div>
 
-        {/* 트렌딩 캐러셀: 검색 바로 아래 */}
+        {/* 트렌딩 캐러셀: 풀 너비 */}
         {trending.length > 0 && (
-          <div className="w-full max-w-4xl">
+          <div className="w-full">
             <TrendingCarousel items={trending} t={t} />
           </div>
         )}
