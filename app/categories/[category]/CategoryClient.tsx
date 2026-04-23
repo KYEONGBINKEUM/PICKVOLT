@@ -209,31 +209,6 @@ function ProductCard({
         batteryCell,
       ]
 
-  // Desktop: full grid (6 cells)
-  const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] =
-    product.category === 'laptop'
-      ? [
-          [
-            { label: 'CPU', value: current.cpu_name ?? null },
-            { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
-          ],
-          [
-            { label: 'GPU', value: current.gpu_name ?? null },
-            displayCell,
-          ],
-          [batteryCell, weightCell],
-        ]
-      : [
-          [
-            { label: 'CPU', value: current.cpu_name ?? null },
-            { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
-          ],
-          [
-            displayCell,
-            { label: t('cat.spec_ppi'), value: product.ppi ? `${product.ppi} ppi` : null },
-          ],
-          [batteryCell, weightCell],
-        ]
 
   const score = product.performance_score
   const scorePercent = Math.min(100, Math.round((score / maxScore) * 100))
@@ -357,30 +332,16 @@ function ProductCard({
             )}
           </div>
 
-          {/* Mobile spec grid: CPU, RAM, display, battery (2×2) */}
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1 md:hidden">
+          {/* Spec grid: 4 cells (CPU, RAM, display, battery/gpu) */}
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
             {mobileCells.map((s, i) => (
               <div key={i}>
                 <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                <p className={`text-xs font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                <p className={`text-xs md:text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                   {s.value ?? '–'}
                 </p>
               </div>
             ))}
-          </div>
-
-          {/* Desktop spec grid: all 6 cells (3×2) */}
-          <div className="hidden md:grid grid-cols-2 gap-x-3 gap-y-1.5">
-            {specGrid.map((row, ri) =>
-              row.map((s, ci) => (
-                <div key={`${ri}-${ci}`}>
-                  <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
-                  <p className={`text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
-                    {s.value ?? '–'}
-                  </p>
-                </div>
-              ))
-            )}
           </div>
 
           {/* Performance bar — hidden (score badge already shows the value) */}
