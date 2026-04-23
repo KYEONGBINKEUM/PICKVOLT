@@ -344,15 +344,15 @@ function ProductCard({
             ))}
           </div>
 
-          {/* Performance bar — hidden (score badge already shows the value) */}
-          {/* {score > 0 && (
+          {/* Performance bar */}
+          {score > 0 && (
             <div className="h-0.5 bg-surface-2 rounded-full overflow-hidden">
               <div
                 className="h-full bg-accent rounded-full"
                 style={{ width: `${scorePercent}%` }}
               />
             </div>
-          )} */}
+          )}
         </div>
       </div>
     </Link>
