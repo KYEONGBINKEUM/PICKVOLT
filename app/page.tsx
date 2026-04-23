@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
-import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { TrendingUp } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import { useI18n } from '@/lib/i18n'
@@ -43,6 +42,7 @@ function ProductThumb({ product }: { product: Product }) {
 
 /* ── 트렌딩 캐러셀 (clone-based infinite · center mode) ── */
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
+  const router = useRouter()
   const CARD_W = 300   // card width px (+ px-2 padding = 316 total slot)
   const GAP    = 16    // px-2 on each side
   const SLOT   = CARD_W + GAP
@@ -106,7 +106,6 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
     dragOffset.current = offsetRef.current
     if (animFrame.current) cancelAnimationFrame(animFrame.current)
     if (trackRef.current) trackRef.current.style.transition = 'none'
-    e.currentTarget.setPointerCapture(e.pointerId)
   }, [])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
@@ -170,18 +169,16 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
               className="flex-shrink-0 px-2"
               style={{ width: CARD_W }}
             >
-              <Link
-                href={item.href}
-                draggable={false}
-                onClick={(e) => { if (didDrag.current) e.preventDefault() }}
-                className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
+              <div
+                onPointerUp={() => { if (!didDrag.current) router.push(item.href) }}
+                className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <ProductThumb product={item.productA} />
                   <span className="flex-shrink-0 text-xs font-black text-white/20 px-1">vs</span>
                   <ProductThumb product={item.productB} />
                 </div>
-              </Link>
+              </div>
             </div>
           ))}
         </div>
