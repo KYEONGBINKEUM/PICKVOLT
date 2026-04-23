@@ -60,7 +60,13 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         if (el && wrap) {
           const containerCenter = el.clientWidth / 2
           const cardCenter = wrap.offsetLeft + wrap.offsetWidth / 2
-          el.scrollTo({ left: cardCenter - containerCenter, behavior: 'smooth' })
+          const scrollTarget = cardCenter - containerCenter
+          // 마지막→처음 wraparound는 instant 이동 (역방향 애니메이션 방지)
+          if (next === 0 && prev === items.length - 1) {
+            el.scrollLeft = scrollTarget
+          } else {
+            el.scrollTo({ left: scrollTarget, behavior: 'smooth' })
+          }
         }
         return next
       })
