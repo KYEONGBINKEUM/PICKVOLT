@@ -983,18 +983,54 @@ export default function CategoryClient({ category }: { category: string }) {
     )
   }
 
+  const [catDropOpen, setCatDropOpen] = useState(false)
+
+  const ALL_CATEGORIES = [
+    { slug: 'smartphone', label: t('cat.smartphone') },
+    { slug: 'laptop',     label: t('cat.laptop')     },
+    { slug: 'tablet',     label: t('cat.tablet')     },
+  ]
+
   return (
     <div className="pb-24 lg:pb-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center">
-            <Icon className="w-5 h-5 text-white/60" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-white">{categoryLabel}</h1>
-          </div>
+        {/* Category switcher */}
+        <div className="relative">
+          <button
+            onClick={() => setCatDropOpen((v) => !v)}
+            className="flex items-center gap-1.5 group"
+          >
+            <h1 className="text-lg md:text-2xl font-black text-white group-hover:text-accent transition-colors">
+              {categoryLabel}
+            </h1>
+            <ChevronDown className={`w-4 h-4 text-white/40 group-hover:text-accent transition-all duration-200 ${catDropOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {catDropOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setCatDropOpen(false)} />
+              <div className="absolute top-full left-0 mt-2 z-20 bg-surface border border-border rounded-2xl overflow-hidden shadow-2xl min-w-[140px]">
+                {ALL_CATEGORIES.map((cat) => (
+                  <Link
+                    key={cat.slug}
+                    href={`/categories/${cat.slug}`}
+                    onClick={() => setCatDropOpen(false)}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      cat.slug === category
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {cat.slug === category && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
+                    {cat.label}
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
         </div>
+
         <span className="text-sm text-white/30 tabular-nums">
           {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())}
         </span>
