@@ -27,7 +27,11 @@ export function extractFirstImage(body: string): string | null {
 }
 
 export function extractAllImages(body: string): string[] {
-  return [...(body ?? '').matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1])
+  const results: string[] = []
+  const re = /<img[^>]+src=["']([^"']+)["']/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(body ?? '')) !== null) results.push(m[1])
+  return results
 }
 
 export function stripHtml(html: string): string {
