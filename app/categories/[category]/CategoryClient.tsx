@@ -184,6 +184,24 @@ function ProductCard({
       : null,
   }
 
+  const displayCell = {
+    label: t('cat.spec_display'),
+    value: product.display_inch
+      ? [`${product.display_inch}"`, product.display_hz
+          ? (product.category === 'laptop' ? `${product.display_hz}Hz` : `(${product.display_hz}Hz)`)
+          : null].filter(Boolean).join(' ')
+      : null,
+  }
+
+  // Mobile: show only CPU, RAM, display, battery (4 cells)
+  const mobileCells = [
+    { label: 'CPU', value: current.cpu_name ?? null },
+    { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
+    displayCell,
+    batteryCell,
+  ]
+
+  // Desktop: full grid (6 cells)
   const specGrid: [{ label: string; value: string | null }, { label: string; value: string | null }][] =
     product.category === 'laptop'
       ? [
@@ -193,12 +211,7 @@ function ProductCard({
           ],
           [
             { label: 'GPU', value: current.gpu_name ?? null },
-            {
-              label: t('cat.spec_display'),
-              value: product.display_inch
-                ? [`${product.display_inch}"`, product.display_hz ? `${product.display_hz}Hz` : null].filter(Boolean).join(' ')
-                : null,
-            },
+            displayCell,
           ],
           [batteryCell, weightCell],
         ]
@@ -208,12 +221,7 @@ function ProductCard({
             { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
           ],
           [
-            {
-              label: t('cat.spec_display'),
-              value: product.display_inch
-                ? [`${product.display_inch}"`, product.display_hz ? `(${product.display_hz}Hz)` : null].filter(Boolean).join(' ')
-                : null,
-            },
+            displayCell,
             { label: t('cat.spec_ppi'), value: product.ppi ? `${product.ppi} ppi` : null },
           ],
           [batteryCell, weightCell],
@@ -275,20 +283,69 @@ function ProductCard({
           ) : (
             <span className="text-3xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
           )}
-          {/* Score badge */}
+          {/* Score badge — top-left of image */}
           {score > 0 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
+            <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
               <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
             </div>
           )}
         </div>
 
+        {/* Action buttons — absolute top-right */}
+        <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+          {/* Add to Compare */}
+          <button
+            onClick={toggleCart}
+            disabled={!inCart && cartFull}
+            title={inCart ? t('cat.in_compare') : cartFull ? t('cat.compare_full') : t('cat.add_compare')}
+            className={`flex items-center gap-1 rounded-lg text-[11px] font-semibold transition-all px-1.5 py-1.5 md:px-2.5 md:py-1.5 ${
+              inCart
+                ? 'bg-accent/15 border border-accent/40 text-accent'
+                : cartFull
+                ? 'bg-surface-2/90 border border-border text-white/20 cursor-not-allowed'
+                : 'bg-surface-2/90 border border-border text-white/50 hover:border-white/20 hover:text-white'
+            }`}
+          >
+            {inCart ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+            <span className="hidden md:inline ml-0.5">
+              {inCart ? t('cat.in_compare') : cartFull ? t('cat.compare_full') : t('cat.add_compare')}
+            </span>
+          </button>
+
+          {/* Wishlist */}
+          <button
+            onClick={(e) => onWishlistToggle(product.id, e)}
+            title={wishlisted ? t('wishlist.remove') : t('wishlist.add')}
+            className={`flex items-center gap-1 rounded-lg text-[11px] font-semibold border transition-all px-1.5 py-1.5 md:px-2.5 md:py-1.5 ${
+              wishlisted
+                ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                : 'bg-surface-2/90 border-border text-white/40 hover:text-white/70 hover:border-white/20'
+            }`}
+          >
+            <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-400' : ''}`} />
+            <span className="hidden md:inline ml-0.5">
+              {wishlisted ? t('wishlist.saved') : t('wishlist.unsaved')}
+            </span>
+          </button>
+
+          {/* Admin edit */}
+          {isAdmin && (
+            <button
+              onClick={(e) => { e.preventDefault(); window.location.href = `/admin/products/${product.id}` }}
+              title={t('admin.edit')}
+              className="flex items-center gap-1 rounded-lg text-[11px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all px-1.5 py-1.5 md:px-2.5 md:py-1.5"
+            >
+              <Pencil className="w-3 h-3" />
+              <span className="hidden md:inline ml-0.5">{t('admin.edit')}</span>
+            </button>
+          )}
+        </div>
+
         {/* Content — right */}
-        <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2">
+        <div className="flex flex-col justify-between flex-1 min-w-0 p-3 sm:p-4 gap-2 pr-3 md:pr-4">
           <div>
-            <p className="text-xs text-white/30 uppercase tracking-widest font-semibold mb-0.5">{product.brand}</p>
-            <h3 className="text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+            <h3 className="text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors pr-16 md:pr-0">
               {product.name}
             </h3>
             {current.price_usd && (
@@ -298,8 +355,20 @@ function ProductCard({
             )}
           </div>
 
-          {/* Specs grid — 2 cols */}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {/* Mobile spec grid: CPU, RAM, display, battery (2×2) */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 md:hidden">
+            {mobileCells.map((s, i) => (
+              <div key={i}>
+                <p className="text-xs text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                <p className={`text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
+                  {s.value ?? '–'}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop spec grid: all 6 cells (3×2) */}
+          <div className="hidden md:grid grid-cols-2 gap-x-3 gap-y-1.5">
             {specGrid.map((row, ri) =>
               row.map((s, ci) => (
                 <div key={`${ri}-${ci}`}>
@@ -321,56 +390,6 @@ function ProductCard({
               />
             </div>
           )}
-
-          {/* Action row */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Add to Compare */}
-            <button
-              onClick={toggleCart}
-              disabled={!inCart && cartFull}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
-                inCart
-                  ? 'bg-accent/15 border border-accent/40 text-accent'
-                  : cartFull
-                  ? 'bg-surface-2 border border-border text-white/20 cursor-not-allowed'
-                  : 'bg-surface-2 border border-border text-white/50 hover:border-white/20 hover:text-white'
-              }`}
-            >
-              {inCart ? (
-                <><Check className="w-3 h-3" />{t('cat.in_compare')}</>
-              ) : cartFull ? (
-                <>{t('cat.compare_full')}</>
-              ) : (
-                <><Plus className="w-3 h-3" />{t('cat.add_compare')}</>
-              )}
-            </button>
-
-            {/* Wishlist */}
-            <button
-              onClick={(e) => onWishlistToggle(product.id, e)}
-              title={wishlisted ? t('wishlist.remove') : t('wishlist.add')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
-                wishlisted
-                  ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
-                  : 'bg-surface-2 border-border text-white/40 hover:text-white/70 hover:border-white/20'
-              }`}
-            >
-              <Heart className={`w-3 h-3 ${wishlisted ? 'fill-red-400' : ''}`} />
-              {wishlisted ? t('wishlist.saved') : t('wishlist.unsaved')}
-            </button>
-
-            {/* Admin edit */}
-            {isAdmin && (
-              <button
-                onClick={(e) => { e.preventDefault(); window.location.href = `/admin/products/${product.id}` }}
-                title="제품 수정"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all"
-              >
-                <Pencil className="w-3 h-3" />
-                수정
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </Link>
@@ -789,7 +808,9 @@ export default function CategoryClient({ category }: { category: string }) {
   const [availableOsList, setAvailableOsList] = useState<string[]>([])
   const [categoryMaxScore, setCategoryMaxScore] = useState<number>(1)
   const [loading,         setLoading]         = useState(true)
-  const [visibleCount,    setVisibleCount]    = useState(30)
+  const [serverPage,      setServerPage]      = useState(1)
+  const [hasMoreServer,   setHasMoreServer]   = useState(false)
+  const [isLoadingMore,   setIsLoadingMore]   = useState(false)
   const [mobileSheet,     setMobileSheet]     = useState(false)
   const [mobileSortOpen,  setMobileSortOpen]  = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -858,81 +879,85 @@ export default function CategoryClient({ category }: { category: string }) {
 
   const PAGE_SIZE = 30
 
-  // 무한 스크롤: sentinel이 뷰포트에 들어오면 더 보여주기
+  const fetchProductsPage = useCallback(async (page: number, reset: boolean) => {
+    if (reset) setLoading(true)
+    else setIsLoadingMore(true)
+    try {
+      const params = new URLSearchParams({ category, sort: filters.sort, page: String(page), limit: String(PAGE_SIZE) })
+      if (filters.brands.length === 1) params.set('brand', filters.brands[0])
+      if (filters.q)                   params.set('q', filters.q)
+
+      const res  = await fetch(`/api/products/list?${params}`)
+      const json: ApiResponse = await res.json()
+      const results: Product[] = json.results ?? []
+
+      if (reset) {
+        setAllProducts(results)
+        const maxScore = Math.max(1, ...results.map((p) => p.performance_score ?? 0))
+        setCategoryMaxScore(maxScore)
+        setAvailableBrands(json.brands ?? [])
+
+        const osValues = Array.from(new Set(
+          results.map((p) => p.os).filter(Boolean).map((os) => osGroup(os as string))
+        )).sort()
+        setAvailableOsList(osValues)
+
+        const maxPrice   = Math.ceil(Math.max(0, ...results.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
+        const allRamVals = results.flatMap((p) =>
+          p.ram_gb != null
+            ? String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n))
+            : []
+        )
+        const maxRam     = allRamVals.length > 0
+          ? Math.ceil(Math.max(0, ...allRamVals) / 2) * 2
+          : DEFAULT_FILTERS.ramMax
+        const maxDisplay = Math.ceil(Math.max(0, ...results.map((p) => p.display_inch ?? 0)) * 10)  / 10  || DEFAULT_FILTERS.displayMax
+        const maxBattery = Math.ceil(Math.max(0, ...results.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
+
+        setDataRanges({ priceMax: maxPrice, ramMax: maxRam, displayMax: maxDisplay, batteryMax: maxBattery })
+        setFilters((prev) => ({
+          ...prev,
+          priceMax:   prev.priceMax   === DEFAULT_FILTERS.priceMax   ? maxPrice   : prev.priceMax,
+          ramMax:     prev.ramMax     === DEFAULT_FILTERS.ramMax     ? maxRam     : prev.ramMax,
+          displayMax: prev.displayMax === DEFAULT_FILTERS.displayMax ? maxDisplay : prev.displayMax,
+          batteryMax: prev.batteryMax === DEFAULT_FILTERS.batteryMax ? maxBattery : prev.batteryMax,
+        }))
+      } else {
+        setAllProducts((prev) => [...prev, ...results])
+      }
+
+      setHasMoreServer(results.length === PAGE_SIZE)
+      setServerPage(page)
+    } finally {
+      setLoading(false)
+      setIsLoadingMore(false)
+    }
+  }, [category, filters.sort, filters.brands, filters.q])
+
+  // Re-fetch from page 1 when primary filter keys change
+  useEffect(() => {
+    fetchProductsPage(1, true)
+  }, [fetchProductsPage])
+
+  // Infinite scroll: load next page when sentinel enters viewport
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((c) => c + PAGE_SIZE)
+        if (entries[0].isIntersecting && hasMoreServer && !isLoadingMore && !loading) {
+          fetchProductsPage(serverPage + 1, false)
         }
       },
       { rootMargin: '200px' }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [loading])
-
-  const fetchProducts = useCallback(async () => {
-    setLoading(true)
-    try {
-      // Fetch all (large limit) for client-side filtering
-      const params = new URLSearchParams({ category, sort: filters.sort, page: '1', limit: '999' })
-      if (filters.brands.length === 1) params.set('brand', filters.brands[0])
-      if (filters.q)                   params.set('q', filters.q)
-
-      const res  = await fetch(`/api/products/list?${params}`)
-      const json: ApiResponse = await res.json()
-
-      const results: Product[] = json.results ?? []
-      setAllProducts(results)
-      const maxScore = Math.max(1, ...results.map((p) => p.performance_score ?? 0))
-      setCategoryMaxScore(maxScore)
-      setAvailableBrands(json.brands ?? [])
-
-      // Extract unique OS values
-      const osValues = Array.from(new Set(
-        results.map((p) => p.os).filter(Boolean).map((os) => osGroup(os as string))
-      )).sort()
-      setAvailableOsList(osValues)
-
-      // Compute actual max values from DB products
-      const maxPrice   = Math.ceil(Math.max(0, ...results.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
-      const allRamVals = results.flatMap((p) =>
-        p.ram_gb != null
-          ? String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n))
-          : []
-      )
-      const maxRam     = allRamVals.length > 0
-        ? Math.ceil(Math.max(0, ...allRamVals) / 2) * 2
-        : DEFAULT_FILTERS.ramMax
-      const maxDisplay = Math.ceil(Math.max(0, ...results.map((p) => p.display_inch ?? 0)) * 10)  / 10  || DEFAULT_FILTERS.displayMax
-      const maxBattery = Math.ceil(Math.max(0, ...results.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
-
-      setDataRanges({ priceMax: maxPrice, ramMax: maxRam, displayMax: maxDisplay, batteryMax: maxBattery })
-      // Reset filter maxes to match new data range on first load
-      setFilters((prev) => ({
-        ...prev,
-        priceMax:   prev.priceMax   === DEFAULT_FILTERS.priceMax   ? maxPrice   : prev.priceMax,
-        ramMax:     prev.ramMax     === DEFAULT_FILTERS.ramMax     ? maxRam     : prev.ramMax,
-        displayMax: prev.displayMax === DEFAULT_FILTERS.displayMax ? maxDisplay : prev.displayMax,
-        batteryMax: prev.batteryMax === DEFAULT_FILTERS.batteryMax ? maxBattery : prev.batteryMax,
-      }))
-    } finally {
-      setLoading(false)
-    }
-  }, [category, filters.sort, filters.brands, filters.q])
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-    fetchProducts()
-  }, [fetchProducts])
+  }, [loading, isLoadingMore, hasMoreServer, serverPage, fetchProductsPage])
 
   const filtered  = applyClientFilters(allProducts, filters)
   const total     = filtered.length
-  const products  = filtered.slice(0, visibleCount)
-  const hasMore   = visibleCount < total
+  const products  = filtered
 
   const hasFilters =
     filters.brands.length > 0 || !!filters.q || !!filters.os ||
@@ -985,7 +1010,7 @@ export default function CategoryClient({ category }: { category: string }) {
             availableOsList={availableOsList}
             filters={filters}
             dataRanges={dataRanges}
-            onChange={(f) => { setFilters(f); setVisibleCount(PAGE_SIZE) }}
+            onChange={(f) => setFilters(f)}
           />
         </div>
 
@@ -1041,7 +1066,7 @@ export default function CategoryClient({ category }: { category: string }) {
 
               {/* 무한 스크롤 sentinel */}
               <div ref={sentinelRef} className="h-10 mt-6 flex items-center justify-center">
-                {hasMore && (
+                {(hasMoreServer || isLoadingMore) && (
                   <div className="flex gap-1.5">
                     {[0, 1, 2].map((i) => (
                       <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent/40 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -1084,7 +1109,6 @@ export default function CategoryClient({ category }: { category: string }) {
                     key={opt.value}
                     onClick={() => {
                       setFilters((f) => ({ ...f, sort: opt.value }))
-                      setVisibleCount(PAGE_SIZE)
                       setMobileSortOpen(false)
                     }}
                     className={`w-full flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors ${
@@ -1149,7 +1173,7 @@ export default function CategoryClient({ category }: { category: string }) {
           <div className="flex items-center gap-3">
             {hasFilters && (
               <button
-                onClick={() => { setFilters({ ...DEFAULT_FILTERS, sort: filters.sort }); setVisibleCount(PAGE_SIZE) }}
+                onClick={() => setFilters({ ...DEFAULT_FILTERS, sort: filters.sort })}
                 className="text-xs text-accent hover:text-accent/80 transition-colors"
               >
                 {t('cat.filter_reset')}
@@ -1170,7 +1194,7 @@ export default function CategoryClient({ category }: { category: string }) {
             availableOsList={availableOsList}
             filters={filters}
             dataRanges={dataRanges}
-            onChange={(f) => { setFilters(f); setVisibleCount(PAGE_SIZE) }}
+            onChange={(f) => setFilters(f)}
           />
         </div>
 
@@ -1180,7 +1204,7 @@ export default function CategoryClient({ category }: { category: string }) {
             onClick={() => setMobileSheet(false)}
             className="w-full py-3.5 rounded-2xl bg-accent text-black font-bold text-sm transition-colors hover:bg-accent/90"
           >
-            {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())} 결과 보기
+            {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())} {t('cat.view_results')}
           </button>
         </div>
       </div>

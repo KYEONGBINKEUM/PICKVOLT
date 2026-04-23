@@ -90,7 +90,7 @@ export default function SearchBar({ initialQuery = '' }: { initialQuery?: string
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={t('search.placeholder')}
-          className="flex-1 bg-transparent text-white placeholder:text-white/30 text-sm focus:outline-none"
+          className="flex-1 bg-transparent text-white placeholder:text-white/30 text-[16px] md:text-sm focus:outline-none"
           autoComplete="off"
         />
         {query && (

@@ -135,15 +135,15 @@ export default function Navbar({ showSearch }: NavbarProps) {
         </div>
 
         {/* ── 모바일 우측 ── */}
-        <div className="flex md:hidden items-center gap-3">
+        <div className="flex md:hidden items-center gap-1">
           <LocalePopup />
           {authReady && loggedIn && (
-            <Link href="/mypage" className="text-white/50 hover:text-white transition-colors">
-              <User className="w-4 h-4" />
+            <Link href="/mypage" className="flex items-center justify-center w-9 h-9 rounded-full text-white/50 hover:text-white transition-colors">
+              <User className="w-5 h-5" />
             </Link>
           )}
           <button onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-full text-white/60 hover:text-white hover:bg-white/5 transition-colors"
             aria-label="메뉴 열기">
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -176,7 +176,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
           <Link href="/" onClick={() => setMobileOpen(false)}
             className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
               !isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
-            Compare
+            {t('nav.compare')}
           </Link>
           <Link href="/community" onClick={() => setMobileOpen(false)}
             className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
@@ -203,7 +203,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
           {isCommunity && (
             <Link href="/community/write" onClick={() => setMobileOpen(false)}
               className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-accent hover:bg-accent/10 transition-colors">
-              <PenSquare className="w-4 h-4" /> 글쓰기
+              <PenSquare className="w-4 h-4" /> {t('community.write')}
             </Link>
           )}
         </div>
@@ -213,7 +213,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
             {loggedIn ? (
               <Link href="/mypage" onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                <User className="w-4 h-4" /> My Page
+                <User className="w-4 h-4" /> {t('mypage.title')}
               </Link>
             ) : (
               <Link href="/login" onClick={() => setMobileOpen(false)}

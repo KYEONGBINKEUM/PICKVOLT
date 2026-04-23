@@ -8,7 +8,7 @@ import { useI18n } from '@/lib/i18n'
 
 export default function CompareTray() {
   const { cart, remove, clear } = useCompareCart()
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(false)
   const router = useRouter()
   const { t } = useI18n()
 
@@ -25,7 +25,7 @@ export default function CompareTray() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex flex-col items-end gap-2">
       {/* 펼쳐진 트레이 */}
       {expanded && (
         <div className="bg-surface-2/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl w-72 overflow-hidden animate-slide-up">

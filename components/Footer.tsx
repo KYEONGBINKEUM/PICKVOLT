@@ -7,7 +7,7 @@ export default function Footer() {
   const { t } = useI18n()
 
   return (
-    <footer className="border-t border-border py-10 mt-auto">
+    <footer className="border-t border-border pt-10 pb-20 lg:pb-10 mt-auto">
       <div className="max-w-inner mx-auto px-6 flex flex-col items-center gap-5">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
