@@ -72,13 +72,17 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
       </div>
 
-      {/* Embla viewport */}
-      <div ref={emblaRef} className="overflow-hidden w-full cursor-grab active:cursor-grabbing">
+      {/* Embla viewport — peek padding shows adjacent cloned slides */}
+      <div
+        ref={emblaRef}
+        className="overflow-hidden w-full cursor-grab active:cursor-grabbing"
+        style={{ paddingLeft: '10%', paddingRight: '10%' }}
+      >
         <div className="flex">
           {items.map((item, i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-[280px] sm:w-[300px] px-1.5"
+              className="flex-shrink-0 w-[280px] sm:w-[300px] px-2"
             >
               <Link
                 href={item.href}
@@ -118,8 +122,8 @@ function HomeContent() {
     <main className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      {/* 히어로 영역 */}
-      <div className={`flex flex-col items-center px-6 ${trending.length > 0 ? 'pt-28 pb-10 md:pt-32 md:pb-12' : 'flex-1 justify-center pb-24 pt-16 md:pt-0'}`}>
+      {/* 히어로 영역: 항상 수직 중앙 */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-12">
         <div className="w-full max-w-3xl flex flex-col items-center gap-10 animate-slide-up">
           <h1 className="text-5xl md:text-7xl font-black text-white text-center leading-[1.05] tracking-tight">
             {t('home.heading')}
@@ -128,9 +132,9 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* 트렌딩 캐러셀 */}
+      {/* 트렌딩 캐러셀: 페이지 하단 */}
       {trending.length > 0 && (
-        <div className="w-full mb-16">
+        <div className="w-full pb-12">
           <TrendingCarousel items={trending} t={t} />
         </div>
       )}

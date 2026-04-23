@@ -55,7 +55,7 @@ function renderMarkdown(text: string): string {
     .replace(/`(.+?)`/g, '<code class="bg-white/10 text-accent px-1 py-0.5 rounded text-[0.85em] font-mono">$1</code>')
     .replace(/^> (.+)$/gm, '<blockquote class="border-l-2 border-white/20 pl-3 text-white/50 italic">$1</blockquote>')
     .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-xl my-3 border border-white/10" style="max-height:600px;object-fit:contain;" />')
+    .replace(/!\[([^\]]*)\]\(\s*(https?:\/\/[^\s)]+)\s*\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-xl my-3 border border-white/10" style="max-height:600px;object-fit:contain;" />')
     .replace(/\[(.+?)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">$1</a>')
     .replace(/\n\n/g, '</p><p class="mb-3">')
     .replace(/\n/g, '<br />')
@@ -111,12 +111,8 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, currentUserId,
             </button>
           )}
         </div>
-        {c.body.includes('![') ? (
-          <div className="text-sm text-white/65 leading-relaxed ml-8"
-            dangerouslySetInnerHTML={{ __html: `<p class="mb-3">${renderMarkdown(c.body)}</p>` }} />
-        ) : (
-          <p className="text-sm text-white/65 leading-relaxed ml-8 whitespace-pre-wrap">{c.body}</p>
-        )}
+        <div className="text-sm text-white/65 leading-relaxed ml-8"
+          dangerouslySetInnerHTML={{ __html: `<p class="mb-3">${renderMarkdown(c.body)}</p>` }} />
         <div className="flex items-center gap-3 mt-2 ml-8">
           <button onClick={() => onVote(c.id)}
             className={`flex items-center gap-1 text-[11px] transition-colors ${c.my_vote ? 'text-accent' : 'text-white/25 hover:text-white/50'}`}>
