@@ -53,7 +53,7 @@ function ProductThumb({ product }: { product: Product }) {
   )
 }
 
-/* ── 트렌딩 캐러셀 ── */
+/* ── 트렌딩 캐러셀 (infinite loop) ── */
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
   const scrollRef      = useRef<HTMLDivElement>(null)
   const cardWrapRefs   = useRef<(HTMLDivElement | null)[]>([])
@@ -61,50 +61,58 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
   const isDragging     = useRef(false)
   const dragStartX     = useRef(0)
   const dragScrollLeft = useRef(0)
-  const [activeIdx, setActiveIdx] = useState(0)
+  // Infinite loop: real items + clone of first item appended
+  const extItems = items.length > 0 ? [...items, items[0]] : []
+  const [currentIdx, setCurrentIdx] = useState(0)
+
+  const scrollToIdx = (idx: number, smooth: boolean) => {
+    const el   = scrollRef.current
+    const wrap = cardWrapRefs.current[idx]
+    if (!el || !wrap) return
+    const target = wrap.offsetLeft - (el.clientWidth - wrap.offsetWidth) / 2
+    if (smooth) el.scrollTo({ left: target, behavior: 'smooth' })
+    else        el.scrollLeft = target
+  }
 
   // 마운트 후 첫 번째 카드 중앙 정렬
   useEffect(() => {
     if (items.length === 0) return
-    const el = scrollRef.current
-    const wrap = cardWrapRefs.current[0]
-    if (el && wrap) {
-      el.scrollLeft = wrap.offsetLeft - (el.clientWidth - wrap.offsetWidth) / 2
-    }
-  }, [items])
+    scrollToIdx(0, false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length])
 
-  // 자동 슬라이드
+  // 자동 슬라이드 — infinite loop via appended clone
   useEffect(() => {
     if (items.length <= 1) return
     const interval = setInterval(() => {
       if (isPaused.current) return
-      setActiveIdx(prev => {
-        const next = (prev + 1) % items.length
-        const el   = scrollRef.current
-        const wrap = cardWrapRefs.current[next]
-        if (el && wrap) {
-          const scrollTarget = wrap.offsetLeft - (el.clientWidth - wrap.offsetWidth) / 2
-          if (next === 0 && prev === items.length - 1) {
-            el.scrollLeft = scrollTarget
-          } else {
-            el.scrollTo({ left: scrollTarget, behavior: 'smooth' })
-          }
+      setCurrentIdx(prev => {
+        const next = prev + 1
+        scrollToIdx(next, true)
+        if (next === items.length) {
+          // Smooth-scrolled to clone of item[0].
+          // After the animation finishes, instantly jump to the real item[0].
+          setTimeout(() => {
+            scrollToIdx(0, false)
+          }, 420)
+          return 0 // next tick starts from 0 → 1
         }
         return next
       })
-    }, 2500)
+    }, 2800)
     return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length])
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = scrollRef.current
     if (!el) return
-    isDragging.current    = true
-    isPaused.current      = true
-    dragStartX.current    = e.pageX - el.offsetLeft
+    isDragging.current     = true
+    isPaused.current       = true
+    dragStartX.current     = e.pageX - el.offsetLeft
     dragScrollLeft.current = el.scrollLeft
-    el.style.cursor       = 'grabbing'
-    el.style.userSelect   = 'none'
+    el.style.cursor        = 'grabbing'
+    el.style.userSelect    = 'none'
   }
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging.current) return
@@ -118,7 +126,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
     isDragging.current = false
     const el = scrollRef.current
     if (el) { el.style.cursor = ''; el.style.userSelect = '' }
-    setTimeout(() => { isPaused.current = false }, 1000)
+    setTimeout(() => { isPaused.current = false }, 1200)
   }
 
   if (items.length === 0) return null
@@ -129,7 +137,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
       </div>
 
-      {/* full-width scroll — spacer를 50%로 계산해서 첫/마지막 카드 중앙 배치 */}
+      {/* full-width scroll — spacer로 첫/마지막 카드 중앙 배치 */}
       <div
         ref={scrollRef}
         onMouseDown={onMouseDown}
@@ -138,16 +146,17 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         onMouseLeave={onMouseUp}
         onTouchStart={() => { isPaused.current = true }}
         onTouchEnd={() => { setTimeout(() => { isPaused.current = false }, 1500) }}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 cursor-grab"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        className="flex gap-3 overflow-x-auto pb-1 cursor-grab"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', scrollSnapType: 'x mandatory' } as React.CSSProperties}
       >
-        {/* 좌측 spacer: 컨테이너 너비의 절반 - 카드 너비의 절반 */}
+        {/* 좌측 spacer */}
         <div className="flex-shrink-0 w-[calc(50%-140px)] sm:w-[calc(50%-150px)]" aria-hidden="true" />
-        {items.map((item, i) => (
+        {extItems.map((item, i) => (
           <div
             key={i}
             ref={(el) => { cardWrapRefs.current[i] = el }}
-            className="snap-center flex-shrink-0 w-[280px] sm:w-[300px]"
+            className="flex-shrink-0 w-[280px] sm:w-[300px]"
+            style={{ scrollSnapAlign: 'center' }}
           >
             <Link
               href={item.href}
@@ -217,15 +226,9 @@ function CommunityHotSection({ posts, t }: { posts: HotPost[]; t: (k: string) =>
   if (posts.length === 0) return null
   return (
     <div className="w-full max-w-3xl px-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Flame className="w-4 h-4 text-accent" />
-          <h3 className="text-lg font-black text-white">{t('community.popular')}</h3>
-        </div>
-        <Link href="/community?sort=hot"
-          className="text-xs text-white/30 hover:text-white/60 transition-colors">
-          {t('community.all')} →
-        </Link>
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <Flame className="w-4 h-4 text-accent" />
+        <h3 className="text-lg font-black text-white">{t('community.popular')}</h3>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {posts.map(post => <HotPostCard key={post.id} post={post} />)}
