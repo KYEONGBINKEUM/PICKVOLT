@@ -30,7 +30,7 @@ export default function CompareTray() {
   }
 
   return (
-    <div className={`fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-50 flex flex-col items-end gap-2 ${isCategory ? 'hidden lg:flex' : ''}`}>
+    <div className={`fixed bottom-6 right-4 lg:right-6 z-50 flex flex-col items-end gap-2 ${isCategory ? 'hidden lg:flex' : ''}`}>
       {/* 펼쳐진 트레이 */}
       {expanded && (
         <div className="bg-surface-2/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl w-72 overflow-hidden animate-slide-up">

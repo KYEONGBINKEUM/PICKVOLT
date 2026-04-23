@@ -1084,7 +1084,7 @@ export default function CategoryClient({ category }: { category: string }) {
 
       {/* ── 모바일 미니 트레이 (하단 바 위에 슬라이드업) ── */}
       {mobileTrayOpen && compareCart.length > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 z-40 lg:hidden mx-4 animate-slide-up">
+        <div className="fixed bottom-20 left-0 right-0 z-40 lg:hidden mx-4 animate-slide-up">
           <div className="bg-surface-2/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-2">
@@ -1130,30 +1130,30 @@ export default function CategoryClient({ category }: { category: string }) {
         </div>
       )}
 
-      {/* ── 모바일 하단 고정 바 ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 flex items-center gap-2">
+      {/* ── 모바일 플로팅 버튼 바 ── */}
+      <div className="fixed bottom-6 left-0 right-0 z-30 lg:hidden flex items-center justify-center gap-2 px-4 pointer-events-none">
 
-        {/* 비교 트레이 토글 버튼 (좌측) */}
+        {/* 비교 트레이 토글 버튼 */}
         <button
           onClick={() => setMobileTrayOpen((v) => !v)}
-          className="flex-1 flex items-center gap-2 bg-surface-2/80 border border-border rounded-full px-4 py-2 hover:border-white/20 transition-all"
+          className="pointer-events-auto flex items-center gap-2 bg-surface-2/95 backdrop-blur-md border border-border rounded-full px-4 py-2.5 shadow-xl hover:border-white/20 transition-all"
         >
           <GitCompare className="w-4 h-4 text-accent flex-shrink-0" />
           <span className="text-sm font-bold text-white">{compareCart.length}</span>
-          <span className="text-xs text-white/40 flex-1 text-left">{t('tray.in_tray')}</span>
+          <span className="text-xs text-white/40">{t('tray.in_tray')}</span>
           {mobileTrayOpen
             ? <ChevronDown className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
             : <ChevronUp className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
           }
         </button>
 
-        {/* 필터 버튼 (우측) */}
+        {/* 필터 버튼 */}
         <button
           onClick={() => setMobileSheet(true)}
-          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+          className={`pointer-events-auto flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-semibold shadow-xl transition-all ${
             hasFilters
-              ? 'bg-accent/10 border-accent/40 text-accent'
-              : 'bg-surface border-border text-white/70 hover:text-white'
+              ? 'bg-accent/15 border-accent/40 text-accent backdrop-blur-md'
+              : 'bg-surface-2/95 border-border text-white/70 hover:border-white/20 backdrop-blur-md'
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
