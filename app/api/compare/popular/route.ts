@@ -22,7 +22,7 @@ export async function GET() {
     if (pairs.length === 0) return NextResponse.json({ items: [] })
 
     // 관련 제품 ID 수집
-    const allIds = [...new Set(pairs.flatMap(item => item.products))]
+    const allIds = Array.from(new Set(pairs.flatMap(item => item.products)))
 
     // 제품 상세 조회
     const { data: products } = await supabase
