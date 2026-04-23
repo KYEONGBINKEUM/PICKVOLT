@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, Flame, MessageSquare } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
@@ -22,6 +22,19 @@ interface TrendingCard {
   cnt: number
 }
 
+interface HotPost {
+  id: string
+  title: string
+  body: string
+  type: string
+  upvotes: number
+  comment_count: number
+  created_at: string
+  user_display_name: string
+  community_post_products: { products: { id: string; name: string; image_url: string | null } | null }[]
+}
+
+/* ── 제품 썸네일 ── */
 function ProductThumb({ product }: { product: Product }) {
   return (
     <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
@@ -40,28 +53,37 @@ function ProductThumb({ product }: { product: Product }) {
   )
 }
 
+/* ── 트렌딩 캐러셀 ── */
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const cardWrapRefs = useRef<(HTMLDivElement | null)[]>([])
-  const isPaused = useRef(false)
-  const isDragging = useRef(false)
-  const dragStartX = useRef(0)
+  const scrollRef      = useRef<HTMLDivElement>(null)
+  const cardWrapRefs   = useRef<(HTMLDivElement | null)[]>([])
+  const isPaused       = useRef(false)
+  const isDragging     = useRef(false)
+  const dragStartX     = useRef(0)
   const dragScrollLeft = useRef(0)
   const [activeIdx, setActiveIdx] = useState(0)
 
+  // 마운트 후 첫 번째 카드 중앙 정렬
+  useEffect(() => {
+    if (items.length === 0) return
+    const el = scrollRef.current
+    const wrap = cardWrapRefs.current[0]
+    if (el && wrap) {
+      el.scrollLeft = wrap.offsetLeft - (el.clientWidth - wrap.offsetWidth) / 2
+    }
+  }, [items])
+
+  // 자동 슬라이드
   useEffect(() => {
     if (items.length <= 1) return
     const interval = setInterval(() => {
       if (isPaused.current) return
       setActiveIdx(prev => {
         const next = (prev + 1) % items.length
-        const el = scrollRef.current
+        const el   = scrollRef.current
         const wrap = cardWrapRefs.current[next]
         if (el && wrap) {
-          const containerCenter = el.clientWidth / 2
-          const cardCenter = wrap.offsetLeft + wrap.offsetWidth / 2
-          const scrollTarget = cardCenter - containerCenter
-          // 마지막→처음 wraparound는 instant 이동 (역방향 애니메이션 방지)
+          const scrollTarget = wrap.offsetLeft - (el.clientWidth - wrap.offsetWidth) / 2
           if (next === 0 && prev === items.length - 1) {
             el.scrollLeft = scrollTarget
           } else {
@@ -77,12 +99,12 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = scrollRef.current
     if (!el) return
-    isDragging.current = true
-    isPaused.current = true
-    dragStartX.current = e.pageX - el.offsetLeft
+    isDragging.current    = true
+    isPaused.current      = true
+    dragStartX.current    = e.pageX - el.offsetLeft
     dragScrollLeft.current = el.scrollLeft
-    el.style.cursor = 'grabbing'
-    el.style.userSelect = 'none'
+    el.style.cursor       = 'grabbing'
+    el.style.userSelect   = 'none'
   }
   const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging.current) return
@@ -105,8 +127,9 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
       <div className="flex items-center justify-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-accent" />
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
-        <span className="text-xs text-white/30 ml-1">{t('compare.trending_sub')}</span>
       </div>
+
+      {/* full-width scroll — spacer를 50%로 계산해서 첫/마지막 카드 중앙 배치 */}
       <div
         ref={scrollRef}
         onMouseDown={onMouseDown}
@@ -118,8 +141,8 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1 cursor-grab"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
-        {/* center-mode left spacer */}
-        <div className="flex-shrink-0 w-[calc(50vw-140px)] sm:w-[calc(50vw-150px)]" aria-hidden="true" />
+        {/* 좌측 spacer: 컨테이너 너비의 절반 - 카드 너비의 절반 */}
+        <div className="flex-shrink-0 w-[calc(50%-140px)] sm:w-[calc(50%-150px)]" aria-hidden="true" />
         {items.map((item, i) => (
           <div
             key={i}
@@ -140,43 +163,125 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
             </Link>
           </div>
         ))}
-        {/* center-mode right spacer */}
-        <div className="flex-shrink-0 w-[calc(50vw-140px)] sm:w-[calc(50vw-150px)]" aria-hidden="true" />
+        {/* 우측 spacer */}
+        <div className="flex-shrink-0 w-[calc(50%-140px)] sm:w-[calc(50%-150px)]" aria-hidden="true" />
       </div>
     </div>
   )
 }
 
+/* ── 커뮤니티 인기글 카드 ── */
+function HotPostCard({ post }: { post: HotPost }) {
+  const isHtml    = /<[a-z]/i.test(post.body ?? '')
+  const bodyThumb = isHtml ? (post.body.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ?? null) : null
+  const prodThumb = post.community_post_products?.[0]?.products?.image_url ?? null
+  const thumb     = bodyThumb ?? prodThumb
+  const plainText = isHtml
+    ? post.body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    : (post.body ?? '')
+
+  return (
+    <Link
+      href={`/community/posts/${post.id}`}
+      className="flex gap-3 bg-surface border border-border rounded-xl p-3.5 hover:border-white/20 active:scale-[0.99] transition-all"
+    >
+      {/* 썸네일 */}
+      <div className="w-14 h-14 rounded-lg flex-shrink-0 bg-surface-2 overflow-hidden flex items-center justify-center">
+        {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumb} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <MessageSquare className="w-4 h-4 text-white/15" />
+        )}
+      </div>
+      {/* 텍스트 */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white line-clamp-1 mb-1 leading-snug">{post.title}</p>
+        {plainText && (
+          <p className="text-xs text-white/35 line-clamp-2 leading-relaxed">{plainText}</p>
+        )}
+        <div className="flex items-center gap-2 mt-1.5 text-[10px] text-white/20">
+          <span>{post.user_display_name}</span>
+          <span>·</span>
+          <span className="flex items-center gap-0.5">
+            <MessageSquare className="w-2.5 h-2.5" />{post.comment_count}
+          </span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+/* ── 커뮤니티 인기글 섹션 ── */
+function CommunityHotSection({ posts, t }: { posts: HotPost[]; t: (k: string) => string }) {
+  if (posts.length === 0) return null
+  return (
+    <div className="w-full max-w-3xl px-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Flame className="w-4 h-4 text-accent" />
+          <h3 className="text-lg font-black text-white">{t('community.popular')}</h3>
+        </div>
+        <Link href="/community?sort=hot"
+          className="text-xs text-white/30 hover:text-white/60 transition-colors">
+          {t('community.all')} →
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {posts.map(post => <HotPostCard key={post.id} post={post} />)}
+      </div>
+    </div>
+  )
+}
+
+/* ── 메인 컨텐츠 ── */
 function HomeContent() {
   const { t } = useI18n()
   const searchParams = useSearchParams()
   const initialQuery = searchParams.get('q') ?? ''
-  const [trending, setTrending] = useState<TrendingCard[]>([])
+  const [trending,  setTrending]  = useState<TrendingCard[]>([])
+  const [hotPosts,  setHotPosts]  = useState<HotPost[]>([])
 
   useEffect(() => {
-    fetch('/api/compare/popular')
-      .then((r) => r.json())
-      .then((d: { items: TrendingCard[] }) => {
-        if (d.items && d.items.length > 0) setTrending(d.items)
-      })
-      .catch(() => {})
+    // 트렌딩 비교 + 커뮤니티 인기글 병렬 로드
+    Promise.all([
+      fetch('/api/compare/popular').then(r => r.json()).catch(() => ({ items: [] })),
+      fetch('/api/community/posts?sort=hot&limit=4').then(r => r.json()).catch(() => ({ posts: [] })),
+    ]).then(([trending, community]) => {
+      if (trending.items?.length > 0)   setTrending(trending.items)
+      if (community.posts?.length > 0)  setHotPosts(community.posts.slice(0, 4))
+    })
   }, [])
+
+  const hasBelowContent = trending.length > 0 || hotPosts.length > 0
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-24 pt-16 md:pt-0">
+      {/* 히어로 영역 */}
+      <div className={`flex flex-col items-center px-6 ${hasBelowContent ? 'pt-28 pb-10 md:pt-32 md:pb-12' : 'flex-1 justify-center pb-24 pt-16 md:pt-0'}`}>
         <div className="w-full max-w-3xl flex flex-col items-center gap-10 animate-slide-up">
           <h1 className="text-5xl md:text-7xl font-black text-white text-center leading-[1.05] tracking-tight">
             {t('home.heading')}
           </h1>
-
           <SearchBar initialQuery={initialQuery} />
-
-          <TrendingCarousel items={trending} t={t} />
         </div>
       </div>
+
+      {/* 트렌딩 캐러셀 (full-width) */}
+      {trending.length > 0 && (
+        <div className="w-full mb-12">
+          <TrendingCarousel items={trending} t={t} />
+        </div>
+      )}
+
+      {/* 커뮤니티 인기글 */}
+      {hotPosts.length > 0 && (
+        <div className="flex justify-center mb-24">
+          <CommunityHotSection posts={hotPosts} t={t} />
+        </div>
+      )}
     </main>
   )
 }
