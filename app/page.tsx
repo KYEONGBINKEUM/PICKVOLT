@@ -46,7 +46,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
   const CARD_W  = 300
   const GAP     = 16
   const SLOT    = CARD_W + GAP
-  const SPEED   = 0.35  // px per ms
+  const SPEED   = 0.04  // px per ms (~40px/s, 카드 1개 통과 약 8초)
 
   const slides  = [...items, ...items, ...items]
   const setLen  = items.length
