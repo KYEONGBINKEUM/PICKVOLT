@@ -336,7 +336,7 @@ function ProductCard({
           <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
             {mobileCells.map((s, i) => (
               <div key={i}>
-                <p className="text-[9px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
+                <p className="text-[10px] text-white/25 uppercase tracking-widest mb-0.5">{s.label}</p>
                 <p className={`text-xs md:text-sm font-semibold ${s.value ? 'text-white/75' : 'text-white/20'}`}>
                   {s.value ?? '–'}
                 </p>
