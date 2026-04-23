@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ThumbsUp, ThumbsDown, MessageSquare, Star, Tag,
-  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check
+  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check, Flag
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
@@ -89,11 +89,12 @@ function Avatar({ url, name, size = 7 }: { url: string | null; name: string; siz
   )
 }
 
-function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, currentUserId, token, onDelete, t }: {
+function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, currentUserId, token, onDelete, t }: {
   c: Comment; depth?: number
   onVote: (id: string) => void
   onDownvote: (id: string) => void
   onReply: (id: string, name: string) => void
+  onReport: (id: string) => void
   currentUserId: string | null; token: string | null
   onDelete: (id: string) => void
   t: (k: string) => string
@@ -126,6 +127,12 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, currentUserId,
             className="flex items-center gap-1 text-[11px] text-white/25 hover:text-white/50 transition-colors">
             <CornerDownRight className="w-3 h-3" /> {t('post.reply')}
           </button>
+          {token && currentUserId !== c.user_id && (
+            <button onClick={() => onReport(c.id)}
+              className="flex items-center gap-1 text-[11px] text-white/20 hover:text-orange-400 transition-colors ml-auto">
+              <Flag className="w-3 h-3" /> {t('report.btn')}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -161,6 +168,13 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [editBody, setEditBody]     = useState('')
   const [editRating, setEditRating] = useState<number | null>(null)
   const [savingEdit, setSavingEdit] = useState(false)
+
+  // 신고 모달
+  const [reportTarget, setReportTarget]   = useState<{ type: 'post' | 'comment'; id: string } | null>(null)
+  const [reportReason, setReportReason]   = useState('')
+  const [reportDetail, setReportDetail]   = useState('')
+  const [submittingReport, setSubmittingReport] = useState(false)
+  const [reportDone, setReportDone]       = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -212,7 +226,8 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     })
     if (res.ok) {
       const d = await res.json()
-      setPost(p => p ? { ...p, upvotes: d.upvotes, my_vote: d.voted } : p)
+      // 추천 시 비추천 자동 해제
+      setPost(p => p ? { ...p, upvotes: d.upvotes, my_vote: d.voted, downvotes: d.downvotes, my_downvote: false } : p)
     }
     setVoting(false)
   }
@@ -225,9 +240,30 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     })
     if (res.ok) {
       const d = await res.json()
-      setPost(p => p ? { ...p, downvotes: d.downvotes, my_downvote: d.voted } : p)
+      // 비추천 시 추천 자동 해제
+      setPost(p => p ? { ...p, downvotes: d.downvotes, my_downvote: d.voted, upvotes: d.upvotes, my_vote: false } : p)
     }
     setDownvoting(false)
+  }
+
+  const handleReport = async () => {
+    if (!token || !reportTarget || !reportReason || submittingReport) return
+    setSubmittingReport(true)
+    const res = await fetch('/api/community/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ target_type: reportTarget.type, target_id: reportTarget.id, reason: reportReason, detail: reportDetail }),
+    })
+    setSubmittingReport(false)
+    if (res.ok || res.status === 409) {
+      setReportDone(true)
+      setTimeout(() => {
+        setReportTarget(null)
+        setReportReason('')
+        setReportDetail('')
+        setReportDone(false)
+      }, 1500)
+    }
   }
 
   const handleStartEdit = () => {
@@ -281,7 +317,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     })
     if (res.ok) {
       const d = await res.json()
-      setComments(cs => cs.map(c => c.id === commentId ? { ...c, upvotes: d.upvotes, my_vote: d.voted } : c))
+      setComments(cs => cs.map(c => c.id === commentId
+        ? { ...c, upvotes: d.upvotes, my_vote: d.voted, downvotes: d.downvotes, my_downvote: false }
+        : c))
     }
   }
 
@@ -348,7 +386,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     })
     if (res.ok) {
       const d = await res.json()
-      setComments(cs => cs.map(c => c.id === commentId ? { ...c, downvotes: d.downvotes, my_downvote: d.voted } : c))
+      setComments(cs => cs.map(c => c.id === commentId
+        ? { ...c, downvotes: d.downvotes, my_downvote: d.voted, upvotes: d.upvotes, my_vote: false }
+        : c))
     }
   }
 
@@ -597,6 +637,13 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   <ThumbsDown className="w-4 h-4" />
                   {(post.downvotes ?? 0) > 0 && <span className="tabular-nums">{post.downvotes}</span>}
                 </button>
+                {/* 신고 버튼 (본인 게시글 제외) */}
+                {token && userId !== post.user_id && (
+                  <button onClick={() => setReportTarget({ type: 'post', id: post.id })}
+                    className="ml-auto flex items-center gap-1.5 text-[11px] text-white/20 hover:text-orange-400 transition-colors">
+                    <Flag className="w-3.5 h-3.5" /> {t('report.btn')}
+                  </button>
+                )}
               </div>
                 </>
               )}
@@ -682,6 +729,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                     onVote={handleCommentVote}
                     onDownvote={handleCommentDownvote}
                     onReply={(pid, name) => setReplyTo({ id: pid, name })}
+                    onReport={(cid) => setReportTarget({ type: 'comment', id: cid })}
                     currentUserId={userId}
                     token={token}
                     onDelete={handleDeleteComment}
@@ -691,6 +739,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                       onVote={handleCommentVote}
                       onDownvote={handleCommentDownvote}
                       onReply={(pid, name) => setReplyTo({ id: pid, name })}
+                      onReport={(cid) => setReportTarget({ type: 'comment', id: cid })}
                       currentUserId={userId}
                       token={token}
                       onDelete={handleDeleteComment}
@@ -702,6 +751,73 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       </main>
+
+      {/* ── 신고 모달 ── */}
+      {reportTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) { setReportTarget(null); setReportReason(''); setReportDetail('') } }}>
+          <div className="w-full max-w-md bg-surface border border-border rounded-2xl p-5 shadow-2xl">
+            {reportDone ? (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <div className="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center">
+                  <Check className="w-5 h-5 text-accent" />
+                </div>
+                <p className="text-sm font-semibold text-white">{t('report.done')}</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Flag className="w-4 h-4 text-orange-400" />
+                    <h3 className="text-sm font-bold text-white">{t('report.title')}</h3>
+                  </div>
+                  <button onClick={() => { setReportTarget(null); setReportReason(''); setReportDetail('') }}
+                    className="text-white/30 hover:text-white/60 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* 신고 유형 */}
+                <p className="text-xs text-white/40 mb-2">{t('report.reason_label')}</p>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {(['spam','hate','sexual','violence','privacy','false_info','other'] as const).map(r => (
+                    <button key={r} onClick={() => setReportReason(r)}
+                      className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left ${
+                        reportReason === r
+                          ? 'border-orange-500/60 bg-orange-500/10 text-orange-300'
+                          : 'border-border text-white/50 hover:border-white/20 hover:text-white/70'
+                      }`}>
+                      {t(`report.reason.${r}`)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 신고 내용 */}
+                <p className="text-xs text-white/40 mb-2">{t('report.detail_label')}</p>
+                <textarea
+                  value={reportDetail}
+                  onChange={e => setReportDetail(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder={t('report.detail_placeholder')}
+                  className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2.5 text-sm text-white/85 placeholder-white/25 outline-none focus:border-white/20 transition-colors resize-none mb-4"
+                />
+
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => { setReportTarget(null); setReportReason(''); setReportDetail('') }}
+                    className="px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 border border-border hover:border-white/20 transition-all">
+                    {t('comment.cancel')}
+                  </button>
+                  <button onClick={handleReport} disabled={!reportReason || submittingReport}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-orange-500 hover:bg-orange-400 text-white transition-all disabled:opacity-40">
+                    {submittingReport ? '...' : t('report.submit')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

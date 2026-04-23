@@ -25,17 +25,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .eq('user_id', user.id)
     .maybeSingle()
 
+  const { data: existingUp } = await supabase
+    .from('community_comment_votes').select('comment_id').eq('comment_id', commentId).eq('user_id', user.id).maybeSingle()
+
   if (existing) {
     await supabase.from('community_comment_downvotes').delete().eq('comment_id', commentId).eq('user_id', user.id)
-    const { data } = await supabase.from('community_comments').select('downvotes').eq('id', commentId).single()
-    const newCount = Math.max(0, (data?.downvotes ?? 1) - 1)
-    await supabase.from('community_comments').update({ downvotes: newCount }).eq('id', commentId)
-    return NextResponse.json({ voted: false, downvotes: newCount })
+    const { data } = await supabase.from('community_comments').select('upvotes, downvotes').eq('id', commentId).single()
+    const newDown = Math.max(0, (data?.downvotes ?? 1) - 1)
+    await supabase.from('community_comments').update({ downvotes: newDown }).eq('id', commentId)
+    return NextResponse.json({ voted: false, downvotes: newDown, upvotes: data?.upvotes ?? 0, my_vote: !!existingUp })
   }
 
+  // 비추천 추가 + 추천 제거(있으면)
   await supabase.from('community_comment_downvotes').insert({ comment_id: commentId, user_id: user.id })
-  const { data } = await supabase.from('community_comments').select('downvotes').eq('id', commentId).single()
-  const newCount = (data?.downvotes ?? 0) + 1
-  await supabase.from('community_comments').update({ downvotes: newCount }).eq('id', commentId)
-  return NextResponse.json({ voted: true, downvotes: newCount })
+  if (existingUp) {
+    await supabase.from('community_comment_votes').delete().eq('comment_id', commentId).eq('user_id', user.id)
+  }
+  const { data } = await supabase.from('community_comments').select('upvotes, downvotes').eq('id', commentId).single()
+  const newDown = (data?.downvotes ?? 0) + 1
+  await supabase.from('community_comments').update({ downvotes: newDown }).eq('id', commentId)
+  return NextResponse.json({ voted: true, downvotes: newDown, upvotes: data?.upvotes ?? 0, my_vote: false })
 }

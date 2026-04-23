@@ -7,7 +7,7 @@ import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
-  Eye, EyeOff, Copy,
+  Eye, EyeOff, Copy, Flag,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -18,7 +18,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -174,6 +174,12 @@ export default function AdminPage() {
   const [addingGpu, setAddingGpu] = useState(false)
   const [aiFillingGpu, setAiFillingGpu] = useState(false)
   const [aiGpuError, setAiGpuError] = useState<string | null>(null)
+
+  // Reports
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [reports, setReports] = useState<any[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
+  const [reportsFilter, setReportsFilter] = useState('')
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -577,6 +583,30 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, tab])
 
+  const fetchReports = useCallback(async (statusFilter = '') => {
+    if (!token) return
+    setReportsLoading(true)
+    const qs = statusFilter ? `?status=${statusFilter}` : ''
+    const res = await fetch(`/api/community/reports${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) { const d = await res.json(); setReports(d.reports ?? []) }
+    setReportsLoading(false)
+  }, [token])
+
+  useEffect(() => {
+    if (!authed || !token) return
+    if (tab === 'reports') fetchReports(reportsFilter)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
+  const handleReportStatus = async (id: string, status: string) => {
+    await fetch('/api/community/reports', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, status }),
+    })
+    setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+  }
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const handleToggleVisible = async (id: string, current: boolean) => {
@@ -640,6 +670,7 @@ export default function AdminPage() {
     { key: 'comparisons', label: '비교 이력', icon: <BarChart2 size={15} /> },
     { key: 'cpus', label: 'CPU 관리', icon: <Cpu size={15} /> },
     { key: 'gpus', label: 'GPU 관리', icon: <Monitor size={15} /> },
+    { key: 'reports', label: '신고 관리', icon: <Flag size={15} /> },
   ]
 
   return (
@@ -1660,6 +1691,96 @@ export default function AdminPage() {
               </table>
             </div>
             <p className="text-xs text-white/20 mt-3">검색어를 입력하면 실시간으로 필터됩니다.</p>
+          </div>
+        )}
+
+        {tab === 'reports' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">신고 관리</h1>
+              <div className="flex gap-2">
+                {(['', 'pending', 'reviewed', 'dismissed'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { setReportsFilter(s); fetchReports(s) }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      reportsFilter === s
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    {s === '' ? '전체' : s === 'pending' ? '대기' : s === 'reviewed' ? '검토완료' : '무시'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {reportsLoading ? (
+              <div className="text-white/40 py-12 text-center">로딩 중...</div>
+            ) : reports.length === 0 ? (
+              <div className="text-white/40 py-12 text-center">신고 없음</div>
+            ) : (
+              <div className="space-y-3">
+                {reports.map(r => (
+                  <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${
+                            r.status === 'pending' ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
+                            r.status === 'reviewed' ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10' :
+                            'border-white/20 text-white/40 bg-white/5'
+                          }`}>
+                            {r.status === 'pending' ? '대기' : r.status === 'reviewed' ? '검토완료' : '무시'}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full border border-border text-white/40">
+                            {r.target_type === 'post' ? '게시물' : '댓글'}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-white/60 border border-border">
+                            {r.reason}
+                          </span>
+                          <span className="text-xs text-white/30">{formatDate(r.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-white/30 mb-1">
+                          <span className="text-white/50">대상 ID:</span> {r.target_id}
+                        </p>
+                        {r.detail && (
+                          <p className="text-sm text-white/70 bg-background rounded-lg p-2 mt-2 border border-border/50">
+                            {r.detail}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {r.status !== 'reviewed' && (
+                          <button
+                            onClick={() => handleReportStatus(r.id, 'reviewed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                          >
+                            검토완료
+                          </button>
+                        )}
+                        {r.status !== 'dismissed' && (
+                          <button
+                            onClick={() => handleReportStatus(r.id, 'dismissed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/40 hover:bg-white/5 transition-all"
+                          >
+                            무시
+                          </button>
+                        )}
+                        {r.status !== 'pending' && (
+                          <button
+                            onClick={() => handleReportStatus(r.id, 'pending')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                          >
+                            대기로 변경
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -12,7 +12,7 @@ async function getUser(req: NextRequest) {
   return user ?? null
 }
 
-// POST: 추천 토글 (없으면 추가, 있으면 취소)
+// POST: 추천 토글 — 비추천과 동시 불가
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const user = await getUser(req)
@@ -20,19 +20,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const supabase = makeServiceClient()
 
-  const { data: existing } = await supabase
-    .from('community_post_votes')
-    .select('post_id')
-    .eq('post_id', id)
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const [{ data: existing }, { data: existingDown }] = await Promise.all([
+    supabase.from('community_post_votes').select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle(),
+    supabase.from('community_post_downvotes').select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle(),
+  ])
 
   if (existing) {
+    // 이미 추천 → 취소
     await supabase.from('community_post_votes').delete().eq('post_id', id).eq('user_id', user.id)
   } else {
+    // 추천 추가 + 비추천 제거(있으면)
     await supabase.from('community_post_votes').insert({ post_id: id, user_id: user.id })
+    if (existingDown) {
+      await supabase.from('community_post_downvotes').delete().eq('post_id', id).eq('user_id', user.id)
+      const { data: p } = await supabase.from('community_posts').select('downvotes').eq('id', id).single()
+      await supabase.from('community_posts').update({ downvotes: Math.max(0, (p?.downvotes ?? 1) - 1) }).eq('id', id)
+    }
   }
 
-  const { data: post } = await supabase.from('community_posts').select('upvotes').eq('id', id).single()
-  return NextResponse.json({ voted: !existing, upvotes: post?.upvotes ?? 0 })
+  const { data: post } = await supabase.from('community_posts').select('upvotes, downvotes').eq('id', id).single()
+  return NextResponse.json({
+    voted: !existing,
+    upvotes: post?.upvotes ?? 0,
+    downvotes: post?.downvotes ?? 0,
+    my_downvote: false,
+  })
 }

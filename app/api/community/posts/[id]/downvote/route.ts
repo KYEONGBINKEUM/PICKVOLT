@@ -26,17 +26,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .eq('user_id', user.id)
     .maybeSingle()
 
+  const { data: existingUp } = await supabase
+    .from('community_post_votes').select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle()
+
   if (existing) {
+    // 이미 비추천 → 취소
     await supabase.from('community_post_downvotes').delete().eq('post_id', id).eq('user_id', user.id)
-    const { data } = await supabase.from('community_posts').select('downvotes').eq('id', id).single()
-    const newCount = Math.max(0, (data?.downvotes ?? 1) - 1)
-    await supabase.from('community_posts').update({ downvotes: newCount }).eq('id', id)
-    return NextResponse.json({ voted: false, downvotes: newCount })
+    const { data } = await supabase.from('community_posts').select('upvotes, downvotes').eq('id', id).single()
+    const newDown = Math.max(0, (data?.downvotes ?? 1) - 1)
+    await supabase.from('community_posts').update({ downvotes: newDown }).eq('id', id)
+    return NextResponse.json({ voted: false, downvotes: newDown, upvotes: data?.upvotes ?? 0, my_vote: !!existingUp })
   }
 
+  // 비추천 추가 + 추천 제거(있으면)
   await supabase.from('community_post_downvotes').insert({ post_id: id, user_id: user.id })
-  const { data } = await supabase.from('community_posts').select('downvotes').eq('id', id).single()
-  const newCount = (data?.downvotes ?? 0) + 1
-  await supabase.from('community_posts').update({ downvotes: newCount }).eq('id', id)
-  return NextResponse.json({ voted: true, downvotes: newCount })
+  if (existingUp) {
+    await supabase.from('community_post_votes').delete().eq('post_id', id).eq('user_id', user.id)
+  }
+  const { data } = await supabase.from('community_posts').select('upvotes, downvotes').eq('id', id).single()
+  const newDown = (data?.downvotes ?? 0) + 1
+  await supabase.from('community_posts').update({ downvotes: newDown }).eq('id', id)
+  return NextResponse.json({ voted: true, downvotes: newDown, upvotes: data?.upvotes ?? 0, my_vote: false })
 }
