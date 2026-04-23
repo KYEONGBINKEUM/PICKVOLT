@@ -55,6 +55,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
   const trackRef   = useRef<HTMLDivElement>(null)
   const offsetRef  = useRef(setLen * SLOT)   // start at middle set
   const dragging   = useRef(false)
+  const didDrag    = useRef(false)
   const dragStart  = useRef(0)
   const dragOffset = useRef(0)
   const animFrame  = useRef<number | null>(null)
@@ -100,6 +101,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
   // Touch / pointer drag
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragging.current = true
+    didDrag.current = false
     dragStart.current = e.clientX
     dragOffset.current = offsetRef.current
     if (animFrame.current) cancelAnimationFrame(animFrame.current)
@@ -110,6 +112,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return
     const delta = dragStart.current - e.clientX
+    if (Math.abs(delta) > 4) didDrag.current = true
     applyOffset(dragOffset.current + delta, false)
   }, [applyOffset])
 
@@ -170,7 +173,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
               <Link
                 href={item.href}
                 draggable={false}
-                onClick={(e) => { if (Math.abs(dragStart.current - (e.clientX || 0)) > 5) e.preventDefault() }}
+                onClick={(e) => { if (didDrag.current) e.preventDefault() }}
                 className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
               >
                 <div className="flex items-center gap-2">
@@ -206,7 +209,7 @@ function HomeContent() {
       <Navbar />
 
       {/* 히어로 + 캐러셀: 수직 중앙 정렬 */}
-      <div className="flex-1 flex flex-col items-center justify-center pt-16 pb-12 gap-10">
+      <div className="flex-1 flex flex-col items-center justify-center pt-16 pb-12 gap-16">
         {/* 검색 영역 */}
         <div className="w-full max-w-3xl px-6 flex flex-col items-center gap-10 animate-slide-up">
           <h1 className="text-5xl md:text-7xl font-black text-white text-center leading-[1.05] tracking-tight">
