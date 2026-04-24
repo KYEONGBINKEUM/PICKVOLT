@@ -141,7 +141,8 @@ interface AiResult {
 
 interface PopularItem {
   title: string
-  products: string[]
+  products?: string[]
+  href?: string
   cnt: number
 }
 
@@ -599,7 +600,7 @@ function PopularComparisons({ items, t }: { items: PopularItem[]; t: (k: string)
         {items.map((item, i) => (
           <Link
             key={i}
-            href={`/compare?ids=${item.products.join(',')}`}
+            href={item.href ?? `/compare?ids=${(item.products ?? []).join(',')}`}
             className="flex items-center justify-between px-5 py-3.5 bg-surface border border-border rounded-xl hover:border-white/15 transition-colors group"
           >
             <div className="flex items-center gap-3 min-w-0">

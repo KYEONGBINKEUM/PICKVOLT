@@ -64,7 +64,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
 
       {/* 양쪽 마스크로 자연스럽게 페이드 */}
       <div
-        className="overflow-hidden w-full"
+        className="overflow-hidden w-full group/marquee"
         style={{
           maskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
           WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
@@ -78,7 +78,7 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         `}</style>
 
         <div
-          className="flex"
+          className="flex group-hover/marquee:[animation-play-state:paused]"
           style={{
             animation: `marquee ${duration}s linear infinite`,
             width: `${doubled.length * SLOT}px`,
