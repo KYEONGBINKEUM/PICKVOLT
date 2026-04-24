@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recalculateCpuRelativeScores } from '@/lib/cpu-relative-score'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
@@ -43,49 +44,12 @@ export async function PATCH(
     if (key in body) updates[key] = body[key]
   }
 
-  // 벤치마크 수치 변경 시 relative_score 자동 재계산 (relative_score를 직접 지정하지 않은 경우)
   const benchmarkFields = ['gb6_single', 'gb6_multi', 'tdmark_score', 'antutu_score', 'cinebench_single', 'cinebench_multi', 'passmark_single', 'passmark_multi']
   const hasBenchmarkChange = benchmarkFields.some((f) => f in updates)
-  if (hasBenchmarkChange && !('relative_score' in body)) {
-    const supabaseTmp = makeServiceClient()
-    // 현재 저장된 값 조회 (업데이트되지 않은 필드 유지용)
-    const { data: current } = await supabaseTmp
-      .from('cpus')
-      .select('gb6_multi, antutu_score, cinebench_multi, passmark_multi, type')
-      .eq('id', id)
-      .single()
-    const cpuType        = (updates.type ?? current?.type) as string | null
-    const gb6Multi       = (updates.gb6_multi       ?? current?.gb6_multi)       as number | null
-    const antutu         = (updates.antutu_score     ?? current?.antutu_score)    as number | null
-    const cinebenchMulti = (updates.cinebench_multi  ?? current?.cinebench_multi) as number | null
-    const passmarkMulti  = (updates.passmark_multi   ?? current?.passmark_multi)  as number | null
-
-    if (cpuType === 'laptop' || cpuType === 'desktop') {
-      // 랩탑/데스크탑: cinebench_multi → passmark_multi → gb6_multi 순으로 기준값 선택
-      const scoreForCalc = cinebenchMulti ?? passmarkMulti ?? gb6Multi
-      if (scoreForCalc != null) {
-        const orderBy = cinebenchMulti ? 'cinebench_multi' : (passmarkMulti ? 'passmark_multi' : 'gb6_multi')
-        const { data: maxRow } = await supabaseTmp
-          .from('cpus').select(orderBy).order(orderBy, { ascending: false }).limit(1).single()
-        const maxVal = (maxRow as Record<string, number | null>)?.[orderBy] ?? scoreForCalc
-        updates.relative_score = Math.round((scoreForCalc / Math.max(maxVal, scoreForCalc)) * 1000)
-      }
-    } else {
-      // 모바일: gb6_multi → antutu 환산 순
-      const scoreForCalc = gb6Multi ?? (antutu ? antutu / 3000 : null)
-      if (scoreForCalc != null) {
-        const { data: maxRow } = await supabaseTmp
-          .from('cpus').select('gb6_multi, antutu_score')
-          .order(gb6Multi ? 'gb6_multi' : 'antutu_score', { ascending: false }).limit(1).single()
-        const maxVal = gb6Multi
-          ? (maxRow?.gb6_multi ?? gb6Multi)
-          : ((maxRow?.antutu_score ?? (antutu ?? 0)) / 3000)
-        updates.relative_score = Math.round((scoreForCalc / Math.max(maxVal, scoreForCalc)) * 1000)
-      }
-    }
-  }
 
   const supabase = makeServiceClient()
+
+  // 1단계: 벤치마크 수치 먼저 저장 (relative_score 제외)
   const { data, error } = await supabase
     .from('cpus')
     .update(updates)
@@ -101,6 +65,21 @@ export async function PATCH(
       .from('specs_common')
       .update({ cpu_name: updates.name })
       .eq('cpu_id', id)
+  }
+
+  // 2단계: 벤치마크가 바뀌었고 relative_score를 직접 지정하지 않은 경우 — 저장 후 전체 재계산
+  // 순서가 중요: 새 벤치마크가 DB에 저장된 뒤 읽어야 현재 칩 값이 정확히 반영됨
+  if (hasBenchmarkChange && !('relative_score' in body)) {
+    const cpuType = (data?.type ?? updates.type ?? 'mobile') as string
+    await recalculateCpuRelativeScores(supabase, cpuType)
+
+    // 재계산 후 최신 데이터 반환
+    const { data: fresh } = await supabase
+      .from('cpus')
+      .select(CPU_FIELDS)
+      .eq('id', id)
+      .single()
+    return NextResponse.json(fresh ?? data)
   }
 
   return NextResponse.json(data)

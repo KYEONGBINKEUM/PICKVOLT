@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recalculateCpuRelativeScores } from '@/lib/cpu-relative-score'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
@@ -89,5 +90,19 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 신규 칩 추가 후 같은 타입 전체 relative_score 재계산
+  const cpuType = (body.type ?? 'mobile') as string
+  const hasBenchmarks = body.gb6_multi || body.antutu_score || body.cinebench_multi || body.passmark_multi
+  if (hasBenchmarks) {
+    await recalculateCpuRelativeScores(supabase, cpuType)
+    const { data: fresh } = await supabase
+      .from('cpus')
+      .select(CPU_FIELDS)
+      .eq('id', (data as { id: string }).id)
+      .single()
+    return NextResponse.json(fresh ?? data)
+  }
+
   return NextResponse.json(data)
 }
