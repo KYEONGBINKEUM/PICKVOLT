@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
@@ -41,94 +41,17 @@ function ProductThumb({ product }: { product: Product }) {
   )
 }
 
-/* ── 트렌딩 캐러셀 (clone-based infinite · center mode) ── */
+/* ── 트렌딩 마키 (width 100% · 양쪽 마스크 · 무한 흐름) ── */
 function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) => string }) {
-  const CARD_W = 300   // card width px (+ px-2 padding = 316 total slot)
-  const GAP    = 16    // px-2 on each side
+  const CARD_W = 260
+  const GAP    = 16
   const SLOT   = CARD_W + GAP
 
-  // Triple clone: [copy1, original, copy2] → start from original(middle) set
-  const slides = [...items, ...items, ...items]
-  const totalSets = 3
-  const setLen = items.length
+  // 두 벌 복제 → CSS animation으로 seamless 무한 루프
+  const doubled = [...items, ...items]
 
-  const trackRef   = useRef<HTMLDivElement>(null)
-  const offsetRef  = useRef(setLen * SLOT)   // start at middle set
-  const dragging   = useRef(false)
-  const dragStart  = useRef(0)
-  const dragOffset = useRef(0)
-  const animFrame  = useRef<number | null>(null)
-  const [renderOffset, setRenderOffset] = useState(setLen * SLOT)
-
-  // Apply offset to DOM directly for snappy performance
-  const applyOffset = useCallback((px: number, animate: boolean) => {
-    if (!trackRef.current) return
-    trackRef.current.style.transition = animate ? 'transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none'
-    trackRef.current.style.transform = `translateX(${-px}px)`
-    offsetRef.current = px
-  }, [])
-
-  // After animated transition, silently reposition to middle set
-  const normalize = useCallback(() => {
-    const min = SLOT
-    const max = (totalSets - 1) * setLen * SLOT - SLOT
-    let o = offsetRef.current
-    if (o < min) {
-      o += setLen * SLOT
-    } else if (o > max) {
-      o -= setLen * SLOT
-    }
-    if (o !== offsetRef.current) {
-      applyOffset(o, false)
-      setRenderOffset(o)
-    }
-  }, [applyOffset, setLen])
-
-  // Auto-advance
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (dragging.current) return
-      const next = offsetRef.current + SLOT
-      applyOffset(next, true)
-      setRenderOffset(next)
-      // Normalize after transition
-      setTimeout(normalize, 420)
-    }, 2800)
-    return () => clearInterval(id)
-  }, [applyOffset, normalize])
-
-  // Touch / pointer drag
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    dragging.current = true
-    dragStart.current = e.clientX
-    dragOffset.current = offsetRef.current
-    if (animFrame.current) cancelAnimationFrame(animFrame.current)
-    if (trackRef.current) trackRef.current.style.transition = 'none'
-    e.currentTarget.setPointerCapture(e.pointerId)
-  }, [])
-
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return
-    const delta = dragStart.current - e.clientX
-    applyOffset(dragOffset.current + delta, false)
-  }, [applyOffset])
-
-  const onPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return
-    dragging.current = false
-    const delta = dragStart.current - e.clientX
-    // Snap to nearest card
-    const raw = dragOffset.current + delta
-    const snapped = Math.round(raw / SLOT) * SLOT
-    applyOffset(snapped, true)
-    setRenderOffset(snapped)
-    setTimeout(normalize, 420)
-  }, [applyOffset, normalize])
-
-  // Init position
-  useEffect(() => {
-    applyOffset(setLen * SLOT, false)
-  }, [applyOffset, setLen])
+  // 아이템 수에 따라 속도 자동 조정 (카드 1개당 4초)
+  const duration = items.length * 4
 
   if (items.length === 0) return null
 
@@ -139,35 +62,37 @@ function TrendingCarousel({ items, t }: { items: TrendingCard[]; t: (k: string) 
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
       </div>
 
-      {/* Viewport: overflow-hidden, no padding – width drives the peek */}
+      {/* 양쪽 마스크로 자연스럽게 페이드 */}
       <div
-        className="overflow-hidden w-full cursor-grab active:cursor-grabbing select-none"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={onPointerUp}
+        className="overflow-hidden w-full"
+        style={{
+          maskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)',
+        }}
       >
-        {/* Track: starts shifted so center card is centered */}
+        <style>{`
+          @keyframes marquee {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-${items.length * SLOT}px); }
+          }
+        `}</style>
+
         <div
-          ref={trackRef}
-          className="flex will-change-transform"
+          className="flex"
           style={{
-            // Offset by half-viewport minus half-card so first visible card is centered
-            paddingLeft: `calc(50% - ${CARD_W / 2}px)`,
-            transform: `translateX(-${setLen * SLOT}px)`,
+            animation: `marquee ${duration}s linear infinite`,
+            width: `${doubled.length * SLOT}px`,
           }}
         >
-          {slides.map((item, i) => (
+          {doubled.map((item, i) => (
             <div
               key={i}
-              className="flex-shrink-0 px-2"
-              style={{ width: CARD_W }}
+              className="flex-shrink-0"
+              style={{ width: CARD_W, marginRight: GAP }}
             >
               <Link
                 href={item.href}
-                draggable={false}
-                onClick={(e) => { if (Math.abs(dragStart.current - (e.clientX || 0)) > 5) e.preventDefault() }}
-                className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 active:scale-[0.98] transition-all"
+                className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <ProductThumb product={item.productA} />
