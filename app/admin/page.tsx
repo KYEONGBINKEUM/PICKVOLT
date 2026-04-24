@@ -129,6 +129,7 @@ export default function AdminPage() {
   const [cpusLoading, setCpusLoading] = useState(false)
   const [cpuSearch, setCpuSearch] = useState('')
   const [cpuError, setCpuError] = useState<string | null>(null)
+  const [recalculating, setRecalculating] = useState(false)
   const [editingCpuId, setEditingCpuId] = useState<string | null>(null)
   const [newCpuName, setNewCpuName] = useState('')
   const [newCpuType, setNewCpuType] = useState<'mobile' | 'laptop' | 'desktop'>('mobile')
@@ -298,6 +299,18 @@ export default function AdminPage() {
     }
     setCpusLoading(false)
   }, [])
+
+  const recalculateAll = async () => {
+    setRecalculating(true)
+    const token = (await supabase.auth.getSession()).data.session?.access_token ?? ''
+    const res = await fetch('/api/admin/cpus/recalculate-all', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+    })
+    if (res.ok) await fetchCpus(cpuSearch)
+    else setCpuError('재계산 실패')
+    setRecalculating(false)
+  }
 
   const resetCpuForm = () => {
     setEditingCpuId(null)
@@ -1096,7 +1109,17 @@ export default function AdminPage() {
         {/* ── CPUS ── */}
         {tab === 'cpus' && (
           <div>
-            <h1 className="text-2xl font-black mb-6">CPU 관리</h1>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">CPU 관리</h1>
+              <button
+                onClick={recalculateAll}
+                disabled={recalculating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface border border-border text-white/60 hover:text-white hover:border-white/30 transition-colors disabled:opacity-40"
+              >
+                <RefreshCw size={12} className={recalculating ? 'animate-spin' : ''} />
+                {recalculating ? '재계산 중...' : '전체 점수 재계산'}
+              </button>
+            </div>
 
             {/* Add / Edit CPU form */}
             <div className="bg-surface border border-border rounded-card p-5 mb-6">
