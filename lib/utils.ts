@@ -29,7 +29,8 @@ export function shortenProductName(name: string): string {
 /**
  * "A vs B vs C" 형태의 비교 제목에서 각 제품명을 단축
  */
-export function shortenCompareTitle(title: string): string {
+export function shortenCompareTitle(title: string | undefined | null): string {
+  if (!title) return ''
   return title
     .split(' vs ')
     .map(shortenProductName)

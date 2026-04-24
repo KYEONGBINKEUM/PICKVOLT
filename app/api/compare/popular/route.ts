@@ -35,6 +35,7 @@ export async function GET() {
     )
 
     const items = pairs.map(item => ({
+      title: item.title,
       productA: productMap.get(item.products[0]) ?? { id: item.products[0], name: item.products[0], brand: '', image_url: null },
       productB: productMap.get(item.products[1]) ?? { id: item.products[1], name: item.products[1], brand: '', image_url: null },
       href: `/compare?ids=${item.products.join(',')}`,
