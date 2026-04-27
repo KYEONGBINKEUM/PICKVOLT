@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const brand = searchParams.get('brand') ?? ''
     let query = supabase
       .from('products')
-      .select('id, name, brand, category, image_url, price_usd, performance_score, specs_common(launch_year, cpus(relative_score))')
+      .select('id, name, brand, category, image_url, price_usd, specs_common(launch_year, cpus(relative_score))')
       .eq('is_visible', true)
 
     if (q) query = query.ilike('name', `%${q}%`)
@@ -46,7 +46,10 @@ export async function GET(req: NextRequest) {
     })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = sorted.map(({ specs_common: _sc, ...rest }: any) => rest)
+    const results = sorted.map(({ specs_common, ...rest }: any) => ({
+      ...rest,
+      performance_score: specs_common?.cpus?.relative_score ?? null,
+    }))
 
     return NextResponse.json({ results, total: results.length })
   } catch (e) {
