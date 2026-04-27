@@ -9,6 +9,7 @@ import {
   Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check, Flag
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
+import RichEditor from '@/components/RichEditor'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
@@ -168,6 +169,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [editBody, setEditBody]     = useState('')
   const [editRating, setEditRating] = useState<number | null>(null)
   const [savingEdit, setSavingEdit] = useState(false)
+  const editEditorRef = useRef<HTMLDivElement | null>(null)
 
   // 신고 모달
   const [reportTarget, setReportTarget]   = useState<{ type: 'post' | 'comment'; id: string } | null>(null)
@@ -501,18 +503,32 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   {post.type === 'review' && editRating !== null && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-white/40">Rating:</span>
-                      <input type="number" min={1} max={10} value={editRating ?? ''}
-                        onChange={e => setEditRating(Number(e.target.value))}
-                        className="w-16 bg-surface-2 border border-border rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:border-white/20 transition-colors" />
-                      <span className="text-xs text-white/30">/10</span>
+                      {[1,2,3,4,5].map(star => {
+                        const filled = Math.round((editRating ?? 0) / 2) >= star
+                        return (
+                          <button key={star} type="button" onClick={() => setEditRating(star * 2)}
+                            className="p-0.5 transition-transform hover:scale-110">
+                            <svg width="28" height="28" viewBox="0 0 24 24"
+                              fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"
+                              className={filled ? 'text-amber-400' : 'text-white/15'}>
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                          </button>
+                        )
+                      })}
+                      <span className="text-sm font-bold text-amber-400 ml-1">{editRating}/10</span>
                     </div>
                   )}
-                  <textarea
-                    value={editBody.replace(/<[^>]+>/g, '')}
-                    onChange={e => setEditBody(e.target.value)}
-                    rows={10}
-                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-white/85 outline-none focus:border-white/20 transition-colors resize-none leading-relaxed"
+                  <RichEditor
+                    editorRef={editEditorRef}
+                    onChange={setEditBody}
+                    token={token}
                     placeholder={t('write.body')}
+                    uploadSizeError={t('write.img_size_error')}
+                    uploadFailText={t('write.img_upload_fail')}
+                    urlPrompt={t('write.toolbar.url')}
+                    initialHtml={editBody}
+                    minHeight="200px"
                   />
                   <div className="flex items-center gap-2 justify-end">
                     <button onClick={() => setIsEditing(false)}
