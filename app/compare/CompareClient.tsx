@@ -8,7 +8,7 @@ import Navbar from '@/components/Navbar'
 import PerformanceBar from '@/components/PerformanceBar'
 import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
-import { shortenCompareTitle, shortenProductName } from '@/lib/utils'
+import { shortenCompareTitle, shortenProductName, imgUrl } from '@/lib/utils'
 import { computeRelativeScores, type CategoryStats, type CpuBenchmarkMaxes } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
@@ -205,7 +205,7 @@ function AIPickLocked({ t }: { t: (k: string) => string }) {
 
 /* ---------- Product Card ---------- */
 function ProductCard({ product }: { product: Product }) {
-  const imgSrc = product.image_url ?? null
+  const imgSrc = product.image_url ? imgUrl(product.image_url, 600) : null
   const sourceDomain = product.source_url
     ? new URL(product.source_url).hostname.replace('www.', '')
     : product.brand.toLowerCase() + '.com'
@@ -641,7 +641,7 @@ function ReviewTabs({ products }: { products: Product[] }) {
             >
               {p.image_url && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.image_url} alt={p.name} className="w-5 h-5 object-contain flex-shrink-0" />
+                <img src={imgUrl(p.image_url, 40)} alt={p.name} className="w-5 h-5 object-contain flex-shrink-0" />
               )}
               <span className="truncate max-w-[120px] lg:max-w-[180px]">{p.name}</span>
             </button>
@@ -1545,7 +1545,7 @@ export default function CompareClient() {
                         {/* 이미지 */}
                         <div className="aspect-square rounded-2xl bg-surface-2 border border-border overflow-hidden flex items-center justify-center mb-3" style={{ borderTopColor: color, borderTopWidth: 2 }}>
                           {p.image_url
-                            ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-3" />
+                            ? <img src={imgUrl(p.image_url, 400)} alt={p.name} className="w-full h-full object-contain p-3" />
                             : <span className="text-xs text-white/20 font-bold">{p.brand}</span>
                           }
                         </div>
@@ -1625,7 +1625,7 @@ export default function CompareClient() {
                         <div key={pi} className="px-4 pt-2 pb-3 border-t border-border/20">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-6 h-6 rounded bg-surface-2 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ borderTopColor: color, borderTopWidth: 2 }}>
-                              {ep.image_url ? <img src={ep.image_url} alt={ep.name} className="w-full h-full object-contain" /> : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />}
+                              {ep.image_url ? <img src={imgUrl(ep.image_url, 48)} alt={ep.name} className="w-full h-full object-contain" /> : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />}
                             </div>
                             <p className="text-[12px] text-white/50 truncate flex-1">{p.name}</p>
                           </div>
@@ -1712,7 +1712,7 @@ export default function CompareClient() {
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-7 h-7 rounded-lg bg-surface-2 border border-border overflow-hidden flex items-center justify-center flex-shrink-0" style={{ borderTopColor: color, borderTopWidth: 2 }}>
                                 {p?.image_url
-                                  ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-0.5" />
+                                  ? <img src={imgUrl(p.image_url, 56)} alt={p.name} className="w-full h-full object-contain p-0.5" />
                                   : <div className="w-2 h-2 rounded-full opacity-40" style={{ backgroundColor: color }} />
                                 }
                               </div>
@@ -1798,7 +1798,7 @@ export default function CompareClient() {
                     colors={PRODUCT_COLORS}
                     rowIndex={ri}
                     nameLabels={row.nameLabels ?? effectiveProducts.map((p) => p.name)}
-                    productImages={effectiveProducts.map((p) => p.image_url ?? null)}
+                    productImages={effectiveProducts.map((p) => p.image_url ? imgUrl(p.image_url, 60) : null)}
                     showNameOnDesktop={row.showNameOnDesktop}
                   />
                 )
@@ -1846,7 +1846,7 @@ export default function CompareClient() {
                     style={{ borderTopColor: color, borderTopWidth: 2 }}
                   >
                     {p.image_url
-                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-0.5" />
+                      ? <img src={imgUrl(p.image_url, 80)} alt={p.name} className="w-full h-full object-contain p-0.5" />
                       : <span className="text-[7px] text-white/30 font-bold">{p.brand.slice(0, 3).toUpperCase()}</span>
                     }
                   </div>

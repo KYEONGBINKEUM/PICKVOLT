@@ -26,7 +26,7 @@ export default function CommunitySidebar() {
     { href: '/community/qa',      label: t('community.qa'),      icon: HelpCircle },
   ]
 
-  const allLinks = [...mainLinks, ...boardLinks]
+  const allLinks: { href: string; label: string; icon: React.ElementType; exact?: boolean }[] = [...mainLinks, ...boardLinks]
 
   const NavItem = ({ href, label, icon: Icon, exact }: {
     href: string; label: string; icon: React.ElementType; exact?: boolean

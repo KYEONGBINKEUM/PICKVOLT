@@ -10,6 +10,7 @@ import ReviewSection from '@/components/ReviewSection'
 import CommunityRelated from '@/components/CommunityRelated'
 import { supabase } from '@/lib/supabase'
 import { extractFirstImage, stripHtml, timeAgo } from '@/components/PostFeed'
+import { imgUrl } from '@/lib/utils'
 
 interface Specs {
   cpu:             string | null
@@ -459,12 +460,11 @@ ${priceHTML}
           <div className="relative aspect-square w-full bg-surface border border-border rounded-2xl overflow-hidden mb-6 flex items-center justify-center">
             {product.image_url ? (
               <Image
-                src={product.image_url}
+                src={imgUrl(product.image_url, 768)}
                 alt={product.name}
                 fill
                 className="object-contain p-8"
                 sizes="(max-width: 1024px) 100vw, 384px"
-                unoptimized
               />
             ) : (
               <span className="text-6xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>

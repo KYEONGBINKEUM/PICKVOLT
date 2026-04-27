@@ -24,6 +24,7 @@ import {
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import { imgUrl } from '@/lib/utils'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -257,12 +258,11 @@ function ProductCard({
         <div className="relative w-28 sm:w-36 flex-shrink-0 bg-surface-2 flex items-center justify-center overflow-hidden self-stretch min-h-[10rem]">
           {product.image_url ? (
             <Image
-              src={product.image_url}
+              src={imgUrl(product.image_url, 288)}
               alt={product.name}
               fill
               className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
               sizes="144px"
-              unoptimized
             />
           ) : (
             <span className="text-3xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>

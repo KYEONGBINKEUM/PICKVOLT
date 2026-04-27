@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import { useI18n } from '@/lib/i18n'
+import { imgUrl } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -29,7 +30,7 @@ function ProductThumb({ product }: { product: Product }) {
       <div className="w-20 h-20 rounded-xl bg-surface-2 flex items-center justify-center overflow-hidden flex-shrink-0">
         {product.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.image_url} alt={product.name} className="w-full h-full object-contain p-2" />
+          <img src={imgUrl(product.image_url, 160)} alt={product.name} className="w-full h-full object-contain p-2" />
         ) : (
           <span className="text-2xl font-black text-white/10">{product.brand?.[0] ?? '?'}</span>
         )}
