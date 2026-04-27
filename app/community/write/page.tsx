@@ -12,7 +12,9 @@ import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
-type PostType = 'review' | 'forum' | 'compare' | 'free' | 'qa'
+type PostType = 'review' | 'forum' | 'compare' | 'free' | 'qa' | 'news'
+
+const ADMIN_EMAIL = 'admin@djcjbch.org'
 
 interface ProductResult { id: string; name: string; brand: string; image_url: string | null }
 
@@ -173,13 +175,16 @@ function WritePageInner() {
     { key: 'other',  label: t('cat.other') },
   ]
 
-  const TYPE_OPTIONS: { key: PostType; label: string; desc: string }[] = [
+  const BASE_TYPES: { key: PostType; label: string; desc: string }[] = [
     { key: 'forum',   label: t('community.forum'),   desc: t('write.type.forum.desc') },
     { key: 'review',  label: t('community.reviews'), desc: t('write.type.review.desc') },
     { key: 'free',    label: t('community.free'),    desc: t('write.type.free.desc') },
     { key: 'qa',      label: t('community.qa'),      desc: t('write.type.qa.desc') },
     { key: 'compare', label: t('community.compare'), desc: t('write.type.compare.desc') },
   ]
+  const TYPE_OPTIONS = isAdmin
+    ? [...BASE_TYPES, { key: 'news' as PostType, label: t('community.news'), desc: t('write.type.news.desc') }]
+    : BASE_TYPES
 
   const [type, setType]         = useState<PostType>(defaultType)
   const [category, setCategory] = useState('laptop')
@@ -195,6 +200,7 @@ function WritePageInner() {
   const [error, setError]           = useState('')
   const [token, setToken]           = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
+  const [isAdmin, setIsAdmin]       = useState(false)
 
   const editorRef = useRef<HTMLDivElement | null>(null)
 
@@ -202,6 +208,7 @@ function WritePageInner() {
     supabase.auth.getSession().then(({ data }) => {
       setToken(data.session?.access_token ?? null)
       setAuthed(!!data.session?.user)
+      setIsAdmin(data.session?.user?.email === ADMIN_EMAIL)
     })
   }, [])
 

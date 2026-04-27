@@ -34,13 +34,15 @@ export async function GET() {
       (products ?? []).map((p: Product) => [p.id, p])
     )
 
-    const items = pairs.map(item => ({
-      title: item.title,
-      productA: productMap.get(item.products[0]) ?? { id: item.products[0], name: item.products[0], brand: '', image_url: null },
-      productB: productMap.get(item.products[1]) ?? { id: item.products[1], name: item.products[1], brand: '', image_url: null },
-      href: `/compare?ids=${item.products.join(',')}`,
-      cnt: item.cnt,
-    }))
+    const items = pairs
+      .filter(item => productMap.has(item.products[0]) && productMap.has(item.products[1]))
+      .map(item => ({
+        title: item.title,
+        productA: productMap.get(item.products[0])!,
+        productB: productMap.get(item.products[1])!,
+        href: `/compare?ids=${item.products.join(',')}`,
+        cnt: item.cnt,
+      }))
 
     return NextResponse.json({ items })
   } catch (e) {

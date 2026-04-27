@@ -7,18 +7,17 @@ import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '@/components/PostFeed'
 
-export default function CommunityPage() {
+export default function PopularPage() {
   const { t } = useI18n()
   const [posts, setPosts]     = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage]       = useState(1)
   const [total, setTotal]     = useState(0)
-  const [token, setToken]         = useState<string | null>(null)
+  const [token, setToken]           = useState<string | null>(null)
   const [tokenReady, setTokenReady] = useState(false)
-  const [compact, setCompact]     = useState(false)
+  const [compact, setCompact]       = useState(false)
 
   const LIMIT = 25
-  const sort = 'latest'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -29,7 +28,7 @@ export default function CommunityPage() {
 
   const load = useCallback(() => {
     setLoading(true)
-    const params = new URLSearchParams({ sort, page: String(page), limit: String(LIMIT) })
+    const params = new URLSearchParams({ sort: 'hot', page: String(page), limit: String(LIMIT) })
     const headers: Record<string, string> = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
     fetch(`/api/community/posts?${params}`, { headers })
@@ -56,20 +55,15 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
-
-        <div className="flex items-center justify-end mb-3">
-          <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
-            <button
-              onClick={() => setCompact(false)}
-              className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
-            >
+      <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
+        <div className="flex items-center gap-2 mb-3">
+          <h1 className="text-lg font-black text-white">{t('community.popular')}</h1>
+          {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}
+          <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+            <button onClick={() => setCompact(false)} className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}>
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => setCompact(true)}
-              className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
-            >
+            <button onClick={() => setCompact(true)} className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}>
               <LayoutList className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -77,7 +71,7 @@ export default function CommunityPage() {
 
         <div>
           {loading
-            ? Array.from({ length: 12 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)
+            ? Array.from({ length: 10 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)
             : posts.length === 0
             ? (
               <div className="py-24 text-center">
@@ -93,7 +87,7 @@ export default function CommunityPage() {
         </div>
 
         <Pagination page={page} totalPages={totalPages} onPage={setPage} />
-      </div>
+      </main>
     </div>
   )
 }

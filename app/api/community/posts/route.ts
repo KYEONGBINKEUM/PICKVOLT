@@ -122,6 +122,9 @@ export async function POST(req: NextRequest) {
   const { type, category, title, body: postBody, rating, product_ids, compare_options } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
+  if (type === 'news' && user.email !== 'admin@djcjbch.org') {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
   if (type === 'review' && !category) return NextResponse.json({ error: 'category required for review' }, { status: 400 })
   if (type === 'compare' && (!compare_options || compare_options.length < 2)) {
     return NextResponse.json({ error: 'compare requires at least 2 options' }, { status: 400 })

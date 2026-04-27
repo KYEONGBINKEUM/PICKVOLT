@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { Home, Flame, MessageSquare, Star, LayoutList, HelpCircle } from 'lucide-react'
+import { Home, Flame, MessageSquare, Star, LayoutList, HelpCircle, Newspaper } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 export default function CommunitySidebar() {
@@ -15,20 +15,21 @@ export default function CommunitySidebar() {
 
   const mainLinks = [
     { href: '/community',          label: t('community.all'),     icon: Home,  exact: true },
-    { href: '/community?sort=hot', label: t('community.popular'), icon: Flame, exact: true, sortLink: true },
+    { href: '/community/popular',  label: t('community.popular'), icon: Flame },
   ]
 
   const boardLinks = [
+    { href: '/community/news',    label: t('community.news'),    icon: Newspaper },
     { href: '/community/forum',   label: t('community.forum'),   icon: MessageSquare },
     { href: '/community/reviews', label: t('community.reviews'), icon: Star },
     { href: '/community/free',    label: t('community.free'),    icon: LayoutList },
     { href: '/community/qa',      label: t('community.qa'),      icon: HelpCircle },
   ]
 
-  const NavItem = ({ href, label, icon: Icon, exact, sortLink }: {
-    href: string; label: string; icon: React.ElementType; exact?: boolean; sortLink?: boolean
+  const NavItem = ({ href, label, icon: Icon, exact }: {
+    href: string; label: string; icon: React.ElementType; exact?: boolean
   }) => {
-    const active = sortLink ? false : isActive(href, exact)
+    const active = isActive(href, exact)
     return (
       <Link href={href}
         className={clsx(
