@@ -42,7 +42,7 @@ function ImageSlider({ images, postId }: { images: string[]; postId: string }) {
     <div className="relative mb-2 rounded-xl overflow-hidden bg-surface-2 group">
       <Link href={`/community/posts/${postId}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[idx]} alt="" className="w-full max-h-80 object-contain" />
+        <img src={images[idx]} alt="" className="w-full h-auto block" />
       </Link>
       {images.length > 1 && (
         <>
