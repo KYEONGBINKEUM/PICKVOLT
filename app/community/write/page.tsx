@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   X, Plus, Search, Bold, Italic, Quote, List, Link2,
-  ChevronLeft, ImageIcon, Loader2,
+  ChevronLeft, ImageIcon, Loader2, Package,
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
@@ -68,7 +68,7 @@ function ProductSearch({ onSelect, exclude, placeholder }: {
   )
 }
 
-function RichEditor({ editorRef, onChange, token, placeholder, uploadSizeError, uploadFailText, urlPrompt }: {
+function RichEditor({ editorRef, onChange, token, placeholder, uploadSizeError, uploadFailText, urlPrompt, onOpenProductPanel, embedCount, maxEmbed }: {
   editorRef: React.MutableRefObject<HTMLDivElement | null>
   onChange: (html: string) => void
   token: string | null
@@ -76,6 +76,9 @@ function RichEditor({ editorRef, onChange, token, placeholder, uploadSizeError, 
   uploadSizeError: string
   uploadFailText: string
   urlPrompt: string
+  onOpenProductPanel: () => void
+  embedCount: number
+  maxEmbed: number
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -133,7 +136,7 @@ function RichEditor({ editorRef, onChange, token, placeholder, uploadSizeError, 
 
   return (
     <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
-      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-black/20 border-b border-border">
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-black/20 border-b border-border flex-wrap">
         {tools.map(({ icon: Icon, title, action }) => (
           <button key={title} type="button" onMouseDown={e => { e.preventDefault(); action() }}
             className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors">
@@ -148,7 +151,18 @@ function RichEditor({ editorRef, onChange, token, placeholder, uploadSizeError, 
           {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+        <div className="w-px h-4 bg-border mx-1" />
+        <button
+          type="button"
+          onMouseDown={e => { e.preventDefault(); if (embedCount < maxEmbed) onOpenProductPanel() }}
+          disabled={embedCount >= maxEmbed}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs text-white/35 hover:text-white hover:bg-white/8 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <Package className="w-3.5 h-3.5" />
+          <span>{embedCount}/{maxEmbed}</span>
+        </button>
       </div>
+
       <div
         ref={el => { editorRef.current = el }}
         contentEditable
@@ -182,9 +196,11 @@ function WritePageInner() {
   const [error, setError]           = useState('')
   const [token, setToken]           = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
-  const [isAdmin, setIsAdmin]       = useState(false)
-  const [hoverStar, setHoverStar]   = useState(0)
-  const [hasCompare, setHasCompare] = useState(false)
+  const [isAdmin, setIsAdmin]             = useState(false)
+  const [hoverStar, setHoverStar]         = useState(0)
+  const [hasCompare, setHasCompare]       = useState(false)
+  const [embeddedProducts, setEmbeddedProducts] = useState<ProductResult[]>([])
+  const [showEmbedSearch, setShowEmbedSearch]   = useState(false)
 
   const CATEGORIES = [
     { key: 'laptop', label: t('cat.laptop') },
@@ -211,6 +227,23 @@ function WritePageInner() {
       setAuthed(!!data.session?.user)
       setIsAdmin(data.session?.user?.email === ADMIN_EMAIL)
     })
+  }, [])
+
+  // Fix: news type not in TYPE_OPTIONS until isAdmin resolves
+  useEffect(() => {
+    if (isAdmin && defaultType === 'news') setType('news')
+  }, [isAdmin, defaultType])
+
+  const handleOpenProductPanel = useCallback(() => {
+    setShowEmbedSearch(true)
+  }, [])
+
+  const handleEmbedProduct = useCallback((p: ProductResult) => {
+    setEmbeddedProducts(prev => {
+      if (prev.find(x => x.id === p.id) || prev.length >= 4) return prev
+      return [...prev, p]
+    })
+    setShowEmbedSearch(false)
   }, [])
 
   const handleProductSelect = useCallback((p: ProductResult) => {
@@ -243,6 +276,29 @@ function WritePageInner() {
     if (!token || !canSubmit()) return
     setSubmitting(true); setError('')
     try {
+      // Build embedded product cards + comparison table HTML
+      let embedHtml = ''
+      if (embeddedProducts.length > 0) {
+        const cardsHtml = embeddedProducts.map(p =>
+          `<div style="display:inline-flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;background:rgba(255,255,255,0.03);margin:4px;min-width:180px;max-width:280px;vertical-align:top">` +
+          (p.image_url ? `<img src="${p.image_url}" style="width:40px;height:40px;object-fit:contain;border-radius:8px;flex-shrink:0" />` : '') +
+          `<div><div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);line-height:1.3">${p.name}</div>` +
+          `<div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">${p.brand}</div></div></div>`
+        ).join('')
+        embedHtml = `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:16px 0">${cardsHtml}</div>`
+        if (embeddedProducts.length >= 2) {
+          const cols = embeddedProducts.map(p =>
+            `<td style="padding:14px;text-align:center;border-right:1px solid rgba(255,255,255,0.08);vertical-align:top">` +
+            (p.image_url ? `<img src="${p.image_url}" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block" />` : '') +
+            `<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.8)">${p.name}</div>` +
+            `<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:3px">${p.brand}</div></td>`
+          ).join('')
+          embedHtml += `<table style="width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;margin:12px 0"><tr>${cols}</tr></table>`
+        }
+      }
+
+      const finalBody = (body.trim() ? body.trim() + (embedHtml ? '<br />' : '') : '') + embedHtml
+
       const res = await fetch('/api/community/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -250,7 +306,7 @@ function WritePageInner() {
           type,
           category: type === 'review' ? category : null,
           title: title.trim(),
-          body: body.trim(),
+          body: finalBody,
           rating: type === 'review' ? rating : null,
           product_ids: products.map(p => p.id),
           compare_options: hasCompare ? options : undefined,
@@ -361,7 +417,77 @@ function WritePageInner() {
               uploadSizeError={t('write.img_size_error')}
               uploadFailText={t('write.img_upload_fail')}
               urlPrompt={t('write.toolbar.url')}
+              onOpenProductPanel={handleOpenProductPanel}
+              embedCount={embeddedProducts.length}
+              maxEmbed={4}
             />
+
+            {/* 제품 카드 삽입 패널 */}
+            {(showEmbedSearch || embeddedProducts.length > 0) && (
+              <div className="mt-3 space-y-3">
+                {showEmbedSearch && (
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{t('write.insert_product')}</span>
+                      <button type="button" onClick={() => setShowEmbedSearch(false)} className="text-white/25 hover:text-white/60 transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <ProductSearch
+                      onSelect={handleEmbedProduct}
+                      exclude={embeddedProducts.map(p => p.id)}
+                      placeholder={t('write.product_search')}
+                    />
+                  </div>
+                )}
+
+                {embeddedProducts.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {embeddedProducts.map(p => (
+                      <div key={p.id} className="flex items-center gap-2.5 bg-surface border border-border rounded-xl p-3 relative group">
+                        {p.image_url && (
+                          <div className="w-10 h-10 flex-shrink-0 bg-surface-2 rounded-lg overflow-hidden relative">
+                            <Image src={p.image_url} alt={p.name} fill className="object-contain p-1" unoptimized />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white/80 truncate">{p.name}</p>
+                          <p className="text-[10px] text-white/30 truncate">{p.brand}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEmbeddedProducts(prev => prev.filter(x => x.id !== p.id))}
+                          className="absolute top-1.5 right-1.5 text-white/20 hover:text-white/60 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {embeddedProducts.length >= 2 && (
+                  <div className="bg-surface border border-border rounded-xl overflow-hidden">
+                    <div className="px-3 py-2 border-b border-border">
+                      <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{t('write.compare_preview')}</span>
+                    </div>
+                    <div className="flex divide-x divide-border">
+                      {embeddedProducts.map(p => (
+                        <div key={p.id} className="flex-1 p-3 text-center">
+                          {p.image_url && (
+                            <div className="w-12 h-12 mx-auto mb-2 relative">
+                              <Image src={p.image_url} alt={p.name} fill className="object-contain" unoptimized />
+                            </div>
+                          )}
+                          <p className="text-[11px] font-semibold text-white/70 line-clamp-2">{p.name}</p>
+                          <p className="text-[10px] text-white/30 mt-0.5">{p.brand}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 비교투표 토글 */}
