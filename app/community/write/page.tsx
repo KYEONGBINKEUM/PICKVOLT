@@ -282,6 +282,7 @@ function WritePageInner() {
           <div>
             <p className={labelCls}>{t('write.type')}</p>
             <select
+              key={String(isAdmin)}
               value={type}
               onChange={e => setType(e.target.value as PostType)}
               className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors cursor-pointer"

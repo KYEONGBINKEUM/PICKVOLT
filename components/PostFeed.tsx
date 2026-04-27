@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronUp, MessageSquare, Eye, Languages } from 'lucide-react'
+import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 export interface FeedPost {
@@ -25,6 +25,49 @@ export interface FeedPost {
 export function extractFirstImage(body: string): string | null {
   const m = (body ?? '').match(/<img[^>]+src=["']([^"']+)["']/i)
   return m ? m[1] : null
+}
+
+export function extractAllImages(body: string): string[] {
+  const re = /<img[^>]+src=["']([^"']+)["']/gi
+  const imgs: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(body ?? '')) !== null) imgs.push(m[1])
+  return imgs
+}
+
+function ImageSlider({ images, postId }: { images: string[]; postId: string }) {
+  const [idx, setIdx] = useState(0)
+  if (images.length === 0) return null
+  return (
+    <div className="relative mb-2 rounded-xl overflow-hidden bg-surface-2 group">
+      <Link href={`/community/posts/${postId}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={images[idx]} alt="" className="w-full max-h-80 object-contain" />
+      </Link>
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={e => { e.preventDefault(); setIdx(i => (i - 1 + images.length) % images.length) }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <ChevronLeft className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={e => { e.preventDefault(); setIdx(i => (i + 1) % images.length) }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <ChevronRight className="w-4 h-4 text-white" />
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {images.map((_, i) => (
+              <button key={i} onClick={e => { e.preventDefault(); setIdx(i) }}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? 'bg-white' : 'bg-white/30'}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 export function stripHtml(html: string): string {
@@ -73,9 +116,8 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
   const isHtml = /<[a-z]/i.test(post.body ?? '')
-  const thumbUrl = isHtml ? extractFirstImage(post.body) : null
+  const images = isHtml ? extractAllImages(post.body) : []
   const rawPlain = isHtml ? stripHtml(post.body) : (post.body ?? '')
-  const isImageOnly = thumbUrl !== null && rawPlain.length < 10
 
   const displayTitle = translated?.title ?? post.title
   const displayPlain = translated?.body ?? rawPlain
@@ -113,7 +155,7 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
       </div>
 
       {/* content */}
-      <div className="flex-1 min-w-0 pr-2">
+      <div className="flex-1 min-w-0">
         <Link href={`/community/posts/${post.id}`}>
           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             {showType && (
@@ -144,21 +186,14 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
             )}
           </p>
 
-          {isImageOnly && !translated && (
-            <div className="mb-2 rounded-lg overflow-hidden bg-surface-2 flex items-center justify-center max-h-64">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={thumbUrl!} alt="" className="w-full max-h-64 object-contain" />
-            </div>
-          )}
-
-          {(!thumbUrl || translated) && displayPlain && (
-            <p className="text-xs text-white/30 line-clamp-3 mb-1.5 leading-relaxed">{displayPlain}</p>
-          )}
-
-          {thumbUrl && !isImageOnly && !translated && displayPlain && (
-            <p className="text-xs text-white/30 line-clamp-3 mb-1.5 leading-relaxed pr-2">{displayPlain}</p>
+          {displayPlain && (
+            <p className="text-xs text-white/30 line-clamp-2 mb-2 leading-relaxed">{displayPlain}</p>
           )}
         </Link>
+
+        {images.length > 0 && !translated && (
+          <ImageSlider images={images} postId={post.id} />
+        )}
 
         <div className="flex items-center gap-3 text-[11px] text-white/20">
           <Link href={`/community/posts/${post.id}`} className="flex items-center gap-1">
@@ -182,13 +217,6 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
           )}
         </div>
       </div>
-
-      {thumbUrl && !isImageOnly && !translated && (
-        <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 ml-3 self-start mt-1">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={thumbUrl} alt="" className="w-20 h-20 object-contain rounded-lg bg-surface-2 p-1" />
-        </Link>
-      )}
     </div>
   )
 }
@@ -205,8 +233,8 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
   const isHtml = /<[a-z]/i.test(post.body ?? '')
-  const thumbUrl = isHtml ? extractFirstImage(post.body) : null
-  const rawPlain = !thumbUrl ? (isHtml ? stripHtml(post.body) : (post.body ?? '')) : ''
+  const compactThumb = isHtml ? extractFirstImage(post.body) : null
+  const rawPlain = isHtml ? stripHtml(post.body) : (post.body ?? '')
 
   const displayTitle = translated?.title ?? post.title
   const displayPlain = translated?.body ?? rawPlain
@@ -242,10 +270,10 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
         </span>
       </div>
 
-      {thumbUrl && !translated && (
+      {compactThumb && !translated && (
         <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 self-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={thumbUrl} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
+          <img src={compactThumb} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
         </Link>
       )}
 
