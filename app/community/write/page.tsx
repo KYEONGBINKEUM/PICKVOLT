@@ -88,6 +88,8 @@ function WritePageInner() {
   const [token, setToken]           = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin]             = useState(false)
+  const [displayName, setDisplayName]     = useState('')
+  const [avatarUrl, setAvatarUrl]         = useState<string | null>(null)
   const [hoverStar, setHoverStar]         = useState(0)
   const [hasCompare, setHasCompare]       = useState(false)
   const [embeddedProducts, setEmbeddedProducts] = useState<ProductResult[]>([])
@@ -114,10 +116,17 @@ function WritePageInner() {
   const richEditorRef = useRef<RichEditorHandle>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      const u = data.session?.user
       setToken(data.session?.access_token ?? null)
-      setAuthed(!!data.session?.user)
-      setIsAdmin(data.session?.user?.email === ADMIN_EMAIL)
+      setAuthed(!!u)
+      setIsAdmin(u?.email === ADMIN_EMAIL)
+      if (u) {
+        const { data: profile } = await supabase
+          .from('profiles').select('nickname, avatar_url').eq('user_id', u.id).maybeSingle()
+        setDisplayName(profile?.nickname ?? u.email?.split('@')[0] ?? 'user')
+        setAvatarUrl(profile?.avatar_url ?? u.user_metadata?.avatar_url ?? null)
+      }
     })
   }, [])
 
@@ -253,6 +262,18 @@ function WritePageInner() {
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <h1 className="text-xl font-black text-white">{t('write.heading')}</h1>
+          <div className="ml-auto flex items-center gap-2">
+            {avatarUrl ? (
+              <div className="w-8 h-8 rounded-full overflow-hidden relative flex-shrink-0">
+                <Image src={avatarUrl} alt={displayName} fill className="object-cover" unoptimized />
+              </div>
+            ) : displayName ? (
+              <div className="w-8 h-8 rounded-full bg-surface-2 border border-border flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-white/50">{displayName[0]?.toUpperCase()}</span>
+              </div>
+            ) : null}
+            {displayName && <span className="text-sm text-white/40">{displayName}</span>}
+          </div>
         </div>
 
         <div className="space-y-6">

@@ -546,11 +546,22 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   {/* 제목 */}
                   <h1 className="text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
 
-              {/* 평점 (리뷰) */}
+              {/* 평점 (리뷰) — 별점 표시 */}
               {post.type === 'review' && post.rating != null && (
                 <div className="flex items-center gap-3 mb-4 p-3 bg-black/20 rounded-xl border border-border">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400 flex-shrink-0" />
-                  <span className="text-3xl font-black text-amber-400 tabular-nums">{post.rating}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1,2,3,4,5].map(star => {
+                      const filled = Math.round(post.rating! / 2) >= star
+                      return (
+                        <svg key={star} width="20" height="20" viewBox="0 0 24 24"
+                          fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"
+                          className={filled ? 'text-amber-400' : 'text-white/15'}>
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      )
+                    })}
+                  </div>
+                  <span className="text-2xl font-black text-amber-400 tabular-nums">{post.rating}</span>
                   <span className="text-sm text-white/30">/10</span>
                   <span className="text-sm text-white/40">{ratingLabel(post.rating)}</span>
                 </div>
