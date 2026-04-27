@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ThumbsUp, ThumbsDown, MessageSquare, Star, Tag,
-  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check, Flag
+  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check, Flag, Languages
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import RichEditor from '@/components/RichEditor'
@@ -143,7 +143,7 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
 export default function PostDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
   const router = useRouter()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [post, setPost]       = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
@@ -162,6 +162,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [commentImages, setCommentImages]           = useState<string[]>([])
   const [uploadingImage, setUploadingImage]         = useState(false)
   const fileInputRef                                = useRef<HTMLInputElement>(null)
+
+  // 번역
+  const [translating, setTranslating] = useState(false)
+  const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
   // 수정 모드
   const [isEditing, setIsEditing]   = useState(false)
@@ -438,6 +442,36 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     : r >= 5 ? t('post.rating.average')
     : t('post.rating.poor')
 
+  const needsTranslation = (text: string) => {
+    const hasKorean   = /[\uAC00-\uD7A3]/.test(text)
+    const hasJapanese = /[\u3040-\u30FF]/.test(text)
+    const hasCJK      = /[\u4E00-\u9FFF]/.test(text)
+    const hasCyrillic = /[\u0400-\u04FF]/.test(text)
+    const hasArabic   = /[\u0600-\u06FF]/.test(text)
+    const hasNonLatin = hasKorean || hasJapanese || hasCJK || hasCyrillic || hasArabic
+    if (locale === 'ko') return !hasKorean
+    if (locale === 'ja') return !hasJapanese && !hasCJK
+    return hasNonLatin
+  }
+
+  const handleTranslate = async () => {
+    if (!post) return
+    if (translated) { setTranslated(null); return }
+    setTranslating(true)
+    try {
+      const plainBody = post.body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      const [title, body] = await Promise.all([
+        fetch(`/api/translate?q=${encodeURIComponent(post.title)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? post.title),
+        plainBody ? fetch(`/api/translate?q=${encodeURIComponent(plainBody)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? plainBody) : Promise.resolve(''),
+      ])
+      setTranslated({ title, body })
+    } finally {
+      setTranslating(false)
+    }
+  }
+
+  const showTranslateBtn = post ? needsTranslation(post.title + ' ' + post.body.replace(/<[^>]+>/g, '')) : false
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -544,7 +578,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               ) : (
                 <>
                   {/* 제목 */}
-                  <h1 className="text-xl font-black text-white mb-4 leading-snug">{post.title}</h1>
+                  <h1 className="text-xl font-black text-white mb-4 leading-snug">
+                    {translated?.title ?? post.title}
+                  </h1>
 
               {/* 평점 (리뷰) — 별점 표시 */}
               {post.type === 'review' && post.rating != null && (
@@ -614,9 +650,12 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               )}
 
               {/* 본문 */}
-              {post.body && (
+              {(post.body || translated?.body) && (
                 <div className="mb-4">
-                  <MarkdownBody text={post.body} />
+                  {translated?.body
+                    ? <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">{translated.body}</p>
+                    : <MarkdownBody text={post.body} />
+                  }
                 </div>
               )}
 
@@ -643,7 +682,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               )}
 
               {/* 하단 추천 */}
-              <div className={`flex items-center gap-3 ${post.community_post_products.length > 0 ? 'mt-4' : 'mt-4 pt-4 border-t border-border'}`}>
+              <div className={`flex items-center gap-3 flex-wrap ${post.community_post_products.length > 0 ? 'mt-4' : 'mt-4 pt-4 border-t border-border'}`}>
                 <button onClick={handleVote} disabled={voting || !token}
                   title={!token ? t('post.login_vote') : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
@@ -664,6 +703,16 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   <ThumbsDown className="w-4 h-4" />
                   {(post.downvotes ?? 0) > 0 && <span className="tabular-nums">{post.downvotes}</span>}
                 </button>
+                {showTranslateBtn && (
+                  <button
+                    onClick={handleTranslate}
+                    disabled={translating}
+                    className="flex items-center gap-1.5 text-[11px] text-white/25 hover:text-accent/70 transition-colors disabled:opacity-40"
+                  >
+                    <Languages className="w-3.5 h-3.5" />
+                    {translating ? t('post.translating') : translated ? t('post.show_original') : t('post.translate')}
+                  </button>
+                )}
                 {/* 신고 버튼 (본인 게시글 제외) */}
                 {token && userId !== post.user_id && (
                   <button onClick={() => setReportTarget({ type: 'post', id: post.id })}
