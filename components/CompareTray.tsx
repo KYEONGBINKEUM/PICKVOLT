@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { X, ChevronUp, ChevronDown, GitCompare } from 'lucide-react'
@@ -10,6 +10,13 @@ import { useI18n } from '@/lib/i18n'
 export default function CompareTray() {
   const { cart, remove, clear } = useCompareCart()
   const [expanded, setExpanded] = useState(false)
+
+  // PC(lg+)에서는 제품 추가 시 자동으로 트레이 열기
+  useEffect(() => {
+    if (cart.length > 0 && window.matchMedia('(min-width: 1024px)').matches) {
+      setExpanded(true)
+    }
+  }, [cart.length])
   const router = useRouter()
   const pathname = usePathname()
   const { t } = useI18n()
