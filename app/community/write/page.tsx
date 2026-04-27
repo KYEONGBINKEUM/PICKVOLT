@@ -168,6 +168,23 @@ function WritePageInner() {
   const { t }        = useI18n()
   const defaultType  = (searchParams.get('type') as PostType) ?? 'forum'
 
+  const [type, setType]         = useState<PostType>(defaultType)
+  const [category, setCategory] = useState('laptop')
+  const [title, setTitle]       = useState('')
+  const [body, setBody]         = useState('')
+  const [rating, setRating]     = useState(8)
+  const [products, setProducts] = useState<ProductResult[]>([])
+  const [options, setOptions]   = useState([
+    { label: '', product_id: null as string | null, image_url: null as string | null },
+    { label: '', product_id: null as string | null, image_url: null as string | null },
+  ])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError]           = useState('')
+  const [token, setToken]           = useState<string | null>(null)
+  const [authed, setAuthed]         = useState<boolean | null>(null)
+  const [isAdmin, setIsAdmin]       = useState(false)
+  const [hoverStar, setHoverStar]   = useState(0)
+
   const CATEGORIES = [
     { key: 'laptop', label: t('cat.laptop') },
     { key: 'mobile', label: t('cat.mobile') },
@@ -185,22 +202,6 @@ function WritePageInner() {
   const TYPE_OPTIONS = isAdmin
     ? [...BASE_TYPES, { key: 'news' as PostType, label: t('community.news'), desc: t('write.type.news.desc') }]
     : BASE_TYPES
-
-  const [type, setType]         = useState<PostType>(defaultType)
-  const [category, setCategory] = useState('laptop')
-  const [title, setTitle]       = useState('')
-  const [body, setBody]         = useState('')
-  const [rating, setRating]     = useState(7)
-  const [products, setProducts] = useState<ProductResult[]>([])
-  const [options, setOptions]   = useState([
-    { label: '', product_id: null as string | null, image_url: null as string | null },
-    { label: '', product_id: null as string | null, image_url: null as string | null },
-  ])
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError]           = useState('')
-  const [token, setToken]           = useState<string | null>(null)
-  const [authed, setAuthed]         = useState<boolean | null>(null)
-  const [isAdmin, setIsAdmin]       = useState(false)
 
   const editorRef = useRef<HTMLDivElement | null>(null)
 
@@ -406,25 +407,37 @@ function WritePageInner() {
           {type === 'review' && (
             <div>
               <p className={labelCls}>{t('write.rating')}</p>
-              <div className="bg-surface border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 flex-wrap mb-3">
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                    <button key={n} onClick={() => setRating(n)}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border ${
-                        rating === n
-                          ? 'bg-accent border-accent text-white'
-                          : rating > n
-                          ? 'bg-accent/15 border-accent/20 text-accent/70'
-                          : 'bg-white/5 border-border text-white/25 hover:bg-white/8'
-                      }`}>
-                      {n}
-                    </button>
-                  ))}
+              <div className="bg-surface border border-border rounded-xl p-5">
+                <div
+                  className="flex items-center gap-1.5 mb-4"
+                  onMouseLeave={() => setHoverStar(0)}
+                >
+                  {[1, 2, 3, 4, 5].map(star => {
+                    const filled = (hoverStar || Math.round(rating / 2)) >= star
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star * 2)}
+                        onMouseEnter={() => setHoverStar(star)}
+                        className="p-0.5 transition-transform hover:scale-110 active:scale-95"
+                      >
+                        <svg
+                          width="36" height="36" viewBox="0 0 24 24"
+                          fill={filled ? 'currentColor' : 'none'}
+                          stroke="currentColor" strokeWidth="1.5"
+                          className={`transition-colors ${filled ? 'text-amber-400' : 'text-white/15'}`}
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+                    )
+                  })}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-3xl font-black text-accent">{rating}</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-amber-400">{rating}</span>
                   <span className="text-sm text-white/25">/10</span>
-                  <span className="text-xs text-white/35 ml-1">{ratingLabel(rating)}</span>
+                  <span className="text-sm text-white/40 ml-1">{ratingLabel(rating)}</span>
                 </div>
               </div>
             </div>
