@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+import { imgUrl } from '@/lib/utils'
 
 export interface FeedPost {
   id: string
@@ -42,7 +43,7 @@ function ImageSlider({ images, postId }: { images: string[]; postId: string }) {
     <div className="relative mb-2 rounded-xl overflow-hidden bg-surface-2 group">
       <Link href={`/community/posts/${postId}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[idx]} alt="" className="w-full h-auto block" />
+        <img src={imgUrl(images[idx], 900)} alt="" className="w-full h-auto block" />
       </Link>
       {images.length > 1 && (
         <>
@@ -273,7 +274,7 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
       {compactThumb && !translated && (
         <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 self-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={compactThumb} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
+          <img src={imgUrl(compactThumb, 128)} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
         </Link>
       )}
 

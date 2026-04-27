@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '@/components/PostFeed'
 
-const ADMIN_EMAIL = 'admin@djcjbch.org'
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
 
 export default function NewsPage() {
   const { t } = useI18n()
@@ -26,7 +26,8 @@ export default function NewsPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setToken(data.session?.access_token ?? null)
-      setIsAdmin(data.session?.user?.email === ADMIN_EMAIL)
+      const email = (data.session?.user?.email ?? '').toLowerCase()
+      setIsAdmin(ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(email))
       setTokenReady(true)
     })
   }, [])

@@ -122,7 +122,8 @@ export async function POST(req: NextRequest) {
   const { type, category, title, body: postBody, rating, product_ids, compare_options } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
-  if (type === 'news' && user.email !== 'admin@djcjbch.org') {
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+  if (type === 'news' && !adminEmails.includes((user.email ?? '').toLowerCase())) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
   if (type === 'review' && !category) return NextResponse.json({ error: 'category required for review' }, { status: 400 })

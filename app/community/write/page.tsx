@@ -12,9 +12,16 @@ import { useI18n } from '@/lib/i18n'
 
 type PostType = 'review' | 'forum' | 'compare' | 'free' | 'qa' | 'news'
 
-const ADMIN_EMAIL = 'admin@djcjbch.org'
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
 
-interface ProductResult { id: string; name: string; brand: string; image_url: string | null }
+interface ProductResult {
+  id: string
+  name: string
+  brand: string
+  image_url: string | null
+  price_usd: number | null
+  performance_score: number | null
+}
 
 function ProductSearch({ onSelect, exclude, placeholder }: {
   onSelect: (p: ProductResult) => void; exclude: string[]; placeholder: string
@@ -50,13 +57,19 @@ function ProductSearch({ onSelect, exclude, placeholder }: {
             <button key={p.id} onClick={() => { onSelect(p); setQ(''); setResults([]) }}
               className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left">
               {p.image_url && (
-                <div className="w-8 h-8 rounded-lg bg-surface-2 flex-shrink-0 overflow-hidden relative">
+                <div className="w-10 h-10 rounded-lg bg-surface-2 flex-shrink-0 overflow-hidden relative">
                   <Image src={p.image_url} alt={p.name} fill className="object-contain p-1" unoptimized />
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-white/80 truncate">{p.name}</p>
                 <p className="text-[10px] text-white/30">{p.brand}</p>
+              </div>
+              <div className="flex-shrink-0 text-right">
+                {p.price_usd != null && <p className="text-[10px] text-white/40">${p.price_usd.toLocaleString()}</p>}
+                {p.performance_score != null && p.performance_score > 0 && (
+                  <p className="text-[10px] text-accent/70 font-bold">{Math.round(p.performance_score)}</p>
+                )}
               </div>
             </button>
           ))}
@@ -87,6 +100,8 @@ function WritePageInner() {
   const [error, setError]           = useState('')
   const [token, setToken]           = useState<string | null>(null)
   const [authed, setAuthed]         = useState<boolean | null>(null)
+  const editPostId = searchParams.get('edit')
+  const [editLoaded, setEditLoaded] = useState(!searchParams.get('edit'))
   const [isAdmin, setIsAdmin]             = useState(false)
   const [displayName, setDisplayName]     = useState('')
   const [avatarUrl, setAvatarUrl]         = useState<string | null>(null)
@@ -123,7 +138,8 @@ function WritePageInner() {
       // getUser()로 서버에서 최신 이메일 확인 (getSession은 캐시 기반)
       const { data: { user } } = await supabase.auth.getUser()
       setAuthed(!!user)
-      const admin = user?.email === ADMIN_EMAIL
+      const email = (user?.email ?? '').toLowerCase()
+      const admin = ADMIN_EMAILS.length > 0 ? ADMIN_EMAILS.includes(email) : false
       console.log('[write] user email:', user?.email, 'isAdmin:', admin)
       setIsAdmin(admin)
 
@@ -141,6 +157,34 @@ function WritePageInner() {
     if (isAdmin && defaultType === 'news') setType('news')
   }, [isAdmin, defaultType])
 
+  // Load existing post for edit mode
+  useEffect(() => {
+    if (!editPostId) return
+    fetch(`/api/community/posts/${editPostId}`)
+      .then(r => r.json())
+      .then(post => {
+        if (!post?.id) return
+        setType(post.type as PostType)
+        setTitle(post.title ?? '')
+        setBody(post.body ?? '')
+        if (post.rating != null) setRating(post.rating)
+        if (post.category) setCategory(post.category)
+        const linked = (post.community_post_products ?? [])
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((pp: any) => pp.products).filter(Boolean)
+        if (linked.length > 0) setProducts(linked)
+        const opts = (post.community_compare_options ?? [])
+        if (opts.length >= 2) {
+          setHasCompare(true)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setOptions(opts.map((o: any) => ({ label: o.label ?? '', product_id: o.product_id ?? null, image_url: o.image_url ?? null })))
+        }
+        setEditLoaded(true)
+      })
+      .catch(() => { setEditLoaded(true) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editPostId])
+
   const handleOpenProductPanel = useCallback(() => {
     setShowEmbedSearch(true)
   }, [])
@@ -148,14 +192,28 @@ function WritePageInner() {
   const handleEmbedProduct = useCallback((p: ProductResult) => {
     setEmbeddedProducts(prev => {
       if (prev.find(x => x.id === p.id) || prev.length >= 4) return prev
-      // Build card HTML and insert at cursor in editor
+      const imgHtml = p.image_url
+        ? `<img src="${p.image_url}" style="width:64px;height:64px;object-fit:contain;border-radius:8px;flex-shrink:0;display:block" />`
+        : `<span style="width:64px;height:64px;border-radius:8px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0">${p.brand?.[0] ?? '?'}</span>`
+      const scoreHtml = p.performance_score != null && p.performance_score > 0
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px">` +
+          `<span style="width:40px;height:3px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden;display:inline-block">` +
+          `<span style="display:block;height:100%;width:${Math.min(100, Math.round(p.performance_score / 20))}%;background:rgba(99,102,241,0.9)"></span></span>` +
+          `<span style="font-size:10px;font-weight:700;color:rgba(99,102,241,0.85)">${Math.round(p.performance_score)}</span>` +
+          `</span>`
+        : ''
+      const priceHtml = p.price_usd != null
+        ? `<span style="display:block;font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">$${p.price_usd.toLocaleString()}</span>`
+        : ''
       const cardHtml =
-        `<span contenteditable="false" style="display:inline-flex;align-items:center;gap:10px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:8px 14px;background:rgba(255,255,255,0.04);margin:4px 2px;min-width:160px;max-width:260px;vertical-align:middle;cursor:default">` +
-        (p.image_url ? `<img src="${p.image_url}" style="width:36px;height:36px;object-fit:contain;border-radius:8px;flex-shrink:0" />` : '') +
+        `<a href="/product/${p.id}" contenteditable="false" style="display:inline-flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,0.04);margin:4px 2px;max-width:280px;vertical-align:middle;text-decoration:none;cursor:pointer">` +
+        imgHtml +
         `<span style="flex:1;min-width:0">` +
-        `<span style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.85);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>` +
-        `<span style="display:block;font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">${p.brand}</span>` +
-        `</span></span>&nbsp;`
+        `<span style="display:block;font-size:12px;font-weight:700;color:rgba(255,255,255,0.88);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>` +
+        `<span style="display:block;font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">${p.brand}</span>` +
+        priceHtml +
+        scoreHtml +
+        `</span></a>&nbsp;`
       richEditorRef.current?.insertHtml(cardHtml)
       return [...prev, p]
     })
@@ -206,22 +264,40 @@ function WritePageInner() {
 
       const finalBody = body.trim() + appendHtml
 
-      const res = await fetch('/api/community/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          type,
-          category: type === 'review' ? category : null,
-          title: title.trim(),
-          body: finalBody,
-          rating: type === 'review' ? rating : null,
-          product_ids: products.map(p => p.id),
-          compare_options: hasCompare ? options : undefined,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? t('write.error_network')); return }
-      router.push(`/community/posts/${json.id}`)
+      if (editPostId) {
+        // Edit mode — PATCH
+        const res = await fetch(`/api/community/posts/${editPostId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            title: title.trim(),
+            body: finalBody,
+            rating: type === 'review' ? rating : null,
+            category: type === 'review' ? category : null,
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) { setError(json.error ?? t('write.error_network')); return }
+        router.push(`/community/posts/${editPostId}`)
+      } else {
+        // Create mode — POST
+        const res = await fetch('/api/community/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            type,
+            category: type === 'review' ? category : null,
+            title: title.trim(),
+            body: finalBody,
+            rating: type === 'review' ? rating : null,
+            product_ids: products.map(p => p.id),
+            compare_options: hasCompare ? options : undefined,
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) { setError(json.error ?? t('write.error_network')); return }
+        router.push(`/community/posts/${json.id}`)
+      }
     } catch {
       setError(t('write.error_network'))
     } finally {
@@ -267,7 +343,7 @@ function WritePageInner() {
           <Link href="/community" className="text-white/25 hover:text-white/60 transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-xl font-black text-white">{t('write.heading')}</h1>
+          <h1 className="text-xl font-black text-white">{editPostId ? t('post.edit') : t('write.heading')}</h1>
           <div className="ml-auto flex items-center gap-2">
             {avatarUrl ? (
               <div className="w-8 h-8 rounded-full overflow-hidden relative flex-shrink-0">
@@ -333,19 +409,25 @@ function WritePageInner() {
           {/* 본문 에디터 */}
           <div>
             <p className={labelCls}>{t('write.body')}</p>
-            <RichEditor
-              ref={richEditorRef}
-              editorRef={editorRef}
-              onChange={setBody}
-              token={token}
-              placeholder={bodyPlaceholder}
-              uploadSizeError={t('write.img_size_error')}
-              uploadFailText={t('write.img_upload_fail')}
-              urlPrompt={t('write.toolbar.url')}
-              onOpenProductPanel={handleOpenProductPanel}
-              embedCount={embeddedProducts.length}
-              maxEmbed={4}
-            />
+            {!editLoaded ? (
+              <div className="w-full h-48 bg-surface border border-border rounded-xl animate-pulse" />
+            ) : (
+              <RichEditor
+                key={editPostId ?? 'new'}
+                ref={richEditorRef}
+                editorRef={editorRef}
+                onChange={setBody}
+                token={token}
+                placeholder={bodyPlaceholder}
+                uploadSizeError={t('write.img_size_error')}
+                uploadFailText={t('write.img_upload_fail')}
+                urlPrompt={t('write.toolbar.url')}
+                onOpenProductPanel={handleOpenProductPanel}
+                embedCount={embeddedProducts.length}
+                maxEmbed={4}
+                initialHtml={editPostId ? body : undefined}
+              />
+            )}
 
             {/* 제품 검색 패널 (툴바 버튼 클릭 시 표시) */}
             {showEmbedSearch && (

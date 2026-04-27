@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  ThumbsUp, ThumbsDown, MessageSquare, Star, Tag,
-  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, X, Check, Flag, Languages
+  ThumbsUp, ThumbsDown, Tag,
+  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, Flag, Languages, X, Check
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
-import RichEditor from '@/components/RichEditor'
 import { supabase } from '@/lib/supabase'
+import { imgUrl } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 
 interface CompareOption {
@@ -167,14 +167,6 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [translating, setTranslating] = useState(false)
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
-  // 수정 모드
-  const [isEditing, setIsEditing]   = useState(false)
-  const [editTitle, setEditTitle]   = useState('')
-  const [editBody, setEditBody]     = useState('')
-  const [editRating, setEditRating] = useState<number | null>(null)
-  const [savingEdit, setSavingEdit] = useState(false)
-  const editEditorRef = useRef<HTMLDivElement | null>(null)
-
   // 신고 모달
   const [reportTarget, setReportTarget]   = useState<{ type: 'post' | 'comment'; id: string } | null>(null)
   const [reportReason, setReportReason]   = useState('')
@@ -270,29 +262,6 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
         setReportDone(false)
       }, 1500)
     }
-  }
-
-  const handleStartEdit = () => {
-    if (!post) return
-    setEditTitle(post.title)
-    setEditBody(post.body)
-    setEditRating(post.rating)
-    setIsEditing(true)
-  }
-
-  const handleSaveEdit = async () => {
-    if (!token || !post || !editTitle.trim() || savingEdit) return
-    setSavingEdit(true)
-    const res = await fetch(`/api/community/posts/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title: editTitle.trim(), body: editBody, rating: editRating }),
-    })
-    if (res.ok) {
-      setPost(p => p ? { ...p, title: editTitle.trim(), body: editBody, rating: editRating, updated_at: new Date().toISOString() } : p)
-      setIsEditing(false)
-    }
-    setSavingEdit(false)
   }
 
   const handleCompareVote = async (optionId: string) => {
@@ -490,9 +459,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
             {/* 본문 */}
             <div className="p-5">
               {/* 삭제/수정 버튼 */}
-              {userId === post.user_id && !isEditing && (
+              {userId === post.user_id && (
                 <div className="flex justify-end gap-3 mb-2">
-                  <button onClick={handleStartEdit}
+                  <button onClick={() => router.push(`/community/write?edit=${id}`)}
                     className="text-white/20 hover:text-white/60 transition-colors flex items-center gap-1 text-xs">
                     <Pencil className="w-3.5 h-3.5" /> {t('post.edit')}
                   </button>
@@ -525,59 +494,8 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 <span className="flex items-center gap-1 ml-auto"><Eye className="w-3 h-3" />{post.view_count}</span>
               </div>
 
-              {/* 수정 모드 */}
-              {isEditing ? (
-                <div className="space-y-3 mb-4">
-                  <input
-                    value={editTitle}
-                    onChange={e => setEditTitle(e.target.value)}
-                    className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-base font-bold text-white outline-none focus:border-white/20 transition-colors"
-                    placeholder={t('write.title')}
-                  />
-                  {post.type === 'review' && editRating !== null && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-white/40">Rating:</span>
-                      {[1,2,3,4,5].map(star => {
-                        const filled = Math.round((editRating ?? 0) / 2) >= star
-                        return (
-                          <button key={star} type="button" onClick={() => setEditRating(star * 2)}
-                            className="p-0.5 transition-transform hover:scale-110">
-                            <svg width="28" height="28" viewBox="0 0 24 24"
-                              fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5"
-                              className={filled ? 'text-amber-400' : 'text-white/15'}>
-                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                            </svg>
-                          </button>
-                        )
-                      })}
-                      <span className="text-sm font-bold text-amber-400 ml-1">{editRating}/10</span>
-                    </div>
-                  )}
-                  <RichEditor
-                    editorRef={editEditorRef}
-                    onChange={setEditBody}
-                    token={token}
-                    placeholder={t('write.body')}
-                    uploadSizeError={t('write.img_size_error')}
-                    uploadFailText={t('write.img_upload_fail')}
-                    urlPrompt={t('write.toolbar.url')}
-                    initialHtml={editBody}
-                    minHeight="200px"
-                  />
-                  <div className="flex items-center gap-2 justify-end">
-                    <button onClick={() => setIsEditing(false)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 border border-border hover:border-white/20 transition-all">
-                      <X className="w-3.5 h-3.5" /> {t('comment.cancel')}
-                    </button>
-                    <button onClick={handleSaveEdit} disabled={savingEdit || !editTitle.trim()}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-accent hover:bg-accent/90 text-white transition-all disabled:opacity-40">
-                      <Check className="w-3.5 h-3.5" /> {t('post.save')}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* 제목 */}
+              {/* 제목 */}
+              <>
                   <h1 className="text-xl font-black text-white mb-4 leading-snug">
                     {translated?.title ?? post.title}
                   </h1>
@@ -623,7 +541,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                         <div className="relative flex items-center gap-3">
                           {opt.products?.image_url && (
                             <div className="w-10 h-10 rounded-lg bg-surface overflow-hidden relative flex-shrink-0">
-                              <Image src={opt.products.image_url} alt={opt.label} fill className="object-contain p-1" unoptimized />
+                              <Image src={imgUrl(opt.products.image_url, 80)} alt={opt.label} fill className="object-contain p-1" unoptimized />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
@@ -671,7 +589,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                         className="flex items-center gap-2 bg-surface-2 border border-border rounded-full px-2.5 py-1 hover:border-white/20 transition-colors">
                         {pp.products.image_url && (
                           <div className="w-4 h-4 relative">
-                            <Image src={pp.products.image_url} alt={pp.products.name} fill className="object-contain" unoptimized />
+                            <Image src={imgUrl(pp.products.image_url, 32)} alt={pp.products.name} fill className="object-contain" unoptimized />
                           </div>
                         )}
                         <span className="text-xs text-white/60">{pp.products.name}</span>
@@ -722,7 +640,6 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 )}
               </div>
                 </>
-              )}
 
             </div>
           </div>
