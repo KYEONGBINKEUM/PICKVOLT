@@ -116,16 +116,22 @@ function WritePageInner() {
   const richEditorRef = useRef<RichEditorHandle>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      const u = data.session?.user
-      setToken(data.session?.access_token ?? null)
-      setAuthed(!!u)
-      setIsAdmin(u?.email === ADMIN_EMAIL)
-      if (u) {
+    supabase.auth.getSession().then(async ({ data: sessionData }) => {
+      const session = sessionData.session
+      setToken(session?.access_token ?? null)
+
+      // getUser()로 서버에서 최신 이메일 확인 (getSession은 캐시 기반)
+      const { data: { user } } = await supabase.auth.getUser()
+      setAuthed(!!user)
+      const admin = user?.email === ADMIN_EMAIL
+      console.log('[write] user email:', user?.email, 'isAdmin:', admin)
+      setIsAdmin(admin)
+
+      if (user) {
         const { data: profile } = await supabase
-          .from('profiles').select('nickname, avatar_url').eq('user_id', u.id).maybeSingle()
-        setDisplayName(profile?.nickname ?? u.email?.split('@')[0] ?? 'user')
-        setAvatarUrl(profile?.avatar_url ?? u.user_metadata?.avatar_url ?? null)
+          .from('profiles').select('nickname, avatar_url').eq('user_id', user.id).maybeSingle()
+        setDisplayName(profile?.nickname ?? user.email?.split('@')[0] ?? 'user')
+        setAvatarUrl(profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null)
       }
     })
   }, [])
@@ -278,19 +284,23 @@ function WritePageInner() {
 
         <div className="space-y-6">
 
-          {/* 유형 선택 — select */}
+          {/* 유형 선택 — 인증 확인 후 렌더 (isAdmin 확정 전에 잘못된 옵션 고정 방지) */}
           <div>
             <p className={labelCls}>{t('write.type')}</p>
-            <select
-              key={String(isAdmin)}
-              value={type}
-              onChange={e => setType(e.target.value as PostType)}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors cursor-pointer"
-            >
-              {TYPE_OPTIONS.map(opt => (
-                <option key={opt.key} value={opt.key}>{opt.label} — {opt.desc}</option>
-              ))}
-            </select>
+            {authed === null ? (
+              <div className="w-full h-12 bg-surface border border-border rounded-xl animate-pulse" />
+            ) : (
+              <select
+                key={String(isAdmin)}
+                value={type}
+                onChange={e => setType(e.target.value as PostType)}
+                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors cursor-pointer"
+              >
+                {TYPE_OPTIONS.map(opt => (
+                  <option key={opt.key} value={opt.key}>{opt.label} — {opt.desc}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* 카테고리 (리뷰만) */}
