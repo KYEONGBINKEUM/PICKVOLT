@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
   if (type === 'review' && !category) return NextResponse.json({ error: 'category required for review' }, { status: 400 })
-  if (type === 'compare' && (!compare_options || compare_options.length < 2)) {
+  if (compare_options && compare_options.length < 2) {
     return NextResponse.json({ error: 'compare requires at least 2 options' }, { status: 400 })
   }
 
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
           product_ids.map((pid: string) => ({ post_id: post.id, product_id: pid }))
         )
       : Promise.resolve(),
-    type === 'compare' && compare_options?.length >= 2
+    compare_options?.length >= 2
       ? supabase.from('community_compare_options').insert(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           compare_options.map((opt: any, i: number) => ({

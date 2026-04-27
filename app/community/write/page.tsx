@@ -184,6 +184,7 @@ function WritePageInner() {
   const [authed, setAuthed]         = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin]       = useState(false)
   const [hoverStar, setHoverStar]   = useState(0)
+  const [hasCompare, setHasCompare] = useState(false)
 
   const CATEGORIES = [
     { key: 'laptop', label: t('cat.laptop') },
@@ -197,7 +198,6 @@ function WritePageInner() {
     { key: 'review',  label: t('community.reviews'), desc: t('write.type.review.desc') },
     { key: 'free',    label: t('community.free'),    desc: t('write.type.free.desc') },
     { key: 'qa',      label: t('community.qa'),      desc: t('write.type.qa.desc') },
-    { key: 'compare', label: t('community.compare'), desc: t('write.type.compare.desc') },
   ]
   const TYPE_OPTIONS = isAdmin
     ? [...BASE_TYPES, { key: 'news' as PostType, label: t('community.news'), desc: t('write.type.news.desc') }]
@@ -235,7 +235,7 @@ function WritePageInner() {
   const canSubmit = () => {
     if (!title.trim()) return false
     if (type === 'review' && !category) return false
-    if (type === 'compare' && options.some(o => !o.label.trim())) return false
+    if (hasCompare && options.some(o => !o.label.trim())) return false
     return true
   }
 
@@ -253,7 +253,7 @@ function WritePageInner() {
           body: body.trim(),
           rating: type === 'review' ? rating : null,
           product_ids: products.map(p => p.id),
-          compare_options: type === 'compare' ? options : undefined,
+          compare_options: hasCompare ? options : undefined,
         }),
       })
       const json = await res.json()
@@ -346,15 +346,40 @@ function WritePageInner() {
           <div>
             <p className={labelCls}>{t('write.post_title')}</p>
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120}
-              placeholder={type === 'compare' ? t('write.placeholder.title_compare') : t('write.placeholder.title')}
+              placeholder={t('write.placeholder.title')}
               className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
           </div>
 
-          {/* 비교투표 옵션 */}
-          {type === 'compare' && (
-            <div>
-              <p className={labelCls}>{t('write.vote_options')}</p>
-              <div className="space-y-3">
+          {/* 본문 에디터 */}
+          <div>
+            <p className={labelCls}>{t('write.body')}</p>
+            <RichEditor
+              editorRef={editorRef}
+              onChange={setBody}
+              token={token}
+              placeholder={bodyPlaceholder}
+              uploadSizeError={t('write.img_size_error')}
+              uploadFailText={t('write.img_upload_fail')}
+              urlPrompt={t('write.toolbar.url')}
+            />
+          </div>
+
+          {/* 비교투표 토글 */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setHasCompare(v => !v)}
+              className={`w-full py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                hasCompare
+                  ? 'border-accent/40 bg-accent/10 text-accent'
+                  : 'border-border text-white/30 hover:border-white/20 hover:text-white/50'
+              }`}
+            >
+              {hasCompare ? t('write.remove_compare') : t('write.add_compare')}
+            </button>
+
+            {hasCompare && (
+              <div className="mt-3 space-y-3">
                 {options.map((opt, i) => (
                   <div key={i} className="bg-surface border border-border rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
@@ -364,6 +389,15 @@ function WritePageInner() {
                       <p className="text-xs text-white/40">
                         {t('write.option_label').replace('{n}', String(i + 1))}
                       </p>
+                      {options.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setOptions(prev => prev.filter((_, j) => j !== i))}
+                          className="ml-auto text-white/20 hover:text-white/50 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                     <input value={opt.label}
                       onChange={e => setOptions(prev => prev.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
@@ -378,30 +412,14 @@ function WritePageInner() {
                   </div>
                 ))}
                 {options.length < 4 && (
-                  <button onClick={() => setOptions(p => [...p, { label: '', product_id: null, image_url: null }])}
+                  <button type="button" onClick={() => setOptions(p => [...p, { label: '', product_id: null, image_url: null }])}
                     className="w-full py-3 border border-dashed border-border rounded-xl text-xs text-white/25 hover:text-white/50 hover:border-white/15 transition-colors flex items-center justify-center gap-1.5">
                     <Plus className="w-3.5 h-3.5" /> {t('write.add_option')}
                   </button>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* 본문 에디터 */}
-          {type !== 'compare' && (
-            <div>
-              <p className={labelCls}>{t('write.body')}</p>
-              <RichEditor
-                editorRef={editorRef}
-                onChange={setBody}
-                token={token}
-                placeholder={bodyPlaceholder}
-                uploadSizeError={t('write.img_size_error')}
-                uploadFailText={t('write.img_upload_fail')}
-                urlPrompt={t('write.toolbar.url')}
-              />
-            </div>
-          )}
+            )}
+          </div>
 
           {/* 평점 (리뷰만) */}
           {type === 'review' && (
@@ -444,34 +462,32 @@ function WritePageInner() {
           )}
 
           {/* 제품 태그 */}
-          {type !== 'compare' && (
-            <div>
-              <p className={labelCls}>
-                {t('write.product_tag')}
-                <span className="text-white/20 normal-case font-normal ml-1">({t('write.optional')})</span>
-              </p>
-              {products.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {products.map(p => (
-                    <div key={p.id} className="flex items-center gap-1.5 bg-surface border border-border rounded-full px-2.5 py-1">
-                      <span className="text-xs text-white/55 truncate max-w-[160px]">{p.name}</span>
-                      <button onClick={() => setProducts(prev => prev.filter(x => x.id !== p.id))}
-                        className="text-white/25 hover:text-white/60 transition-colors">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {products.length < (type === 'review' ? 1 : 5) && (
-                <ProductSearch
-                  onSelect={handleProductSelect}
-                  exclude={products.map(p => p.id)}
-                  placeholder={t('write.product_search')}
-                />
-              )}
-            </div>
-          )}
+          <div>
+            <p className={labelCls}>
+              {t('write.product_tag')}
+              <span className="text-white/20 normal-case font-normal ml-1">({t('write.optional')})</span>
+            </p>
+            {products.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {products.map(p => (
+                  <div key={p.id} className="flex items-center gap-1.5 bg-surface border border-border rounded-full px-2.5 py-1">
+                    <span className="text-xs text-white/55 truncate max-w-[160px]">{p.name}</span>
+                    <button onClick={() => setProducts(prev => prev.filter(x => x.id !== p.id))}
+                      className="text-white/25 hover:text-white/60 transition-colors">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {products.length < (type === 'review' ? 1 : 5) && (
+              <ProductSearch
+                onSelect={handleProductSelect}
+                exclude={products.map(p => p.id)}
+                placeholder={t('write.product_search')}
+              />
+            )}
+          </div>
 
           {error && (
             <p className="text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-4 py-3">{error}</p>
