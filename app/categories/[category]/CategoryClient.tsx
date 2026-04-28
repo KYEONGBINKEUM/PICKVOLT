@@ -25,6 +25,12 @@ import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { imgUrl } from '@/lib/utils'
+import AdBanner from '@/components/AdBanner'
+
+// 광고 코드 설정: .env.local 에 NEXT_PUBLIC_AD_BANNER_CATEGORY 키로 광고 HTML 삽입
+// 예) Ezoic / Kakao AdFit / Amazon Associates / Carbon Ads 등 어떤 코드든 가능
+const AD_HTML = process.env.NEXT_PUBLIC_AD_BANNER_CATEGORY ?? ''
+const AD_EVERY = 5  // 제품 N개마다 배너 1회 노출
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1073,15 +1079,23 @@ export default function CategoryClient({ category }: { category: string }) {
           ) : (
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
-                {products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    wishlisted={wishlistedIds.has(product.id)}
-                    onWishlistToggle={toggleWishlist}
-                    isAdmin={isAdmin}
-                    maxScore={categoryMaxScore}
-                  />
+                {products.map((product, idx) => (
+                  <>
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      wishlisted={wishlistedIds.has(product.id)}
+                      onWishlistToggle={toggleWishlist}
+                      isAdmin={isAdmin}
+                      maxScore={categoryMaxScore}
+                    />
+                    {/* 광고 배너: AD_EVERY 개마다, 마지막 아이템 제외 */}
+                    {AD_HTML && (idx + 1) % AD_EVERY === 0 && idx < products.length - 1 && (
+                      <div key={`ad-${idx}`} className="col-span-full">
+                        <AdBanner html={AD_HTML} className="w-full rounded-2xl overflow-hidden" />
+                      </div>
+                    )}
+                  </>
                 ))}
               </div>
 
