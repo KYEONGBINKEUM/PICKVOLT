@@ -198,8 +198,8 @@ function WritePageInner() {
       const scoreHtml = p.performance_score != null && p.performance_score > 0
         ? `<span style="display:inline-flex;align-items:center;gap:6px;margin-top:6px">` +
           `<span style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden;display:inline-block;min-width:60px">` +
-          `<span style="display:block;height:100%;width:${Math.min(100, Math.round(p.performance_score / 20))}%;background:rgba(249,115,22,0.9)"></span></span>` +
-          `<span style="font-size:11px;font-weight:700;color:rgba(249,115,22,0.9)">${Math.round(p.performance_score)}</span>` +
+          `<span style="display:block;height:100%;width:${Math.min(100, Math.round(p.performance_score / 20))}%;background:rgba(255,77,0,0.9)"></span></span>` +
+          `<span style="font-size:11px;font-weight:700;color:rgba(255,77,0,0.9)">${Math.round(p.performance_score)}</span>` +
           `</span>`
         : ''
       const priceHtml = p.price_usd != null
