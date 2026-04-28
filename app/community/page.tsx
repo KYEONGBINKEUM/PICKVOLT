@@ -9,10 +9,15 @@ import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '
 import AdBanner from '@/components/AdBanner'
 
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
-function shouldShowAd(idx: number) {
-  if (idx === 9) return true
-  if (idx > 9 && (idx - 9) % 20 === 0) return true
-  return false
+
+function generateAdIndices(max = 200): Set<number> {
+  const set = new Set<number>()
+  let pos = 9
+  while (pos < max) {
+    set.add(pos)
+    pos += Math.floor(Math.random() * 21) + 20
+  }
+  return set
 }
 
 export default function CommunityPage() {
@@ -22,6 +27,7 @@ export default function CommunityPage() {
   const [page, setPage]       = useState(1)
   const [total, setTotal]     = useState(0)
   const [token, setToken]         = useState<string | null>(null)
+  const [adIndices] = useState<Set<number>>(() => generateAdIndices())
   const [tokenReady, setTokenReady] = useState(false)
   const [compact, setCompact]     = useState(false)
 
@@ -96,7 +102,7 @@ export default function CommunityPage() {
                 const card = compact
                   ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
                   : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
-                const showAd = AD_HTML_INLINE && shouldShowAd(idx) && idx < posts.length - 1
+                const showAd = AD_HTML_INLINE && adIndices.has(idx) && idx < posts.length - 1
                 return showAd
                   ? [card, <div key={`ad-${idx}`} className="my-3 w-full"><AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" /></div>]
                   : [card]

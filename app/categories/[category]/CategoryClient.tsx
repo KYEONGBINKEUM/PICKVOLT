@@ -33,11 +33,15 @@ import AdBanner from '@/components/AdBanner'
 const AD_HTML_TOP    = process.env.NEXT_PUBLIC_AD_BANNER_TOP    ?? ''
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
 
-// 첫 번째 광고: 10개 후 / 이후: 20개마다
-function shouldShowAd(idx: number): boolean {
-  if (idx === 9) return true              // 10번째 뒤
-  if (idx > 9 && (idx - 9) % 20 === 0) return true  // 이후 20개마다
-  return false
+// 광고 위치 생성: 첫 번째는 10번째 뒤, 이후 20~40개 랜덤 간격
+function generateAdIndices(max = 600): Set<number> {
+  const set = new Set<number>()
+  let pos = 9  // 첫 광고: index 9 (10번째 제품 뒤)
+  while (pos < max) {
+    set.add(pos)
+    pos += Math.floor(Math.random() * 21) + 20  // 다음: +20~40 랜덤
+  }
+  return set
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -986,6 +990,8 @@ export default function CategoryClient({ category }: { category: string }) {
   }
 
   const [catDropOpen, setCatDropOpen] = useState(false)
+  // 광고 위치: 마운트 시 1회 랜덤 생성 (리렌더마다 재계산 방지)
+  const [adIndices] = useState<Set<number>>(() => generateAdIndices())
 
   const ALL_CATEGORIES = [
     { slug: 'smartphone', label: t('cat.smartphone') },
@@ -1101,8 +1107,8 @@ export default function CategoryClient({ category }: { category: string }) {
                       isAdmin={isAdmin}
                       maxScore={categoryMaxScore}
                     />
-                    {/* 인라인 배너: 10개 후 첫 노출, 이후 20개마다 */}
-                    {AD_HTML_INLINE && shouldShowAd(idx) && idx < products.length - 1 && (
+                    {/* 인라인 배너: 10번째 뒤 첫 노출, 이후 20~40개 랜덤 간격 */}
+                    {AD_HTML_INLINE && adIndices.has(idx) && idx < products.length - 1 && (
                       <div key={`ad-${idx}`} className="col-span-full w-full">
                         <AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" />
                       </div>
