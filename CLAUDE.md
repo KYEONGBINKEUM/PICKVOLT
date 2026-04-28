@@ -29,7 +29,13 @@ en → es → pt → fr → de → ja → ko
 ```
 기존 키 근처에 의미적으로 관련된 곳에 삽입한다.
 
-### 3. 타입 뱃지/라벨 색상
+### 3. 브랜드 메인 컬러
+- 메인 accent 색상은 **`rgb(255, 77, 0)`** (주황-레드) 이다.
+- 인라인 style에서 컬러를 쓸 때 반드시 이 값을 사용한다: `rgba(255,77,0,0.9)` 등
+- Tailwind에서는 `text-accent`, `bg-accent`, `border-accent` 클래스를 사용한다.
+- **절대 임의로 Tailwind의 orange-500(`249,115,22`), indigo(`99,102,241`) 등 다른 색을 쓰지 않는다.**
+
+### 4. 타입 뱃지/라벨 색상
 커뮤니티 타입 라벨(forum, review, compare, free, qa)은 타입별 다른 색상을 쓰지 않는다.
 모두 `text-accent/70` 으로 통일한다.
 
