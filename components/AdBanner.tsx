@@ -10,10 +10,10 @@ interface AdBannerProps {
 
 /**
  * AdBanner — injects any third-party ad HTML (including <script> tags) safely.
- * Supports: Ezoic, Carbon Ads, Amazon Associates, Kakao AdFit, Naver, etc.
+ * When className includes "w-full", inner iframe/ins stretches to fill the container.
  *
  * Usage:
- *   NEXT_PUBLIC_AD_BANNER_CATEGORY="<your ad code here>"
+ *   NEXT_PUBLIC_AD_BANNER_INLINE="<your ad code here>"
  */
 export default function AdBanner({ html, className }: AdBannerProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -23,6 +23,7 @@ export default function AdBanner({ html, className }: AdBannerProps) {
     if (!el || !html) return
     el.innerHTML = ''
     const wrapper = document.createElement('div')
+    wrapper.style.width = '100%'
     wrapper.innerHTML = html
     // Re-create <script> elements so the browser executes them
     wrapper.querySelectorAll('script').forEach(old => {
@@ -35,5 +36,12 @@ export default function AdBanner({ html, className }: AdBannerProps) {
   }, [html])
 
   if (!html) return null
-  return <div ref={ref} className={className} />
+  return (
+    <div
+      ref={ref}
+      data-ad-banner="true"
+      className={className}
+      style={{ minHeight: 60, width: '100%' }}
+    />
+  )
 }

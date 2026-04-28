@@ -29,10 +29,16 @@ import AdBanner from '@/components/AdBanner'
 
 // 광고 코드 설정 (Vercel 환경변수로 주입)
 // NEXT_PUBLIC_AD_BANNER_TOP    → 728×90 상단 배너 (데스크탑용)
-// NEXT_PUBLIC_AD_BANNER_INLINE → 300×250 인라인 배너 (카드 사이사이)
+// NEXT_PUBLIC_AD_BANNER_INLINE → 반응형 인라인 배너 (카드 사이사이)
 const AD_HTML_TOP    = process.env.NEXT_PUBLIC_AD_BANNER_TOP    ?? ''
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
-const AD_EVERY = 6  // 제품 N개마다 배너 1회 노출
+
+// 첫 번째 광고: 10개 후 / 이후: 20개마다
+function shouldShowAd(idx: number): boolean {
+  if (idx === 9) return true              // 10번째 뒤
+  if (idx > 9 && (idx - 9) % 20 === 0) return true  // 이후 20개마다
+  return false
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1102,10 +1108,10 @@ export default function CategoryClient({ category }: { category: string }) {
                       isAdmin={isAdmin}
                       maxScore={categoryMaxScore}
                     />
-                    {/* 인라인 배너 (300×250): AD_EVERY 개마다, 마지막 아이템 제외 */}
-                    {AD_HTML_INLINE && (idx + 1) % AD_EVERY === 0 && idx < products.length - 1 && (
-                      <div key={`ad-${idx}`} className="col-span-full flex justify-center">
-                        <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
+                    {/* 인라인 배너: 10개 후 첫 노출, 이후 20개마다 */}
+                    {AD_HTML_INLINE && shouldShowAd(idx) && idx < products.length - 1 && (
+                      <div key={`ad-${idx}`} className="col-span-full w-full">
+                        <AdBanner html={AD_HTML_INLINE} className="w-full rounded-2xl overflow-hidden" />
                       </div>
                     )}
                   </>

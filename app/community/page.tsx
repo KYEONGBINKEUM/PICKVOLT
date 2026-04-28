@@ -9,7 +9,11 @@ import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '
 import AdBanner from '@/components/AdBanner'
 
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
-const AD_EVERY = 6
+function shouldShowAd(idx: number) {
+  if (idx === 9) return true
+  if (idx > 9 && (idx - 9) % 20 === 0) return true
+  return false
+}
 
 export default function CommunityPage() {
   const { t } = useI18n()
@@ -92,9 +96,9 @@ export default function CommunityPage() {
                 const card = compact
                   ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
                   : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
-                const showAd = AD_HTML_INLINE && (idx + 1) % AD_EVERY === 0 && idx < posts.length - 1
+                const showAd = AD_HTML_INLINE && shouldShowAd(idx) && idx < posts.length - 1
                 return showAd
-                  ? [card, <div key={`ad-${idx}`} className="my-3 flex justify-center"><AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" /></div>]
+                  ? [card, <div key={`ad-${idx}`} className="my-3 w-full"><AdBanner html={AD_HTML_INLINE} className="w-full rounded-2xl overflow-hidden" /></div>]
                   : [card]
               })
           }
