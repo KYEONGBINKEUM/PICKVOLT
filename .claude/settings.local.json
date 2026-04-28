@@ -36,7 +36,8 @@
       "WebFetch(domain:www.carbonads.net)",
       "WebFetch(domain:propellerads.com)",
       "WebFetch(domain:publishers.adsterra.com)",
-      "WebFetch(domain:adsterra.com)"
+      "WebFetch(domain:adsterra.com)",
+      "Bash(git commit *)"
     ]
   }
 }

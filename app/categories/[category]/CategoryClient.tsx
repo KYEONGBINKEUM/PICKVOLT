@@ -32,7 +32,7 @@ import AdBanner from '@/components/AdBanner'
 // NEXT_PUBLIC_AD_BANNER_INLINE → 300×250 인라인 배너 (카드 사이사이)
 const AD_HTML_TOP    = process.env.NEXT_PUBLIC_AD_BANNER_TOP    ?? ''
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
-const AD_EVERY = 5  // 제품 N개마다 배너 1회 노출
+const AD_EVERY = 2  // 제품 N개마다 배너 1회 노출 (2-column 기준 한 줄마다)
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
