@@ -1055,9 +1055,9 @@ export default function CategoryClient({ category }: { category: string }) {
 
         {/* Product list */}
         <div className="flex-1 min-w-0">
-          {/* 상단 가로 배너 (728×90) — 데스크탑에서만 표시 */}
+          {/* 상단 배너 — 반응형 전체 너비 */}
           {AD_HTML_TOP && (
-            <div className="hidden sm:block mb-5">
+            <div className="mb-5">
               <AdBanner html={AD_HTML_TOP} className="w-full overflow-hidden rounded-2xl" />
             </div>
           )}
