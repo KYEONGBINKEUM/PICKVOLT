@@ -569,25 +569,6 @@ function FilterSidebar({
   return (
     <aside className="w-full space-y-1.5">
 
-      {/* Search */}
-      <div className="bg-surface border border-border rounded-2xl p-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
-          <input
-            type="text"
-            placeholder={t('cat.search_placeholder').replace('{label}', categoryLabel)}
-            value={filters.q}
-            onChange={(e) => onChange({ ...filters, q: e.target.value })}
-            className="w-full bg-surface-2 border border-border rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-accent/50 transition-colors"
-          />
-          {filters.q && (
-            <button onClick={() => onChange({ ...filters, q: '' })} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <X className="w-3 h-3 text-white/30 hover:text-white/60" />
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* Sort */}
       <FilterSection title={t('cat.filter_sort')}>
         <div className="space-y-0.5">
@@ -806,6 +787,8 @@ export default function CategoryClient({ category }: { category: string }) {
   const [isLoadingMore,   setIsLoadingMore]   = useState(false)
   const [mobileSheet,     setMobileSheet]     = useState(false)
   const [mobileTrayOpen,  setMobileTrayOpen]  = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const mobileSearchRef = useRef<HTMLInputElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // ── Auth / Wishlist ──────────────────────────────────────────────────────────
@@ -978,9 +961,9 @@ export default function CategoryClient({ category }: { category: string }) {
   return (
     <div className="pb-24 lg:pb-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3 mb-6">
         {/* Category switcher */}
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <button
             onClick={() => setCatDropOpen((v) => !v)}
             className="flex items-center gap-1.5 group"
@@ -1015,10 +998,60 @@ export default function CategoryClient({ category }: { category: string }) {
           )}
         </div>
 
-        <span className="text-sm text-white/30 tabular-nums">
+        {/* Search bar — desktop: always visible; mobile: hidden (magnifier below) */}
+        <div className="hidden sm:flex flex-1 items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2 max-w-sm">
+          <Search className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+          <input
+            type="text"
+            placeholder={t('cat.search_placeholder').replace('{label}', categoryLabel)}
+            value={filters.q}
+            onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/25 outline-none"
+          />
+          {filters.q && (
+            <button onClick={() => setFilters((f) => ({ ...f, q: '' }))}>
+              <X className="w-3 h-3 text-white/30 hover:text-white/60 transition-colors" />
+            </button>
+          )}
+        </div>
+
+        {/* Mobile: magnifier icon */}
+        <button
+          className="sm:hidden ml-auto p-1.5 rounded-lg text-white/40 hover:text-white transition-colors"
+          onClick={() => {
+            setMobileSearchOpen((v) => {
+              if (!v) setTimeout(() => mobileSearchRef.current?.focus(), 50)
+              return !v
+            })
+          }}
+        >
+          {mobileSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+        </button>
+
+        <span className="hidden sm:block text-sm text-white/30 tabular-nums flex-shrink-0">
           {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())}
         </span>
       </div>
+
+      {/* Mobile search bar (expanded) */}
+      {mobileSearchOpen && (
+        <div className="sm:hidden mb-4 flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2.5">
+          <Search className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+          <input
+            ref={mobileSearchRef}
+            type="text"
+            placeholder={t('cat.search_placeholder').replace('{label}', categoryLabel)}
+            value={filters.q}
+            onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/25 outline-none"
+          />
+          {filters.q && (
+            <button onClick={() => setFilters((f) => ({ ...f, q: '' }))}>
+              <X className="w-3 h-3 text-white/30 hover:text-white/60 transition-colors" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Body */}
       <div className="flex gap-5 items-start">
