@@ -205,12 +205,13 @@ function WritePageInner() {
       const imgHtml = p.image_url
         ? `<img src="${p.image_url}" style="width:72px;height:72px;object-fit:contain;border-radius:10px;flex-shrink:0;display:block" />`
         : `<span style="width:72px;height:72px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0">${p.brand?.[0] ?? '?'}</span>`
+      // Score: max ~1000 → divide by 10 for percent; bar uses full flex width
       const scoreHtml = p.performance_score != null && p.performance_score > 0
-        ? `<span style="display:inline-flex;align-items:center;gap:6px;margin-top:6px">` +
-          `<span style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden;display:inline-block;min-width:60px">` +
-          `<span style="display:block;height:100%;width:${Math.min(100, Math.round(p.performance_score / 20))}%;background:rgba(255,77,0,0.9)"></span></span>` +
-          `<span style="font-size:11px;font-weight:700;color:rgba(255,77,0,0.9)">${Math.round(p.performance_score)}</span>` +
-          `</span>`
+        ? `<div style="display:flex;align-items:center;gap:8px;margin-top:7px;width:100%">` +
+          `<div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden">` +
+          `<div style="height:100%;width:${Math.min(100, Math.round(p.performance_score / 10))}%;background:rgba(255,77,0,0.9);border-radius:2px"></div></div>` +
+          `<span style="font-size:11px;font-weight:700;color:rgba(255,77,0,0.9);white-space:nowrap">${Math.round(p.performance_score)}</span>` +
+          `</div>`
         : ''
       const priceHtml = p.price_usd != null
         ? `<span style="display:block;font-size:12px;color:rgba(255,255,255,0.5);margin-top:3px;font-weight:500">$${p.price_usd.toLocaleString()}</span>`
@@ -218,17 +219,19 @@ function WritePageInner() {
       const cardHtml =
         `<div contenteditable="false" data-product-card="true" draggable="true" style="display:flex;align-items:center;gap:14px;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,0.04);margin:6px 0;width:100%;box-sizing:border-box;position:relative;cursor:grab">` +
         imgHtml +
-        `<span style="flex:1;min-width:0">` +
+        `<div style="flex:1;min-width:0">` +
         `<a href="/product/${p.id}" style="display:block;font-size:14px;font-weight:700;color:rgba(255,255,255,0.88);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">${p.name}</a>` +
         `<span style="display:block;font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">${p.brand}</span>` +
         priceHtml +
         scoreHtml +
-        `</span>` +
+        `</div>` +
         `<span data-delete-card="true" style="position:absolute;top:8px;right:10px;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.4);cursor:pointer;line-height:1;flex-shrink:0" title="삭제">×</span>` +
         `</div><br />`
       richEditorRef.current?.insertHtml(cardHtml)
       return [...prev, p]
     })
+    // Auto-add to product tags when embedding a card
+    setProducts(prev => prev.find(x => x.id === p.id) ? prev : [...prev, p].slice(0, 5))
     setShowEmbedSearch(false)
   }, [])
 
