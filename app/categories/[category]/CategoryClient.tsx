@@ -406,13 +406,29 @@ function RangeFilter({
   format?: (v: number) => string
   defaultOpen?: boolean
 }) {
+  const [minOnTop, setMinOnTop] = useState(false)
+  const trackRef = useRef<HTMLDivElement>(null)
   const pct = (v: number) => ((v - absMin) / (absMax - absMin)) * 100
+
+  // 클릭 위치 기준으로 더 가까운 thumb을 위로 올림
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!trackRef.current) return
+    const rect = trackRef.current.getBoundingClientRect()
+    const clickPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
+    const distMin = Math.abs(clickPct - pct(valueMin))
+    const distMax = Math.abs(clickPct - pct(valueMax))
+    setMinOnTop(distMin <= distMax)
+  }
 
   return (
     <FilterSection title={title} defaultOpen={defaultOpen}>
       <div className="px-1 pb-1">
         {/* Dual range slider track */}
-        <div className="relative h-1 bg-surface-2 rounded-full mt-1 mb-5 mx-1">
+        <div
+          ref={trackRef}
+          className="relative h-1 bg-surface-2 rounded-full mt-1 mb-5 mx-1"
+          onPointerDown={handlePointerDown}
+        >
           <div
             className="absolute h-full bg-accent rounded-full"
             style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }}
@@ -427,7 +443,7 @@ function RangeFilter({
               onChange(Math.min(v, valueMax - step), valueMax)
             }}
             className="absolute w-full h-full opacity-0 cursor-pointer"
-            style={{ zIndex: valueMin > absMax - (absMax - absMin) * 0.1 ? 5 : 3 }}
+            style={{ zIndex: minOnTop ? 5 : 3 }}
           />
           {/* Max thumb */}
           <input
@@ -439,7 +455,7 @@ function RangeFilter({
               onChange(valueMin, Math.max(v, valueMin + step))
             }}
             className="absolute w-full h-full opacity-0 cursor-pointer"
-            style={{ zIndex: 4 }}
+            style={{ zIndex: minOnTop ? 4 : 5 }}
           />
           {/* Thumb dots */}
           <div
