@@ -21,6 +21,14 @@ interface ProductResult {
   image_url: string | null
   price_usd: number | null
   performance_score: number | null
+  cpu_name: string | null
+  gpu_name: string | null
+  ram_gb: number | null
+  display_inch: number | null
+  display_hz: number | null
+  battery: string | null
+  weight: string | null
+  launch_year: number | null
 }
 
 function ProductSearch({ onSelect, exclude, placeholder }: {
@@ -206,14 +214,16 @@ function WritePageInner() {
         ? `<span style="display:block;font-size:12px;color:rgba(255,255,255,0.5);margin-top:3px;font-weight:500">$${p.price_usd.toLocaleString()}</span>`
         : ''
       const cardHtml =
-        `<a href="/product/${p.id}" contenteditable="false" style="display:flex;align-items:center;gap:14px;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,0.04);margin:6px 0;width:100%;box-sizing:border-box;text-decoration:none;cursor:pointer">` +
+        `<div contenteditable="false" data-product-card="true" draggable="true" style="display:flex;align-items:center;gap:14px;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,0.04);margin:6px 0;width:100%;box-sizing:border-box;position:relative;cursor:grab">` +
         imgHtml +
         `<span style="flex:1;min-width:0">` +
-        `<span style="display:block;font-size:14px;font-weight:700;color:rgba(255,255,255,0.88);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>` +
+        `<a href="/product/${p.id}" style="display:block;font-size:14px;font-weight:700;color:rgba(255,255,255,0.88);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none">${p.name}</a>` +
         `<span style="display:block;font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">${p.brand}</span>` +
         priceHtml +
         scoreHtml +
-        `</span></a>`
+        `</span>` +
+        `<span data-delete-card="true" style="position:absolute;top:8px;right:10px;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.4);cursor:pointer;line-height:1;flex-shrink:0" title="삭제">×</span>` +
+        `</div><br />`
       richEditorRef.current?.insertHtml(cardHtml)
       return [...prev, p]
     })
@@ -253,13 +263,44 @@ function WritePageInner() {
       // Cards are already embedded in the editor body; only append comparison table if 2+ products
       let appendHtml = ''
       if (embeddedProducts.length >= 2) {
-        const cols = embeddedProducts.map(p =>
-          `<td style="padding:14px;text-align:center;border-right:1px solid rgba(255,255,255,0.08);vertical-align:top">` +
-          (p.image_url ? `<img src="${p.image_url}" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block" />` : '') +
-          `<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.8)">${p.name}</div>` +
-          `<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:3px">${p.brand}</div></td>`
+        // 헤더 행 (이미지 + 이름)
+        const headerCols = embeddedProducts.map((p, i) =>
+          `<td style="padding:16px 14px;text-align:center;${i < embeddedProducts.length - 1 ? 'border-right:1px solid rgba(255,255,255,0.08);' : ''}vertical-align:top;background:rgba(255,255,255,0.03)">` +
+          (p.image_url ? `<img src="${p.image_url}" style="width:64px;height:64px;object-fit:contain;margin:0 auto 8px;display:block" />` : '') +
+          `<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.85)">${p.name}</div>` +
+          `<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">${p.brand}</div>` +
+          (p.price_usd != null ? `<div style="font-size:11px;color:rgba(255,77,0,0.9);font-weight:600;margin-top:4px">$${p.price_usd.toLocaleString()}</div>` : '') +
+          `</td>`
         ).join('')
-        appendHtml = `<br /><table style="width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;margin:12px 0"><tr>${cols}</tr></table>`
+
+        // 스펙 행 생성 함수
+        const specRow = (label: string, values: (string | null)[]) => {
+          const hasAny = values.some(v => v != null)
+          if (!hasAny) return ''
+          const cells = values.map((v, i) =>
+            `<td style="padding:10px 14px;text-align:center;font-size:12px;color:${v ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)'};${i < values.length - 1 ? 'border-right:1px solid rgba(255,255,255,0.06);' : ''}">` +
+            (v ?? '—') + `</td>`
+          ).join('')
+          return `<tr style="border-top:1px solid rgba(255,255,255,0.06)">` +
+            `<td style="padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.3);font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.02)">${label}</td>` +
+            cells + `</tr>`
+        }
+
+        const specsRows = [
+          specRow('Score', embeddedProducts.map(p => p.performance_score != null ? String(Math.round(p.performance_score)) : null)),
+          specRow('CPU', embeddedProducts.map(p => p.cpu_name)),
+          specRow('GPU', embeddedProducts.map(p => p.gpu_name)),
+          specRow('RAM', embeddedProducts.map(p => p.ram_gb != null ? `${p.ram_gb} GB` : null)),
+          specRow('Display', embeddedProducts.map(p => p.display_inch != null ? `${p.display_inch}"${p.display_hz ? ` ${p.display_hz}Hz` : ''}` : null)),
+          specRow('Battery', embeddedProducts.map(p => p.battery)),
+          specRow('Weight', embeddedProducts.map(p => p.weight)),
+        ].join('')
+
+        appendHtml =
+          `<br /><table style="width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;margin:12px 0;table-layout:fixed">` +
+          `<colgroup><col style="width:90px" />${embeddedProducts.map(() => '<col />').join('')}</colgroup>` +
+          `<thead><tr><td style="padding:16px 14px;background:rgba(255,255,255,0.03)"></td>${headerCols}</tr></thead>` +
+          `<tbody>${specsRows}</tbody></table>`
       }
 
       const finalBody = body.trim() + appendHtml

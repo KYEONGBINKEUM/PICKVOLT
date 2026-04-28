@@ -34,6 +34,7 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
 ) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const dragCardRef = useRef<HTMLElement | null>(null)
 
   const doInsertHtml = (html: string) => {
     editorRef.current?.focus()
@@ -135,6 +136,58 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
         data-placeholder={placeholder}
         className="px-4 py-3 text-sm text-white/85 leading-relaxed outline-none bg-surface empty:before:content-[attr(data-placeholder)] empty:before:text-white/20"
         style={{ minHeight, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+        onClick={e => {
+          const target = e.target as HTMLElement
+          // X 버튼 클릭 → 제품 카드 삭제
+          if (target.closest('[data-delete-card]')) {
+            e.preventDefault()
+            const card = target.closest('[data-product-card]') as HTMLElement | null
+            if (card) {
+              // br 다음 노드도 같이 제거
+              const next = card.nextSibling
+              card.remove()
+              if (next?.nodeName === 'BR') next.parentNode?.removeChild(next)
+              onChange(editorRef.current?.innerHTML ?? '')
+            }
+            return
+          }
+          // 제품 카드 링크 클릭 → 에디터 내 네비게이션 차단
+          if (target.closest('[data-product-card]')) {
+            e.preventDefault()
+          }
+        }}
+        onDragStart={e => {
+          const target = e.target as HTMLElement
+          const card = target.closest('[data-product-card]') as HTMLElement | null
+          if (card) {
+            dragCardRef.current = card
+            card.style.opacity = '0.4'
+          }
+        }}
+        onDragEnd={() => {
+          if (dragCardRef.current) {
+            dragCardRef.current.style.opacity = '1'
+            dragCardRef.current = null
+            onChange(editorRef.current?.innerHTML ?? '')
+          }
+        }}
+        onDragOver={e => {
+          const dragging = dragCardRef.current
+          if (!dragging) return
+          e.preventDefault()
+          // 드래그 위치 기준으로 가장 가까운 카드 찾기
+          const cards = Array.from(editorRef.current?.querySelectorAll('[data-product-card]') ?? []) as HTMLElement[]
+          const after = cards.find(card => {
+            if (card === dragging) return false
+            const box = card.getBoundingClientRect()
+            return e.clientY < box.top + box.height / 2
+          })
+          if (after) {
+            editorRef.current?.insertBefore(dragging, after)
+          } else {
+            editorRef.current?.appendChild(dragging)
+          }
+        }}
       />
     </div>
   )

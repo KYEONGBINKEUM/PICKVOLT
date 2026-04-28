@@ -22,7 +22,14 @@
       "Read(//Users/keumkyeongbin/Downloads/**)",
       "Read(//private/var/folders/**)",
       "Bash(curl -L \"https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg\" -o \"/Users/keumkyeongbin/바이브 코딩/PICKVOLT/public/amazon-logo.svg\")",
-      "Bash(npm list:*)"
+      "Bash(npm list:*)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix: 제품 검색 API performance_score 컬럼 제거, specs_common에서 파생 *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'fix: 듀얼 슬라이더 min/max 조정 버그 수정 *)",
+      "Bash(git commit -m 'fix: 제품 카드 width 100% + 게이지 주황색 + news 타입 DB constraint 추가 *)",
+      "Bash(git commit -m 'fix: 제품 카드 게이지 색상 메인컬러 rgb\\(255,77,0\\) 적용 *)",
+      "Bash(git commit -m 'docs: CLAUDE.md에 메인 컬러 rgb\\(255,77,0\\) 명시 *)"
     ]
   }
 }
