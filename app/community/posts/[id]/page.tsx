@@ -9,9 +9,12 @@ import {
   Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, Flag, Languages, X, Check
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
+import AdBanner from '@/components/AdBanner'
 import { supabase } from '@/lib/supabase'
 import { imgUrl } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
+
+const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
 
 interface CompareOption {
   id: string; label: string; vote_count: number
@@ -671,6 +674,13 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
         </div>
+
+        {/* 광고 배너 — 본문과 댓글 사이 */}
+        {AD_HTML_INLINE && (
+          <div className="flex justify-center">
+            <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
+          </div>
+        )}
 
         {/* 댓글 섹션 */}
         <div className="bg-surface border border-border rounded-xl overflow-hidden">

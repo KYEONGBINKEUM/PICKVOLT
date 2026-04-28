@@ -6,6 +6,10 @@ import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '@/components/PostFeed'
+import AdBanner from '@/components/AdBanner'
+
+const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
+const AD_EVERY = 6
 
 export default function CommunityPage() {
   const { t } = useI18n()
@@ -84,11 +88,15 @@ export default function CommunityPage() {
                 <p className="text-sm text-white/20">{t('board.empty')}</p>
               </div>
             )
-            : posts.map(post => (
-              compact
-                ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
-                : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
-            ))
+            : posts.flatMap((post, idx) => {
+                const card = compact
+                  ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
+                  : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
+                const showAd = AD_HTML_INLINE && (idx + 1) % AD_EVERY === 0 && idx < posts.length - 1
+                return showAd
+                  ? [card, <div key={`ad-${idx}`} className="my-3 flex justify-center"><AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" /></div>]
+                  : [card]
+              })
           }
         </div>
 

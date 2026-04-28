@@ -8,7 +8,10 @@ import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
 import CommunityRelated from '@/components/CommunityRelated'
+import AdBanner from '@/components/AdBanner'
 import { supabase } from '@/lib/supabase'
+
+const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
 import { extractFirstImage, stripHtml, timeAgo } from '@/components/PostFeed'
 import { imgUrl } from '@/lib/utils'
 
@@ -562,6 +565,12 @@ ${priceHTML}
             <SpecRow label={t('product.spec_bluetooth')} value={effectiveSpecs.bluetooth} />
             <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
           </div>
+          {/* 스펙표 하단 광고 */}
+          {AD_HTML_INLINE && (
+            <div className="mt-5 flex justify-center">
+              <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
+            </div>
+          )}
           <ReviewSection productId={product.id} />
           <CommunityReviewsSection productId={product.id} />
           <CommunityRelated productId={product.id} />

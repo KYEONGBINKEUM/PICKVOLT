@@ -12,8 +12,10 @@ import { shortenCompareTitle, shortenProductName, imgUrl } from '@/lib/utils'
 import { computeRelativeScores, type CategoryStats, type CpuBenchmarkMaxes } from '@/lib/scoring'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
+import AdBanner from '@/components/AdBanner'
 
 const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
+const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
 
 interface ProductVariant {
   id: string
@@ -1804,6 +1806,13 @@ export default function CompareClient() {
                 )
               })}
             </div>
+
+            {/* 비교표 하단 광고 */}
+            {AD_HTML_INLINE && (
+              <div className="mt-6 flex justify-center">
+                <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
+              </div>
+            )}
 
             {/* User Reviews — 탭으로 제품별 전환 */}
             <ReviewTabs products={products} />

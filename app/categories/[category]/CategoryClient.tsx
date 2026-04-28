@@ -32,7 +32,7 @@ import AdBanner from '@/components/AdBanner'
 // NEXT_PUBLIC_AD_BANNER_INLINE → 300×250 인라인 배너 (카드 사이사이)
 const AD_HTML_TOP    = process.env.NEXT_PUBLIC_AD_BANNER_TOP    ?? ''
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
-const AD_EVERY = 2  // 제품 N개마다 배너 1회 노출 (2-column 기준 한 줄마다)
+const AD_EVERY = 6  // 제품 N개마다 배너 1회 노출
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -903,26 +903,30 @@ export default function CategoryClient({ category }: { category: string }) {
         )).sort()
         setAvailableOsList(osValues)
 
-        const maxPrice   = Math.ceil(Math.max(0, ...results.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
-        const allRamVals = results.flatMap((p) =>
-          p.ram_gb != null
-            ? String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n))
-            : []
-        )
-        const maxRam     = allRamVals.length > 0
-          ? Math.ceil(Math.max(0, ...allRamVals) / 2) * 2
-          : DEFAULT_FILTERS.ramMax
-        const maxDisplay = Math.ceil(Math.max(0, ...results.map((p) => p.display_inch ?? 0)) * 10)  / 10  || DEFAULT_FILTERS.displayMax
-        const maxBattery = Math.ceil(Math.max(0, ...results.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
+        // 검색(q)이 활성화된 상태에서는 data ranges를 재계산하지 않음
+        // → 검색 결과가 적을 때 슬라이더 absMax가 줄어들어 thumb이 범위 밖으로 튀어나가는 버그 방지
+        if (!filters.q) {
+          const maxPrice   = Math.ceil(Math.max(0, ...results.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
+          const allRamVals = results.flatMap((p) =>
+            p.ram_gb != null
+              ? String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n))
+              : []
+          )
+          const maxRam     = allRamVals.length > 0
+            ? Math.ceil(Math.max(0, ...allRamVals) / 2) * 2
+            : DEFAULT_FILTERS.ramMax
+          const maxDisplay = Math.ceil(Math.max(0, ...results.map((p) => p.display_inch ?? 0)) * 10)  / 10  || DEFAULT_FILTERS.displayMax
+          const maxBattery = Math.ceil(Math.max(0, ...results.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
 
-        setDataRanges({ priceMax: maxPrice, ramMax: maxRam, displayMax: maxDisplay, batteryMax: maxBattery })
-        setFilters((prev) => ({
-          ...prev,
-          priceMax:   prev.priceMax   === DEFAULT_FILTERS.priceMax   ? maxPrice   : prev.priceMax,
-          ramMax:     prev.ramMax     === DEFAULT_FILTERS.ramMax     ? maxRam     : prev.ramMax,
-          displayMax: prev.displayMax === DEFAULT_FILTERS.displayMax ? maxDisplay : prev.displayMax,
-          batteryMax: prev.batteryMax === DEFAULT_FILTERS.batteryMax ? maxBattery : prev.batteryMax,
-        }))
+          setDataRanges({ priceMax: maxPrice, ramMax: maxRam, displayMax: maxDisplay, batteryMax: maxBattery })
+          setFilters((prev) => ({
+            ...prev,
+            priceMax:   prev.priceMax   === DEFAULT_FILTERS.priceMax   ? maxPrice   : prev.priceMax,
+            ramMax:     prev.ramMax     === DEFAULT_FILTERS.ramMax     ? maxRam     : prev.ramMax,
+            displayMax: prev.displayMax === DEFAULT_FILTERS.displayMax ? maxDisplay : prev.displayMax,
+            batteryMax: prev.batteryMax === DEFAULT_FILTERS.batteryMax ? maxBattery : prev.batteryMax,
+          }))
+        }
       } else {
         setAllProducts((prev) => [...prev, ...results])
       }
