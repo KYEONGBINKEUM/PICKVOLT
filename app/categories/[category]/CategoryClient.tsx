@@ -27,9 +27,11 @@ import { supabase } from '@/lib/supabase'
 import { imgUrl } from '@/lib/utils'
 import AdBanner from '@/components/AdBanner'
 
-// 광고 코드 설정: .env.local 에 NEXT_PUBLIC_AD_BANNER_CATEGORY 키로 광고 HTML 삽입
-// 예) Ezoic / Kakao AdFit / Amazon Associates / Carbon Ads 등 어떤 코드든 가능
-const AD_HTML = process.env.NEXT_PUBLIC_AD_BANNER_CATEGORY ?? ''
+// 광고 코드 설정 (Vercel 환경변수로 주입)
+// NEXT_PUBLIC_AD_BANNER_TOP    → 728×90 상단 배너 (데스크탑용)
+// NEXT_PUBLIC_AD_BANNER_INLINE → 300×250 인라인 배너 (카드 사이사이)
+const AD_HTML_TOP    = process.env.NEXT_PUBLIC_AD_BANNER_TOP    ?? ''
+const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
 const AD_EVERY = 5  // 제품 N개마다 배너 1회 노출
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1043,6 +1045,13 @@ export default function CategoryClient({ category }: { category: string }) {
 
         {/* Product list */}
         <div className="flex-1 min-w-0">
+          {/* 상단 가로 배너 (728×90) — 데스크탑에서만 표시 */}
+          {AD_HTML_TOP && (
+            <div className="hidden sm:block mb-5">
+              <AdBanner html={AD_HTML_TOP} className="w-full overflow-hidden rounded-2xl" />
+            </div>
+          )}
+
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -1089,10 +1098,10 @@ export default function CategoryClient({ category }: { category: string }) {
                       isAdmin={isAdmin}
                       maxScore={categoryMaxScore}
                     />
-                    {/* 광고 배너: AD_EVERY 개마다, 마지막 아이템 제외 */}
-                    {AD_HTML && (idx + 1) % AD_EVERY === 0 && idx < products.length - 1 && (
-                      <div key={`ad-${idx}`} className="col-span-full">
-                        <AdBanner html={AD_HTML} className="w-full rounded-2xl overflow-hidden" />
+                    {/* 인라인 배너 (300×250): AD_EVERY 개마다, 마지막 아이템 제외 */}
+                    {AD_HTML_INLINE && (idx + 1) % AD_EVERY === 0 && idx < products.length - 1 && (
+                      <div key={`ad-${idx}`} className="col-span-full flex justify-center">
+                        <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
                       </div>
                     )}
                   </>

@@ -31,7 +31,12 @@
       "Bash(git commit -m 'fix: 제품 카드 게이지 색상 메인컬러 rgb\\(255,77,0\\) 적용 *)",
       "Bash(git commit -m 'docs: CLAUDE.md에 메인 컬러 rgb\\(255,77,0\\) 명시 *)",
       "Bash(git commit -m 'fix: 듀얼 슬라이더 완전 재작성 — 커스텀 포인터 드래그 *)",
-      "Bash(git commit -m 'feat: 리뷰 별점 UI + 검색 API 500 수정 *)"
+      "Bash(git commit -m 'feat: 리뷰 별점 UI + 검색 API 500 수정 *)",
+      "Bash(git commit -m ' *)",
+      "WebFetch(domain:www.carbonads.net)",
+      "WebFetch(domain:propellerads.com)",
+      "WebFetch(domain:publishers.adsterra.com)",
+      "WebFetch(domain:adsterra.com)"
     ]
   }
 }
