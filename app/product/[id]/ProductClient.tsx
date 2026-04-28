@@ -567,8 +567,8 @@ ${priceHTML}
           </div>
           {/* 스펙표 하단 광고 — 내보내기(이미지/PDF) 시 제외 */}
           {AD_HTML_INLINE && (
-            <div className="mt-5 flex justify-center" data-export-exclude="true">
-              <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
+            <div className="mt-5" data-export-exclude="true">
+              <AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" />
             </div>
           )}
           <ReviewSection productId={product.id} />

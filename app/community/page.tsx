@@ -98,7 +98,7 @@ export default function CommunityPage() {
                   : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
                 const showAd = AD_HTML_INLINE && shouldShowAd(idx) && idx < posts.length - 1
                 return showAd
-                  ? [card, <div key={`ad-${idx}`} className="my-3 w-full"><AdBanner html={AD_HTML_INLINE} className="w-full rounded-2xl overflow-hidden" /></div>]
+                  ? [card, <div key={`ad-${idx}`} className="my-3 w-full"><AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" /></div>]
                   : [card]
               })
           }

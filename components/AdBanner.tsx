@@ -5,15 +5,35 @@ import { useEffect, useRef, useState } from 'react'
 interface AdBannerProps {
   html: string
   className?: string
+  /** 고정 크기 광고일 때 (e.g. 728×90): 지정하면 컨테이너 너비에 맞춰 scale 축소됨 */
+  adWidth?: number
+  adHeight?: number
 }
 
 // Global queue so multiple banners don't race to set atOptions simultaneously
 let adQueue = Promise.resolve()
 
-export default function AdBanner({ html, className }: AdBannerProps) {
+export default function AdBanner({ html, className, adWidth, adHeight }: AdBannerProps) {
   const ref         = useRef<HTMLDivElement>(null)
+  const wrapRef     = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
-  const [inView, setInView] = useState(false)
+  const [inView,    setInView]  = useState(false)
+  const [scale,     setScale]   = useState(1)
+
+  // Responsive scaling for fixed-size ads (e.g. 728×90)
+  useEffect(() => {
+    if (!adWidth || !wrapRef.current) return
+    const update = () => {
+      if (wrapRef.current) {
+        const w = wrapRef.current.offsetWidth
+        setScale(Math.min(1, w / adWidth))
+      }
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(wrapRef.current)
+    return () => ro.disconnect()
+  }, [adWidth])
 
   // Step 1 — watch for viewport entry
   useEffect(() => {
@@ -48,7 +68,6 @@ export default function AdBanner({ html, className }: AdBannerProps) {
       wrapper.querySelectorAll('script').forEach(s => s.remove())
       el.appendChild(wrapper)
 
-      // Execute scripts one by one, waiting for external src to load
       const runNext = (i: number) => {
         if (i >= scripts.length) { resolve(); return }
         const old = scripts[i]
@@ -59,7 +78,6 @@ export default function AdBanner({ html, className }: AdBannerProps) {
           s.onload  = () => setTimeout(() => runNext(i + 1), 50)
           s.onerror = () => runNext(i + 1)
         } else {
-          // inline script — execute synchronously then move on
           document.head.appendChild(s)
           document.head.removeChild(s)
           runNext(i + 1)
@@ -72,6 +90,27 @@ export default function AdBanner({ html, className }: AdBannerProps) {
   }, [html, inView])
 
   if (!html) return null
+
+  // 고정 크기 광고: 스케일 래퍼로 감싸서 반응형 처리
+  if (adWidth && adHeight) {
+    const scaledH = adHeight * scale
+    return (
+      <div ref={wrapRef} className={className} style={{ width: '100%', overflow: 'hidden' }}>
+        <div style={{
+          width: adWidth,
+          height: adHeight,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          marginLeft: `${((wrapRef.current?.offsetWidth ?? adWidth) - adWidth * scale) / 2}px`,
+          marginBottom: `${scaledH - adHeight}px`,
+        }}>
+          <div ref={ref} data-ad-banner="true" style={{ width: adWidth, height: adHeight }} />
+        </div>
+      </div>
+    )
+  }
+
+  // 반응형 광고 (기본)
   return (
     <div
       ref={ref}

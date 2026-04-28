@@ -1104,7 +1104,7 @@ export default function CategoryClient({ category }: { category: string }) {
                     {/* 인라인 배너: 10개 후 첫 노출, 이후 20개마다 */}
                     {AD_HTML_INLINE && shouldShowAd(idx) && idx < products.length - 1 && (
                       <div key={`ad-${idx}`} className="col-span-full w-full">
-                        <AdBanner html={AD_HTML_INLINE} className="w-full rounded-2xl overflow-hidden" />
+                        <AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" />
                       </div>
                     )}
                   </>
