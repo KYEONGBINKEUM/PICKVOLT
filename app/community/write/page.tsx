@@ -193,27 +193,27 @@ function WritePageInner() {
     setEmbeddedProducts(prev => {
       if (prev.find(x => x.id === p.id) || prev.length >= 4) return prev
       const imgHtml = p.image_url
-        ? `<img src="${p.image_url}" style="width:64px;height:64px;object-fit:contain;border-radius:8px;flex-shrink:0;display:block" />`
-        : `<span style="width:64px;height:64px;border-radius:8px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0">${p.brand?.[0] ?? '?'}</span>`
+        ? `<img src="${p.image_url}" style="width:72px;height:72px;object-fit:contain;border-radius:10px;flex-shrink:0;display:block" />`
+        : `<span style="width:72px;height:72px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0">${p.brand?.[0] ?? '?'}</span>`
       const scoreHtml = p.performance_score != null && p.performance_score > 0
-        ? `<span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px">` +
-          `<span style="width:40px;height:3px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden;display:inline-block">` +
-          `<span style="display:block;height:100%;width:${Math.min(100, Math.round(p.performance_score / 20))}%;background:rgba(99,102,241,0.9)"></span></span>` +
-          `<span style="font-size:10px;font-weight:700;color:rgba(99,102,241,0.85)">${Math.round(p.performance_score)}</span>` +
+        ? `<span style="display:inline-flex;align-items:center;gap:6px;margin-top:6px">` +
+          `<span style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden;display:inline-block;min-width:60px">` +
+          `<span style="display:block;height:100%;width:${Math.min(100, Math.round(p.performance_score / 20))}%;background:rgba(249,115,22,0.9)"></span></span>` +
+          `<span style="font-size:11px;font-weight:700;color:rgba(249,115,22,0.9)">${Math.round(p.performance_score)}</span>` +
           `</span>`
         : ''
       const priceHtml = p.price_usd != null
-        ? `<span style="display:block;font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">$${p.price_usd.toLocaleString()}</span>`
+        ? `<span style="display:block;font-size:12px;color:rgba(255,255,255,0.5);margin-top:3px;font-weight:500">$${p.price_usd.toLocaleString()}</span>`
         : ''
       const cardHtml =
-        `<a href="/product/${p.id}" contenteditable="false" style="display:inline-flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:10px 14px;background:rgba(255,255,255,0.04);margin:4px 2px;max-width:280px;vertical-align:middle;text-decoration:none;cursor:pointer">` +
+        `<a href="/product/${p.id}" contenteditable="false" style="display:flex;align-items:center;gap:14px;border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:14px 16px;background:rgba(255,255,255,0.04);margin:6px 0;width:100%;box-sizing:border-box;text-decoration:none;cursor:pointer">` +
         imgHtml +
         `<span style="flex:1;min-width:0">` +
-        `<span style="display:block;font-size:12px;font-weight:700;color:rgba(255,255,255,0.88);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>` +
-        `<span style="display:block;font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px">${p.brand}</span>` +
+        `<span style="display:block;font-size:14px;font-weight:700;color:rgba(255,255,255,0.88);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>` +
+        `<span style="display:block;font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">${p.brand}</span>` +
         priceHtml +
         scoreHtml +
-        `</span></a>&nbsp;`
+        `</span></a>`
       richEditorRef.current?.insertHtml(cardHtml)
       return [...prev, p]
     })
