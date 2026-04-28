@@ -50,7 +50,7 @@ export default async function CategoryPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(categorySchema) }}
       />
-      <Navbar />
+      <Navbar showSearch />
       <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
         <CategoryClient category={category} />
       </main>
