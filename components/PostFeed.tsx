@@ -29,7 +29,12 @@ function removeStructuralElements(html: string): string {
   if (typeof window === 'undefined') return html  // SSR passthrough
   try {
     const doc = new DOMParser().parseFromString(html, 'text/html')
+    // 1) explicitly marked (new posts)
     doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => el.remove())
+    // 2) any <table> in body = comparison table (old posts without data-compare-table)
+    doc.querySelectorAll('table').forEach(el => el.remove())
+    // 3) product card div by its drag cursor style (old posts without data-product-card)
+    doc.querySelectorAll('div[style*="cursor:grab"]').forEach(el => el.remove())
     return doc.body.innerHTML
   } catch {
     return html
