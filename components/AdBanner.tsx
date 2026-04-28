@@ -3,16 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 
 interface AdBannerProps {
-  /** Raw ad HTML/script to inject. Set via NEXT_PUBLIC_AD_BANNER_* env vars. */
   html: string
   className?: string
 }
 
-/**
- * AdBanner — lazy-loads ad script only when the slot enters the viewport.
- * This prevents race conditions when multiple banners exist on a page
- * (e.g. infinite-scroll product lists) that share a global `atOptions` variable.
- */
+// Global queue so multiple banners don't race to set atOptions simultaneously
+let adQueue = Promise.resolve()
+
 export default function AdBanner({ html, className }: AdBannerProps) {
   const ref         = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
@@ -29,32 +26,49 @@ export default function AdBanner({ html, className }: AdBannerProps) {
           observer.disconnect()
         }
       },
-      { rootMargin: '300px' }  // 300px 앞서 미리 로드
+      { rootMargin: '300px' }
     )
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
 
-  // Step 2 — inject scripts only after visible (one-time)
+  // Step 2 — inject ad scripts sequentially via global queue (prevents atOptions race)
   useEffect(() => {
     const el = ref.current
     if (!el || !html || !inView || initialized.current) return
     initialized.current = true
 
-    el.innerHTML = ''
-    const wrapper = document.createElement('div')
-    wrapper.style.width = '100%'
-    wrapper.innerHTML = html
+    adQueue = adQueue.then(() => new Promise<void>((resolve) => {
+      el.innerHTML = ''
+      const wrapper = document.createElement('div')
+      wrapper.style.width = '100%'
+      wrapper.innerHTML = html
 
-    // Re-create <script> tags so the browser executes them
-    wrapper.querySelectorAll('script').forEach(old => {
-      const s = document.createElement('script')
-      Array.from(old.attributes).forEach(a => s.setAttribute(a.name, a.value))
-      s.textContent = old.textContent
-      old.replaceWith(s)
-    })
+      const scripts = Array.from(wrapper.querySelectorAll('script'))
+      wrapper.querySelectorAll('script').forEach(s => s.remove())
+      el.appendChild(wrapper)
 
-    el.appendChild(wrapper)
+      // Execute scripts one by one, waiting for external src to load
+      const runNext = (i: number) => {
+        if (i >= scripts.length) { resolve(); return }
+        const old = scripts[i]
+        const s   = document.createElement('script')
+        Array.from(old.attributes).forEach(a => s.setAttribute(a.name, a.value))
+        s.textContent = old.textContent
+        if (old.src) {
+          s.onload  = () => setTimeout(() => runNext(i + 1), 50)
+          s.onerror = () => runNext(i + 1)
+        } else {
+          // inline script — execute synchronously then move on
+          document.head.appendChild(s)
+          document.head.removeChild(s)
+          runNext(i + 1)
+          return
+        }
+        el.appendChild(s)
+      }
+      runNext(0)
+    }))
   }, [html, inView])
 
   if (!html) return null
