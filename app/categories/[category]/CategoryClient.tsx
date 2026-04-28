@@ -39,7 +39,7 @@ function generateAdIndices(max = 600): Set<number> {
   let pos = 9  // 첫 광고: index 9 (10번째 제품 뒤)
   while (pos < max) {
     set.add(pos)
-    pos += Math.floor(Math.random() * 21) + 20  // 다음: +20~40 랜덤
+    pos += (Math.floor(Math.random() * 11) + 10) * 2  // 다음: +20~40 짝수 랜덤
   }
   return set
 }
