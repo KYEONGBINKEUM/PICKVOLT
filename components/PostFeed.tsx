@@ -23,16 +23,41 @@ export interface FeedPost {
   community_compare_options?: { vote_count: number }[]
 }
 
+// Remove product-card and compare-table blocks from HTML (for feed preview)
+function removeStructuralElements(html: string): string {
+  if (!html) return html
+  if (typeof window === 'undefined') return html  // SSR passthrough
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => el.remove())
+    return doc.body.innerHTML
+  } catch {
+    return html
+  }
+}
+
 export function extractFirstImage(body: string): string | null {
-  const m = (body ?? '').match(/<img[^>]+src=["']([^"']+)["']/i)
-  return m ? m[1] : null
+  const clean = removeStructuralElements(body ?? '')
+  const re = /<img[^>]+>/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(clean)) !== null) {
+    const tag = m[0]
+    const src = tag.match(/src=["']([^"']+)["']/)
+    if (src) return src[1]
+  }
+  return null
 }
 
 export function extractAllImages(body: string): string[] {
-  const re = /<img[^>]+src=["']([^"']+)["']/gi
+  const clean = removeStructuralElements(body ?? '')
+  const re = /<img[^>]+>/gi
   const imgs: string[] = []
   let m: RegExpExecArray | null
-  while ((m = re.exec(body ?? '')) !== null) imgs.push(m[1])
+  while ((m = re.exec(clean)) !== null) {
+    const tag = m[0]
+    const src = tag.match(/src=["']([^"']+)["']/)
+    if (src) imgs.push(src[1])
+  }
   return imgs
 }
 
@@ -117,8 +142,10 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
   const isHtml = /<[a-z]/i.test(post.body ?? '')
+  // Strip product-card / compare-table blocks before extracting preview images & text
+  const previewBody = isHtml ? removeStructuralElements(post.body) : (post.body ?? '')
   const images = isHtml ? extractAllImages(post.body) : []
-  const rawPlain = isHtml ? stripHtml(post.body) : (post.body ?? '')
+  const rawPlain = isHtml ? stripHtml(previewBody) : (post.body ?? '')
 
   const displayTitle = translated?.title ?? post.title
   const displayPlain = translated?.body ?? rawPlain
@@ -234,8 +261,10 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
   const isHtml = /<[a-z]/i.test(post.body ?? '')
+  // Strip product-card / compare-table blocks before extracting preview images & text
+  const previewBody = isHtml ? removeStructuralElements(post.body) : (post.body ?? '')
   const compactThumb = isHtml ? extractFirstImage(post.body) : null
-  const rawPlain = isHtml ? stripHtml(post.body) : (post.body ?? '')
+  const rawPlain = isHtml ? stripHtml(previewBody) : (post.body ?? '')
 
   const displayTitle = translated?.title ?? post.title
   const displayPlain = translated?.body ?? rawPlain

@@ -428,7 +428,16 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     if (translated) { setTranslated(null); return }
     setTranslating(true)
     try {
-      const plainBody = post.body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      // Strip structural elements (product cards, compare tables) before translating text
+      let textOnlyBody = post.body
+      if (typeof window !== 'undefined') {
+        try {
+          const doc = new DOMParser().parseFromString(post.body, 'text/html')
+          doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => el.remove())
+          textOnlyBody = doc.body.innerHTML
+        } catch { /* ignore */ }
+      }
+      const plainBody = textOnlyBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
       const [title, body] = await Promise.all([
         fetch(`/api/translate?q=${encodeURIComponent(post.title)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? post.title),
         plainBody ? fetch(`/api/translate?q=${encodeURIComponent(plainBody)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? plainBody) : Promise.resolve(''),
@@ -437,6 +446,17 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     } finally {
       setTranslating(false)
     }
+  }
+
+  // Extract only structural HTML (product cards + compare tables) from body
+  const extractStructuralHtml = (html: string): string => {
+    if (typeof window === 'undefined') return ''
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html')
+      const parts: string[] = []
+      doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => parts.push(el.outerHTML))
+      return parts.join('<br />')
+    } catch { return '' }
   }
 
   const showTranslateBtn = post ? needsTranslation(post.title + ' ' + post.body.replace(/<[^>]+>/g, '')) : false
@@ -570,10 +590,17 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               {/* 본문 */}
               {(post.body || translated?.body) && (
                 <div className="mb-4">
-                  {translated?.body
-                    ? <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">{translated.body}</p>
-                    : <MarkdownBody text={post.body} />
-                  }
+                  {translated?.body ? (
+                    <>
+                      <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap mb-3">{translated.body}</p>
+                      {/* Keep product cards & compare tables from original HTML */}
+                      {extractStructuralHtml(post.body) && (
+                        <MarkdownBody text={extractStructuralHtml(post.body)} />
+                      )}
+                    </>
+                  ) : (
+                    <MarkdownBody text={post.body} />
+                  )}
                 </div>
               )}
 

@@ -21,7 +21,16 @@ interface ProductResult {
   image_url: string | null
   price_usd: number | null
   performance_score: number | null
+  cpu_name: string | null
+  gpu_name: string | null
+  ram_gb: string | null
+  os: string | null
   launch_year: number | null
+  display_inch: number | null
+  display_hz: number | null
+  display_res: string | null
+  battery: string | null
+  weight: string | null
 }
 
 function ProductSearch({ onSelect, exclude, placeholder }: {
@@ -256,9 +265,11 @@ function WritePageInner() {
       // Cards are already embedded in the editor body; only append comparison table if 2+ products
       let appendHtml = ''
       if (embeddedProducts.length >= 2) {
-        // 헤더 행 (이미지 + 이름)
+        // 헤더 행 (이미지 + 이름 + 가격)
+        const n = embeddedProducts.length
+        const sep = (i: number) => i < n - 1 ? 'border-right:1px solid rgba(255,255,255,0.08);' : ''
         const headerCols = embeddedProducts.map((p, i) =>
-          `<td style="padding:16px 14px;text-align:center;${i < embeddedProducts.length - 1 ? 'border-right:1px solid rgba(255,255,255,0.08);' : ''}vertical-align:top;background:rgba(255,255,255,0.03)">` +
+          `<td style="padding:16px 14px;text-align:center;${sep(i)}vertical-align:top;background:rgba(255,255,255,0.03)">` +
           (p.image_url ? `<img src="${p.image_url}" style="width:64px;height:64px;object-fit:contain;margin:0 auto 8px;display:block" />` : '') +
           `<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.85)">${p.name}</div>` +
           `<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">${p.brand}</div>` +
@@ -266,12 +277,11 @@ function WritePageInner() {
           `</td>`
         ).join('')
 
-        // 스펙 행 생성 함수
+        // 스펙 행 생성 함수 (label은 번역된 문자열)
         const specRow = (label: string, values: (string | null)[]) => {
-          const hasAny = values.some(v => v != null)
-          if (!hasAny) return ''
+          if (!values.some(v => v != null)) return ''
           const cells = values.map((v, i) =>
-            `<td style="padding:10px 14px;text-align:center;font-size:12px;color:${v ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.2)'};${i < values.length - 1 ? 'border-right:1px solid rgba(255,255,255,0.06);' : ''}">` +
+            `<td style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;color:${v ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.2)'};${sep(i)}">` +
             (v ?? '—') + `</td>`
           ).join('')
           return `<tr style="border-top:1px solid rgba(255,255,255,0.06)">` +
@@ -279,16 +289,45 @@ function WritePageInner() {
             cells + `</tr>`
         }
 
+        // 점수 행 (게이지 포함)
+        const scoreRow = () => {
+          if (!embeddedProducts.some(p => p.performance_score != null)) return ''
+          const cells = embeddedProducts.map((p, i) => {
+            const s = p.performance_score != null ? Math.round(p.performance_score) : null
+            const bar = s != null
+              ? `<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:6px;overflow:hidden">` +
+                `<div style="height:100%;width:${s}%;background:rgba(255,77,0,0.85);border-radius:2px"></div></div>`
+              : ''
+            return `<td style="padding:10px 14px;text-align:center;${sep(i)}">` +
+              `<span style="font-size:20px;font-weight:900;color:rgba(255,77,0,0.95)">${s ?? '—'}</span>` +
+              (s != null ? `<span style="font-size:11px;color:rgba(255,255,255,0.25)"> /100</span>` : '') +
+              bar + `</td>`
+          }).join('')
+          return `<tr style="border-top:1px solid rgba(255,255,255,0.06)">` +
+            `<td style="padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.3);font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.02)">${t('compare.score')}</td>` +
+            cells + `</tr>`
+        }
+
         const specsRows = [
-          specRow('Score', embeddedProducts.map(p => p.performance_score != null ? String(Math.round(p.performance_score)) : null)),
-          specRow('Year',  embeddedProducts.map(p => p.launch_year != null ? String(p.launch_year) : null)),
+          scoreRow(),
+          specRow('CPU', embeddedProducts.map(p => p.cpu_name)),
+          specRow('GPU', embeddedProducts.map(p => p.gpu_name)),
+          specRow(t('spec.ram'), embeddedProducts.map(p => p.ram_gb != null ? `${p.ram_gb} GB` : null)),
+          specRow(t('cat.spec_display'), embeddedProducts.map(p =>
+            p.display_inch != null ? `${p.display_inch}"${p.display_hz ? ` ${p.display_hz}Hz` : ''}` : null
+          )),
+          specRow(t('compare.resolution'), embeddedProducts.map(p => p.display_res)),
+          specRow(t('cat.spec_battery'), embeddedProducts.map(p => p.battery)),
+          specRow(t('cat.spec_weight'), embeddedProducts.map(p => p.weight)),
+          specRow('OS', embeddedProducts.map(p => p.os)),
+          specRow(t('compare.launch_year'), embeddedProducts.map(p => p.launch_year != null ? String(p.launch_year) : null)),
         ].join('')
 
         appendHtml =
-          `<br /><table style="width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;margin:12px 0;table-layout:fixed">` +
-          `<colgroup><col style="width:90px" />${embeddedProducts.map(() => '<col />').join('')}</colgroup>` +
+          `<br /><div data-compare-table="true" style="overflow-x:auto;margin:12px 0"><table style="width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;table-layout:fixed">` +
+          `<colgroup><col style="width:100px" />${embeddedProducts.map(() => '<col />').join('')}</colgroup>` +
           `<thead><tr><td style="padding:16px 14px;background:rgba(255,255,255,0.03)"></td>${headerCols}</tr></thead>` +
-          `<tbody>${specsRows}</tbody></table>`
+          `<tbody>${specsRows}</tbody></table></div>`
       }
 
       const finalBody = body.trim() + appendHtml
