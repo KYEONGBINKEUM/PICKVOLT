@@ -269,11 +269,11 @@ function WritePageInner() {
         const n = embeddedProducts.length
         const sep = (i: number) => i < n - 1 ? 'border-right:1px solid rgba(255,255,255,0.08);' : ''
         const headerCols = embeddedProducts.map((p, i) =>
-          `<td style="padding:16px 14px;text-align:center;${sep(i)}vertical-align:top;background:rgba(255,255,255,0.03)">` +
-          (p.image_url ? `<img src="${p.image_url}" style="width:64px;height:64px;object-fit:contain;margin:0 auto 8px;display:block" />` : '') +
-          `<div style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.85)">${p.name}</div>` +
+          `<td style="padding:12px 10px;text-align:center;${sep(i)}vertical-align:top;background:rgba(255,255,255,0.03)">` +
+          (p.image_url ? `<img src="${p.image_url}" style="width:56px;height:56px;object-fit:contain;margin:0 auto 6px;display:block" />` : '') +
+          `<div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.85);word-break:break-word;line-height:1.3">${p.name}</div>` +
           `<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">${p.brand}</div>` +
-          (p.price_usd != null ? `<div style="font-size:11px;color:rgba(255,77,0,0.9);font-weight:600;margin-top:4px">$${p.price_usd.toLocaleString()}</div>` : '') +
+          (p.price_usd != null ? `<div style="font-size:11px;color:rgba(255,77,0,0.9);font-weight:600;margin-top:3px">$${p.price_usd.toLocaleString()}</div>` : '') +
           `</td>`
         ).join('')
 
@@ -281,11 +281,11 @@ function WritePageInner() {
         const specRow = (label: string, values: (string | null)[]) => {
           if (!values.some(v => v != null)) return ''
           const cells = values.map((v, i) =>
-            `<td style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;color:${v ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.2)'};${sep(i)}">` +
+            `<td style="padding:8px 10px;text-align:center;font-size:12px;font-weight:600;color:${v ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.2)'};${sep(i)}word-break:break-word">` +
             (v ?? '—') + `</td>`
           ).join('')
           return `<tr style="border-top:1px solid rgba(255,255,255,0.06)">` +
-            `<td style="padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.3);font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.02)">${label}</td>` +
+            `<td style="padding:8px 10px;font-size:10px;color:rgba(255,255,255,0.3);font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.02)">${label}</td>` +
             cells + `</tr>`
         }
 
@@ -295,16 +295,16 @@ function WritePageInner() {
           const cells = embeddedProducts.map((p, i) => {
             const s = p.performance_score != null ? Math.round(p.performance_score) : null
             const bar = s != null
-              ? `<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:6px;overflow:hidden">` +
+              ? `<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:5px;overflow:hidden">` +
                 `<div style="height:100%;width:${s}%;background:rgba(255,77,0,0.85);border-radius:2px"></div></div>`
               : ''
-            return `<td style="padding:10px 14px;text-align:center;${sep(i)}">` +
-              `<span style="font-size:20px;font-weight:900;color:rgba(255,77,0,0.95)">${s ?? '—'}</span>` +
-              (s != null ? `<span style="font-size:11px;color:rgba(255,255,255,0.25)"> /100</span>` : '') +
+            return `<td style="padding:8px 10px;text-align:center;${sep(i)}">` +
+              `<span style="font-size:18px;font-weight:900;color:rgba(255,77,0,0.95)">${s ?? '—'}</span>` +
+              (s != null ? `<span style="font-size:10px;color:rgba(255,255,255,0.25)"> /100</span>` : '') +
               bar + `</td>`
           }).join('')
           return `<tr style="border-top:1px solid rgba(255,255,255,0.06)">` +
-            `<td style="padding:10px 14px;font-size:11px;color:rgba(255,255,255,0.3);font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.02)">${t('compare.score')}</td>` +
+            `<td style="padding:8px 10px;font-size:10px;color:rgba(255,255,255,0.3);font-weight:600;white-space:nowrap;background:rgba(255,255,255,0.02)">${t('compare.overall_score')}</td>` +
             cells + `</tr>`
         }
 
@@ -316,17 +316,18 @@ function WritePageInner() {
           specRow(t('cat.spec_display'), embeddedProducts.map(p =>
             p.display_inch != null ? `${p.display_inch}"${p.display_hz ? ` ${p.display_hz}Hz` : ''}` : null
           )),
-          specRow(t('compare.resolution'), embeddedProducts.map(p => p.display_res)),
+          specRow(t('spec.resolution'), embeddedProducts.map(p => p.display_res)),
           specRow(t('cat.spec_battery'), embeddedProducts.map(p => p.battery)),
           specRow(t('cat.spec_weight'), embeddedProducts.map(p => p.weight)),
           specRow('OS', embeddedProducts.map(p => p.os)),
           specRow(t('compare.launch_year'), embeddedProducts.map(p => p.launch_year != null ? String(p.launch_year) : null)),
         ].join('')
 
+        const productColWidth = Math.max(140, Math.floor(300 / embeddedProducts.length))
         appendHtml =
-          `<br /><div data-compare-table="true" style="overflow-x:auto;margin:12px 0"><table style="width:100%;border-collapse:collapse;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;table-layout:fixed">` +
-          `<colgroup><col style="width:100px" />${embeddedProducts.map(() => '<col />').join('')}</colgroup>` +
-          `<thead><tr><td style="padding:16px 14px;background:rgba(255,255,255,0.03)"></td>${headerCols}</tr></thead>` +
+          `<br /><div data-compare-table="true" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden"><table style="width:100%;min-width:${80 + embeddedProducts.length * productColWidth}px;border-collapse:collapse">` +
+          `<colgroup><col style="width:80px;min-width:80px" />${embeddedProducts.map(() => `<col style="min-width:${productColWidth}px" />`).join('')}</colgroup>` +
+          `<thead><tr><td style="padding:12px 10px;background:rgba(255,255,255,0.03)"></td>${headerCols}</tr></thead>` +
           `<tbody>${specsRows}</tbody></table></div>`
       }
 
