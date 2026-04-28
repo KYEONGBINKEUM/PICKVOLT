@@ -1055,13 +1055,6 @@ export default function CategoryClient({ category }: { category: string }) {
 
         {/* Product list */}
         <div className="flex-1 min-w-0">
-          {/* 상단 배너 — 반응형 전체 너비 */}
-          {AD_HTML_TOP && (
-            <div className="mb-5">
-              <AdBanner html={AD_HTML_TOP} className="w-full overflow-hidden rounded-2xl" />
-            </div>
-          )}
-
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
