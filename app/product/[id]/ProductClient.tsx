@@ -565,9 +565,9 @@ ${priceHTML}
             <SpecRow label={t('product.spec_bluetooth')} value={effectiveSpecs.bluetooth} />
             <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
           </div>
-          {/* 스펙표 하단 광고 */}
+          {/* 스펙표 하단 광고 — 내보내기(이미지/PDF) 시 제외 */}
           {AD_HTML_INLINE && (
-            <div className="mt-5 flex justify-center">
+            <div className="mt-5 flex justify-center" data-export-exclude="true">
               <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
             </div>
           )}
