@@ -21,13 +21,6 @@ interface ProductResult {
   image_url: string | null
   price_usd: number | null
   performance_score: number | null
-  cpu_name: string | null
-  gpu_name: string | null
-  ram_gb: number | null
-  display_inch: number | null
-  display_hz: number | null
-  battery: string | null
-  weight: string | null
   launch_year: number | null
 }
 
@@ -288,12 +281,7 @@ function WritePageInner() {
 
         const specsRows = [
           specRow('Score', embeddedProducts.map(p => p.performance_score != null ? String(Math.round(p.performance_score)) : null)),
-          specRow('CPU', embeddedProducts.map(p => p.cpu_name)),
-          specRow('GPU', embeddedProducts.map(p => p.gpu_name)),
-          specRow('RAM', embeddedProducts.map(p => p.ram_gb != null ? `${p.ram_gb} GB` : null)),
-          specRow('Display', embeddedProducts.map(p => p.display_inch != null ? `${p.display_inch}"${p.display_hz ? ` ${p.display_hz}Hz` : ''}` : null)),
-          specRow('Battery', embeddedProducts.map(p => p.battery)),
-          specRow('Weight', embeddedProducts.map(p => p.weight)),
+          specRow('Year',  embeddedProducts.map(p => p.launch_year != null ? String(p.launch_year) : null)),
         ].join('')
 
         appendHtml =

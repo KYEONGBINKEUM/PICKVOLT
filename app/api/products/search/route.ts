@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const brand = searchParams.get('brand') ?? ''
     let query = supabase
       .from('products')
-      .select('id, name, brand, category, image_url, price_usd, specs_common(launch_year, cpu_name, gpu_name, ram_gb, display_inch, display_hz, battery_mah, battery_wh, weight_kg, weight_g, cpus(relative_score))')
+      .select('id, name, brand, category, image_url, price_usd, specs_common(launch_year, cpus(relative_score))')
       .eq('is_visible', true)
 
     if (q) query = query.ilike('name', `%${q}%`)
@@ -49,16 +49,7 @@ export async function GET(req: NextRequest) {
     const results = sorted.map(({ specs_common, ...rest }: any) => ({
       ...rest,
       performance_score: specs_common?.cpus?.relative_score ?? null,
-      cpu_name:     specs_common?.cpu_name ?? null,
-      gpu_name:     specs_common?.gpu_name ?? null,
-      ram_gb:       specs_common?.ram_gb ?? null,
-      display_inch: specs_common?.display_inch ?? null,
-      display_hz:   specs_common?.display_hz ?? null,
-      battery:      specs_common?.battery_mah ? `${specs_common.battery_mah.toLocaleString()} mAh`
-                    : specs_common?.battery_wh ? `${specs_common.battery_wh} Wh` : null,
-      weight:       specs_common?.weight_kg ? `${specs_common.weight_kg} kg`
-                    : specs_common?.weight_g ? `${specs_common.weight_g} g` : null,
-      launch_year:  specs_common?.launch_year ?? null,
+      launch_year:       specs_common?.launch_year ?? null,
     }))
 
     return NextResponse.json({ results, total: results.length })

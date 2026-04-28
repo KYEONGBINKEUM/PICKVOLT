@@ -48,32 +48,84 @@ function saveLikedSet(set: Set<string>) {
   localStorage.setItem('pv_liked', JSON.stringify(Array.from(set)))
 }
 
-function RatingPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+// ── Star helpers ─────────────────────────────────────────────
+// DB: 1–10 integers  |  Display: 0.5–5.0 stars (rating / 2)
+// Star N left-half = rating (N*2-1), right-half = rating N*2
+
+const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'
+
+function StarSvg({ fill, size = 18, idx }: { fill: 'full' | 'half' | 'empty'; size?: number; idx: number }) {
+  const clipId = `hstar-${idx}`
   return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n)}
-          className={`w-7 h-7 rounded-full text-xs font-bold transition-all ${
-            value >= n ? 'bg-accent text-white' : 'bg-white/5 text-white/30 hover:bg-white/10'
-          }`}
-        >
-          {n}
-        </button>
-      ))}
-      <span className="ml-2 text-xs text-white/40 font-semibold">/ 10</span>
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+      {fill === 'half' && (
+        <defs>
+          <clipPath id={clipId}>
+            <rect x="0" y="0" width="12" height="24" />
+          </clipPath>
+        </defs>
+      )}
+      {/* outline */}
+      <polygon points={STAR_POINTS} fill="none" stroke="rgba(255,77,0,0.35)" strokeWidth="1.5" strokeLinejoin="round" />
+      {/* fill */}
+      {fill !== 'empty' && (
+        <polygon
+          points={STAR_POINTS}
+          fill="rgb(255,77,0)"
+          stroke="none"
+          clipPath={fill === 'half' ? `url(#${clipId})` : undefined}
+        />
+      )}
+    </svg>
+  )
+}
+
+function StarDisplay({ rating, size = 16 }: { rating: number; size?: number }) {
+  // rating 1–10 → stars 0.5–5.0
+  const stars = rating / 2
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map(n => {
+        const fill = stars >= n ? 'full' : stars >= n - 0.5 ? 'half' : 'empty'
+        return <StarSvg key={n} idx={n} fill={fill} size={size} />
+      })}
+      <span className="text-[11px] text-white/35 ml-1 font-medium tabular-nums">{stars % 1 === 0 ? stars : stars.toFixed(1)}/5</span>
     </div>
   )
 }
 
-function RatingBadge({ rating }: { rating: number }) {
-  const color = rating >= 8 ? 'text-green-400' : rating >= 5 ? 'text-accent' : 'text-red-400'
+function RatingPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState<number | null>(null)
+  const display = hovered ?? value  // 1–10
+  const displayStars = display / 2
+
   return (
-    <span className={`text-sm font-black ${color}`}>
-      {rating}<span className="text-xs text-white/30 font-normal">/10</span>
-    </span>
+    <div className="flex items-center gap-1" onMouseLeave={() => setHovered(null)}>
+      {[1, 2, 3, 4, 5].map(n => {
+        const fill = displayStars >= n ? 'full' : displayStars >= n - 0.5 ? 'half' : 'empty'
+        return (
+          <div
+            key={n}
+            className="relative cursor-pointer"
+            onMouseMove={e => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const half = e.clientX - rect.left < rect.width / 2
+              setHovered(half ? n * 2 - 1 : n * 2)
+            }}
+            onClick={e => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const half = e.clientX - rect.left < rect.width / 2
+              onChange(half ? n * 2 - 1 : n * 2)
+            }}
+          >
+            <StarSvg idx={n} fill={fill} size={28} />
+          </div>
+        )
+      })}
+      <span className="ml-1.5 text-sm font-bold text-white/60 tabular-nums">
+        {displayStars % 1 === 0 ? displayStars : displayStars.toFixed(1)}<span className="text-xs text-white/25 font-normal">/5</span>
+      </span>
+    </div>
   )
 }
 
@@ -252,7 +304,7 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
             {displayed.map((r) => (
               <div key={r.id} className="rounded-lg bg-white/[0.03] border border-border p-2.5">
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <RatingBadge rating={r.rating ?? 5} />
+                  <StarDisplay rating={r.rating ?? 5} size={12} />
                   <span className="text-[10px] text-white/20">·</span>
                   <span className="text-[10px] text-white/30">{r.user_display_name}</span>
                 </div>
@@ -362,7 +414,7 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-xs font-semibold text-white/70">{r.user_display_name}</p>
-                      <RatingBadge rating={r.rating ?? 5} />
+                      <StarDisplay rating={r.rating ?? 5} size={14} />
                     </div>
                     <p className="text-[10px] text-white/30">{timeAgo(r.created_at)}</p>
                   </div>
