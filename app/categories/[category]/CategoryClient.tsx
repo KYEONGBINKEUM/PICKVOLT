@@ -406,64 +406,66 @@ function RangeFilter({
   format?: (v: number) => string
   defaultOpen?: boolean
 }) {
-  const [minOnTop, setMinOnTop] = useState(false)
   const trackRef = useRef<HTMLDivElement>(null)
+  const draggingRef = useRef<'min' | 'max' | null>(null)
   const pct = (v: number) => ((v - absMin) / (absMax - absMin)) * 100
 
-  // 클릭 위치 기준으로 더 가까운 thumb을 위로 올림
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!trackRef.current) return
-    const rect = trackRef.current.getBoundingClientRect()
-    const clickPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
-    const distMin = Math.abs(clickPct - pct(valueMin))
-    const distMax = Math.abs(clickPct - pct(valueMax))
-    setMinOnTop(distMin <= distMax)
+  const clampToStep = (v: number) => Math.round(v / step) * step
+
+  const valueFromClientX = (clientX: number) => {
+    const rect = trackRef.current!.getBoundingClientRect()
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    return clampToStep(absMin + ratio * (absMax - absMin))
   }
+
+  const handleTrackPointerDown = (e: React.PointerEvent) => {
+    if (!trackRef.current) return
+    e.preventDefault()
+    trackRef.current.setPointerCapture(e.pointerId)
+    const val = valueFromClientX(e.clientX)
+    const distMin = Math.abs(val - valueMin)
+    const distMax = Math.abs(val - valueMax)
+    draggingRef.current = distMin <= distMax ? 'min' : 'max'
+    // 즉시 값 이동
+    if (draggingRef.current === 'min') onChange(Math.min(Math.max(absMin, val), valueMax - step), valueMax)
+    else onChange(valueMin, Math.max(Math.min(absMax, val), valueMin + step))
+  }
+
+  const handleTrackPointerMove = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return
+    const val = valueFromClientX(e.clientX)
+    if (draggingRef.current === 'min') onChange(Math.min(Math.max(absMin, val), valueMax - step), valueMax)
+    else onChange(valueMin, Math.max(Math.min(absMax, val), valueMin + step))
+  }
+
+  const handleTrackPointerUp = () => { draggingRef.current = null }
 
   return (
     <FilterSection title={title} defaultOpen={defaultOpen}>
       <div className="px-1 pb-1">
-        {/* Dual range slider track */}
-        <div
+        {/* Dual range slider — 커스텀 드래그 (native input z-index 문제 해결) */}
+        <div className="relative pt-3 pb-4 mx-1 cursor-pointer select-none"
           ref={trackRef}
-          className="relative h-1 bg-surface-2 rounded-full mt-1 mb-5 mx-1"
-          onPointerDown={handlePointerDown}
+          onPointerDown={handleTrackPointerDown}
+          onPointerMove={handleTrackPointerMove}
+          onPointerUp={handleTrackPointerUp}
+          onPointerCancel={handleTrackPointerUp}
         >
-          <div
-            className="absolute h-full bg-accent rounded-full"
-            style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }}
-          />
+          {/* 트랙 */}
+          <div className="relative h-1 bg-surface-2 rounded-full">
+            <div
+              className="absolute h-full bg-accent rounded-full"
+              style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }}
+            />
+          </div>
           {/* Min thumb */}
-          <input
-            type="range"
-            min={absMin} max={absMax} step={step}
-            value={valueMin}
-            onChange={(e) => {
-              const v = Number(e.target.value)
-              onChange(Math.min(v, valueMax - step), valueMax)
-            }}
-            className="absolute w-full h-full opacity-0 cursor-pointer"
-            style={{ zIndex: minOnTop ? 5 : 3 }}
-          />
-          {/* Max thumb */}
-          <input
-            type="range"
-            min={absMin} max={absMax} step={step}
-            value={valueMax}
-            onChange={(e) => {
-              const v = Number(e.target.value)
-              onChange(valueMin, Math.max(v, valueMin + step))
-            }}
-            className="absolute w-full h-full opacity-0 cursor-pointer"
-            style={{ zIndex: minOnTop ? 4 : 5 }}
-          />
-          {/* Thumb dots */}
           <div
-            className="absolute w-4 h-4 bg-white rounded-full border-2 border-accent -top-1.5 -translate-x-1/2 pointer-events-none shadow-md"
+            className="absolute w-4 h-4 bg-white rounded-full border-2 border-accent top-1 -translate-x-1/2 shadow-md"
             style={{ left: `${pct(valueMin)}%` }}
           />
+          {/* Max thumb */}
           <div
-            className="absolute w-4 h-4 bg-white rounded-full border-2 border-accent -top-1.5 -translate-x-1/2 pointer-events-none shadow-md"
+            className="absolute w-4 h-4 bg-white rounded-full border-2 border-accent top-1 -translate-x-1/2 shadow-md"
             style={{ left: `${pct(valueMax)}%` }}
           />
         </div>
