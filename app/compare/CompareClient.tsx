@@ -209,8 +209,8 @@ function AIPickLocked({ t }: { t: (k: string) => string }) {
 function ProductCard({ product }: { product: Product }) {
   const imgSrc = product.image_url ? imgUrl(product.image_url, 600) : null
   const sourceDomain = product.source_url
-    ? new URL(product.source_url).hostname.replace('www.', '')
-    : product.brand.toLowerCase() + '.com'
+    ? new URL(product.source_url).hostname.replace('www.', '').replace(/\.com$/, '')
+    : product.brand.toLowerCase()
 
   return (
     <div className="flex flex-col">
