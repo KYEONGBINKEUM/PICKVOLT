@@ -69,7 +69,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
 
         {/* ── 좌측: 로고 + 메인 탭 ── */}
         <div className="flex items-center gap-1">
-          <Link href="/" className="flex items-center gap-2 mr-4 flex-shrink-0">
+          <Link href={isCommunity ? "/community" : "/"} className="flex items-center gap-2 mr-4 flex-shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse-dot" />
             <svg viewBox="0 0 1334.13 282.17" className="h-4 w-auto" fill="white" xmlns="http://www.w3.org/2000/svg" aria-label="pickvolt">
               <path d="M187.05,57.78c-7.39-13.39-18.12-23.89-32.18-31.49c-14.06-7.6-31.12-11.39-51.19-11.37L0.78,15.03l0.28,263.88l54.02-0.06l-0.09-86.25l47.64-0.05c20.31-0.02,37.57-3.79,51.79-11.3c14.22-7.51,25.07-17.91,32.55-31.2c7.48-13.29,11.22-28.67,11.2-46.15C198.15,86.55,194.44,71.18,187.05,57.78z M137.18,127.35c-3.48,6.73-8.78,12.02-15.92,15.87c-7.14,3.85-16.26,5.77-27.36,5.78l-38.96,0.04l-0.09-89.44l38.79-0.04c11.1-0.01,20.25,1.84,27.46,5.55c7.2,3.71,12.55,8.9,16.04,15.57c3.49,6.67,5.24,14.43,5.25,23.28C142.39,112.82,140.65,120.62,137.18,127.35z"/>
@@ -133,7 +133,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
 
           {authReady && (
             loggedIn ? (
-              <Link href="/mypage" className="text-white/40 hover:text-white transition-colors p-1.5">
+              <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} className="text-white/40 hover:text-white transition-colors p-1.5">
                 <User className="w-4 h-4" />
               </Link>
             ) : (
@@ -149,7 +149,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
         <div className="flex md:hidden items-center gap-1">
           <LocalePopup />
           {authReady && loggedIn && (
-            <Link href="/mypage" className="flex items-center justify-center w-9 h-9 rounded-full text-white/50 hover:text-white transition-colors">
+            <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} className="flex items-center justify-center w-9 h-9 rounded-full text-white/50 hover:text-white transition-colors">
               <User className="w-5 h-5" />
             </Link>
           )}
@@ -173,7 +173,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
         mobileOpen ? 'translate-y-0' : '-translate-y-full'
       )}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
-          <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
+          <Link href={isCommunity ? "/community" : "/"} className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
             <span className="w-2.5 h-2.5 rounded-full bg-accent" />
             <svg viewBox="0 0 1334.13 282.17" className="h-4 w-auto" fill="white" xmlns="http://www.w3.org/2000/svg" aria-label="pickvolt">
               <path d="M187.05,57.78c-7.39-13.39-18.12-23.89-32.18-31.49c-14.06-7.6-31.12-11.39-51.19-11.37L0.78,15.03l0.28,263.88l54.02-0.06l-0.09-86.25l47.64-0.05c20.31-0.02,37.57-3.79,51.79-11.3c14.22-7.51,25.07-17.91,32.55-31.2c7.48-13.29,11.22-28.67,11.2-46.15C198.15,86.55,194.44,71.18,187.05,57.78z M137.18,127.35c-3.48,6.73-8.78,12.02-15.92,15.87c-7.14,3.85-16.26,5.77-27.36,5.78l-38.96,0.04l-0.09-89.44l38.79-0.04c11.1-0.01,20.25,1.84,27.46,5.55c7.2,3.71,12.55,8.9,16.04,15.57c3.49,6.67,5.24,14.43,5.25,23.28C142.39,112.82,140.65,120.62,137.18,127.35z"/>
@@ -231,7 +231,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
         {authReady && (
           <div className="px-4 pb-6 pt-2 border-t border-border/50">
             {loggedIn ? (
-              <Link href="/mypage" onClick={() => setMobileOpen(false)}
+              <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
                 <User className="w-4 h-4" /> {t('mypage.title')}
               </Link>

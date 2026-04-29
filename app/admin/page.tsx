@@ -7,7 +7,7 @@ import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
-  Eye, EyeOff, Copy, Flag,
+  Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -18,7 +18,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -110,7 +110,7 @@ export default function AdminPage() {
   const [duplicating, setDuplicating] = useState<string | null>(null)
 
   // Users
-  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; plan: string; provider: string }[]>([])
+  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; plan: string; provider: string; posts: number; comments: number }[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersPage, setUsersPage] = useState(1)
   const [usersTotal, setUsersTotal] = useState(0)
@@ -182,6 +182,24 @@ export default function AdminPage() {
   const [reportsLoading, setReportsLoading] = useState(false)
   const [reportsFilter, setReportsFilter] = useState('')
 
+  // Inquiries (contact form)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [inquiries, setInquiries] = useState<any[]>([])
+  const [inquiriesLoading, setInquiriesLoading] = useState(false)
+  const [inquiriesFilter, setInquiriesFilter] = useState('')
+
+  // Edit requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editRequests, setEditRequests] = useState<any[]>([])
+  const [editRequestsLoading, setEditRequestsLoading] = useState(false)
+  const [editRequestsFilter, setEditRequestsFilter] = useState('')
+
+  // Add requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [addRequests, setAddRequests] = useState<any[]>([])
+  const [addRequestsLoading, setAddRequestsLoading] = useState(false)
+  const [addRequestsFilter, setAddRequestsFilter] = useState('')
+
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
   const [compError, setCompError] = useState<string | null>(null)
@@ -204,7 +222,7 @@ export default function AdminPage() {
     const params = new URLSearchParams(window.location.search)
     const tabParam = params.get('tab') as Tab | null
     const catParam = params.get('category') as 'smartphone' | 'tablet' | 'laptop' | null
-    if (tabParam && ['dashboard', 'products', 'users', 'comparisons', 'cpus', 'gpus'].includes(tabParam)) {
+    if (tabParam && ['dashboard', 'products', 'users', 'comparisons', 'cpus', 'gpus', 'reports', 'inquiries', 'edit_requests', 'add_requests'].includes(tabParam)) {
       setTab(tabParam)
     }
     if (catParam && ['smartphone', 'tablet', 'laptop'].includes(catParam)) {
@@ -620,6 +638,78 @@ export default function AdminPage() {
     setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r))
   }
 
+  const fetchInquiries = useCallback(async (statusFilter = '') => {
+    if (!token) return
+    setInquiriesLoading(true)
+    const qs = statusFilter ? `?status=${statusFilter}` : ''
+    const res = await fetch(`/api/contact${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) { const d = await res.json(); setInquiries(d.inquiries ?? []) }
+    setInquiriesLoading(false)
+  }, [token])
+
+  const handleInquiryStatus = async (id: string, status: string) => {
+    await fetch('/api/contact', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, status }),
+    })
+    setInquiries(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+  }
+
+  const fetchEditRequests = useCallback(async (statusFilter = '') => {
+    if (!token) return
+    setEditRequestsLoading(true)
+    const qs = statusFilter ? `?status=${statusFilter}` : ''
+    const res = await fetch(`/api/products/edit-request${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) { const d = await res.json(); setEditRequests(d.requests ?? []) }
+    setEditRequestsLoading(false)
+  }, [token])
+
+  const handleEditRequestStatus = async (id: string, status: string) => {
+    await fetch('/api/products/edit-request', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, status }),
+    })
+    setEditRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+  }
+
+  const fetchAddRequests = useCallback(async (statusFilter = '') => {
+    if (!token) return
+    setAddRequestsLoading(true)
+    const qs = statusFilter ? `?status=${statusFilter}` : ''
+    const res = await fetch(`/api/products/add-request${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) { const d = await res.json(); setAddRequests(d.requests ?? []) }
+    setAddRequestsLoading(false)
+  }, [token])
+
+  const handleAddRequestStatus = async (id: string, status: string) => {
+    await fetch('/api/products/add-request', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, status }),
+    })
+    setAddRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+  }
+
+  useEffect(() => {
+    if (!authed || !token) return
+    if (tab === 'inquiries') fetchInquiries(inquiriesFilter)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
+  useEffect(() => {
+    if (!authed || !token) return
+    if (tab === 'edit_requests') fetchEditRequests(editRequestsFilter)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
+  useEffect(() => {
+    if (!authed || !token) return
+    if (tab === 'add_requests') fetchAddRequests(addRequestsFilter)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const handleToggleVisible = async (id: string, current: boolean) => {
@@ -684,6 +774,9 @@ export default function AdminPage() {
     { key: 'cpus', label: 'CPU 관리', icon: <Cpu size={15} /> },
     { key: 'gpus', label: 'GPU 관리', icon: <Monitor size={15} /> },
     { key: 'reports', label: '신고 관리', icon: <Flag size={15} /> },
+    { key: 'inquiries', label: '문의 관리', icon: <Mail size={15} /> },
+    { key: 'edit_requests', label: '수정 요청', icon: <Pencil size={15} /> },
+    { key: 'add_requests', label: '등록 요청', icon: <PlusCircle size={15} /> },
   ]
 
   return (
@@ -981,7 +1074,9 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-3 text-white/40 font-medium">이메일</th>
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">가입일</th>
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">마지막 로그인</th>
-                      <th className="text-right px-4 py-3 text-white/40 font-medium">비교수</th>
+                      <th className="text-right px-4 py-3 text-white/40 font-medium">비교</th>
+                      <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">글</th>
+                      <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">댓글</th>
                       <th className="text-center px-4 py-3 text-white/40 font-medium">플랜</th>
                       <th className="text-center px-4 py-3 text-white/40 font-medium hidden md:table-cell">로그인</th>
                     </tr>
@@ -993,6 +1088,8 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.created_at)}</td>
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.last_sign_in_at)}</td>
                         <td className="px-4 py-3 text-white/70 text-right font-mono">{u.comparisons}</td>
+                        <td className="px-4 py-3 text-white/70 text-right font-mono hidden md:table-cell">{u.posts}</td>
+                        <td className="px-4 py-3 text-white/70 text-right font-mono hidden md:table-cell">{u.comments}</td>
                         <td className="px-4 py-3 text-center">
                           <button
                             onClick={() => handleUpdatePlan(u.id, u.plan === 'pro' ? 'free' : 'pro')}
@@ -1018,7 +1115,7 @@ export default function AdminPage() {
                       </tr>
                     ))}
                     {users.length === 0 && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
+                      <tr><td colSpan={8} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1793,6 +1890,265 @@ export default function AdminPage() {
                         {r.status !== 'pending' && (
                           <button
                             onClick={() => handleReportStatus(r.id, 'pending')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                          >
+                            대기로 변경
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── INQUIRIES ── */}
+        {tab === 'inquiries' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">문의 관리</h1>
+              <div className="flex gap-2">
+                {(['', 'pending', 'reviewed', 'closed'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { setInquiriesFilter(s); fetchInquiries(s) }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      inquiriesFilter === s
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    {s === '' ? '전체' : s === 'pending' ? '대기' : s === 'reviewed' ? '검토완료' : '종료'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {inquiriesLoading ? (
+              <div className="text-white/40 py-12 text-center">로딩 중...</div>
+            ) : inquiries.length === 0 ? (
+              <div className="text-white/40 py-12 text-center">문의 없음</div>
+            ) : (
+              <div className="space-y-3">
+                {inquiries.map(r => (
+                  <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${
+                            r.status === 'pending' ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
+                            r.status === 'reviewed' ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10' :
+                            'border-white/20 text-white/40 bg-white/5'
+                          }`}>
+                            {r.status === 'pending' ? '대기' : r.status === 'reviewed' ? '검토완료' : '종료'}
+                          </span>
+                          <span className="text-xs text-white/30">{formatDate(r.created_at)}</span>
+                        </div>
+                        <p className="text-sm font-bold text-white mb-1">{r.subject}</p>
+                        <p className="text-xs text-white/50 mb-2">{r.name} · {r.email}</p>
+                        <p className="text-sm text-white/70 bg-background rounded-lg p-2 border border-border/50 whitespace-pre-wrap">
+                          {r.body}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {r.status !== 'reviewed' && (
+                          <button
+                            onClick={() => handleInquiryStatus(r.id, 'reviewed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                          >
+                            검토완료
+                          </button>
+                        )}
+                        {r.status !== 'closed' && (
+                          <button
+                            onClick={() => handleInquiryStatus(r.id, 'closed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/40 hover:bg-white/5 transition-all"
+                          >
+                            종료
+                          </button>
+                        )}
+                        {r.status !== 'pending' && (
+                          <button
+                            onClick={() => handleInquiryStatus(r.id, 'pending')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                          >
+                            대기로 변경
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── EDIT REQUESTS ── */}
+        {tab === 'edit_requests' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">제품 수정 요청</h1>
+              <div className="flex gap-2">
+                {(['', 'pending', 'reviewed', 'closed'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { setEditRequestsFilter(s); fetchEditRequests(s) }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      editRequestsFilter === s
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    {s === '' ? '전체' : s === 'pending' ? '대기' : s === 'reviewed' ? '검토완료' : '종료'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {editRequestsLoading ? (
+              <div className="text-white/40 py-12 text-center">로딩 중...</div>
+            ) : editRequests.length === 0 ? (
+              <div className="text-white/40 py-12 text-center">수정 요청 없음</div>
+            ) : (
+              <div className="space-y-3">
+                {editRequests.map(r => (
+                  <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${
+                            r.status === 'pending' ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
+                            r.status === 'reviewed' ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10' :
+                            'border-white/20 text-white/40 bg-white/5'
+                          }`}>
+                            {r.status === 'pending' ? '대기' : r.status === 'reviewed' ? '검토완료' : '종료'}
+                          </span>
+                          <span className="text-xs text-white/30">{formatDate(r.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-white/50 mb-2">제품 ID: {r.product_id}</p>
+                        <div className="bg-background rounded-lg p-3 border border-border/50 space-y-1">
+                          <p className="text-xs text-white/40">필드: <span className="text-white/70 font-mono">{r.field_name}</span></p>
+                          <p className="text-xs text-white/40">기존값: <span className="text-white/70">{r.old_value || '—'}</span></p>
+                          <p className="text-xs text-white/40">변경값: <span className="text-accent font-bold">{r.new_value}</span></p>
+                          {r.reason && <p className="text-xs text-white/40">이유: <span className="text-white/70">{r.reason}</span></p>}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {r.status !== 'reviewed' && (
+                          <button
+                            onClick={() => handleEditRequestStatus(r.id, 'reviewed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                          >
+                            검토완료
+                          </button>
+                        )}
+                        {r.status !== 'closed' && (
+                          <button
+                            onClick={() => handleEditRequestStatus(r.id, 'closed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/40 hover:bg-white/5 transition-all"
+                          >
+                            종료
+                          </button>
+                        )}
+                        {r.status !== 'pending' && (
+                          <button
+                            onClick={() => handleEditRequestStatus(r.id, 'pending')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                          >
+                            대기로 변경
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ADD REQUESTS ── */}
+        {tab === 'add_requests' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">제품 등록 요청</h1>
+              <div className="flex gap-2">
+                {(['', 'pending', 'reviewed', 'closed'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { setAddRequestsFilter(s); fetchAddRequests(s) }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      addRequestsFilter === s
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    {s === '' ? '전체' : s === 'pending' ? '대기' : s === 'reviewed' ? '검토완료' : '종료'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {addRequestsLoading ? (
+              <div className="text-white/40 py-12 text-center">로딩 중...</div>
+            ) : addRequests.length === 0 ? (
+              <div className="text-white/40 py-12 text-center">등록 요청 없음</div>
+            ) : (
+              <div className="space-y-3">
+                {addRequests.map(r => (
+                  <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${
+                            r.status === 'pending' ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
+                            r.status === 'reviewed' ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10' :
+                            'border-white/20 text-white/40 bg-white/5'
+                          }`}>
+                            {r.status === 'pending' ? '대기' : r.status === 'reviewed' ? '검토완료' : '종료'}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full border border-border text-white/40">{r.category}</span>
+                          <span className="text-xs text-white/30">{formatDate(r.created_at)}</span>
+                        </div>
+                        <p className="text-sm font-bold text-white mb-0.5">{r.product_name}</p>
+                        <p className="text-xs text-white/50 mb-2">{r.brand}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs mb-2">
+                          {r.cpu && <p className="text-white/40">CPU: <span className="text-white/70">{r.cpu}</span></p>}
+                          {r.gpu && <p className="text-white/40">GPU: <span className="text-white/70">{r.gpu}</span></p>}
+                          {r.ram && <p className="text-white/40">RAM: <span className="text-white/70">{r.ram}</span></p>}
+                          {r.storage && <p className="text-white/40">저장소: <span className="text-white/70">{r.storage}</span></p>}
+                          {r.os && <p className="text-white/40">OS: <span className="text-white/70">{r.os}</span></p>}
+                          {r.launch_year && <p className="text-white/40">출시년도: <span className="text-white/70">{r.launch_year}</span></p>}
+                        </div>
+                        {r.extra_notes && (
+                          <p className="text-sm text-white/60 bg-background rounded-lg p-2 border border-border/50">
+                            {r.extra_notes}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {r.status !== 'reviewed' && (
+                          <button
+                            onClick={() => handleAddRequestStatus(r.id, 'reviewed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                          >
+                            검토완료
+                          </button>
+                        )}
+                        {r.status !== 'closed' && (
+                          <button
+                            onClick={() => handleAddRequestStatus(r.id, 'closed')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/40 hover:bg-white/5 transition-all"
+                          >
+                            종료
+                          </button>
+                        )}
+                        {r.status !== 'pending' && (
+                          <button
+                            onClick={() => handleAddRequestStatus(r.id, 'pending')}
                             className="text-xs px-3 py-1.5 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all"
                           >
                             대기로 변경

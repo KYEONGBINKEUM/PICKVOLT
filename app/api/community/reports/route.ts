@@ -47,6 +47,19 @@ export async function POST(req: NextRequest) {
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 신고 5회 이상이면 자동 비공개
+  if (target_type === 'post') {
+    const { count } = await supabase
+      .from('community_reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('target_type', 'post')
+      .eq('target_id', target_id)
+    if ((count ?? 0) >= 5) {
+      await supabase.from('community_posts').update({ is_hidden: true }).eq('id', target_id)
+    }
+  }
+
   return NextResponse.json({ ok: true }, { status: 201 })
 }
 

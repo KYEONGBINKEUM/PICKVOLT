@@ -20,6 +20,7 @@ import {
   Heart,
   Pencil,
   GitCompare,
+  Flag,
 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
@@ -993,6 +994,15 @@ export default function CategoryClient({ category }: { category: string }) {
   // 광고 위치: 마운트 시 1회 랜덤 생성 (리렌더마다 재계산 방지)
   const [adIndices] = useState<Set<number>>(() => generateAdIndices())
 
+  // 제품 등록 요청 모달
+  const [addReqOpen, setAddReqOpen] = useState(false)
+  const [addReqSubmitted, setAddReqSubmitted] = useState(false)
+  const [addReqSubmitting, setAddReqSubmitting] = useState(false)
+  const [addReqForm, setAddReqForm] = useState({
+    product_name: '', brand: '', cpu: '', gpu: '', ram: '', storage: '',
+    os: '', wifi: '', bluetooth: '', launch_year: '', extra_notes: '',
+  })
+
   const ALL_CATEGORIES = [
     { slug: 'smartphone', label: t('cat.smartphone') },
     { slug: 'laptop',     label: t('cat.laptop')     },
@@ -1039,9 +1049,18 @@ export default function CategoryClient({ category }: { category: string }) {
           )}
         </div>
 
-        <span className="text-sm text-white/30 tabular-nums">
-          {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-white/30 tabular-nums">
+            {loading ? '–' : t('cat.count').replace('{n}', total.toLocaleString())}
+          </span>
+          <button
+            onClick={() => { setAddReqOpen(true); setAddReqSubmitted(false) }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold border border-border text-white/40 hover:text-white hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+          >
+            <Flag className="w-3 h-3" />
+            {t('cat.add_request_btn')}
+          </button>
+        </div>
       </div>
 
       {/* Body */}
@@ -1279,6 +1298,110 @@ export default function CategoryClient({ category }: { category: string }) {
           </button>
         </div>
       </div>
+
+      {/* 제품 등록 요청 모달 */}
+      {addReqOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8 overflow-y-auto"
+          onClick={() => setAddReqOpen(false)}>
+          <div className="bg-surface border border-border rounded-card p-6 max-w-md w-full my-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm font-bold text-white">{t('cat.add_request_title')}</h2>
+              <button onClick={() => setAddReqOpen(false)} className="text-white/30 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {addReqSubmitted ? (
+              <div className="text-center py-6">
+                <Check className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <p className="text-sm text-white/70">{t('cat.add_request_submitted')}</p>
+              </div>
+            ) : (
+              <form onSubmit={async e => {
+                e.preventDefault()
+                setAddReqSubmitting(true)
+                await fetch('/api/products/add-request', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+                  body: JSON.stringify({ ...addReqForm, category }),
+                })
+                setAddReqSubmitting(false)
+                setAddReqSubmitted(true)
+              }} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_name')} *</label>
+                    <input required value={addReqForm.product_name} onChange={e => setAddReqForm(f => ({ ...f, product_name: e.target.value }))}
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_brand')} *</label>
+                    <input required value={addReqForm.brand} onChange={e => setAddReqForm(f => ({ ...f, brand: e.target.value }))}
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_cpu')}</label>
+                    <input value={addReqForm.cpu} onChange={e => setAddReqForm(f => ({ ...f, cpu: e.target.value }))}
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_gpu')}</label>
+                    <input value={addReqForm.gpu} onChange={e => setAddReqForm(f => ({ ...f, gpu: e.target.value }))}
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_ram')}</label>
+                    <input value={addReqForm.ram} onChange={e => setAddReqForm(f => ({ ...f, ram: e.target.value }))} placeholder="e.g. 8GB"
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_storage')}</label>
+                    <input value={addReqForm.storage} onChange={e => setAddReqForm(f => ({ ...f, storage: e.target.value }))} placeholder="e.g. 256GB"
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_os')}</label>
+                    <input value={addReqForm.os} onChange={e => setAddReqForm(f => ({ ...f, os: e.target.value }))}
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_launch_year')}</label>
+                    <input type="number" value={addReqForm.launch_year} onChange={e => setAddReqForm(f => ({ ...f, launch_year: e.target.value }))} placeholder="2024"
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_wifi')}</label>
+                    <input value={addReqForm.wifi} onChange={e => setAddReqForm(f => ({ ...f, wifi: e.target.value }))} placeholder="Wi-Fi 6E"
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_bluetooth')}</label>
+                    <input value={addReqForm.bluetooth} onChange={e => setAddReqForm(f => ({ ...f, bluetooth: e.target.value }))} placeholder="5.3"
+                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">{t('cat.add_req_notes')}</label>
+                  <textarea value={addReqForm.extra_notes} onChange={e => setAddReqForm(f => ({ ...f, extra_notes: e.target.value }))} rows={2}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors resize-none" />
+                </div>
+                <button type="submit" disabled={addReqSubmitting}
+                  className="w-full bg-accent hover:bg-accent/90 text-white text-sm font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50">
+                  {addReqSubmitting ? '...' : t('cat.add_request_submit')}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

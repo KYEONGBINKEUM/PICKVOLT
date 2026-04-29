@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown, FileText } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
@@ -14,6 +14,8 @@ export default function MyPage() {
   const { t, locale, setLocale } = useI18n()
   const { currency, setCurrency } = useCurrency()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromCommunity = searchParams.get('from') === 'community'
 
   const [user, setUser] = useState<{ email: string; name: string } | null>(null)
   const [compareCount, setCompareCount] = useState<number | null>(null)
@@ -41,6 +43,10 @@ export default function MyPage() {
   const [nicknameError, setNicknameError] = useState('')
   const [nicknameDupStatus, setNicknameDupStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
   const nicknameDupRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 커뮤니티 활동
+  const [myPosts, setMyPosts] = useState<{ id: string; title: string; type: string; upvotes: number; comment_count: number; created_at: string }[]>([])
+  const [myComments, setMyComments] = useState<{ id: string; body: string; created_at: string; post_id: string; community_posts: { id: string; title: string } | null }[]>([])
 
   // 포인트 & 설정
   const [points, setPoints] = useState<number | null>(null)
@@ -105,6 +111,9 @@ export default function MyPage() {
             .then((r) => r.json()).then((j) => setMyReviews(j.reviews ?? []))
           fetch('/api/wishlist', { headers: { Authorization: `Bearer ${token}` } })
             .then((r) => r.json()).then((j) => setWishlist(j.wishlist ?? []))
+          fetch('/api/community/my-activity', { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json()).then((j) => { setMyPosts(j.posts ?? []); setMyComments(j.comments ?? []) })
+            .catch(() => {})
 
           // 포인트 & 설정 로드
           fetch('/api/user/points', { headers: { Authorization: `Bearer ${token}` } })
@@ -324,6 +333,11 @@ export default function MyPage() {
         )}
 
         <div className="max-w-xl mx-auto">
+          {fromCommunity && (
+            <Link href="/community" className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors mb-6">
+              ← {t('community.title')}
+            </Link>
+          )}
           <h1 className="text-4xl font-black text-white mb-8">{t('mypage.title')}</h1>
 
           {/* Profile card */}
@@ -528,7 +542,7 @@ export default function MyPage() {
             </div>
           )}
 
-          {/* Plan */}
+          {/* Plan — 비활성화
           <div className={`rounded-card p-5 mb-4 flex items-center justify-between ${
             isPro
               ? 'bg-gradient-to-r from-accent/20 to-transparent border border-accent/30'
@@ -554,6 +568,52 @@ export default function MyPage() {
               </Link>
             )}
           </div>
+          */}
+
+          {/* 내 커뮤니티 게시글 */}
+          {myPosts.length > 0 && (
+            <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+                <FileText className="w-4 h-4 text-white/40" />
+                <p className="text-sm font-bold text-white">{t('mypage.my_posts_heading')} <span className="text-white/30 font-normal text-xs ml-1">{myPosts.length}{t('mypage.count_unit')}</span></p>
+              </div>
+              <div className="divide-y divide-border">
+                {myPosts.map((p) => (
+                  <Link key={p.id} href={`/community/posts/${p.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-2 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-accent/60 mb-0.5">{t(`community.${p.type}`)}</p>
+                      <p className="text-sm font-semibold text-white truncate">{p.title}</p>
+                      <p className="text-[10px] text-white/25 mt-0.5">↑{p.upvotes} · {p.comment_count}{t('mypage.comment_unit')}</p>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-white/20 flex-shrink-0" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 내 댓글 */}
+          {myComments.length > 0 && (
+            <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+                <MessageSquare className="w-4 h-4 text-white/40" />
+                <p className="text-sm font-bold text-white">{t('mypage.my_comments_heading')} <span className="text-white/30 font-normal text-xs ml-1">{myComments.length}{t('mypage.count_unit')}</span></p>
+              </div>
+              <div className="divide-y divide-border">
+                {myComments.map((c) => (
+                  <Link key={c.id} href={`/community/posts/${c.post_id}`} className="flex items-start gap-3 px-5 py-3 hover:bg-surface-2 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      {c.community_posts && (
+                        <p className="text-[10px] text-white/30 truncate mb-0.5">↳ {c.community_posts.title}</p>
+                      )}
+                      <p className="text-sm text-white/70 line-clamp-2">{c.body.replace(/<[^>]+>/g, ' ').trim()}</p>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-white/20 flex-shrink-0 mt-1" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Preferences */}
           <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">

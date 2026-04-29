@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight, Flag } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { imgUrl } from '@/lib/utils'
 
@@ -135,6 +135,53 @@ async function translateText(text: string, targetLang: string): Promise<string> 
   return d.text ?? text
 }
 
+function ReportButton({ postId, token, t }: { postId: string; token: string | null; t: (k: string) => string }) {
+  const [open, setOpen] = useState(false)
+  const [done, setDone] = useState(false)
+  const reasons = ['spam', 'hate', 'sexual', 'violence', 'false_info', 'other'] as const
+
+  const submit = async (reason: string) => {
+    if (!token) return
+    await fetch('/api/community/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ target_type: 'post', target_id: postId, reason }),
+    })
+    setDone(true)
+    setTimeout(() => setOpen(false), 1200)
+  }
+
+  if (!token) return null
+  return (
+    <div className="relative">
+      <button
+        onClick={e => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o) }}
+        className="flex items-center gap-1 text-white/20 hover:text-red-400/60 transition-colors"
+        title={t('report.title')}
+      >
+        <Flag className="w-3 h-3" />
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 bottom-5 z-50 bg-surface border border-border rounded-xl shadow-2xl py-1.5 min-w-[140px]"
+          onClick={e => e.stopPropagation()}
+        >
+          {done ? (
+            <p className="px-3 py-2 text-xs text-green-400">{t('report.done')}</p>
+          ) : (
+            reasons.map(r => (
+              <button key={r} onClick={() => submit(r)}
+                className="w-full text-left px-3 py-2 text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                {t(`report.reason.${r}` as Parameters<typeof t>[0])}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function CardPost({ post, token, onVote, t, showType = true }: {
   post: FeedPost
   token: string | null
@@ -238,16 +285,19 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
               <Eye className="w-3 h-3" />{post.view_count}
             </Link>
           )}
-          {showTranslateBtn && (
-            <button
-              onClick={handleTranslate}
-              disabled={translating}
-              className="flex items-center gap-1 text-white/25 hover:text-accent/70 transition-colors disabled:opacity-40 ml-auto"
-            >
-              <Languages className="w-3 h-3" />
-              {translating ? t('post.translating') : translated ? t('post.show_original') : t('post.translate')}
-            </button>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {showTranslateBtn && (
+              <button
+                onClick={handleTranslate}
+                disabled={translating}
+                className="flex items-center gap-1 text-white/25 hover:text-accent/70 transition-colors disabled:opacity-40"
+              >
+                <Languages className="w-3 h-3" />
+                {translating ? t('post.translating') : translated ? t('post.show_original') : t('post.translate')}
+              </button>
+            )}
+            <ReportButton postId={post.id} token={token} t={t} />
+          </div>
         </div>
       </div>
     </div>
@@ -341,16 +391,19 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
           <span>{post.user_display_name}</span>
           <span>{timeAgo(post.created_at, t)}</span>
           <span className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" />{post.comment_count}</span>
-          {showTranslateBtn && (
-            <button
-              onClick={handleTranslate}
-              disabled={translating}
-              className="flex items-center gap-0.5 text-white/20 hover:text-accent/70 transition-colors disabled:opacity-40 ml-auto"
-            >
-              <Languages className="w-3 h-3" />
-              {translating ? t('post.translating') : translated ? t('post.show_original') : t('post.translate')}
-            </button>
-          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {showTranslateBtn && (
+              <button
+                onClick={handleTranslate}
+                disabled={translating}
+                className="flex items-center gap-0.5 text-white/20 hover:text-accent/70 transition-colors disabled:opacity-40"
+              >
+                <Languages className="w-3 h-3" />
+                {translating ? t('post.translating') : translated ? t('post.show_original') : t('post.translate')}
+              </button>
+            )}
+            <ReportButton postId={post.id} token={token} t={t} />
+          </div>
         </div>
       </div>
     </div>

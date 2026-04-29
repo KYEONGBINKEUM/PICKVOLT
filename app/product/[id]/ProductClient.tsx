@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2, Heart, Pencil } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2, Heart, Pencil, Flag, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
@@ -166,6 +166,13 @@ export default function ProductClient({ product }: { product: Product }) {
   const [wishlistLoading, setWishlistLoading] = useState(false)
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [editRequestOpen, setEditRequestOpen] = useState(false)
+  const [editField, setEditField] = useState('')
+  const [editOldVal, setEditOldVal] = useState('')
+  const [editNewVal, setEditNewVal] = useState('')
+  const [editReason, setEditReason] = useState('')
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editSubmitted, setEditSubmitted] = useState(false)
 
   const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
     .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
@@ -450,6 +457,14 @@ ${priceHTML}
               수정
             </Link>
           )}
+          {/* 수정 요청 */}
+          <button
+            onClick={() => { setEditRequestOpen(true); setEditSubmitted(false) }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold border border-border text-white/40 hover:text-white hover:border-white/20 px-3 py-1.5 rounded-full transition-all"
+          >
+            <Flag className="w-3.5 h-3.5" />
+            {t('product.edit_request_btn')}
+          </button>
         </div>
       </div>
 
@@ -576,6 +591,61 @@ ${priceHTML}
           <CommunityRelated productId={product.id} />
         </div>
       </div>
+
+      {/* 수정 요청 모달 */}
+      {editRequestOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setEditRequestOpen(false)}>
+          <div className="bg-surface border border-border rounded-card p-6 max-w-sm w-full"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-white">{t('product.edit_request_title')}</h2>
+              <button onClick={() => setEditRequestOpen(false)} className="text-white/30 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {editSubmitted ? (
+              <div className="text-center py-4">
+                <Check className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <p className="text-sm text-white/70">{t('product.edit_request_submitted')}</p>
+              </div>
+            ) : (
+              <form onSubmit={async e => {
+                e.preventDefault()
+                if (!authToken) { window.location.href = '/login'; return }
+                setEditSubmitting(true)
+                await fetch('/api/products/edit-request', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+                  body: JSON.stringify({ product_id: product.id, field_name: editField, old_value: editOldVal, new_value: editNewVal, reason: editReason }),
+                })
+                setEditSubmitting(false)
+                setEditSubmitted(true)
+              }} className="space-y-3">
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">{t('product.edit_request_field')} *</label>
+                  <input value={editField} onChange={e => setEditField(e.target.value)} required placeholder={t('product.edit_request_field_placeholder')}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">{t('product.edit_request_new_value')} *</label>
+                  <input value={editNewVal} onChange={e => setEditNewVal(e.target.value)} required placeholder={t('product.edit_request_new_value_placeholder')}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">{t('product.edit_request_reason')}</label>
+                  <textarea value={editReason} onChange={e => setEditReason(e.target.value)} rows={2} placeholder={t('product.edit_request_reason_placeholder')}
+                    className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors resize-none" />
+                </div>
+                <button type="submit" disabled={editSubmitting}
+                  className="w-full bg-accent hover:bg-accent/90 text-white text-sm font-bold py-2.5 rounded-xl transition-colors disabled:opacity-50">
+                  {editSubmitting ? '...' : t('product.edit_request_submit')}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }

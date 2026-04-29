@@ -71,6 +71,30 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // 커뮤니티 포스트 수
+    const postsMap: Record<string, number> = {}
+    if (userIds.length > 0) {
+      const { data: postRows } = await svc
+        .from('community_posts')
+        .select('user_id')
+        .in('user_id', userIds)
+      for (const row of postRows ?? []) {
+        postsMap[row.user_id] = (postsMap[row.user_id] ?? 0) + 1
+      }
+    }
+
+    // 커뮤니티 댓글 수
+    const commentsMap: Record<string, number> = {}
+    if (userIds.length > 0) {
+      const { data: commentRows } = await svc
+        .from('community_comments')
+        .select('user_id')
+        .in('user_id', userIds)
+      for (const row of commentRows ?? []) {
+        commentsMap[row.user_id] = (commentsMap[row.user_id] ?? 0) + 1
+      }
+    }
+
     const enriched = users.map((u) => ({
       id: u.id,
       email: u.email ?? '',
@@ -79,6 +103,8 @@ export async function GET(req: NextRequest) {
       comparisons: compMap[u.id] ?? 0,
       plan: planMap[u.id] ?? 'free',
       provider: (u.app_metadata?.provider as string) ?? 'email',
+      posts: postsMap[u.id] ?? 0,
+      comments: commentsMap[u.id] ?? 0,
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
