@@ -71,7 +71,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
         <div className="flex items-center gap-1">
           <Link href="/" className="flex items-center gap-2 mr-4 flex-shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse-dot" />
-            <span className="font-bold text-white text-base tracking-tight">pickvolt</span>
+            <img src="/logo.svg" alt="pickvolt" className="h-4 w-auto" />
           </Link>
 
           <div className="hidden md:flex items-center">
@@ -166,7 +166,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
         <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
           <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
             <span className="w-2.5 h-2.5 rounded-full bg-accent" />
-            <span className="font-bold text-white text-base tracking-tight">pickvolt</span>
+            <img src="/logo.svg" alt="pickvolt" className="h-4 w-auto" />
           </Link>
           <button onClick={() => setMobileOpen(false)}
             className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">

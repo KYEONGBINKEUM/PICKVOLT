@@ -18,10 +18,24 @@ export const metadata: Metadata = {
   title: 'pickvolt — ai-powered product comparisons',
   description: 'compare any tech product and get an ai-powered verdict instantly.',
   keywords: ['product comparison', 'tech specs', 'ai recommendations', 'vs'],
+  metadataBase: new URL('https://www.pickvolt.com'),
+  icons: {
+    icon: '/icon.png',
+    apple: '/apple-icon.png',
+  },
   openGraph: {
-    title: 'pickvolt',
+    title: 'Pickvolt',
     description: 'compare any tech product and get an ai-powered verdict instantly.',
     type: 'website',
+    url: 'https://www.pickvolt.com',
+    siteName: 'Pickvolt',
+    images: [{ url: '/opengraph-image.png', width: 1200, height: 630, alt: 'Pickvolt' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pickvolt',
+    description: 'compare any tech product and get an ai-powered verdict instantly.',
+    images: ['/opengraph-image.png'],
   },
 }
 

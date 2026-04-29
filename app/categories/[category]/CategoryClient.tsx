@@ -572,10 +572,10 @@ function FilterSidebar({
   const isDefault = (f: Filters) =>
     f.brands.length === 0 &&
     !f.q && !f.os &&
-    f.priceMin === DEFAULT_FILTERS.priceMin && f.priceMax === DEFAULT_FILTERS.priceMax &&
-    f.ramMin === DEFAULT_FILTERS.ramMin && f.ramMax === DEFAULT_FILTERS.ramMax &&
-    f.displayMin === DEFAULT_FILTERS.displayMin && f.displayMax === DEFAULT_FILTERS.displayMax &&
-    f.batteryMin === DEFAULT_FILTERS.batteryMin && f.batteryMax === DEFAULT_FILTERS.batteryMax
+    f.priceMin === DEFAULT_FILTERS.priceMin && f.priceMax === dataRanges.priceMax &&
+    f.ramMin === DEFAULT_FILTERS.ramMin && f.ramMax === dataRanges.ramMax &&
+    f.displayMin === DEFAULT_FILTERS.displayMin && f.displayMax === dataRanges.displayMax &&
+    f.batteryMin === DEFAULT_FILTERS.batteryMin && f.batteryMax === dataRanges.batteryMax
 
   const toggleBrand = (brand: string) => {
     const next = filters.brands.includes(brand)
@@ -717,7 +717,7 @@ function FilterSidebar({
       {/* Reset */}
       {!isDefault(filters) && (
         <button
-          onClick={() => onChange({ ...DEFAULT_FILTERS, sort: filters.sort })}
+          onClick={() => onChange({ ...DEFAULT_FILTERS, sort: filters.sort, priceMax: dataRanges.priceMax, ramMax: dataRanges.ramMax, displayMax: dataRanges.displayMax, batteryMax: dataRanges.batteryMax })}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-white/40 hover:text-white transition-colors border border-border hover:border-white/20"
         >
           <X className="w-3.5 h-3.5" />
