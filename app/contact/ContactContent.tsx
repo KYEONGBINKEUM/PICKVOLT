@@ -107,24 +107,6 @@ export default function ContactContent() {
           </button>
         </form>
       )}
-
-      <div className="mt-6 rounded-xl border border-border p-5 space-y-3">
-        <h2 className="text-sm font-bold text-white">{t('contact.faq_title')}</h2>
-        <ul className="space-y-2 text-sm text-white/50">
-          <li>
-            <span className="text-white/70">{t('contact.faq_product_title')}</span>
-            {' '}{t('contact.faq_product_body')}
-          </li>
-          <li>
-            <span className="text-white/70">{t('contact.faq_specs_title')}</span>
-            {' '}{t('contact.faq_specs_body')}
-          </li>
-          <li>
-            <span className="text-white/70">{t('contact.faq_billing_title')}</span>
-            {' '}{t('contact.faq_billing_body')}
-          </li>
-        </ul>
-      </div>
     </div>
   )
 }
