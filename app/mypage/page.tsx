@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -10,7 +10,7 @@ import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
 import { supabase } from '@/lib/supabase'
 
-export default function MyPage() {
+function MyPageContent() {
   const { t, locale, setLocale } = useI18n()
   const { currency, setCurrency } = useCurrency()
   const router = useRouter()
@@ -825,5 +825,13 @@ export default function MyPage() {
         )}
       </main>
     </>
+  )
+}
+
+export default function MyPage() {
+  return (
+    <Suspense>
+      <MyPageContent />
+    </Suspense>
   )
 }
