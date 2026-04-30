@@ -319,7 +319,7 @@ function MyPageContent() {
 
   return (
     <>
-      <Navbar />
+      <Navbar communityContext={fromCommunity} />
       <main className="min-h-screen bg-background pt-24 pb-20 px-6 max-w-inner mx-auto">
 
         {/* 일일 로그인 보너스 토스트 */}

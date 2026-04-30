@@ -12,9 +12,10 @@ import SearchBar from '@/components/SearchBar'
 
 interface NavbarProps {
   showSearch?: boolean
+  communityContext?: boolean
 }
 
-export default function Navbar({ showSearch }: NavbarProps) {
+export default function Navbar({ showSearch, communityContext }: NavbarProps) {
   const pathname = usePathname()
   const { t } = useI18n()
   const [loggedIn, setLoggedIn] = useState(false)
@@ -41,7 +42,7 @@ export default function Navbar({ showSearch }: NavbarProps) {
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const isCommunity = pathname.startsWith('/community')
+  const isCommunity = pathname.startsWith('/community') || communityContext === true
 
   // 커뮤니티 섹션 우측 링크
   const communityLinks = [
