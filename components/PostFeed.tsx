@@ -19,6 +19,9 @@ export interface FeedPost {
   created_at: string
   user_display_name: string
   my_vote?: boolean
+  is_bot?: boolean
+  source_url?: string | null
+  source_name?: string | null
   community_post_products?: { products: { id: string; name: string } | null }[]
   community_compare_options?: { vote_count: number }[]
 }
@@ -204,6 +207,7 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
 
   const linkedProduct = post.community_post_products?.[0]?.products
   const showTranslateBtn = needsTranslation(post.title + ' ' + rawPlain, locale)
+  const isExternal = !!(post.is_bot && post.source_url)
 
   const handleTranslate = async () => {
     if (translated) { setTranslated(null); return }
@@ -218,6 +222,13 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
       setTranslating(false)
     }
   }
+
+  const ContentWrapper = ({ children }: { children: React.ReactNode }) =>
+    isExternal ? (
+      <a href={post.source_url!} target="_blank" rel="noopener noreferrer">{children}</a>
+    ) : (
+      <Link href={`/community/posts/${post.id}`}>{children}</Link>
+    )
 
   return (
     <div className="flex group border-b border-border/40 py-3 px-2 hover:bg-white/[0.02] transition-colors">
@@ -236,7 +247,7 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
 
       {/* content */}
       <div className="flex-1 min-w-0">
-        <Link href={`/community/posts/${post.id}`}>
+        <ContentWrapper>
           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             {showType && (
               <span className="text-[10px] font-semibold text-accent/70">{t(`community.${post.type}`)}</span>
@@ -261,7 +272,7 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
 
           <p className="text-[15px] font-semibold text-white/80 group-hover:text-white transition-colors leading-snug line-clamp-2 mb-1.5">
             {displayTitle}
-            {post.comment_count > 0 && (
+            {!isExternal && post.comment_count > 0 && (
               <span className="ml-1.5 text-xs text-accent font-semibold">[{post.comment_count}]</span>
             )}
           </p>
@@ -269,18 +280,20 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
           {displayPlain && (
             <p className="text-xs text-white/30 line-clamp-2 mb-2 leading-relaxed">{displayPlain}</p>
           )}
-        </Link>
+        </ContentWrapper>
 
         {images.length > 0 && !translated && (
           <ImageSlider images={images} postId={post.id} />
         )}
 
         <div className="flex items-center gap-3 text-[11px] text-white/20">
-          <Link href={`/community/posts/${post.id}`} className="flex items-center gap-1">
-            <MessageSquare className="w-3 h-3" />
-            {post.comment_count} {t('community.comments')}
-          </Link>
-          {post.view_count > 0 && (
+          {!isExternal && (
+            <Link href={`/community/posts/${post.id}`} className="flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" />
+              {post.comment_count} {t('community.comments')}
+            </Link>
+          )}
+          {!isExternal && post.view_count > 0 && (
             <Link href={`/community/posts/${post.id}`} className="flex items-center gap-1">
               <Eye className="w-3 h-3" />{post.view_count}
             </Link>
@@ -326,6 +339,7 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
 
   const linkedProduct = post.community_post_products?.[0]?.products
   const showTranslateBtn = needsTranslation(post.title + ' ' + rawPlain, locale)
+  const isExternal = !!(post.is_bot && post.source_url)
 
   const handleTranslate = async () => {
     if (translated) { setTranslated(null); return }
@@ -340,6 +354,8 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
       setTranslating(false)
     }
   }
+
+  const internalHref = `/community/posts/${post.id}`
 
   return (
     <div className="flex group py-2 px-2 hover:bg-white/[0.02] transition-colors gap-2 border-b border-border/30">
@@ -356,10 +372,17 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
       </div>
 
       {compactThumb && !translated && (
-        <Link href={`/community/posts/${post.id}`} className="flex-shrink-0 self-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imgUrl(compactThumb, 128)} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
-        </Link>
+        isExternal ? (
+          <a href={post.source_url!} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 self-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgUrl(compactThumb, 128)} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
+          </a>
+        ) : (
+          <Link href={internalHref} className="flex-shrink-0 self-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgUrl(compactThumb, 128)} alt="" className="w-16 h-16 object-contain rounded-md bg-surface-2 p-0.5" />
+          </Link>
+        )
       )}
 
       <div className="flex-1 min-w-0">
@@ -375,17 +398,28 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
             )}
           </div>
         )}
-        <Link href={`/community/posts/${post.id}`}>
-          <p className="text-sm font-medium text-white/75 group-hover:text-white transition-colors leading-snug line-clamp-1">
-            {displayTitle}
-            {post.comment_count > 0 && (
-              <span className="ml-1.5 text-[11px] text-accent font-semibold">[{post.comment_count}]</span>
+        {isExternal ? (
+          <a href={post.source_url!} target="_blank" rel="noopener noreferrer">
+            <p className="text-sm font-medium text-white/75 group-hover:text-white transition-colors leading-snug line-clamp-1">
+              {displayTitle}
+            </p>
+            {displayPlain && (
+              <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed mt-0.5">{displayPlain}</p>
             )}
-          </p>
-          {displayPlain && (
-            <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed mt-0.5">{displayPlain}</p>
-          )}
-        </Link>
+          </a>
+        ) : (
+          <Link href={internalHref}>
+            <p className="text-sm font-medium text-white/75 group-hover:text-white transition-colors leading-snug line-clamp-1">
+              {displayTitle}
+              {post.comment_count > 0 && (
+                <span className="ml-1.5 text-[11px] text-accent font-semibold">[{post.comment_count}]</span>
+              )}
+            </p>
+            {displayPlain && (
+              <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed mt-0.5">{displayPlain}</p>
+            )}
+          </Link>
+        )}
         <div className="flex items-center gap-2 text-[10px] text-white/20 mt-0.5">
           {post.rating != null && <span className="text-amber-400 font-bold">{post.rating}/10</span>}
           <span>{post.user_display_name}</span>
