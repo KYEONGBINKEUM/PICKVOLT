@@ -6,6 +6,7 @@ import { RSS_FEEDS, MAX_ITEMS_PER_FEED } from '@/lib/rss-feeds'
 type CustomItem = {
   title?: string
   link?: string
+  content?: string
   contentSnippet?: string
   isoDate?: string
   enclosure?: { url?: string }
@@ -21,28 +22,29 @@ function makeServiceClient() {
 }
 
 function extractThumbnail(item: CustomItem): string | null {
-  return (
+  const direct =
     item['media:thumbnail']?.$?.url ??
     item['media:content']?.$?.url ??
     item.enclosure?.url ??
     null
-  )
+  if (direct) return direct
+  // fallback: content:encoded / description HTML 안에 있는 첫 번째 img src
+  if (item.content) {
+    const m = item.content.match(/<img[^>]+src=["']([^"']+)["']/)
+    if (m) return m[1]
+  }
+  return null
 }
 
-// 1~2문장 발췌 (100자 이내) + 출처 + 원문 링크
-function buildBody(link: string, sourceName: string, thumb: string | null, snippet: string): string {
+// 1~2문장 발췌 (100자 이내) + 썸네일 이미지만 저장 (출처/원문보기는 CardPost에서 렌더링)
+function buildBody(thumb: string | null, snippet: string): string {
   const imgHtml = thumb
     ? `<p><img src="${thumb}" alt="" style="max-width:100%;border-radius:8px;margin-bottom:8px;" /></p>`
     : ''
   const excerptHtml = snippet
     ? `<p>${snippet}</p>`
     : ''
-  return (
-    `${imgHtml}` +
-    `${excerptHtml}` +
-    `<p style="font-size:12px;color:rgba(255,255,255,0.35);">출처: ${sourceName}</p>` +
-    `<p><a href="${link}" target="_blank" rel="noopener noreferrer" style="color:rgba(255,77,0,0.9);font-weight:600;">원문 보기 →</a></p>`
-  )
+  return `${imgHtml}${excerptHtml}`
 }
 
 // contentSnippet을 1~2문장(100자)으로 자르기
@@ -98,7 +100,7 @@ export async function GET(req: NextRequest) {
 
         const thumb   = extractThumbnail(item)
         const snippet = toShortExcerpt(item.contentSnippet)
-        const body    = buildBody(item.link, feed.name, thumb, snippet)
+        const body    = buildBody(thumb, snippet)
 
         const { error } = await supabase.from('community_posts').insert({
           user_id:           null,

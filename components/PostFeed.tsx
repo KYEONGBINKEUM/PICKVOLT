@@ -200,7 +200,14 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
   // Strip product-card / compare-table blocks before extracting preview images & text
   const previewBody = isHtml ? removeStructuralElements(post.body) : (post.body ?? '')
   const images = isHtml ? extractAllImages(post.body) : []
-  const rawPlain = isHtml ? stripHtml(previewBody) : (post.body ?? '')
+  const rawPlain = (() => {
+    const plain = isHtml ? stripHtml(previewBody) : (post.body ?? '')
+    // 기존 저장된 RSS 데이터의 "출처: ..." 및 "원문 보기 →" 텍스트 제거
+    if (post.is_bot) {
+      return plain.replace(/출처:\s*\S[^\n]*/g, '').replace(/원문\s*보기\s*→?/g, '').replace(/\s+/g, ' ').trim()
+    }
+    return plain
+  })()
 
   const displayTitle = translated?.title ?? post.title
   const displayPlain = translated?.body ?? rawPlain
@@ -286,6 +293,22 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
           <ImageSlider images={images} postId={post.id} />
         )}
 
+        {post.is_bot && post.source_name && post.source_url && (
+          <p className="text-xs mb-2">
+            <span className="text-white/30">{t('news.source')}: {post.source_name}</span>
+            <span className="text-white/15 mx-1">·</span>
+            <a
+              href={post.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'rgba(255,77,0,0.9)' }}
+              className="font-semibold hover:underline"
+            >
+              {t('news.read_original')}
+            </a>
+          </p>
+        )}
+
         <div className="flex items-center gap-3 text-[11px] text-white/20">
           {!isExternal && (
             <Link href={`/community/posts/${post.id}`} className="flex items-center gap-1">
@@ -332,7 +355,13 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
   // Strip product-card / compare-table blocks before extracting preview images & text
   const previewBody = isHtml ? removeStructuralElements(post.body) : (post.body ?? '')
   const compactThumb = isHtml ? extractFirstImage(post.body) : null
-  const rawPlain = isHtml ? stripHtml(previewBody) : (post.body ?? '')
+  const rawPlain = (() => {
+    const plain = isHtml ? stripHtml(previewBody) : (post.body ?? '')
+    if (post.is_bot) {
+      return plain.replace(/출처:\s*\S[^\n]*/g, '').replace(/원문\s*보기\s*→?/g, '').replace(/\s+/g, ' ').trim()
+    }
+    return plain
+  })()
 
   const displayTitle = translated?.title ?? post.title
   const displayPlain = translated?.body ?? rawPlain
@@ -420,6 +449,23 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
             )}
           </Link>
         )}
+        {post.is_bot && post.source_name && post.source_url && (
+          <p className="text-[10px] mt-0.5 mb-0.5">
+            <span className="text-white/25">{t('news.source')}: {post.source_name}</span>
+            <span className="text-white/15 mx-1">·</span>
+            <a
+              href={post.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'rgba(255,77,0,0.75)' }}
+              className="font-semibold hover:underline"
+              onClick={e => e.stopPropagation()}
+            >
+              {t('news.read_original')}
+            </a>
+          </p>
+        )}
+
         <div className="flex items-center gap-2 text-[10px] text-white/20 mt-0.5">
           {post.rating != null && <span className="text-amber-400 font-bold">{post.rating}/10</span>}
           <span>{post.user_display_name}</span>
