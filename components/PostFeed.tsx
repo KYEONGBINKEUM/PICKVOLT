@@ -263,7 +263,13 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
             )}
             {showType && <span className="text-white/15 text-[10px]">·</span>}
             {post.user_id && !post.is_bot
-              ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="text-[10px] text-white/25 hover:text-white/60 transition-colors">{post.user_display_name}</Link>
+              ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                  {post.user_avatar_url
+                    ? <img src={imgUrl(post.user_avatar_url, 16)} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+                    : <span className="w-3.5 h-3.5 rounded-full bg-white/15 flex items-center justify-center text-[8px] text-white/50 flex-shrink-0">{post.user_display_name?.[0]?.toUpperCase()}</span>
+                  }
+                  <span className="text-[10px] text-white/25 hover:text-white/60 transition-colors">{post.user_display_name}</span>
+                </Link>
               : <span className="text-[10px] text-white/25">{post.user_display_name}</span>
             }
             <span className="text-white/15 text-[10px]">·</span>
@@ -474,7 +480,13 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
         <div className="flex items-center gap-2 text-[10px] text-white/20 mt-0.5">
           {post.rating != null && <span className="text-amber-400 font-bold">{post.rating}/10</span>}
           {post.user_id && !post.is_bot
-            ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="hover:text-white/50 transition-colors">{post.user_display_name}</Link>
+            ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                {post.user_avatar_url
+                  ? <img src={imgUrl(post.user_avatar_url, 14)} alt="" className="w-3 h-3 rounded-full object-cover flex-shrink-0" />
+                  : <span className="w-3 h-3 rounded-full bg-white/15 flex items-center justify-center text-[7px] text-white/50 flex-shrink-0">{post.user_display_name?.[0]?.toUpperCase()}</span>
+                }
+                <span className="hover:text-white/50 transition-colors">{post.user_display_name}</span>
+              </Link>
             : <span>{post.user_display_name}</span>
           }
           <span>{timeAgo(post.created_at, t)}</span>

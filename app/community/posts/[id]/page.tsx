@@ -497,8 +497,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
               {/* 메타 */}
               <div className="flex items-center gap-2 mb-3 text-[11px] text-white/30 flex-wrap">
-                <Avatar url={post.user_avatar_url} name={post.user_display_name} size={5} />
-                <span className="font-medium text-white/50">{post.user_display_name}</span>
+                <Link href={`/user/${post.user_id}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                  <Avatar url={post.user_avatar_url} name={post.user_display_name} size={5} />
+                  <span className="font-medium text-white/50 hover:text-white/80 transition-colors">{post.user_display_name}</span>
+                </Link>
                 <span>·</span>
                 <span>{timeAgo(post.created_at, t)}</span>
                 {post.updated_at && post.created_at &&
