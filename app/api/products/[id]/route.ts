@@ -86,8 +86,10 @@ export async function GET(
     variantsPromise,
   ])
 
-  const cpu = cpuRes.data
-  const gpu = gpuRes.data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cpu = cpuRes.data as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const gpu = gpuRes.data as any
   if (cpu) {
     relativeScore   = cpu.relative_score    ?? null
     cpuType         = cpu.type              ?? null
