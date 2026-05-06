@@ -7,7 +7,7 @@ import {
   Search, Edit2, CheckCircle, AlertCircle, Circle,
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
-  Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle,
+  Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle, BadgeCheck,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -18,7 +18,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -199,6 +199,10 @@ export default function AdminPage() {
   const [addRequests, setAddRequests] = useState<any[]>([])
   const [addRequestsLoading, setAddRequestsLoading] = useState(false)
   const [addRequestsFilter, setAddRequestsFilter] = useState('')
+
+  const [verifyRequests, setVerifyRequests] = useState<any[]>([])
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const [verifyFilter, setVerifyFilter] = useState('')
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -710,6 +714,33 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
+  const fetchVerifyRequests = useCallback(async (statusFilter = '') => {
+    if (!token) return
+    setVerifyLoading(true)
+    const qs = statusFilter ? `?status=${statusFilter}` : ''
+    const res = await fetch(`/api/admin/verify-requests${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) { const d = await res.json(); setVerifyRequests(d.requests ?? []) }
+    setVerifyLoading(false)
+  }, [token])
+
+  const handleVerifyAction = async (id: string, action: 'approve' | 'reject', adminNote = '') => {
+    const res = await fetch('/api/admin/verify-requests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, action, admin_note: adminNote || null }),
+    })
+    if (res.ok) {
+      const d = await res.json()
+      setVerifyRequests(prev => prev.map(r => r.id === id ? { ...r, status: d.status } : r))
+    }
+  }
+
+  useEffect(() => {
+    if (!authed || !token) return
+    if (tab === 'verify_requests') fetchVerifyRequests(verifyFilter)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const handleToggleVisible = async (id: string, current: boolean) => {
@@ -777,6 +808,7 @@ export default function AdminPage() {
     { key: 'inquiries', label: '문의 관리', icon: <Mail size={15} /> },
     { key: 'edit_requests', label: '수정 요청', icon: <Pencil size={15} /> },
     { key: 'add_requests', label: '등록 요청', icon: <PlusCircle size={15} /> },
+    { key: 'verify_requests', label: '인증 신청', icon: <BadgeCheck size={15} /> },
   ]
 
   return (
@@ -2164,6 +2196,88 @@ export default function AdminPage() {
                           </button>
                         )}
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── VERIFY REQUESTS ── */}
+        {tab === 'verify_requests' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">인증 신청 관리</h1>
+              <div className="flex gap-2">
+                {(['', 'pending', 'approved', 'rejected'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => { setVerifyFilter(s); fetchVerifyRequests(s) }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      verifyFilter === s
+                        ? 'border-accent text-accent bg-accent/10'
+                        : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    {s === '' ? '전체' : s === 'pending' ? '대기' : s === 'approved' ? '승인' : '거절'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {verifyLoading ? (
+              <div className="text-white/40 py-12 text-center">로딩 중...</div>
+            ) : verifyRequests.length === 0 ? (
+              <div className="text-white/40 py-12 text-center">인증 신청 없음</div>
+            ) : (
+              <div className="space-y-3">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {verifyRequests.map((r: any) => (
+                  <div key={r.id} className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border font-bold ${
+                            r.status === 'pending'  ? 'border-yellow-500/50 text-yellow-400 bg-yellow-500/10' :
+                            r.status === 'approved' ? 'border-accent/50 text-accent bg-accent/10' :
+                            'border-red-500/50 text-red-400 bg-red-500/10'
+                          }`}>
+                            {r.status === 'pending' ? '대기' : r.status === 'approved' ? '승인' : '거절'}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full border border-border text-white/40">{r.category}</span>
+                          <span className="text-xs text-white/30">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
+                        </div>
+                        <p className="text-sm font-bold text-white mb-0.5">{r.nickname}</p>
+                        <p className="text-xs text-white/40 mb-1">{r.email}</p>
+                        <p className="text-xs text-white/60 bg-background rounded-lg p-2 border border-border/50 mb-2 leading-relaxed">{r.reason}</p>
+                        <div className="flex flex-col gap-0.5 text-xs text-white/40">
+                          {r.website && <a href={r.website} target="_blank" rel="noopener noreferrer" className="hover:text-white/70 underline truncate">{r.website}</a>}
+                          {r.social_links && <p>{r.social_links}</p>}
+                        </div>
+                        {r.admin_note && (
+                          <p className="mt-2 text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">{r.admin_note}</p>
+                        )}
+                      </div>
+                      {r.status === 'pending' && (
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <button
+                            onClick={() => handleVerifyAction(r.id, 'approve')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 transition-all"
+                          >
+                            인증 승인
+                          </button>
+                          <button
+                            onClick={() => {
+                              const note = window.prompt('거절 사유 (선택)')
+                              handleVerifyAction(r.id, 'reject', note ?? '')
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-all"
+                          >
+                            거절
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
