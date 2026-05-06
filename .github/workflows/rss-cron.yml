@@ -3,13 +3,14 @@ name: RSS Cron
 on:
   schedule:
     - cron: '*/30 * * * *'
-  workflow_dispatch: # 수동 실행 버튼
+  workflow_dispatch:
 
 jobs:
   fetch-rss:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Trigger RSS fetch
         run: |
-          curl -sf -X GET "${{ secrets.VERCEL_URL }}/api/cron/rss" \
+          curl -sf --max-time 90 -X GET "${{ secrets.VERCEL_URL }}/api/cron/rss" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
