@@ -202,13 +202,13 @@ export async function GET(
 
   return NextResponse.json(
     {
-      id:        product.id,
-      name:      product.name,
-      brand:     product.brand,
-      category:  product.category,
-      price_usd: product.price_usd,
-      image_url: product.image_url,
-      source_url: product.source_url,
+      id:        p.id,
+      name:      p.name,
+      brand:     p.brand,
+      category:  p.category,
+      price_usd: p.price_usd,
+      image_url: p.image_url,
+      source_url: p.source_url,
       specs,
       raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
       variants,
