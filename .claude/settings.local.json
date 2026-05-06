@@ -37,7 +37,16 @@
       "WebFetch(domain:propellerads.com)",
       "WebFetch(domain:publishers.adsterra.com)",
       "WebFetch(domain:adsterra.com)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(gh pr *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(gh run *)",
+      "Bash(gh workflow *)",
+      "Bash(xargs grep *)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

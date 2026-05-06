@@ -46,11 +46,12 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
   // 커뮤니티 섹션 우측 링크
   const communityLinks = [
-    { href: '/community',         label: t('community.all'),     exact: true },
-    { href: '/community/forum',   label: t('community.forum') },
-    { href: '/community/reviews', label: t('community.reviews') },
-    { href: '/community/free',    label: t('community.free') },
-    { href: '/community/qa',      label: t('community.qa') },
+    { href: '/community',                  label: t('community.all'),           exact: true },
+    { href: '/community/forum',            label: t('community.forum') },
+    { href: '/community/reviews',          label: t('community.reviews') },
+    { href: '/community/free',             label: t('community.free') },
+    { href: '/community/qa',               label: t('community.qa') },
+    { href: '/community/subscriptions',    label: t('community.subscriptions') },
   ]
 
   // Compare 섹션 우측 링크

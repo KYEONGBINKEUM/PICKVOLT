@@ -17,7 +17,9 @@ export interface FeedPost {
   view_count: number
   rating?: number | null
   created_at: string
+  user_id?: string | null
   user_display_name: string
+  user_avatar_url?: string | null
   my_vote?: boolean
   is_bot?: boolean
   source_url?: string | null
@@ -260,7 +262,10 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
               <span className="text-[10px] font-semibold text-accent/70">{t(`community.${post.type}`)}</span>
             )}
             {showType && <span className="text-white/15 text-[10px]">·</span>}
-            <span className="text-[10px] text-white/25">{post.user_display_name}</span>
+            {post.user_id && !post.is_bot
+              ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="text-[10px] text-white/25 hover:text-white/60 transition-colors">{post.user_display_name}</Link>
+              : <span className="text-[10px] text-white/25">{post.user_display_name}</span>
+            }
             <span className="text-white/15 text-[10px]">·</span>
             <span className="text-[10px] text-white/20">{timeAgo(post.created_at, t)}</span>
             {post.rating != null && (
@@ -468,7 +473,10 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
 
         <div className="flex items-center gap-2 text-[10px] text-white/20 mt-0.5">
           {post.rating != null && <span className="text-amber-400 font-bold">{post.rating}/10</span>}
-          <span>{post.user_display_name}</span>
+          {post.user_id && !post.is_bot
+            ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="hover:text-white/50 transition-colors">{post.user_display_name}</Link>
+            : <span>{post.user_display_name}</span>
+          }
           <span>{timeAgo(post.created_at, t)}</span>
           <span className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" />{post.comment_count}</span>
           <div className="ml-auto flex items-center gap-1.5">
