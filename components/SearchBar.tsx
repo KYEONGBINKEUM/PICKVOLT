@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Search, Plus, Check, Loader2 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
+import { imgUrl } from '@/lib/utils'
 
 interface SearchResult {
   id: string
   name: string
   brand: string
   category: string
+  image_url?: string | null
 }
 
 export default function SearchBar({ initialQuery = '' }: { initialQuery?: string }) {
@@ -120,7 +122,10 @@ export default function SearchBar({ initialQuery = '' }: { initialQuery?: string
                 onClick={() => handleResultClick(result)}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <Search className="w-3 h-3 text-white/30 flex-shrink-0" />
+                  {result.image_url
+                    ? <img src={imgUrl(result.image_url, 40)} alt="" className="w-9 h-9 object-contain rounded-lg bg-white/5 p-0.5 flex-shrink-0" />
+                    : <Search className="w-3 h-3 text-white/30 flex-shrink-0" />
+                  }
                   <div className="min-w-0">
                     <p className="text-sm text-white/80 group-hover:text-white transition-colors truncate">
                       {result.name}
