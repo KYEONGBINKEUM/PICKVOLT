@@ -1,49 +1,88 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { LayoutList, LayoutGrid, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
-import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '@/components/PostFeed'
+import { CardPost, CompactPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
 
 export default function NewsPage() {
   const { t } = useI18n()
-  const [posts, setPosts]     = useState<FeedPost[]>([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage]       = useState(1)
-  const [total, setTotal]     = useState(0)
-  const [token, setToken]           = useState<string | null>(null)
+  const [posts, setPosts]         = useState<FeedPost[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage]           = useState(1)
+  const [hasMore, setHasMore]     = useState(true)
+  const [total, setTotal]         = useState(0)
+  const [token, setToken]         = useState<string | null>(null)
   const [tokenReady, setTokenReady] = useState(false)
-  const [compact, setCompact]       = useState(false)
-  const [isAdmin, setIsAdmin]       = useState(false)
+  const [compact, setCompact]     = useState(false)
+  const [isAdmin, setIsAdmin]     = useState(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const tokenRef = useRef<string | null>(null)
 
   const LIMIT = 25
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setToken(data.session?.access_token ?? null)
+      const t = data.session?.access_token ?? null
+      setToken(t)
+      tokenRef.current = t
       const email = (data.session?.user?.email ?? '').toLowerCase()
       setIsAdmin(ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(email))
       setTokenReady(true)
     })
   }, [])
 
-  const load = useCallback(() => {
+  // 초기 로드
+  useEffect(() => {
+    if (!tokenReady) return
     setLoading(true)
-    const params = new URLSearchParams({ type: 'news', sort: 'latest', page: String(page), limit: String(LIMIT) })
+    const params = new URLSearchParams({ type: 'news', sort: 'latest', page: '1', limit: String(LIMIT) })
     const headers: Record<string, string> = {}
-    if (token) headers['Authorization'] = `Bearer ${token}`
+    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
     fetch(`/api/community/posts?${params}`, { headers })
       .then(r => r.json())
-      .then(d => { setPosts(d.posts ?? []); setTotal(d.total ?? 0) })
+      .then(d => {
+        const fetched = d.posts ?? []
+        setPosts(fetched)
+        setTotal(d.total ?? 0)
+        setHasMore(fetched.length === LIMIT && fetched.length < (d.total ?? 0))
+        setPage(2)
+      })
       .finally(() => setLoading(false))
-  }, [page, token])
+  }, [tokenReady])
 
-  useEffect(() => { if (tokenReady) load() }, [load, tokenReady])
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const params = new URLSearchParams({ type: 'news', sort: 'latest', page: String(page), limit: String(LIMIT) })
+    const headers: Record<string, string> = {}
+    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
+    fetch(`/api/community/posts?${params}`, { headers })
+      .then(r => r.json())
+      .then(d => {
+        const fetched = d.posts ?? []
+        setPosts(prev => [...prev, ...fetched])
+        setHasMore(fetched.length === LIMIT)
+        setPage(p => p + 1)
+      })
+      .finally(() => setLoadingMore(false))
+  }, [page, loadingMore, hasMore])
+
+  // IntersectionObserver로 sentinel 감지
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMore()
+    }, { threshold: 0.1 })
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   const handleVote = async (postId: string) => {
     if (!token) return
@@ -55,8 +94,6 @@ export default function NewsPage() {
       setPosts(ps => ps.map(p => p.id === postId ? { ...p, upvotes: d.upvotes, my_vote: d.voted } : p))
     }
   }
-
-  const totalPages = Math.ceil(total / LIMIT)
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,7 +140,14 @@ export default function NewsPage() {
           }
         </div>
 
-        <Pagination page={page} totalPages={totalPages} onPage={setPage} />
+        {/* 무한스크롤 sentinel */}
+        <div ref={sentinelRef} className="h-4" />
+
+        {loadingMore && (
+          <div className="flex justify-center py-4">
+            {Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)}
+          </div>
+        )}
       </main>
     </div>
   )
