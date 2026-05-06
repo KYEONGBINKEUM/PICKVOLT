@@ -10,6 +10,7 @@ import { useI18n, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { shortenCompareTitle, shortenProductName, imgUrl } from '@/lib/utils'
 import { computeRelativeScores, type CategoryStats, type CpuBenchmarkMaxes } from '@/lib/scoring'
+import { CardPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
 import AdBanner from '@/components/AdBanner'
@@ -615,6 +616,48 @@ function PopularComparisons({ items, t }: { items: PopularItem[]; t: (k: string)
           </Link>
         ))}
       </div>
+    </div>
+  )
+}
+
+/* ---------- Related Comparisons ---------- */
+function RelatedComparisons({ productIds, token, t }: { productIds: string[]; token: string | null; t: (k: string) => string }) {
+  const [posts, setPosts] = useState<FeedPost[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (productIds.length === 0) return
+    Promise.all(
+      productIds.map(id =>
+        fetch(`/api/community/posts?type=compare&product_id=${id}&limit=10&sort=hot`)
+          .then(r => r.json())
+          .then(d => (d.posts ?? []) as FeedPost[])
+          .catch(() => [] as FeedPost[])
+      )
+    ).then(results => {
+      const seen = new Set<string>()
+      const merged: FeedPost[] = []
+      for (const chunk of results) {
+        for (const post of chunk) {
+          if (!seen.has(post.id)) { seen.add(post.id); merged.push(post) }
+        }
+      }
+      setPosts(merged.slice(0, 10))
+    }).finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productIds.join(',')])
+
+  if (!loading && posts.length === 0) return null
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-lg font-black text-white mb-4">{t('compare.related')}</h3>
+      {loading
+        ? Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} />)
+        : posts.map(post => (
+          <CardPost key={post.id} post={post} token={token} t={t} showType={false} />
+        ))
+      }
     </div>
   )
 }
@@ -1826,8 +1869,8 @@ export default function CompareClient() {
               onExportPDF={handleExportPDF}
             />
 
-            {/* 인기 비교 */}
-            <PopularComparisons items={popularItems} t={t} />
+            {/* 관련 비교 */}
+            <RelatedComparisons productIds={products.map(p => p.id)} token={session?.access_token ?? null} t={t} />
           </div>
         )}
       </main>
