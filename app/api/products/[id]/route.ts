@@ -70,7 +70,7 @@ export async function GET(
       cpus ( relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, type ),
       gpus ( relative_score )
     `)
-    .eq('product_id', product.id)
+    .eq('product_id', p.id)
     .order('sort_order')
     .order('created_at')
 
