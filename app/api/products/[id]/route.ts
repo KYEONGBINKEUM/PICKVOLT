@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export const dynamic = 'force-dynamic'
+let _supabase: ReturnType<typeof createClient> | null = null
+function getClient() {
+  if (!_supabase) _supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  return _supabase
+}
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { fetch: (url, opts = {}) => fetch(url, { ...opts, cache: 'no-store' }) } }
-  )
+  const supabase = getClient()
 
   const { id } = await params
 
@@ -56,33 +59,45 @@ export async function GET(
   let scoreSource: string | null = null
   let gpuRelativeScore: number | null = null
 
-  if (common?.cpu_id) {
-    const { data: cpu } = await supabase
-      .from('cpus')
-      .select('relative_score, type, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, score_source')
-      .eq('id', common.cpu_id)
-      .single()
+  // CPU, GPU, variants 병렬 조회
+  const variantsPromise = supabase
+    .from('product_variants')
+    .select(`
+      id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id,
+      ram_gb, storage_gb, price_usd, amazon_url, sort_order,
+      cpus ( relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, type ),
+      gpus ( relative_score )
+    `)
+    .eq('product_id', product.id)
+    .order('sort_order')
+    .order('created_at')
 
-    relativeScore   = cpu?.relative_score    ?? null
-    cpuType         = cpu?.type              ?? null
-    gb6Single       = cpu?.gb6_single        ?? null
-    gb6Multi        = cpu?.gb6_multi         ?? null
-    tdmark          = cpu?.tdmark_score      ?? null
-    antutu          = cpu?.antutu_score      ?? null
-    cinebenchSingle = cpu?.cinebench_single  ?? null
-    cinebenchMulti  = cpu?.cinebench_multi   ?? null
-    scoreSource     = cpu?.score_source      ?? null
-  }
+  const [cpuRes, gpuRes, variantsRes] = await Promise.all([
+    common?.cpu_id
+      ? supabase.from('cpus')
+          .select('relative_score, type, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, score_source')
+          .eq('id', common.cpu_id).single()
+      : Promise.resolve({ data: null }),
+    common?.gpu_id
+      ? supabase.from('gpus').select('relative_score').eq('id', common.gpu_id).single()
+      : Promise.resolve({ data: null }),
+    variantsPromise,
+  ])
 
-  // GPU 벤치마크 점수 조회 (gpu_id로 연결된 경우)
-  if (common?.gpu_id) {
-    const { data: gpu } = await supabase
-      .from('gpus')
-      .select('relative_score')
-      .eq('id', common.gpu_id)
-      .single()
-    gpuRelativeScore = gpu?.relative_score ?? null
+  const cpu = cpuRes.data
+  const gpu = gpuRes.data
+  if (cpu) {
+    relativeScore   = cpu.relative_score    ?? null
+    cpuType         = cpu.type              ?? null
+    gb6Single       = cpu.gb6_single        ?? null
+    gb6Multi        = cpu.gb6_multi         ?? null
+    tdmark          = cpu.tdmark_score      ?? null
+    antutu          = cpu.antutu_score      ?? null
+    cinebenchSingle = cpu.cinebench_single  ?? null
+    cinebenchMulti  = cpu.cinebench_multi   ?? null
+    scoreSource     = cpu.score_source      ?? null
   }
+  if (gpu) gpuRelativeScore = gpu.relative_score ?? null
 
   const specSrc = laptop ?? smartphone ?? tablet ?? {}
 
@@ -153,18 +168,8 @@ export async function GET(
     ipRating:        null,
   }
 
-  // ── variants 조회 ────────────────────────────────────────────────────────
-  const { data: rawVariants } = await supabase
-    .from('product_variants')
-    .select(`
-      id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id,
-      ram_gb, storage_gb, price_usd, amazon_url, sort_order,
-      cpus ( relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, type ),
-      gpus ( relative_score )
-    `)
-    .eq('product_id', product.id)
-    .order('sort_order')
-    .order('created_at')
+  // variants는 위에서 병렬 조회됨
+  const { data: rawVariants } = variantsRes
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const variants = (rawVariants ?? []).map((v: any) => ({
@@ -204,6 +209,6 @@ export async function GET(
       raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
       variants,
     },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } }
   )
 }

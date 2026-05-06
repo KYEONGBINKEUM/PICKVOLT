@@ -67,16 +67,7 @@ export async function GET(req: NextRequest) {
 
   const offset = (page - 1) * limit
 
-  // 전체 개수 조회 (페이지네이션용)
-  const countQuery = supabase
-    .from('community_posts')
-    .select('id', { count: 'exact', head: true })
-    .eq('is_hidden', false)
-  if (type) countQuery.eq('type', type)
-  if (category) countQuery.eq('category', category)
-  if (filteredIds) countQuery.in('id', filteredIds)
-  const { count } = await countQuery
-
+  // 정렬 + range 먼저 적용
   if (sort === 'hot') {
     query = query.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
   } else if (sort === 'top') {
@@ -84,10 +75,18 @@ export async function GET(req: NextRequest) {
   } else {
     query = query.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
   }
-
   query = query.range(offset, offset + limit - 1)
 
-  const { data, error } = await query
+  // count + data 병렬 조회
+  let countQuery = supabase
+    .from('community_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_hidden', false)
+  if (type) countQuery = countQuery.eq('type', type)
+  if (category) countQuery = countQuery.eq('category', category)
+  if (filteredIds) countQuery = countQuery.in('id', filteredIds)
+
+  const [{ count }, { data, error }] = await Promise.all([countQuery, query])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // 내 vote 여부 — 병렬로 조회

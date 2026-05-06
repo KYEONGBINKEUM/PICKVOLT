@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+
+let _supabase: SupabaseClient | null = null
+function getClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return null
+  if (!_supabase) _supabase = createClient(url, key)
+  return _supabase
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!url || !key) {
-      return NextResponse.json(
-        { error: `missing env: url=${!!url} key=${!!key}`, results: [] },
-        { status: 500 }
-      )
+    const supabase = getClient()
+    if (!supabase) {
+      return NextResponse.json({ error: 'missing env', results: [] }, { status: 500 })
     }
-
-    const supabase = createClient(url, key)
 
     const { searchParams } = new URL(req.url)
     const q        = searchParams.get('q')        ?? ''
@@ -104,7 +106,9 @@ export async function GET(req: NextRequest) {
       return (b.launch_year ?? 0) - (a.launch_year ?? 0)
     })
 
-    return NextResponse.json({ results: sorted, total: sorted.length })
+    const res = NextResponse.json({ results: sorted, total: sorted.length })
+    res.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+    return res
   } catch (e) {
     return NextResponse.json({ error: String(e), results: [] }, { status: 500 })
   }
