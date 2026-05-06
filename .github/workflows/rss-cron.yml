@@ -12,5 +12,5 @@ jobs:
     steps:
       - name: Trigger RSS fetch
         run: |
-          curl -sf --max-time 90 -X GET "${{ secrets.VERCEL_URL }}/api/cron/rss" \
+          curl -sfL --max-time 90 -X GET "${{ secrets.VERCEL_URL }}/api/cron/rss" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
