@@ -82,47 +82,55 @@ export async function GET(req: NextRequest) {
   let skipped  = 0
   const errors: string[] = []
 
-  for (const feed of RSS_FEEDS) {
-    try {
-      const result = await parser.parseURL(feed.url)
+  // 모든 피드를 병렬로 fetch
+  const feedResults = await Promise.allSettled(
+    RSS_FEEDS.map(feed => parser.parseURL(feed.url).then(r => ({ feed, items: r.items })))
+  )
 
-      for (const item of result.items.slice(0, MAX_ITEMS_PER_FEED)) {
-        if (!item.link || !item.title) continue
+  for (const result of feedResults) {
+    if (result.status === 'rejected') {
+      errors.push(String(result.reason))
+      continue
+    }
 
-        // 중복 확인
-        const { data: existing } = await supabase
-          .from('community_posts')
-          .select('id')
-          .eq('source_url', item.link)
-          .maybeSingle()
+    const { feed, items } = result.value
+    const candidates = items.slice(0, MAX_ITEMS_PER_FEED).filter(i => i.link && i.title)
+    if (candidates.length === 0) continue
 
-        if (existing) { skipped++; continue }
+    // 배치 중복 확인 (1번 쿼리로 처리)
+    const urls = candidates.map(i => i.link!)
+    const { data: existingRows } = await supabase
+      .from('community_posts')
+      .select('source_url')
+      .in('source_url', urls)
 
-        const thumb   = extractThumbnail(item)
-        const snippet = toShortExcerpt(item.contentSnippet)
-        const body    = buildBody(thumb, snippet)
+    const existingSet = new Set((existingRows ?? []).map(r => r.source_url))
 
-        const { error } = await supabase.from('community_posts').insert({
-          user_id:           null,
-          user_display_name: feed.name,
-          user_avatar_url:   feed.favicon ?? null,
-          type:              'news',
-          title:             item.title.trim().slice(0, 200),
-          body,
-          source_url:        item.link,
-          source_name:       feed.name,
-          is_bot:            true,
-        })
+    for (const item of candidates) {
+      if (existingSet.has(item.link!)) { skipped++; continue }
 
-        if (error) {
-          // UNIQUE 중복 등 무시
-          if (error.code !== '23505') errors.push(`${feed.name}: ${error.message}`)
-        } else {
-          inserted++
-        }
+      const thumb   = extractThumbnail(item)
+      const snippet = toShortExcerpt(item.contentSnippet)
+      const body    = buildBody(thumb, snippet)
+
+      const { error } = await supabase.from('community_posts').insert({
+        user_id:           null,
+        user_display_name: feed.name,
+        user_avatar_url:   feed.favicon ?? null,
+        type:              'news',
+        title:             item.title!.trim().slice(0, 200),
+        body,
+        source_url:        item.link!,
+        source_name:       feed.name,
+        is_bot:            true,
+      })
+
+      if (error) {
+        if (error.code !== '23505') errors.push(`${feed.name}: ${error.message}`)
+        else skipped++
+      } else {
+        inserted++
       }
-    } catch (e) {
-      errors.push(`${feed.name}: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 

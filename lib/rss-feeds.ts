@@ -25,4 +25,4 @@ export const RSS_FEEDS: RssFeed[] = [
 ]
 
 // 피드 하나당 최대 가져올 기사 수
-export const MAX_ITEMS_PER_FEED = 5
+export const MAX_ITEMS_PER_FEED = 10
