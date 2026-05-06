@@ -37,13 +37,15 @@ export async function GET(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const common = product.specs_common as any
+  const p = product as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const laptop = product.specs_laptop as any
+  const common = p.specs_common as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const smartphone = product.specs_smartphone as any
+  const laptop = p.specs_laptop as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tablet = product.specs_tablet as any
+  const smartphone = p.specs_smartphone as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tablet = p.specs_tablet as any
 
   // ── 벤치마크 점수 조회 ──────────────────────────────────────────
   // relativeScore  : 비교 화면용 (0~1000, DB 트리거 자동 계산)
