@@ -601,37 +601,57 @@ function WritePageInner() {
           {type === 'review' && (
             <div>
               <p className={labelCls}>{t('write.rating')}</p>
-              <div className="bg-surface border border-border rounded-xl p-5">
-                <div
-                  className="flex items-center gap-1.5 mb-4"
-                  onMouseLeave={() => setHoverStar(0)}
-                >
-                  {[1, 2, 3, 4, 5].map(star => {
-                    const filled = (hoverStar || Math.round(rating / 2)) >= star
+              <div className="bg-surface border border-border rounded-xl px-5 py-4">
+                <div className="flex items-center gap-1" onMouseLeave={() => setHoverStar(0)}>
+                  {[1, 2, 3, 4, 5].map(n => {
+                    const display = hoverStar || rating
+                    const stars = display / 2
+                    const fill = stars >= n ? 'full' : stars >= n - 0.5 ? 'half' : 'empty'
+                    const clipId = `wstar-${n}`
                     return (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setRating(star * 2)}
-                        onMouseEnter={() => setHoverStar(star)}
-                        className="p-0.5 transition-transform hover:scale-110 active:scale-95"
+                      <div
+                        key={n}
+                        className="relative cursor-pointer"
+                        onMouseMove={e => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setHoverStar(e.clientX - rect.left < rect.width / 2 ? n * 2 - 1 : n * 2)
+                        }}
+                        onClick={e => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setRating(e.clientX - rect.left < rect.width / 2 ? n * 2 - 1 : n * 2)
+                        }}
                       >
-                        <svg
-                          width="36" height="36" viewBox="0 0 24 24"
-                          fill={filled ? 'currentColor' : 'none'}
-                          stroke="currentColor" strokeWidth="1.5"
-                          className={`transition-colors ${filled ? 'text-amber-400' : 'text-white/15'}`}
-                        >
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        <svg width={28} height={28} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                          {fill === 'half' && (
+                            <defs>
+                              <clipPath id={clipId}>
+                                <rect x="0" y="0" width="12" height="24" />
+                              </clipPath>
+                            </defs>
+                          )}
+                          <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                            fill={fill !== 'empty' ? 'rgb(255,77,0)' : 'none'}
+                            stroke={fill !== 'empty' ? 'rgb(255,77,0)' : 'rgba(255,255,255,0.15)'}
+                            strokeWidth="1.5"
+                            clipPath={fill === 'half' ? `url(#${clipId})` : undefined}
+                          />
+                          {fill === 'half' && (
+                            <polygon
+                              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                              fill="none"
+                              stroke="rgba(255,255,255,0.15)"
+                              strokeWidth="1.5"
+                            />
+                          )}
                         </svg>
-                      </button>
+                      </div>
                     )
                   })}
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-amber-400">{rating}</span>
-                  <span className="text-sm text-white/25">/10</span>
-                  <span className="text-sm text-white/40 ml-1">{ratingLabel(rating)}</span>
+                  <span className="ml-1.5 text-sm font-bold tabular-nums" style={{ color: 'rgb(255,77,0)' }}>
+                    {(rating / 2) % 1 === 0 ? rating / 2 : (rating / 2).toFixed(1)}
+                    <span className="text-xs text-white/25 font-normal">/5</span>
+                  </span>
                 </div>
               </div>
             </div>
