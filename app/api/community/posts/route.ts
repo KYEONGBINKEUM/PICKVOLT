@@ -54,17 +54,28 @@ export async function GET(req: NextRequest) {
   if (type) query = query.eq('type', type)
   if (category) query = query.eq('category', category)
 
+  let filteredIds: string[] | null = null
   if (product_id) {
     const { data: linked } = await supabase
       .from('community_post_products')
       .select('post_id')
       .eq('product_id', product_id)
-    const ids = (linked ?? []).map((r: { post_id: string }) => r.post_id)
-    if (ids.length === 0) return NextResponse.json({ posts: [], total: 0 })
-    query = query.in('id', ids)
+    filteredIds = (linked ?? []).map((r: { post_id: string }) => r.post_id)
+    if (filteredIds.length === 0) return NextResponse.json({ posts: [], total: 0 })
+    query = query.in('id', filteredIds)
   }
 
   const offset = (page - 1) * limit
+
+  // 전체 개수 조회 (페이지네이션용)
+  const countQuery = supabase
+    .from('community_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_hidden', false)
+  if (type) countQuery.eq('type', type)
+  if (category) countQuery.eq('category', category)
+  if (filteredIds) countQuery.in('id', filteredIds)
+  const { count } = await countQuery
 
   if (sort === 'hot') {
     query = query.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
@@ -108,7 +119,7 @@ export async function GET(req: NextRequest) {
     community_compare_options: (p.community_compare_options ?? []).sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order),
   }))
 
-  const res = NextResponse.json({ posts, total: data?.length ?? 0 })
+  const res = NextResponse.json({ posts, total: count ?? 0 })
   // 비로그인 응답은 짧게 캐시
   if (!userId) res.headers.set('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=30')
   return res
