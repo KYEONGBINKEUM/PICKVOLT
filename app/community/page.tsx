@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { LayoutList, LayoutGrid } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
-import { CardPost, CompactPost, PostSkeleton, Pagination, type FeedPost } from '@/components/PostFeed'
+import { CardPost, CompactPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
 import AdBanner from '@/components/AdBanner'
 
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
@@ -22,37 +22,73 @@ function generateAdIndices(max = 200): Set<number> {
 
 export default function CommunityPage() {
   const { t } = useI18n()
-  const [posts, setPosts]     = useState<FeedPost[]>([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage]       = useState(1)
-  const [total, setTotal]     = useState(0)
+  const [posts, setPosts]         = useState<FeedPost[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage]           = useState(1)
+  const [hasMore, setHasMore]     = useState(true)
+  const [total, setTotal]         = useState(0)
   const [token, setToken]         = useState<string | null>(null)
-  const [adIndices] = useState<Set<number>>(() => generateAdIndices())
   const [tokenReady, setTokenReady] = useState(false)
   const [compact, setCompact]     = useState(false)
+  const [adIndices] = useState<Set<number>>(() => generateAdIndices())
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const tokenRef = useRef<string | null>(null)
 
   const LIMIT = 25
-  const sort = 'latest'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setToken(data.session?.access_token ?? null)
+      const t = data.session?.access_token ?? null
+      setToken(t)
+      tokenRef.current = t
       setTokenReady(true)
     })
   }, [])
 
-  const load = useCallback(() => {
+  useEffect(() => {
+    if (!tokenReady) return
     setLoading(true)
-    const params = new URLSearchParams({ sort, page: String(page), limit: String(LIMIT) })
+    const params = new URLSearchParams({ sort: 'latest', page: '1', limit: String(LIMIT) })
     const headers: Record<string, string> = {}
-    if (token) headers['Authorization'] = `Bearer ${token}`
+    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
     fetch(`/api/community/posts?${params}`, { headers })
       .then(r => r.json())
-      .then(d => { setPosts(d.posts ?? []); setTotal(d.total ?? 0) })
+      .then(d => {
+        const fetched = d.posts ?? []
+        setPosts(fetched)
+        setTotal(d.total ?? 0)
+        setHasMore(fetched.length === LIMIT && fetched.length < (d.total ?? 0))
+        setPage(2)
+      })
       .finally(() => setLoading(false))
-  }, [page, token])
+  }, [tokenReady])
 
-  useEffect(() => { if (tokenReady) load() }, [load, tokenReady])
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const params = new URLSearchParams({ sort: 'latest', page: String(page), limit: String(LIMIT) })
+    const headers: Record<string, string> = {}
+    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
+    fetch(`/api/community/posts?${params}`, { headers })
+      .then(r => r.json())
+      .then(d => {
+        const fetched = d.posts ?? []
+        setPosts(prev => [...prev, ...fetched])
+        setHasMore(fetched.length === LIMIT)
+        setPage(p => p + 1)
+      })
+      .finally(() => setLoadingMore(false))
+  }, [page, loadingMore, hasMore])
+
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMore()
+    }, { threshold: 0.1 })
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   const handleVote = async (postId: string) => {
     if (!token) return
@@ -65,25 +101,18 @@ export default function CommunityPage() {
     }
   }
 
-  const totalPages = Math.ceil(total / LIMIT)
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
 
-        <div className="flex items-center justify-end mb-3">
-          <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
-            <button
-              onClick={() => setCompact(false)}
-              className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
-            >
+        <div className="flex items-center justify-between mb-3">
+          {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}
+          <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+            <button onClick={() => setCompact(false)} className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}>
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={() => setCompact(true)}
-              className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
-            >
+            <button onClick={() => setCompact(true)} className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}>
               <LayoutList className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -110,7 +139,8 @@ export default function CommunityPage() {
           }
         </div>
 
-        <Pagination page={page} totalPages={totalPages} onPage={setPage} />
+        <div ref={sentinelRef} className="h-4" />
+        {loadingMore && Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)}
       </div>
     </div>
   )
