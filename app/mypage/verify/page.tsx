@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { BadgeCheck, ChevronLeft, Loader2 } from 'lucide-react'
+import { BadgeCheck, ChevronLeft, Loader2, Upload, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
@@ -17,20 +17,40 @@ interface VerifyRequest {
   admin_note?: string | null
 }
 
+const EMAIL_CATEGORIES = ['business', 'media']
+const ID_CATEGORIES    = ['creator', 'public_figure', 'other']
+
 export default function VerifyPage() {
   const { t } = useI18n()
   const router = useRouter()
-  const [token, setToken] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const [token, setToken]       = useState<string | null>(null)
+  const [userId, setUserId]     = useState<string | null>(null)
+  const [loading, setLoading]   = useState(true)
   const [existing, setExisting] = useState<VerifyRequest | null>(null)
 
-  const [category, setCategory] = useState('creator')
-  const [reason, setReason] = useState('')
-  const [website, setWebsite] = useState('')
+  const [category, setCategory]       = useState('creator')
+  const [reason, setReason]           = useState('')
+  const [website, setWebsite]         = useState('')
   const [socialLinks, setSocialLinks] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [submitting, setSubmitting]   = useState(false)
+  const [error, setError]             = useState('')
+  const [success, setSuccess]         = useState(false)
+
+  // 이메일 인증
+  const [workEmail, setWorkEmail]         = useState('')
+  const [otpSent, setOtpSent]             = useState(false)
+  const [otpCode, setOtpCode]             = useState('')
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [sendingOtp, setSendingOtp]       = useState(false)
+  const [confirmingOtp, setConfirmingOtp] = useState(false)
+  const [otpError, setOtpError]           = useState('')
+  const [codeSentMsg, setCodeSentMsg]     = useState('')
+
+  // 파일 업로드
+  const [idImageUrl, setIdImageUrl]       = useState<string | null>(null)
+  const [uploadingFile, setUploadingFile] = useState(false)
 
   const CATEGORIES = [
     { key: 'creator',       label: t('verify.cat.creator') },
@@ -45,7 +65,7 @@ export default function VerifyPage() {
       const tok = data.session?.access_token ?? null
       if (!tok) { router.replace('/login'); return }
       setToken(tok)
-      // fetch existing request
+      setUserId(data.session?.user?.id ?? null)
       const res = await fetch('/api/user/verify-request', {
         headers: { Authorization: `Bearer ${tok}` },
       })
@@ -55,19 +75,107 @@ export default function VerifyPage() {
     })
   }, [router])
 
+  const handleCategoryChange = (key: string) => {
+    setCategory(key)
+    setWorkEmail('')
+    setOtpSent(false)
+    setOtpCode('')
+    setEmailVerified(false)
+    setOtpError('')
+    setIdImageUrl(null)
+  }
+
+  const handleSendOtp = async () => {
+    if (!workEmail.trim()) return
+    setSendingOtp(true)
+    setOtpError('')
+    setCodeSentMsg('')
+    try {
+      const res = await fetch('/api/user/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: workEmail }),
+      })
+      if (res.ok) {
+        setOtpSent(true)
+        setCodeSentMsg(t('verify.code_sent'))
+      } else {
+        const d = await res.json()
+        setOtpError(d.error ?? 'error')
+      }
+    } finally {
+      setSendingOtp(false)
+    }
+  }
+
+  const handleConfirmOtp = async () => {
+    if (!otpCode.trim()) return
+    setConfirmingOtp(true)
+    setOtpError('')
+    try {
+      const res = await fetch('/api/user/verify-email', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: workEmail, code: otpCode }),
+      })
+      if (res.ok) {
+        setEmailVerified(true)
+      } else {
+        setOtpError(t('verify.otp_error'))
+      }
+    } finally {
+      setConfirmingOtp(false)
+    }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+    setUploadingFile(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${userId}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('verify-docs')
+        .upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('verify-docs').getPublicUrl(path)
+      setIdImageUrl(publicUrl)
+    } catch {
+      setError('Upload failed.')
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!reason.trim()) return
+
+    if (EMAIL_CATEGORIES.includes(category) && !emailVerified) {
+      setError(t('verify.email_required_err'))
+      return
+    }
+    if (ID_CATEGORIES.includes(category) && !idImageUrl) {
+      setError(t('verify.id_required_err'))
+      return
+    }
+
     setSubmitting(true)
     setError('')
     try {
       const res = await fetch('/api/user/verify-request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ category, reason, website, social_links: socialLinks }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          category,
+          reason,
+          website,
+          social_links:   socialLinks,
+          work_email:     EMAIL_CATEGORIES.includes(category) ? workEmail : undefined,
+          email_verified: EMAIL_CATEGORIES.includes(category) ? emailVerified : undefined,
+          id_image_url:   ID_CATEGORIES.includes(category) ? idImageUrl : undefined,
+        }),
       })
       const d = await res.json()
       if (!res.ok) {
@@ -104,14 +212,11 @@ export default function VerifyPage() {
         </div>
         <p className="text-sm text-white/40 leading-relaxed mb-8">{t('verify.desc')}</p>
 
-        {/* Existing request status */}
         {existing && (
           <div className={`rounded-2xl border p-5 mb-8 ${
-            existing.status === 'approved'
-              ? 'border-accent/30 bg-accent/5'
-              : existing.status === 'rejected'
-              ? 'border-red-500/30 bg-red-500/5'
-              : 'border-yellow-500/30 bg-yellow-500/5'
+            existing.status === 'approved'  ? 'border-accent/30 bg-accent/5'
+            : existing.status === 'rejected' ? 'border-red-500/30 bg-red-500/5'
+            : 'border-yellow-500/30 bg-yellow-500/5'
           }`}>
             <div className="flex items-center gap-2 mb-1">
               <span className={`text-sm font-bold ${
@@ -135,7 +240,6 @@ export default function VerifyPage() {
           </div>
         )}
 
-        {/* Form — only show if no pending/approved request */}
         {(!existing || existing.status === 'rejected') && !success && (
           <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -147,7 +251,7 @@ export default function VerifyPage() {
                   <button
                     key={c.key}
                     type="button"
-                    onClick={() => setCategory(c.key)}
+                    onClick={() => handleCategoryChange(c.key)}
                     className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                       category === c.key
                         ? 'border-accent text-white'
@@ -160,6 +264,99 @@ export default function VerifyPage() {
                 ))}
               </div>
             </div>
+
+            {/* 이메일 인증 — business / media */}
+            {EMAIL_CATEGORIES.includes(category) && (
+              <div>
+                <label className="block text-xs font-semibold text-white/50 mb-2">
+                  {t('verify.work_email')} <span className="text-accent">*</span>
+                </label>
+                {emailVerified ? (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl text-sm text-accent font-semibold">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t('verify.verified')}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        type="email"
+                        value={workEmail}
+                        onChange={e => { setWorkEmail(e.target.value); setOtpSent(false); setOtpCode(''); setOtpError('') }}
+                        placeholder={t('verify.work_email_ph')}
+                        className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={sendingOtp || !workEmail.trim()}
+                        className="px-4 py-3 rounded-xl text-xs font-bold text-white border border-border hover:border-white/20 transition-all disabled:opacity-40 whitespace-nowrap"
+                      >
+                        {sendingOtp ? t('verify.sending') : t('verify.send_code')}
+                      </button>
+                    </div>
+                    {codeSentMsg && <p className="text-xs text-accent mt-1.5">{codeSentMsg}</p>}
+                    {otpSent && (
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="text"
+                          value={otpCode}
+                          onChange={e => setOtpCode(e.target.value)}
+                          placeholder={t('verify.otp_ph')}
+                          maxLength={6}
+                          className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 tracking-widest"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleConfirmOtp}
+                          disabled={confirmingOtp || otpCode.length < 6}
+                          className="px-4 py-3 rounded-xl text-xs font-bold text-white border border-accent/50 bg-accent/10 hover:bg-accent/20 transition-all disabled:opacity-40"
+                        >
+                          {confirmingOtp ? <Loader2 className="w-4 h-4 animate-spin" /> : t('verify.confirm_code')}
+                        </button>
+                      </div>
+                    )}
+                    {otpError && <p className="text-xs text-red-400 mt-1.5">{otpError}</p>}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* 신분증/명함 업로드 — creator / public_figure / other */}
+            {ID_CATEGORIES.includes(category) && (
+              <div>
+                <label className="block text-xs font-semibold text-white/50 mb-1">
+                  {t('verify.id_upload')} <span className="text-accent">*</span>
+                </label>
+                <p className="text-xs text-white/30 mb-2">{t('verify.id_upload_desc')}</p>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                {idImageUrl ? (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-accent/10 border border-accent/30 rounded-xl text-sm text-accent font-semibold">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t('verify.upload_done')}
+                    <button
+                      type="button"
+                      onClick={() => { setIdImageUrl(null); if (fileRef.current) fileRef.current.value = '' }}
+                      className="ml-auto text-xs text-white/30 hover:text-white/60"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-surface border border-dashed border-border rounded-xl text-sm text-white/40 hover:text-white/70 hover:border-white/20 transition-all disabled:opacity-40"
+                  >
+                    {uploadingFile
+                      ? <><Loader2 className="w-4 h-4 animate-spin" />{t('verify.uploading')}</>
+                      : <><Upload className="w-4 h-4" />{t('verify.id_upload')}</>
+                    }
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Reason */}
             <div>

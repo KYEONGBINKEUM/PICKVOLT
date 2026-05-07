@@ -59,9 +59,19 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { category, reason, website, social_links } = body
+  const { category, reason, website, social_links, work_email, email_verified, id_image_url } = body
   if (!category || !reason?.trim()) {
     return NextResponse.json({ error: 'category and reason required' }, { status: 400 })
+  }
+
+  const needsEmail = ['business', 'media'].includes(category)
+  const needsId    = ['creator', 'public_figure', 'other'].includes(category)
+
+  if (needsEmail && !email_verified) {
+    return NextResponse.json({ error: 'email_verification_required' }, { status: 400 })
+  }
+  if (needsId && !id_image_url) {
+    return NextResponse.json({ error: 'id_required' }, { status: 400 })
   }
 
   const { data: profile } = await supabase
@@ -78,6 +88,9 @@ export async function POST(req: NextRequest) {
     reason: reason.trim(),
     website: website?.trim() || null,
     social_links: social_links?.trim() || null,
+    work_email: work_email?.trim() || null,
+    email_verified: email_verified ?? false,
+    id_image_url: id_image_url || null,
     status: 'pending',
   })
 
