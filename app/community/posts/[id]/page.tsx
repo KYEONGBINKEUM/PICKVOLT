@@ -679,7 +679,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
         {/* 광고 배너 — 본문과 댓글 사이 */}
         {AD_HTML_INLINE && (
-          <div className="flex justify-center my-6">
+          <div className="my-6 max-w-[728px] mx-auto">
             <AdBanner html={AD_HTML_INLINE} className="rounded-2xl overflow-hidden" />
           </div>
         )}
