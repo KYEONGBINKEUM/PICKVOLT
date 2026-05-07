@@ -335,11 +335,6 @@ function MyPageContent() {
         )}
 
         <div className="max-w-xl mx-auto">
-          {fromCommunity && (
-            <Link href="/community" className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors mb-6">
-              ← {t('community.title')}
-            </Link>
-          )}
           <h1 className="text-4xl font-black text-white mb-8">{t('mypage.title')}</h1>
 
           {/* Profile card */}
