@@ -1,0 +1,12 @@
+import CommunitySidebar from '@/components/CommunitySidebar'
+
+export default function ClanLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <CommunitySidebar />
+      <div className="md:pl-52 pt-10 md:pt-0">
+        {children}
+      </div>
+    </>
+  )
+}
