@@ -1,22 +1,40 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2 } from 'lucide-react'
+import { ChevronLeft, Loader2, Camera, ImagePlus } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
+async function uploadImage(file: File, userId: string, type: 'avatar' | 'banner'): Promise<string | null> {
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const path = `${userId}/${type}-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('clan-assets').upload(path, file, { upsert: true })
+  if (error) return null
+  const { data } = supabase.storage.from('clan-assets').getPublicUrl(path)
+  return data.publicUrl
+}
+
 export default function ClanCreatePage() {
   const { t } = useI18n()
   const router = useRouter()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
   const [token, setToken]     = useState<string | null>(null)
+  const [userId, setUserId]   = useState<string | null>(null)
   const [authed, setAuthed]   = useState<boolean | null>(null)
   const [name, setName]       = useState('')
   const [slug, setSlug]       = useState('')
   const [description, setDescription] = useState('')
   const [joinType, setJoinType] = useState<'auto' | 'approval'>('auto')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]     = useState('')
 
@@ -25,6 +43,7 @@ export default function ClanCreatePage() {
       setToken(data.session?.access_token ?? null)
       const { data: { user } } = await supabase.auth.getUser()
       setAuthed(!!user)
+      setUserId(user?.id ?? null)
     })
   }, [])
 
@@ -35,18 +54,43 @@ export default function ClanCreatePage() {
     }
   }
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBannerFile(file)
+    setBannerPreview(URL.createObjectURL(file))
+  }
+
   const handleSubmit = async () => {
-    if (!token || !name.trim() || !slug.trim()) return
+    if (!token || !name.trim() || !slug.trim() || !userId) return
     setSubmitting(true); setError('')
     try {
+      let finalAvatarUrl = avatarUrl
+      let finalBannerUrl = bannerUrl
+      if (avatarFile) finalAvatarUrl = await uploadImage(avatarFile, userId, 'avatar')
+      if (bannerFile) finalBannerUrl = await uploadImage(bannerFile, userId, 'banner')
+
       const res = await fetch('/api/clans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim() || null, join_type: joinType }),
+        body: JSON.stringify({
+          name: name.trim(), slug: slug.trim(),
+          description: description.trim() || null,
+          join_type: joinType,
+          avatar_url: finalAvatarUrl,
+          banner_url: finalBannerUrl,
+        }),
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error === 'slug_taken' ? t('clan.slug') + ' — taken' : json.error ?? 'error')
+        setError(json.error === 'slug_taken' ? `${t('clan.slug')} — taken` : json.error ?? 'error')
         return
       }
       router.push(`/clan/${json.slug}`)
@@ -82,11 +126,53 @@ export default function ClanCreatePage() {
         </div>
 
         <div className="space-y-6">
+
+          {/* 배너 이미지 */}
           <div>
-            <p className={labelCls}>{t('clan.name')}</p>
-            <input value={name} onChange={e => handleNameChange(e.target.value)} maxLength={40}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors"
-              placeholder={t('clan.name')} />
+            <p className={labelCls}>{t('clan.banner')}</p>
+            <div
+              className="relative w-full h-32 rounded-2xl overflow-hidden bg-surface border border-border cursor-pointer group"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              {bannerPreview
+                ? <img src={bannerPreview} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-gradient-to-br from-accent/10 to-surface-2 flex items-center justify-center">
+                    <ImagePlus className="w-8 h-8 text-white/20" />
+                  </div>
+              }
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerChange} />
+          </div>
+
+          {/* 클랜 아이콘 + 이름 */}
+          <div className="flex items-end gap-4">
+            <div>
+              <p className={labelCls}>{t('clan.avatar')}</p>
+              <div
+                className="relative w-20 h-20 rounded-2xl overflow-hidden bg-surface border border-border cursor-pointer group flex-shrink-0"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {avatarPreview
+                  ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center">
+                      <Camera className="w-6 h-6 text-white/20" />
+                    </div>
+                }
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            </div>
+            <div className="flex-1">
+              <p className={labelCls}>{t('clan.name')}</p>
+              <input value={name} onChange={e => handleNameChange(e.target.value)} maxLength={40}
+                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors"
+                placeholder={t('clan.name')} />
+            </div>
           </div>
 
           <div>
@@ -112,7 +198,7 @@ export default function ClanCreatePage() {
             <div className="flex gap-3">
               {(['auto', 'approval'] as const).map(jt => (
                 <button key={jt} type="button" onClick={() => setJoinType(jt)}
-                  className={`flex-1 py-3 rounded-xl border text-xs font-semibold transition-all text-left px-4 ${
+                  className={`flex-1 py-3 rounded-xl border text-xs font-semibold transition-all text-center ${
                     joinType === jt ? 'border-accent bg-accent/10 text-white' : 'border-border text-white/40 hover:border-white/20'
                   }`}>
                   {t(jt === 'auto' ? 'clan.join_auto' : 'clan.join_approval')}

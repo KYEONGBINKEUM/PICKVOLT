@@ -1,17 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, Plus, X, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, Loader2, Plus, X, AlertTriangle, Camera, ImagePlus } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
+
+async function uploadImage(file: File, userId: string, type: 'avatar' | 'banner'): Promise<string | null> {
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const path = `${userId}/${type}-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('clan-assets').upload(path, file, { upsert: true })
+  if (error) return null
+  const { data } = supabase.storage.from('clan-assets').getPublicUrl(path)
+  return data.publicUrl
+}
 
 export default function ClanSettingsPage({ params }: { params: { slug: string } }) {
   const { slug } = params
   const { t } = useI18n()
   const router = useRouter()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
   const [token, setToken]     = useState<string | null>(null)
   const [userId, setUserId]   = useState<string | null>(null)
   const [clanId, setClanId]   = useState<string | null>(null)
@@ -28,7 +39,13 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
   const [isPrivate, setIsPrivate] = useState(false)
   const [rules, setRules]         = useState<string[]>([])
   const [newRule, setNewRule]     = useState('')
-  const [clanName, setClanName]   = useState('') // for delete confirm
+  const [clanName, setClanName]   = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -53,17 +70,34 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
       setJoinType(c.join_type)
       setIsPrivate(c.is_private)
       setRules(Array.isArray(c.rules) ? c.rules : [])
+      setAvatarUrl(c.avatar_url ?? null)
+      setBannerUrl(c.banner_url ?? null)
+      setAvatarPreview(c.avatar_url ?? null)
+      setBannerPreview(c.banner_url ?? null)
       setLoading(false)
     })
   }, [slug, router])
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file))
+  }
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setBannerFile(file); setBannerPreview(URL.createObjectURL(file))
+  }
+
   const handleSave = async () => {
-    if (!token) return
+    if (!token || !userId) return
     setSaving(true); setSaved(false)
+    let finalAvatarUrl = avatarUrl
+    let finalBannerUrl = bannerUrl
+    if (avatarFile) finalAvatarUrl = await uploadImage(avatarFile, userId, 'avatar')
+    if (bannerFile) finalBannerUrl = await uploadImage(bannerFile, userId, 'banner')
     await fetch(`/api/clans/${slug}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name, description, join_type: joinType, is_private: isPrivate, rules }),
+      body: JSON.stringify({ name, description, join_type: joinType, is_private: isPrivate, rules, avatar_url: finalAvatarUrl, banner_url: finalBannerUrl }),
     })
     setSaved(true)
     setSaving(false)
@@ -104,10 +138,48 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
         </div>
 
         <div className="space-y-6">
+
+          {/* 배너 */}
           <div>
-            <p className={labelCls}>{t('clan.name')}</p>
-            <input value={name} onChange={e => setName(e.target.value)} maxLength={40}
-              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
+            <p className={labelCls}>{t('clan.banner')}</p>
+            <div
+              className="relative w-full h-28 rounded-2xl overflow-hidden bg-surface border border-border cursor-pointer group"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              {bannerPreview
+                ? <img src={bannerPreview} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center"><ImagePlus className="w-7 h-7 text-white/20" /></div>
+              }
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerChange} />
+          </div>
+
+          {/* 아이콘 + 이름 */}
+          <div className="flex items-end gap-4">
+            <div>
+              <p className={labelCls}>{t('clan.avatar')}</p>
+              <div
+                className="relative w-16 h-16 rounded-2xl overflow-hidden bg-surface border border-border cursor-pointer group"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {avatarPreview
+                  ? <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center"><Camera className="w-5 h-5 text-white/20" /></div>
+                }
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            </div>
+            <div className="flex-1">
+              <p className={labelCls}>{t('clan.name')}</p>
+              <input value={name} onChange={e => setName(e.target.value)} maxLength={40}
+                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
+            </div>
           </div>
 
           <div>
