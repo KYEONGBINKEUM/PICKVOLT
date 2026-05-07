@@ -30,13 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   })
 
   if (status === 'approved') {
-    await db.from('clans').update({ member_count: db.rpc('increment', { x: 1 }) as unknown as number }).eq('id', clan.id)
-    // Simple increment via raw SQL
-    await db.rpc('increment_clan_members', { clan_id: clan.id }).catch(() => {
-      db.from('clans').select('member_count').eq('id', clan.id).single().then(({ data }) => {
-        if (data) db.from('clans').update({ member_count: (data.member_count ?? 0) + 1 }).eq('id', clan.id)
-      })
-    })
+    const { data: c } = await db.from('clans').select('member_count').eq('id', clan.id).single()
+    if (c) await db.from('clans').update({ member_count: (c.member_count ?? 0) + 1 }).eq('id', clan.id)
   }
 
   return NextResponse.json({ status })
