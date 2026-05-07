@@ -15,8 +15,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'pickvolt — ai-powered product comparisons',
-  description: 'compare any tech product and get an ai-powered verdict instantly.',
+  title: 'Pickvolt — AI-Powered Product Comparisons',
+  description: 'Compare any tech product and get an AI-powered verdict instantly.',
   keywords: ['product comparison', 'tech specs', 'ai recommendations', 'vs'],
   metadataBase: new URL('https://www.pickvolt.com'),
   icons: {
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Pickvolt',
-    description: 'compare any tech product and get an ai-powered verdict instantly.',
+    description: 'Compare any tech product and get an AI-powered verdict instantly.',
     type: 'website',
     url: 'https://www.pickvolt.com',
     siteName: 'Pickvolt',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Pickvolt',
-    description: 'compare any tech product and get an ai-powered verdict instantly.',
+    description: 'Compare any tech product and get an AI-powered verdict instantly.',
     images: ['/opengraph-image.png'],
   },
 }
