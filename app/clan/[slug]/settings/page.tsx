@@ -80,10 +80,12 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
+    if (file.size > 2 * 1024 * 1024) { alert(t('write.img_size_error')); return }
     setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file))
   }
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
+    if (file.size > 5 * 1024 * 1024) { alert(t('write.img_size_error')); return }
     setBannerFile(file); setBannerPreview(URL.createObjectURL(file))
   }
 

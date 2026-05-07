@@ -57,6 +57,7 @@ export default function ClanCreatePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 2 * 1024 * 1024) { setError(t('write.img_size_error')); return }
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
   }
@@ -64,6 +65,7 @@ export default function ClanCreatePage() {
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setError(t('write.img_size_error')); return }
     setBannerFile(file)
     setBannerPreview(URL.createObjectURL(file))
   }
