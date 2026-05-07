@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
-import { Home, Flame, MessageSquare, Star, LayoutList, HelpCircle, Newspaper } from 'lucide-react'
+import { Home, Flame, Newspaper } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 export default function CommunitySidebar() {
@@ -13,20 +13,11 @@ export default function CommunitySidebar() {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
 
-  const mainLinks = [
-    { href: '/community',          label: t('community.all'),     icon: Home,    exact: true },
-    { href: '/community/popular',  label: t('community.popular'), icon: Flame },
-  ]
-
-  const boardLinks = [
+  const allLinks = [
+    { href: '/community',         label: t('community.all'),     icon: Home,      exact: true },
+    { href: '/community/popular', label: t('community.popular'), icon: Flame },
     { href: '/community/news',    label: t('community.news'),    icon: Newspaper },
-    { href: '/community/forum',   label: t('community.forum'),   icon: MessageSquare },
-    { href: '/community/reviews', label: t('community.reviews'), icon: Star },
-    { href: '/community/free',    label: t('community.free'),    icon: LayoutList },
-    { href: '/community/qa',      label: t('community.qa'),      icon: HelpCircle },
   ]
-
-  const allLinks: { href: string; label: string; icon: React.ElementType; exact?: boolean }[] = [...mainLinks, ...boardLinks]
 
   const NavItem = ({ href, label, icon: Icon, exact }: {
     href: string; label: string; icon: React.ElementType; exact?: boolean
@@ -51,16 +42,8 @@ export default function CommunitySidebar() {
       {/* PC 사이드바 */}
       <aside className="hidden md:flex fixed left-0 top-[65px] w-52 h-[calc(100vh-65px)] border-r border-border/40 bg-background flex-col z-30 overflow-y-auto">
         <div className="py-3 px-2">
-          <div className="space-y-0.5 mb-4">
-            {mainLinks.map(l => <NavItem key={l.href} {...l} />)}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest px-3 mb-2">
-              {t('nav.community')}
-            </p>
-            <div className="space-y-0.5">
-              {boardLinks.map(l => <NavItem key={l.href} {...l} />)}
-            </div>
+          <div className="space-y-0.5">
+            {allLinks.map(l => <NavItem key={l.href} {...l} />)}
           </div>
         </div>
       </aside>

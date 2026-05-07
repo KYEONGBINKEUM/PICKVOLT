@@ -10,7 +10,7 @@ import RichEditor, { RichEditorHandle } from '@/components/RichEditor'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
-type PostType = 'review' | 'forum' | 'compare' | 'free' | 'qa' | 'news'
+type PostType = 'forum' | 'news'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
 
@@ -120,22 +120,6 @@ function WritePageInner() {
   const [embeddedProducts, setEmbeddedProducts] = useState<ProductResult[]>([])
   const [showEmbedSearch, setShowEmbedSearch]   = useState(false)
 
-  const CATEGORIES = [
-    { key: 'laptop', label: t('cat.laptop') },
-    { key: 'mobile', label: t('cat.mobile') },
-    { key: 'tablet', label: t('cat.tablet') },
-    { key: 'other',  label: t('cat.other') },
-  ]
-
-  const BASE_TYPES: { key: PostType; label: string; desc: string }[] = [
-    { key: 'forum',   label: t('community.forum'),   desc: t('write.type.forum.desc') },
-    { key: 'review',  label: t('community.reviews'), desc: t('write.type.review.desc') },
-    { key: 'free',    label: t('community.free'),    desc: t('write.type.free.desc') },
-    { key: 'qa',      label: t('community.qa'),      desc: t('write.type.qa.desc') },
-  ]
-  const TYPE_OPTIONS = isAdmin
-    ? [...BASE_TYPES, { key: 'news' as PostType, label: t('community.news'), desc: t('write.type.news.desc') }]
-    : BASE_TYPES
 
   const editorRef     = useRef<HTMLDivElement | null>(null)
   const richEditorRef = useRef<RichEditorHandle>(null)
@@ -162,7 +146,6 @@ function WritePageInner() {
     })
   }, [])
 
-  // Fix: news type not in TYPE_OPTIONS until isAdmin resolves
   useEffect(() => {
     if (isAdmin && defaultType === 'news') setType('news')
   }, [isAdmin, defaultType])
@@ -236,18 +219,8 @@ function WritePageInner() {
   }, [])
 
   const handleProductSelect = useCallback((p: ProductResult) => {
-    if (type === 'review') {
-      setProducts([p])
-    } else {
-      setProducts(prev => prev.length < 5 ? [...prev, p] : prev)
-    }
-  }, [type])
-
-  useEffect(() => {
-    if (type === 'review' && products.length > 1) {
-      setProducts(prev => prev.slice(0, 1))
-    }
-  }, [type, products.length])
+    setProducts(prev => prev.length < 5 ? [...prev, p] : prev)
+  }, [])
 
   const handleOptionProductSelect = useCallback((p: ProductResult, idx: number) => {
     setOptions(prev => prev.map((o, i) => i === idx ? { ...o, label: o.label || p.name, product_id: p.id, image_url: p.image_url } : o))
@@ -256,7 +229,6 @@ function WritePageInner() {
 
   const canSubmit = () => {
     if (!title.trim()) return false
-    if (type === 'review' && !category) return false
     if (hasCompare && options.some(o => !o.label.trim())) return false
     return true
   }
@@ -344,8 +316,8 @@ function WritePageInner() {
           body: JSON.stringify({
             title: title.trim(),
             body: finalBody,
-            rating: type === 'review' ? rating : null,
-            category: type === 'review' ? category : null,
+            rating: null,
+            category: null,
           }),
         })
         const json = await res.json()
@@ -358,10 +330,10 @@ function WritePageInner() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             type,
-            category: type === 'review' ? category : null,
+            category: null,
             title: title.trim(),
             body: finalBody,
-            rating: type === 'review' ? rating : null,
+            rating: null,
             product_ids: products.map(p => p.id),
             compare_options: hasCompare ? options : undefined,
           }),
@@ -383,10 +355,7 @@ function WritePageInner() {
     : r >= 5 ? t('post.rating.average')
     : t('post.rating.poor')
 
-  const bodyPlaceholder =
-    type === 'review' ? t('write.placeholder.review')
-    : type === 'qa'   ? t('write.placeholder.qa')
-    : t('write.placeholder.forum')
+  const bodyPlaceholder = t('write.placeholder.forum')
 
   // Section label style
   const labelCls = 'text-xs font-bold text-white/40 mb-2 uppercase tracking-widest'
@@ -432,41 +401,20 @@ function WritePageInner() {
 
         <div className="space-y-6">
 
-          {/* 유형 선택 — 인증 확인 후 렌더 (isAdmin 확정 전에 잘못된 옵션 고정 방지) */}
-          <div>
-            <p className={labelCls}>{t('write.type')}</p>
-            {authed === null ? (
-              <div className="w-full h-12 bg-surface border border-border rounded-xl animate-pulse" />
-            ) : (
-              <select
-                key={String(isAdmin)}
-                value={type}
-                onChange={e => setType(e.target.value as PostType)}
-                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors cursor-pointer"
+          {/* 어드민 전용 뉴스 타입 토글 */}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setType(t => t === 'news' ? 'forum' : 'news')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  type === 'news'
+                    ? 'border-accent bg-accent/15 text-white'
+                    : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                }`}
               >
-                {TYPE_OPTIONS.map(opt => (
-                  <option key={opt.key} value={opt.key}>{opt.label} — {opt.desc}</option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* 카테고리 (리뷰만) */}
-          {type === 'review' && (
-            <div>
-              <p className={labelCls}>{t('write.category')}</p>
-              <div className="flex gap-2 flex-wrap">
-                {CATEGORIES.map(c => (
-                  <button key={c.key} onClick={() => setCategory(c.key)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all border ${
-                      category === c.key
-                        ? 'bg-accent border-accent text-white'
-                        : 'bg-surface border-border text-white/40 hover:text-white/70'
-                    }`}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
+                {t('community.news')}
+              </button>
             </div>
           )}
 
@@ -597,66 +545,6 @@ function WritePageInner() {
             )}
           </div>
 
-          {/* 평점 (리뷰만) */}
-          {type === 'review' && (
-            <div>
-              <p className={labelCls}>{t('write.rating')}</p>
-              <div className="bg-surface border border-border rounded-xl px-5 py-4">
-                <div className="flex items-center gap-1" onMouseLeave={() => setHoverStar(0)}>
-                  {[1, 2, 3, 4, 5].map(n => {
-                    const display = hoverStar || rating
-                    const stars = display / 2
-                    const fill = stars >= n ? 'full' : stars >= n - 0.5 ? 'half' : 'empty'
-                    const clipId = `wstar-${n}`
-                    return (
-                      <div
-                        key={n}
-                        className="relative cursor-pointer"
-                        onMouseMove={e => {
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          setHoverStar(e.clientX - rect.left < rect.width / 2 ? n * 2 - 1 : n * 2)
-                        }}
-                        onClick={e => {
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          setRating(e.clientX - rect.left < rect.width / 2 ? n * 2 - 1 : n * 2)
-                        }}
-                      >
-                        <svg width={28} height={28} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-                          {fill === 'half' && (
-                            <defs>
-                              <clipPath id={clipId}>
-                                <rect x="0" y="0" width="12" height="24" />
-                              </clipPath>
-                            </defs>
-                          )}
-                          <polygon
-                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                            fill={fill !== 'empty' ? 'rgb(255,77,0)' : 'none'}
-                            stroke={fill !== 'empty' ? 'rgb(255,77,0)' : 'rgba(255,255,255,0.15)'}
-                            strokeWidth="1.5"
-                            clipPath={fill === 'half' ? `url(#${clipId})` : undefined}
-                          />
-                          {fill === 'half' && (
-                            <polygon
-                              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-                              fill="none"
-                              stroke="rgba(255,255,255,0.15)"
-                              strokeWidth="1.5"
-                            />
-                          )}
-                        </svg>
-                      </div>
-                    )
-                  })}
-                  <span className="ml-1.5 text-sm font-bold tabular-nums" style={{ color: 'rgb(255,77,0)' }}>
-                    {(rating / 2) % 1 === 0 ? rating / 2 : (rating / 2).toFixed(1)}
-                    <span className="text-xs text-white/25 font-normal">/5</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* 제품 태그 */}
           <div>
             <p className={labelCls}>
@@ -676,7 +564,7 @@ function WritePageInner() {
                 ))}
               </div>
             )}
-            {products.length < (type === 'review' ? 1 : 5) && (
+            {products.length < 5 && (
               <ProductSearch
                 onSelect={handleProductSelect}
                 exclude={products.map(p => p.id)}
