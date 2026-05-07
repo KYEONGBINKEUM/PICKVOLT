@@ -435,40 +435,49 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     if (translated) { setTranslated(null); return }
     setTranslating(true)
     try {
-      // Strip structural elements (product cards, compare tables) before translating text
-      let textOnlyBody = post.body
+      const SEP = '\n||||\n'
+      let translatedBody = post.body
+
       if (typeof window !== 'undefined') {
-        try {
-          const doc = new DOMParser().parseFromString(post.body, 'text/html')
-          doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => el.remove())
-          textOnlyBody = doc.body.innerHTML
-        } catch { /* ignore */ }
+        const doc = new DOMParser().parseFromString(post.body, 'text/html')
+        const textNodes: Text[] = []
+
+        const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+          acceptNode(node) {
+            const parent = (node as Text).parentElement
+            if (!parent) return NodeFilter.FILTER_REJECT
+            if (parent.closest('[data-product-card],[data-compare-table],script,style')) return NodeFilter.FILTER_REJECT
+            if (!(node as Text).textContent?.trim()) return NodeFilter.FILTER_SKIP
+            return NodeFilter.FILTER_ACCEPT
+          },
+        })
+        let n: Node | null
+        while ((n = walker.nextNode())) textNodes.push(n as Text)
+
+        const combined = textNodes.map(n => n.textContent!.replace(/\n/g, ' ').trim()).join(SEP)
+
+        const [result, translatedTitle] = await Promise.all([
+          combined
+            ? fetch(`/api/translate?q=${encodeURIComponent(combined)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? combined)
+            : Promise.resolve(combined),
+          fetch(`/api/translate?q=${encodeURIComponent(post.title)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? post.title),
+        ])
+
+        const parts = result.split(/\n\|{4}\n/)
+        let pi = 0
+        textNodes.forEach(node => {
+          if (node.textContent?.trim()) { node.textContent = parts[pi] ?? node.textContent; pi++ }
+        })
+        translatedBody = doc.body.innerHTML
+        setTranslated({ title: translatedTitle, body: translatedBody })
+        return
       }
-      const plainBody = textOnlyBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-      const [title, body] = await Promise.all([
-        fetch(`/api/translate?q=${encodeURIComponent(post.title)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? post.title),
-        plainBody ? fetch(`/api/translate?q=${encodeURIComponent(plainBody)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? plainBody) : Promise.resolve(''),
-      ])
-      setTranslated({ title, body })
+
+      const translatedTitle = await fetch(`/api/translate?q=${encodeURIComponent(post.title)}&tl=${locale}`).then(r => r.json()).then(d => d.text ?? post.title)
+      setTranslated({ title: translatedTitle, body: translatedBody })
     } finally {
       setTranslating(false)
     }
-  }
-
-  // Extract structural HTML (product cards, compare tables, images) from body
-  const extractStructuralHtml = (html: string): string => {
-    if (typeof window === 'undefined') return ''
-    try {
-      const doc = new DOMParser().parseFromString(html, 'text/html')
-      const parts: string[] = []
-      doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => parts.push(el.outerHTML))
-      doc.querySelectorAll('img').forEach(el => {
-        if (!el.closest('[data-product-card],[data-compare-table]')) {
-          parts.push(`<div class="my-2">${el.outerHTML}</div>`)
-        }
-      })
-      return parts.join('')
-    } catch { return '' }
   }
 
   const showTranslateBtn = post ? needsTranslation(post.title + ' ' + post.body.replace(/<[^>]+>/g, '')) : false
@@ -604,17 +613,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
               {/* 본문 */}
               {(post.body || translated?.body) && (
                 <div className="mb-4">
-                  {translated?.body ? (
-                    <>
-                      <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap mb-3">{translated.body}</p>
-                      {/* Keep product cards & compare tables from original HTML */}
-                      {extractStructuralHtml(post.body) && (
-                        <MarkdownBody text={extractStructuralHtml(post.body)} />
-                      )}
-                    </>
-                  ) : (
-                    <MarkdownBody text={post.body} />
-                  )}
+                  <MarkdownBody text={translated?.body ?? post.body} />
                 </div>
               )}
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
-import { Bold, Italic, Quote, List, Link2, ImageIcon, Loader2, Package } from 'lucide-react'
+import { Bold, Italic, Quote, List, Link2, ImageIcon, Loader2, Package, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export interface RichEditorHandle {
@@ -88,17 +88,30 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
   }
 
   const tools = [
-    { icon: Bold,   title: 'B',  action: () => exec('bold') },
-    { icon: Italic, title: 'I',  action: () => exec('italic') },
-    { icon: List,   title: '•',  action: () => exec('insertUnorderedList') },
-    { icon: Quote,  title: '"',  action: () => doInsertHtml('<blockquote style="border-left:2px solid rgba(255,255,255,0.2);padding-left:12px;color:rgba(255,255,255,0.45);margin:4px 0">Quote</blockquote><br />') },
-    { icon: Link2,  title: '🔗', action: () => { const url = prompt(urlPrompt); if (url) exec('createLink', url) } },
+    { icon: Bold,        title: 'B',  action: () => exec('bold') },
+    { icon: Italic,      title: 'I',  action: () => exec('italic') },
+    { icon: List,        title: '•',  action: () => exec('insertUnorderedList') },
+    { icon: Quote,       title: '"',  action: () => doInsertHtml('<blockquote style="border-left:2px solid rgba(255,255,255,0.2);padding-left:12px;color:rgba(255,255,255,0.45);margin:4px 0">Quote</blockquote><br />') },
+    { icon: Link2,       title: '🔗', action: () => { const url = prompt(urlPrompt); if (url) exec('createLink', url) } },
+  ]
+
+  const alignTools = [
+    { icon: AlignLeft,   title: 'left',   action: () => exec('justifyLeft') },
+    { icon: AlignCenter, title: 'center', action: () => exec('justifyCenter') },
+    { icon: AlignRight,  title: 'right',  action: () => exec('justifyRight') },
   ]
 
   return (
     <div className="border border-border rounded-xl overflow-hidden focus-within:border-white/20 transition-colors">
       <div className="flex items-center gap-0.5 px-2 py-1.5 bg-black/20 border-b border-border flex-wrap">
         {tools.map(({ icon: Icon, title, action }) => (
+          <button key={title} type="button" onMouseDown={e => { e.preventDefault(); action() }}
+            className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors">
+            <Icon className="w-3.5 h-3.5" />
+          </button>
+        ))}
+        <div className="w-px h-4 bg-border mx-1" />
+        {alignTools.map(({ icon: Icon, title, action }) => (
           <button key={title} type="button" onMouseDown={e => { e.preventDefault(); action() }}
             className="p-1.5 rounded-lg text-white/35 hover:text-white hover:bg-white/8 transition-colors">
             <Icon className="w-3.5 h-3.5" />

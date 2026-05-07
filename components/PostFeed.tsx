@@ -318,7 +318,7 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
           )}
         </ContentWrapper>
 
-        {images.length > 0 && !translated && (
+        {images.length > 0 && (
           <ImageSlider images={images} postId={post.id} />
         )}
 
@@ -429,7 +429,7 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
         </span>
       </div>
 
-      {compactThumb && !translated && (
+      {compactThumb && (
         isExternal ? (
           <a href={post.source_url!} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 self-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
