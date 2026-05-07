@@ -17,7 +17,6 @@ export default function ClanCreatePage() {
   const [slug, setSlug]       = useState('')
   const [description, setDescription] = useState('')
   const [joinType, setJoinType] = useState<'auto' | 'approval'>('auto')
-  const [isPrivate, setIsPrivate] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]     = useState('')
 
@@ -43,7 +42,7 @@ export default function ClanCreatePage() {
       const res = await fetch('/api/clans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim() || null, join_type: joinType, is_private: isPrivate }),
+        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim() || null, join_type: joinType }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -120,21 +119,6 @@ export default function ClanCreatePage() {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div>
-            <button type="button" onClick={() => setIsPrivate(v => !v)}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all ${
-                isPrivate ? 'border-accent/40 bg-accent/5' : 'border-border'
-              }`}>
-              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${isPrivate ? 'border-accent bg-accent' : 'border-white/30'}`}>
-                {isPrivate && <span className="text-white text-[9px] font-black">✓</span>}
-              </span>
-              <div className="text-left">
-                <p className={`text-sm font-semibold ${isPrivate ? 'text-white' : 'text-white/50'}`}>{t('clan.is_private')}</p>
-                <p className="text-[11px] text-white/30">{t('clan.is_private_desc')}</p>
-              </div>
-            </button>
           </div>
 
           {error && <p className="text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-4 py-3">{error}</p>}
