@@ -119,6 +119,9 @@ function WritePageInner() {
   const [hasCompare, setHasCompare]       = useState(false)
   const [embeddedProducts, setEmbeddedProducts] = useState<ProductResult[]>([])
   const [showEmbedSearch, setShowEmbedSearch]   = useState(false)
+  const [myClans, setMyClans]             = useState<{ id: string; slug: string; name: string }[]>([])
+  const [selectedClanId, setSelectedClanId]   = useState<string | null>(null)
+  const [isMembersOnly, setIsMembersOnly]     = useState(false)
 
 
   const editorRef     = useRef<HTMLDivElement | null>(null)
@@ -142,6 +145,14 @@ function WritePageInner() {
           .from('profiles').select('nickname, avatar_url').eq('user_id', user.id).maybeSingle()
         setDisplayName(profile?.nickname ?? user.email?.split('@')[0] ?? 'user')
         setAvatarUrl(profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null)
+
+        // Load user's clans
+        if (session?.access_token) {
+          fetch('/api/clans?my=1', { headers: { Authorization: `Bearer ${session.access_token}` } })
+            .then(r => r.json())
+            .then(d => setMyClans((d.clans ?? []).map((c: { id: string; slug: string; name: string }) => ({ id: c.id, slug: c.slug, name: c.name }))))
+            .catch(() => {})
+        }
       }
     })
   }, [])
@@ -336,6 +347,8 @@ function WritePageInner() {
             rating: null,
             product_ids: products.map(p => p.id),
             compare_options: hasCompare ? options : undefined,
+            clan_id: selectedClanId ?? null,
+            is_members_only: selectedClanId ? isMembersOnly : false,
           }),
         })
         const json = await res.json()
@@ -415,6 +428,56 @@ function WritePageInner() {
               >
                 {t('community.news')}
               </button>
+            </div>
+          )}
+
+          {/* 클랜 선택 */}
+          {myClans.length > 0 && !editPostId && (
+            <div>
+              <p className={labelCls}>{t('clan.post_in')}</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedClanId(null); setIsMembersOnly(false) }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    !selectedClanId
+                      ? 'border-white/30 bg-white/10 text-white'
+                      : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                  }`}
+                >
+                  {t('clan.none')}
+                </button>
+                {myClans.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedClanId(selectedClanId === c.id ? null : c.id)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                      selectedClanId === c.id
+                        ? 'border-accent bg-accent/15 text-white'
+                        : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                    }`}
+                  >
+                    c/{c.slug}
+                  </button>
+                ))}
+              </div>
+              {selectedClanId && (
+                <button
+                  type="button"
+                  onClick={() => setIsMembersOnly(v => !v)}
+                  className={`mt-2 flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    isMembersOnly
+                      ? 'border-accent/40 bg-accent/10 text-accent'
+                      : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                  }`}
+                >
+                  <span className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all ${isMembersOnly ? 'border-accent bg-accent' : 'border-white/30'}`}>
+                    {isMembersOnly && <span className="text-white text-[8px] font-black">✓</span>}
+                  </span>
+                  {t('clan.members_only_toggle')}
+                </button>
+              )}
             </div>
           )}
 

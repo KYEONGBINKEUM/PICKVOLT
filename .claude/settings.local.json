@@ -46,7 +46,9 @@
       "Bash(gh run *)",
       "Bash(gh workflow *)",
       "Bash(xargs grep *)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(mkdir -p \"E:/00. pickvolt/cli/.claude/worktrees/crazy-mirzakhani-574499/app/api/clans/[slug]/join\" \"E:/00. pickvolt/cli/.claude/worktrees/crazy-mirzakhani-574499/app/api/clans/[slug]/leave\" \"E:/00. pickvolt/cli/.claude/worktrees/crazy-mirzakhani-574499/app/api/clans/[slug]/members\")",
+      "Bash(mkdir -p \"E:/00. pickvolt/cli/.claude/worktrees/crazy-mirzakhani-574499/app/clan/create\" \"E:/00. pickvolt/cli/.claude/worktrees/crazy-mirzakhani-574499/app/clan/[slug]/settings\" \"E:/00. pickvolt/cli/.claude/worktrees/crazy-mirzakhani-574499/app/clan/[slug]/members\")"
     ]
   }
 }

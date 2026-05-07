@@ -24,6 +24,9 @@ export interface FeedPost {
   is_bot?: boolean
   source_url?: string | null
   source_name?: string | null
+  clan_id?: string | null
+  is_members_only?: boolean
+  clans?: { id: string; slug: string; name: string; avatar_url?: string | null } | null
   community_post_products?: { products: { id: string; name: string } | null }[]
   community_compare_options?: { vote_count: number }[]
 }
@@ -258,10 +261,22 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
       <div className="flex-1 min-w-0">
         <ContentWrapper>
           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            {showType && (
+            {post.clans && (
+              <>
+                <Link href={`/clan/${post.clans.slug}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                  {post.clans.avatar_url
+                    ? <img src={imgUrl(post.clans.avatar_url, 14)} alt="" className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
+                    : <span className="w-3.5 h-3.5 rounded-full bg-accent/20 flex items-center justify-center text-[7px] font-bold text-accent/70 flex-shrink-0">{post.clans.name[0]?.toUpperCase()}</span>
+                  }
+                  <span className="text-[10px] font-semibold text-accent/80">c/{post.clans.slug}</span>
+                </Link>
+                <span className="text-white/15 text-[10px]">·</span>
+              </>
+            )}
+            {showType && !post.clans && (
               <span className="text-[10px] font-semibold text-accent/70">{t(`community.${post.type}`)}</span>
             )}
-            {showType && <span className="text-white/15 text-[10px]">·</span>}
+            {showType && !post.clans && <span className="text-white/15 text-[10px]">·</span>}
             {post.user_id && !post.is_bot
               ? <Link href={`/user/${post.user_id}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
                   {post.user_avatar_url
@@ -279,6 +294,9 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
                 <span className="text-white/15 text-[10px]">·</span>
                 <span className="text-[10px] font-bold text-amber-400">{post.rating}/10</span>
               </>
+            )}
+            {post.is_members_only && (
+              <span className="text-[9px] font-semibold bg-accent/10 text-accent/60 border border-accent/20 rounded-full px-1.5 py-0.5">{t('clan.members_only')}</span>
             )}
           </div>
 
@@ -426,15 +444,27 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
       )}
 
       <div className="flex-1 min-w-0">
-        {(showType || linkedProduct) && (
+        {(showType || linkedProduct || post.clans) && (
           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-            {showType && (
+            {post.clans && (
+              <Link href={`/clan/${post.clans.slug}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                {post.clans.avatar_url
+                  ? <img src={imgUrl(post.clans.avatar_url, 12)} alt="" className="w-3 h-3 rounded-full object-cover flex-shrink-0" />
+                  : <span className="w-3 h-3 rounded-full bg-accent/20 flex items-center justify-center text-[6px] font-bold text-accent/70 flex-shrink-0">{post.clans.name[0]?.toUpperCase()}</span>
+                }
+                <span className="text-[10px] font-semibold text-accent/80">c/{post.clans.slug}</span>
+              </Link>
+            )}
+            {showType && !post.clans && (
               <span className="text-[10px] font-semibold text-accent/70">{t(`community.${post.type}`)}</span>
             )}
             {linkedProduct && (
               <span className="text-[9px] font-semibold bg-accent/10 text-accent/70 border border-accent/20 rounded-full px-1.5 py-0.5">
                 {linkedProduct.name}
               </span>
+            )}
+            {post.is_members_only && (
+              <span className="text-[9px] font-semibold bg-accent/10 text-accent/60 border border-accent/20 rounded-full px-1.5 py-0.5">{t('clan.members_only')}</span>
             )}
           </div>
         )}

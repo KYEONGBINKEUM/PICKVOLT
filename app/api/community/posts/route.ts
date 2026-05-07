@@ -20,7 +20,7 @@ async function getUser(req: NextRequest) {
   return user ?? null
 }
 
-// GET /api/community/posts?type=review&category=laptop&sort=hot&page=1&limit=20&product_id=...
+// GET /api/community/posts?type=review&category=laptop&sort=hot&page=1&limit=20&product_id=...&clan_id=...
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type       = searchParams.get('type')       ?? ''
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   const page       = Math.max(1, parseInt(searchParams.get('page')  ?? '1'))
   const limit      = Math.min(50, parseInt(searchParams.get('limit') ?? '20'))
   const product_id = searchParams.get('product_id') ?? ''
+  const clan_id    = searchParams.get('clan_id')    ?? ''
 
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
   let userId: string | null = null
@@ -39,6 +40,19 @@ export async function GET(req: NextRequest) {
 
   const supabase = makeServiceClient()
 
+  // Check clan membership if needed (for members-only filtering)
+  let isClanMember = false
+  if (clan_id && userId) {
+    const { data: membership } = await supabase
+      .from('clan_members')
+      .select('status')
+      .eq('clan_id', clan_id)
+      .eq('user_id', userId)
+      .eq('status', 'approved')
+      .maybeSingle()
+    isClanMember = !!membership
+  }
+
   let query = supabase
     .from('community_posts')
     .select(`
@@ -46,6 +60,8 @@ export async function GET(req: NextRequest) {
       is_pinned, created_at, updated_at,
       user_id, user_display_name, user_avatar_url,
       is_bot, source_url, source_name,
+      clan_id, is_members_only,
+      clans ( id, slug, name, avatar_url ),
       community_post_products ( product_id, products ( id, name, image_url ) ),
       community_compare_options ( id, label, image_url, vote_count, sort_order, product_id )
     `)
@@ -53,6 +69,12 @@ export async function GET(req: NextRequest) {
 
   if (type) query = query.eq('type', type)
   if (category) query = query.eq('category', category)
+  if (clan_id) query = query.eq('clan_id', clan_id)
+
+  // Hide members-only posts from non-members
+  if (!isClanMember) {
+    query = query.eq('is_members_only', false)
+  }
 
   let filteredIds: string[] | null = null
   if (product_id) {
@@ -84,6 +106,8 @@ export async function GET(req: NextRequest) {
     .eq('is_hidden', false)
   if (type) countQuery = countQuery.eq('type', type)
   if (category) countQuery = countQuery.eq('category', category)
+  if (clan_id) countQuery = countQuery.eq('clan_id', clan_id)
+  if (!isClanMember) countQuery = countQuery.eq('is_members_only', false)
   if (filteredIds) countQuery = countQuery.in('id', filteredIds)
 
   const [{ count }, { data, error }] = await Promise.all([countQuery, query])
@@ -130,7 +154,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { type, category, title, body: postBody, rating, product_ids, compare_options } = body
+  const { type, category, title, body: postBody, rating, product_ids, compare_options, clan_id, is_members_only } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
   const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
@@ -143,6 +167,18 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = makeServiceClient()
+
+  // Validate clan membership if posting to a clan
+  if (clan_id) {
+    const { data: membership } = await supabase
+      .from('clan_members')
+      .select('status')
+      .eq('clan_id', clan_id)
+      .eq('user_id', user.id)
+      .eq('status', 'approved')
+      .maybeSingle()
+    if (!membership) return NextResponse.json({ error: 'not a clan member' }, { status: 403 })
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -164,6 +200,8 @@ export async function POST(req: NextRequest) {
       title: title.trim(),
       body: postBody?.trim() ?? '',
       rating: rating ?? null,
+      clan_id: clan_id || null,
+      is_members_only: is_members_only ?? false,
     })
     .select('id')
     .single()
