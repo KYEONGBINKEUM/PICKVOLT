@@ -42,7 +42,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const isCommunity = pathname.startsWith('/community') || communityContext === true
+  const isCommunity = pathname.startsWith('/community') || pathname.startsWith('/clan') || communityContext === true
 
   // 커뮤니티 섹션 우측 링크
   const communityLinks = [
