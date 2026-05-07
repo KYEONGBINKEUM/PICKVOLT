@@ -31,6 +31,8 @@ interface Post {
   upvotes: number; downvotes?: number; comment_count: number; view_count: number
   is_pinned: boolean; created_at: string; updated_at: string
   user_id: string; user_display_name: string; user_avatar_url: string | null
+  clan_id: string | null
+  clans: { id: string; slug: string; name: string; avatar_url: string | null } | null
   community_post_products: PostProduct[]
   community_compare_options: CompareOption[]
   my_vote: boolean; my_downvote?: boolean; my_compare_option: string | null
@@ -398,10 +400,12 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   )
 
   const total = post.community_compare_options.reduce((s, o) => s + o.vote_count, 0)
-  const backHref = post.type === 'review' ? '/community/reviews'
+  const backHref = post.clans ? `/clan/${post.clans.slug}`
+    : post.type === 'review' ? '/community/reviews'
     : post.type === 'forum' ? '/community/forum'
     : '/community'
-  const backLabel = post.type === 'review' ? t('community.reviews')
+  const backLabel = post.clans ? post.clans.name
+    : post.type === 'review' ? t('community.reviews')
     : post.type === 'forum' ? t('community.forum')
     : t('community.compare')
 
@@ -451,14 +455,19 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     }
   }
 
-  // Extract only structural HTML (product cards + compare tables) from body
+  // Extract structural HTML (product cards, compare tables, images) from body
   const extractStructuralHtml = (html: string): string => {
     if (typeof window === 'undefined') return ''
     try {
       const doc = new DOMParser().parseFromString(html, 'text/html')
       const parts: string[] = []
       doc.querySelectorAll('[data-product-card],[data-compare-table]').forEach(el => parts.push(el.outerHTML))
-      return parts.join('<br />')
+      doc.querySelectorAll('img').forEach(el => {
+        if (!el.closest('[data-product-card],[data-compare-table]')) {
+          parts.push(`<div class="my-2">${el.outerHTML}</div>`)
+        }
+      })
+      return parts.join('')
     } catch { return '' }
   }
 

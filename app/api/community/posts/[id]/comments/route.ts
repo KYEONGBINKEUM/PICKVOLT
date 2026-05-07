@@ -82,5 +82,52 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Create notifications (best-effort)
+  try {
+    const notifInserts: Record<string, unknown>[] = []
+    const { data: postData } = await supabase
+      .from('community_posts')
+      .select('user_id, title')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (postData && postData.user_id !== user.id) {
+      notifInserts.push({
+        user_id: postData.user_id,
+        type: 'comment',
+        title: postData.title,
+        body: body.trim().slice(0, 80),
+        link: `/community/posts/${id}`,
+        actor_id: user.id,
+        actor_name: userDisplayName,
+        actor_avatar: userAvatarUrl,
+      })
+    }
+
+    if (parent_id) {
+      const { data: parentComment } = await supabase
+        .from('community_comments')
+        .select('user_id')
+        .eq('id', parent_id)
+        .maybeSingle()
+
+      if (parentComment && parentComment.user_id !== user.id && parentComment.user_id !== postData?.user_id) {
+        notifInserts.push({
+          user_id: parentComment.user_id,
+          type: 'reply',
+          title: postData?.title ?? '',
+          body: body.trim().slice(0, 80),
+          link: `/community/posts/${id}`,
+          actor_id: user.id,
+          actor_name: userDisplayName,
+          actor_avatar: userAvatarUrl,
+        })
+      }
+    }
+
+    if (notifInserts.length > 0) await supabase.from('notifications').insert(notifInserts)
+  } catch {}
+
   return NextResponse.json({ comment: { ...data, my_vote: false } }, { status: 201 })
 }

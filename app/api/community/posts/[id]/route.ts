@@ -40,6 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       id, type, category, title, body, rating, upvotes, downvotes, comment_count, view_count,
       is_pinned, created_at, updated_at,
       user_id, user_display_name, user_avatar_url,
+      clan_id, clans ( id, slug, name, avatar_url ),
       community_post_products ( product_id, products ( id, name, brand, image_url, category ) ),
       community_compare_options ( id, label, image_url, vote_count, sort_order, product_id, products ( id, name, image_url ) )
     `)

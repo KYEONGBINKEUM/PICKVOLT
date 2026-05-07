@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
 import SearchBar from '@/components/SearchBar'
+import NotificationBell from '@/components/NotificationBell'
 
 interface NavbarProps {
   showSearch?: boolean
@@ -133,6 +134,8 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
           <div className="w-px h-4 bg-border mx-2" />
 
+          {authReady && loggedIn && <NotificationBell />}
+
           {authReady && (
             loggedIn ? (
               <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} className="text-white/40 hover:text-white transition-colors p-1.5">
@@ -150,6 +153,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
         {/* ── 모바일 우측 ── */}
         <div className="flex md:hidden items-center gap-1">
           <LocalePopup />
+          {authReady && loggedIn && <NotificationBell />}
           {authReady && loggedIn && (
             <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} className="flex items-center justify-center w-9 h-9 rounded-full text-white/50 hover:text-white transition-colors">
               <User className="w-5 h-5" />

@@ -226,5 +226,53 @@ export async function POST(req: NextRequest) {
       : Promise.resolve(),
   ])
 
+  // Create notifications for clan members and subscribers (best-effort)
+  try {
+    const notifInserts: Record<string, unknown>[] = []
+
+    if (clan_id) {
+      const [{ data: clanInfo }, { data: clanMembers }] = await Promise.all([
+        supabase.from('clans').select('name').eq('id', clan_id).maybeSingle(),
+        supabase.from('clan_members').select('user_id').eq('clan_id', clan_id).eq('status', 'approved').neq('user_id', user.id).limit(200),
+      ])
+      for (const m of clanMembers ?? []) {
+        notifInserts.push({
+          user_id: m.user_id,
+          type: 'clan_post',
+          title: title.trim(),
+          body: clanInfo?.name ?? '',
+          link: `/community/posts/${post.id}`,
+          actor_id: user.id,
+          actor_name: userDisplayName,
+          actor_avatar: userAvatarUrl,
+        })
+      }
+    }
+
+    const { data: subscribers } = await supabase
+      .from('channel_subscriptions')
+      .select('subscriber_id')
+      .eq('channel_id', user.id)
+      .limit(200)
+
+    const notifiedIds = new Set(notifInserts.map(n => n.user_id as string))
+    for (const s of subscribers ?? []) {
+      if (!notifiedIds.has(s.subscriber_id)) {
+        notifInserts.push({
+          user_id: s.subscriber_id,
+          type: 'subscription_post',
+          title: title.trim(),
+          body: userDisplayName,
+          link: `/community/posts/${post.id}`,
+          actor_id: user.id,
+          actor_name: userDisplayName,
+          actor_avatar: userAvatarUrl,
+        })
+      }
+    }
+
+    if (notifInserts.length > 0) await supabase.from('notifications').insert(notifInserts)
+  } catch {}
+
   return NextResponse.json({ id: post.id }, { status: 201 })
 }

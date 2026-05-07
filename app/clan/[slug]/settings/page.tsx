@@ -11,7 +11,7 @@ import { useI18n } from '@/lib/i18n'
 async function uploadImage(file: File, userId: string, type: 'avatar' | 'banner'): Promise<string | null> {
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${userId}/${type}-${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('clan-assets').upload(path, file, { upsert: true })
+  const { error } = await supabase.storage.from('clan-assets').upload(path, file)
   if (error) return null
   const { data } = supabase.storage.from('clan-assets').getPublicUrl(path)
   return data.publicUrl

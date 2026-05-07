@@ -11,7 +11,7 @@ import { useI18n } from '@/lib/i18n'
 async function uploadImage(file: File, userId: string, type: 'avatar' | 'banner'): Promise<string | null> {
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${userId}/${type}-${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('clan-assets').upload(path, file, { upsert: true })
+  const { error } = await supabase.storage.from('clan-assets').upload(path, file)
   if (error) return null
   const { data } = supabase.storage.from('clan-assets').getPublicUrl(path)
   return data.publicUrl
@@ -150,10 +150,10 @@ export default function ClanCreatePage() {
             <p className="text-[11px] text-white/25 mt-1 px-1">{t('clan.banner_hint')}</p>
           </div>
 
-          {/* 클랜 아이콘 + 이름 */}
-          <div className="flex items-end gap-4">
-            <div>
-              <p className={labelCls}>{t('clan.avatar')}</p>
+          {/* 클랜 아이콘 */}
+          <div>
+            <p className={labelCls}>{t('clan.avatar')}</p>
+            <div className="flex items-center gap-4">
               <div
                 className="relative w-20 h-20 rounded-2xl overflow-hidden bg-surface border border-border cursor-pointer group flex-shrink-0"
                 onClick={() => avatarInputRef.current?.click()}
@@ -168,15 +168,17 @@ export default function ClanCreatePage() {
                   <Camera className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-              <p className="text-[10px] text-white/25 mt-1 text-center">{t('clan.avatar_hint')}</p>
+              <p className="text-xs text-white/30">{t('clan.avatar_hint')}</p>
             </div>
-            <div className="flex-1">
-              <p className={labelCls}>{t('clan.name')}</p>
-              <input value={name} onChange={e => handleNameChange(e.target.value)} maxLength={40}
-                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors"
-                placeholder={t('clan.name')} />
-            </div>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          </div>
+
+          {/* 클랜 이름 */}
+          <div>
+            <p className={labelCls}>{t('clan.name')}</p>
+            <input value={name} onChange={e => handleNameChange(e.target.value)} maxLength={40}
+              className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors"
+              placeholder={t('clan.name')} />
           </div>
 
           <div>
