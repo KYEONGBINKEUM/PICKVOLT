@@ -67,7 +67,7 @@ const COUNTRIES: Country[] = [
 // ── Component ────────────────────────────────────────────────────
 export default function SetupPreferencesPage() {
   const router = useRouter()
-  const { setLocale } = useI18n()
+  const { t, setLocale } = useI18n()
   const { setCurrency } = useCurrency()
 
   const [checking, setChecking]   = useState(true)
@@ -156,9 +156,9 @@ export default function SetupPreferencesPage() {
       </div>
 
       <div className="w-full max-w-md">
-        <h1 className="text-3xl font-black text-white mb-1.5">where are you from?</h1>
+        <h1 className="text-3xl font-black text-white mb-1.5">{t('setup.where_from')}</h1>
         <p className="text-sm text-white/40 mb-8">
-          we&apos;ll set your language, currency, and regional defaults automatically.
+          {t('setup.where_sub')}
         </p>
 
         {/* Country search */}
@@ -167,7 +167,7 @@ export default function SetupPreferencesPage() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search country..."
+            placeholder={t('setup.search_country')}
             className="w-full bg-surface border border-border rounded-xl pl-9 pr-4 py-3 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
           />
         </div>
@@ -176,7 +176,7 @@ export default function SetupPreferencesPage() {
         <div className="bg-surface border border-border rounded-xl overflow-hidden mb-6">
           <div className="max-h-56 overflow-y-auto divide-y divide-border/50">
             {filtered.length === 0 ? (
-              <div className="py-8 text-center text-sm text-white/25">No results</div>
+              <div className="py-8 text-center text-sm text-white/25">{t('setup.no_results')}</div>
             ) : filtered.map(country => (
               <button
                 key={country.code}
@@ -199,7 +199,7 @@ export default function SetupPreferencesPage() {
 
         {/* Language selection */}
         <div className="mb-5">
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Language</p>
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">{t('mypage.language')}</p>
           <div className="flex flex-wrap gap-2">
             {LANGUAGES.map(lang => (
               <button
@@ -220,7 +220,7 @@ export default function SetupPreferencesPage() {
 
         {/* Currency selection */}
         <div className="mb-8">
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">Currency</p>
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">{t('mypage.currency')}</p>
           <div className="flex flex-wrap gap-2">
             {CURRENCIES.map(cur => (
               <button
@@ -245,14 +245,14 @@ export default function SetupPreferencesPage() {
           disabled={saving || !selected}
           className="w-full py-3.5 rounded-full bg-accent hover:bg-accent/90 disabled:opacity-40 text-white font-bold text-sm transition-colors mb-3"
         >
-          {saving ? 'saving...' : 'continue'}
+          {saving ? t('setup.saving') : t('setup.continue')}
         </button>
 
         <button
           onClick={handleSkip}
           className="w-full py-2.5 text-xs text-white/30 hover:text-white/60 transition-colors"
         >
-          skip for now
+          {t('setup.skip')}
         </button>
       </div>
     </main>
