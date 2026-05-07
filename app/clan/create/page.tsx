@@ -147,6 +147,7 @@ export default function ClanCreatePage() {
               </div>
             </div>
             <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerChange} />
+            <p className="text-[11px] text-white/25 mt-1 px-1">{t('clan.banner_hint')}</p>
           </div>
 
           {/* 클랜 아이콘 + 이름 */}
@@ -168,6 +169,7 @@ export default function ClanCreatePage() {
                 </div>
               </div>
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+              <p className="text-[10px] text-white/25 mt-1 text-center">{t('clan.avatar_hint')}</p>
             </div>
             <div className="flex-1">
               <p className={labelCls}>{t('clan.name')}</p>
