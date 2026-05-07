@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, Loader2, Crown, Shield, User } from 'lucide-react'
@@ -18,8 +18,8 @@ interface Member {
   profiles: { avatar_url: string | null } | null
 }
 
-export default function ClanMembersPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function ClanMembersPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const { t } = useI18n()
   const router = useRouter()
   const [token, setToken]       = useState<string | null>(null)

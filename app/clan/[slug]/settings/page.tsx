@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, Loader2, Plus, X, AlertTriangle } from 'lucide-react'
@@ -8,8 +8,8 @@ import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
-export default function ClanSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function ClanSettingsPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const { t } = useI18n()
   const router = useRouter()
   const [token, setToken]     = useState<string | null>(null)

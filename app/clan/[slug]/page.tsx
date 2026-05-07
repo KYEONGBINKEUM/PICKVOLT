@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Settings, Users, Edit3, Loader2, Lock } from 'lucide-react'
 import Navbar from '@/components/Navbar'
@@ -25,8 +25,8 @@ interface Clan {
   my_membership: { role: string; status: string } | null
 }
 
-export default function ClanPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params)
+export default function ClanPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
   const { t } = useI18n()
   const [token, setToken]       = useState<string | null>(null)
   const [userId, setUserId]     = useState<string | null>(null)
