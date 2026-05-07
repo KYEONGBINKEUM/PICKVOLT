@@ -64,13 +64,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'category and reason required' }, { status: 400 })
   }
 
-  const needsEmail = ['business', 'media'].includes(category)
-  const needsId    = ['creator', 'public_figure', 'other'].includes(category)
-
-  if (needsEmail && !email_verified) {
+  if (!email_verified) {
     return NextResponse.json({ error: 'email_verification_required' }, { status: 400 })
   }
-  if (needsId && !id_image_url) {
+  if (!id_image_url) {
     return NextResponse.json({ error: 'id_required' }, { status: 400 })
   }
 

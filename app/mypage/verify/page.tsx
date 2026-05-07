@@ -17,8 +17,6 @@ interface VerifyRequest {
   admin_note?: string | null
 }
 
-const EMAIL_CATEGORIES = ['business', 'media']
-const ID_CATEGORIES    = ['creator', 'public_figure', 'other']
 
 export default function VerifyPage() {
   const { t } = useI18n()
@@ -152,11 +150,11 @@ export default function VerifyPage() {
     e.preventDefault()
     if (!reason.trim()) return
 
-    if (EMAIL_CATEGORIES.includes(category) && !emailVerified) {
+    if (!emailVerified) {
       setError(t('verify.email_required_err'))
       return
     }
-    if (ID_CATEGORIES.includes(category) && !idImageUrl) {
+    if (!idImageUrl) {
       setError(t('verify.id_required_err'))
       return
     }
@@ -172,9 +170,9 @@ export default function VerifyPage() {
           reason,
           website,
           social_links:   socialLinks,
-          work_email:     EMAIL_CATEGORIES.includes(category) ? workEmail : undefined,
-          email_verified: EMAIL_CATEGORIES.includes(category) ? emailVerified : undefined,
-          id_image_url:   ID_CATEGORIES.includes(category) ? idImageUrl : undefined,
+          work_email:     workEmail,
+          email_verified: emailVerified,
+          id_image_url:   idImageUrl,
         }),
       })
       const d = await res.json()
@@ -265,9 +263,8 @@ export default function VerifyPage() {
               </div>
             </div>
 
-            {/* 이메일 인증 — business / media */}
-            {EMAIL_CATEGORIES.includes(category) && (
-              <div>
+            {/* 이메일 인증 — 전 카테고리 필수 */}
+            <div>
                 <label className="block text-xs font-semibold text-white/50 mb-2">
                   {t('verify.work_email')} <span className="text-accent">*</span>
                 </label>
@@ -319,12 +316,10 @@ export default function VerifyPage() {
                     {otpError && <p className="text-xs text-red-400 mt-1.5">{otpError}</p>}
                   </>
                 )}
-              </div>
-            )}
+            </div>
 
-            {/* 신분증/명함 업로드 — creator / public_figure / other */}
-            {ID_CATEGORIES.includes(category) && (
-              <div>
+            {/* 신분증/명함 업로드 — 전 카테고리 필수 */}
+            <div>
                 <label className="block text-xs font-semibold text-white/50 mb-1">
                   {t('verify.id_upload')} <span className="text-accent">*</span>
                 </label>
@@ -355,8 +350,7 @@ export default function VerifyPage() {
                     }
                   </button>
                 )}
-              </div>
-            )}
+            </div>
 
             {/* Reason */}
             <div>
