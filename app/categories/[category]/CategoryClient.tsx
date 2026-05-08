@@ -77,6 +77,7 @@ interface Product {
     storage_gb: string | null
     cpu_name: string | null
     gpu_name: string | null
+    is_default?: boolean
   }[]
 }
 
@@ -166,10 +167,11 @@ function ProductCard({
 
   // Variant carousel
   const allVariants = [
-    { id: undefined, variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null },
+    { id: undefined, variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null, is_default: false },
     ...product.variants,
   ]
-  const [variantIdx, setVariantIdx] = useState(0)
+  const defaultIdx = product.variants.findIndex((v) => v.is_default)
+  const [variantIdx, setVariantIdx] = useState(defaultIdx >= 0 ? defaultIdx + 1 : 0)
   const [animating, setAnimating] = useState(false)
   const [animDir, setAnimDir] = useState<'left' | 'right'>('left')
   const current = allVariants[variantIdx]
