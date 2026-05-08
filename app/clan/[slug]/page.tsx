@@ -210,7 +210,7 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
               </button>
             )}
             {isMember && (
-              <Link href={`/community/write`}
+              <Link href={`/community/write?clan=${slug}`}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-border text-white/60 hover:text-white hover:border-white/20 text-xs font-semibold transition-colors">
                 <Edit3 className="w-3.5 h-3.5" />
                 {t('write.heading')}
@@ -228,7 +228,7 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
               <div className="text-center py-20">
                 <p className="text-white/30 text-sm">{t('clan.no_posts')}</p>
                 {isMember && (
-                  <Link href="/community/write"
+                  <Link href={`/community/write?clan=${slug}`}
                     className="mt-4 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
                     <Edit3 className="w-4 h-4" />
                     {t('write.heading')}
@@ -264,7 +264,7 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
                   </div>
                 )}
                 {isMember && (
-                  <Link href="/community/write"
+                  <Link href={`/community/write?clan=${slug}`}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-colors">
                     <Edit3 className="w-4 h-4" />
                     {t('write.heading')}

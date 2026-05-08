@@ -148,9 +148,17 @@ function WritePageInner() {
 
         // Load user's clans
         if (session?.access_token) {
+          const clanSlugParam = new URLSearchParams(window.location.search).get('clan')
           fetch('/api/clans?my=1', { headers: { Authorization: `Bearer ${session.access_token}` } })
             .then(r => r.json())
-            .then(d => setMyClans((d.clans ?? []).map((c: { id: string; slug: string; name: string }) => ({ id: c.id, slug: c.slug, name: c.name }))))
+            .then(d => {
+              const list = (d.clans ?? []).map((c: { id: string; slug: string; name: string }) => ({ id: c.id, slug: c.slug, name: c.name }))
+              setMyClans(list)
+              if (clanSlugParam) {
+                const matched = list.find((c: { slug: string }) => c.slug === clanSlugParam)
+                if (matched) setSelectedClanId(matched.id)
+              }
+            })
             .catch(() => {})
         }
       }
