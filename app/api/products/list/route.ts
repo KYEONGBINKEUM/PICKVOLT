@@ -65,10 +65,11 @@ export async function GET(req: NextRequest) {
         : Promise.resolve({ data: [] as { id: string; relative_score: number }[] }),
       allIds.length > 0
         ? supabase.from('product_variants')
-            .select('id, product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, gpu_name')
+            .select('id, product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, gpu_name, is_default')
             .in('product_id', allIds)
+            .order('is_default', { ascending: false })
             .order('sort_order')
-        : Promise.resolve({ data: [] as { id: string; product_id: string; variant_name: string; price_usd: number | null; ram_gb: number | null; storage_gb: number | null; cpu_name: string | null; gpu_name: string | null }[] }),
+        : Promise.resolve({ data: [] as { id: string; product_id: string; variant_name: string; price_usd: number | null; ram_gb: number | null; storage_gb: number | null; cpu_name: string | null; gpu_name: string | null; is_default: boolean | null }[] }),
     ])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,6 +86,7 @@ export async function GET(req: NextRequest) {
       variantMap[row.product_id].push({
         id: row.id, variant_name: row.variant_name, price_usd: row.price_usd,
         ram_gb: row.ram_gb, storage_gb: row.storage_gb, cpu_name: row.cpu_name, gpu_name: row.gpu_name,
+        is_default: row.is_default ?? false,
       })
     }
 
