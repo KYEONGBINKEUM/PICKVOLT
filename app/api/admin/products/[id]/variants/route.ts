@@ -110,15 +110,28 @@ export async function PUT(
 
   const supabase = makeServiceClient()
 
-  // Setting as default: clear ALL existing defaults first, then set this one
+  // Setting as default: handle atomically — set target true, clear all others
   if (rest.is_default === true) {
+    // Step 1: set THIS variant as default
+    const { error: setErr } = await supabase
+      .from('product_variants')
+      .update({ is_default: true })
+      .eq('id', variantId)
+    if (setErr) return NextResponse.json({ error: setErr.message }, { status: 500 })
+
+    // Step 2: clear is_default on every OTHER variant of the same product
     const { error: clearErr } = await supabase
       .from('product_variants')
       .update({ is_default: false })
       .eq('product_id', id)
+      .neq('id', variantId)
     if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 })
-    updates.is_default = true
+
+    return NextResponse.json({ ok: true })
   }
+
+  // Normal field update (non-default change)
+  if (Object.keys(updates).length === 0) return NextResponse.json({ ok: true })
 
   const { error } = await supabase
     .from('product_variants')
