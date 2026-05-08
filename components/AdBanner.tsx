@@ -91,11 +91,24 @@ export default function AdBanner({ html, className, adWidth, adHeight }: AdBanne
 
   if (!html) return null
 
+  const adLabel = (
+    <span style={{
+      position: 'absolute', top: 3, left: 4,
+      fontSize: 9, fontWeight: 700, lineHeight: 1,
+      color: 'rgba(255,255,255,0.25)',
+      letterSpacing: '0.05em',
+      pointerEvents: 'none',
+      zIndex: 10,
+      userSelect: 'none',
+    }}>AD</span>
+  )
+
   // 고정 크기 광고: 스케일 래퍼로 감싸서 반응형 처리
   if (adWidth && adHeight) {
     const scaledH = adHeight * scale
     return (
-      <div ref={wrapRef} className={className} style={{ width: '100%', overflow: 'hidden' }}>
+      <div ref={wrapRef} className={className} style={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+        {adLabel}
         <div style={{
           width: adWidth,
           height: adHeight,
@@ -112,11 +125,13 @@ export default function AdBanner({ html, className, adWidth, adHeight }: AdBanne
 
   // 반응형 광고 (기본)
   return (
-    <div
-      ref={ref}
-      data-ad-banner="true"
-      className={className}
-      style={{ minHeight: 60, width: '100%' }}
-    />
+    <div className={className} style={{ position: 'relative', width: '100%' }}>
+      {adLabel}
+      <div
+        ref={ref}
+        data-ad-banner="true"
+        style={{ minHeight: 60, width: '100%' }}
+      />
+    </div>
   )
 }
