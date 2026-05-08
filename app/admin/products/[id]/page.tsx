@@ -118,7 +118,7 @@ interface Variant {
   is_default: boolean
 }
 
-type VariantForm = Omit<Variant, 'id' | 'sort_order'>
+type VariantForm = Omit<Variant, 'id' | 'sort_order' | 'is_default'>
 
 const EMPTY_FORM: VariantForm = {
   variant_name: '', cpu_name: null, cpu_id: null,
