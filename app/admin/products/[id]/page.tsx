@@ -289,13 +289,23 @@ function VariantsSection({
 
   const handleSetDefault = async (variantId: string) => {
     setSaving(variantId)
-    const res = await fetch(`/api/admin/products/${productId}/variants`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ variantId, is_default: true }),
-    })
-    if (res.ok) await fetchVariants()
-    setSaving(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/variants`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ variantId, is_default: true }),
+      })
+      if (res.ok) {
+        await fetchVariants()
+      } else {
+        const json = await res.json().catch(() => ({}))
+        setErr(json.error ?? '기본 옵션 설정에 실패했습니다')
+      }
+    } catch {
+      setErr('네트워크 오류가 발생했습니다')
+    } finally {
+      setSaving(null)
+    }
   }
 
   const pf = (field: keyof VariantForm, value: unknown) =>
@@ -557,7 +567,7 @@ function VariantsSection({
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {!v.is_default && (
-                        <button onClick={() => handleSetDefault(v.id)} disabled={isEditing || !!saving}
+                        <button onClick={() => handleSetDefault(v.id)} disabled={!!saving}
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-white/30 hover:text-accent hover:bg-accent/10 border border-border hover:border-accent/30 rounded-lg transition-colors disabled:opacity-30">
                           {saving === v.id ? <RefreshCw size={11} className="animate-spin" /> : '★'}
                           기본으로

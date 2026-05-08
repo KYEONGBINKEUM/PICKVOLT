@@ -110,12 +110,13 @@ export async function PUT(
 
   const supabase = makeServiceClient()
 
-  // Setting as default: clear existing default first
+  // Setting as default: clear ALL existing defaults first, then set this one
   if (rest.is_default === true) {
-    await supabase
+    const { error: clearErr } = await supabase
       .from('product_variants')
       .update({ is_default: false })
       .eq('product_id', id)
+    if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 })
     updates.is_default = true
   }
 
