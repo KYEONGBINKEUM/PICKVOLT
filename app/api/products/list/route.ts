@@ -50,26 +50,36 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message, results: [] }, { status: 500 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cpuIds = Array.from(new Set((data ?? []).map((p: any) => p.specs_common?.cpu_id).filter(Boolean)))
+    const commonCpuIds = (data ?? []).map((p: any) => p.specs_common?.cpu_id).filter(Boolean)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gpuIds = Array.from(new Set((data ?? []).map((p: any) => p.specs_common?.gpu_id).filter(Boolean)))
+    const commonGpuIds = (data ?? []).map((p: any) => p.specs_common?.gpu_id).filter(Boolean)
     const allIds = (data ?? []).map((p: { id: string }) => p.id)
 
-    // CPU scores, GPU scores, variants — 병렬 fetch
-    const [cpuResult, gpuResult, variantResult] = await Promise.all([
+    // Step 1: fetch variants first to collect variant cpu/gpu ids
+    const variantResult = allIds.length > 0
+      ? await supabase.from('product_variants')
+          .select('id, product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, cpu_id, gpu_name, gpu_id, is_default')
+          .in('product_id', allIds)
+          .order('is_default', { ascending: false })
+          .order('sort_order')
+      : { data: [] as { id: string; product_id: string; variant_name: string; price_usd: number | null; ram_gb: number | null; storage_gb: number | null; cpu_name: string | null; cpu_id: string | null; gpu_name: string | null; gpu_id: string | null; is_default: boolean | null }[] }
+
+    // Step 2: collect all cpu/gpu ids (common + variants) for score lookup
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const variantCpuIds = (variantResult.data ?? []).map((v: any) => v.cpu_id).filter(Boolean)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const variantGpuIds = (variantResult.data ?? []).map((v: any) => v.gpu_id).filter(Boolean)
+    const cpuIds = Array.from(new Set([...commonCpuIds, ...variantCpuIds]))
+    const gpuIds = Array.from(new Set([...commonGpuIds, ...variantGpuIds]))
+
+    // Step 3: fetch cpu/gpu scores
+    const [cpuResult, gpuResult] = await Promise.all([
       cpuIds.length > 0
         ? supabase.from('cpus').select('id, relative_score').in('id', cpuIds as string[])
         : Promise.resolve({ data: [] as { id: string; relative_score: number }[] }),
       gpuIds.length > 0
         ? supabase.from('gpus').select('id, relative_score').in('id', gpuIds as string[])
         : Promise.resolve({ data: [] as { id: string; relative_score: number }[] }),
-      allIds.length > 0
-        ? supabase.from('product_variants')
-            .select('id, product_id, variant_name, price_usd, ram_gb, storage_gb, cpu_name, gpu_name, is_default')
-            .in('product_id', allIds)
-            .order('is_default', { ascending: false })
-            .order('sort_order')
-        : Promise.resolve({ data: [] as { id: string; product_id: string; variant_name: string; price_usd: number | null; ram_gb: number | null; storage_gb: number | null; cpu_name: string | null; gpu_name: string | null; is_default: boolean | null }[] }),
     ])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,9 +87,11 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gpuMap: Record<string, number> = Object.fromEntries(((gpuResult.data ?? []) as any[]).map((g) => [g.id, g.relative_score ?? 0]))
 
-    // variant map
+    // variant map + default variant map
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const variantMap: Record<string, any[]> = {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const defaultVariantMap: Record<string, any> = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const row of (variantResult.data ?? []) as any[]) {
       if (!variantMap[row.product_id]) variantMap[row.product_id] = []
@@ -88,6 +100,7 @@ export async function GET(req: NextRequest) {
         ram_gb: row.ram_gb, storage_gb: row.storage_gb, cpu_name: row.cpu_name, gpu_name: row.gpu_name,
         is_default: row.is_default ?? false,
       })
+      if (row.is_default) defaultVariantMap[row.product_id] = row
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,8 +111,12 @@ export async function GET(req: NextRequest) {
       const tablet     = p.specs_tablet
       const specSrc    = smartphone ?? laptop ?? tablet ?? {}
 
-      const cpuScore = common?.cpu_id ? (cpuMap[common.cpu_id] ?? 0) : 0
-      const gpuScore = common?.gpu_id ? (gpuMap[common.gpu_id] ?? 0) : 0
+      // Use default variant's cpu/gpu if available, otherwise fall back to common specs
+      const defVariant = defaultVariantMap[p.id]
+      const activeCpuId = defVariant?.cpu_id ?? common?.cpu_id ?? null
+      const activeGpuId = defVariant?.gpu_id ?? common?.gpu_id ?? null
+      const cpuScore = activeCpuId ? (cpuMap[activeCpuId] ?? 0) : 0
+      const gpuScore = activeGpuId ? (gpuMap[activeGpuId] ?? 0) : 0
       const hasCpu = cpuScore > 0
       const hasGpu = gpuScore > 0
       const performanceScore = hasCpu && hasGpu
