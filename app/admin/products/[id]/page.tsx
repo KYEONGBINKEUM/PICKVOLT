@@ -519,8 +519,8 @@ function VariantsSection({
                   <div className="flex items-start gap-3 py-2.5 border-b border-border/40">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-white">기본 옵션</p>
-                        <span className="text-[10px] text-white/30 bg-white/5 border border-border rounded px-1.5 py-0.5">기본</span>
+                        <p className="text-sm font-semibold text-white">공통 스펙</p>
+                        <span className="text-[10px] text-white/30 bg-white/5 border border-border rounded px-1.5 py-0.5">specs_common</span>
                       </div>
                       <p className="text-xs text-white/30 mt-0.5">
                         {[
