@@ -400,13 +400,11 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   )
 
   const total = post.community_compare_options.reduce((s, o) => s + o.vote_count, 0)
-  const backHref  = post.clans          ? `/clan/${post.clans.slug}`
-    : post.type === 'news'    ? '/community/news'
-    : post.type === 'compare' ? '/community/compare'
+  const backHref  = post.clans ? `/clan/${post.clans.slug}`
+    : post.type === 'news' ? '/community/news'
     : '/community'
-  const backLabel = post.clans          ? post.clans.name
-    : post.type === 'news'    ? t('community.news')
-    : post.type === 'compare' ? t('community.compare')
+  const backLabel = post.clans ? post.clans.name
+    : post.type === 'news' ? t('community.news')
     : t('community.all')
 
   const topComments   = comments.filter(c => !c.parent_id)

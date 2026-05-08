@@ -93,7 +93,7 @@ export default function AdBanner({ html, className, adWidth, adHeight }: AdBanne
 
   const adLabel = (
     <span style={{
-      position: 'absolute', top: 3, left: 4,
+      position: 'absolute', top: 10, left: 10,
       fontSize: 9, fontWeight: 700, lineHeight: 1,
       color: 'rgba(255,255,255,0.25)',
       letterSpacing: '0.05em',
