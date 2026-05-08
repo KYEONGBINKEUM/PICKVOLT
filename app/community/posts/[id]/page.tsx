@@ -26,7 +26,7 @@ interface PostProduct {
   products: { id: string; name: string; brand: string; image_url: string | null; category: string } | null
 }
 interface Post {
-  id: string; type: 'review' | 'forum' | 'compare' | 'news' | 'free' | 'qa'; category: string | null
+  id: string; type: 'forum' | 'news' | 'compare'; category: string | null
   title: string; body: string; rating: number | null
   upvotes: number; downvotes?: number; comment_count: number; view_count: number
   is_pinned: boolean; created_at: string; updated_at: string
