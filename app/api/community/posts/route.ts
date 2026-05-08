@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
   const limit      = Math.min(50, parseInt(searchParams.get('limit') ?? '20'))
   const product_id = searchParams.get('product_id') ?? ''
   const clan_id    = searchParams.get('clan_id')    ?? ''
+  const q          = searchParams.get('q')          ?? ''
 
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
   let userId: string | null = null
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest) {
   if (type) query = query.eq('type', type)
   if (category) query = query.eq('category', category)
   if (clan_id) query = query.eq('clan_id', clan_id)
+  if (q) query = query.ilike('title', `%${q}%`)
 
   // Hide members-only posts from non-members
   if (!isClanMember) {
@@ -109,6 +111,7 @@ export async function GET(req: NextRequest) {
   if (clan_id) countQuery = countQuery.eq('clan_id', clan_id)
   if (!isClanMember) countQuery = countQuery.eq('is_members_only', false)
   if (filteredIds) countQuery = countQuery.in('id', filteredIds)
+  if (q) countQuery = countQuery.ilike('title', `%${q}%`)
 
   const [{ count }, { data, error }] = await Promise.all([countQuery, query])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

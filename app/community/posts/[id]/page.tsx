@@ -400,14 +400,18 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   )
 
   const total = post.community_compare_options.reduce((s, o) => s + o.vote_count, 0)
-  const backHref = post.clans ? `/clan/${post.clans.slug}`
-    : post.type === 'review' ? '/community/reviews'
-    : post.type === 'forum' ? '/community/forum'
-    : '/community'
-  const backLabel = post.clans ? post.clans.name
-    : post.type === 'review' ? t('community.reviews')
-    : post.type === 'forum' ? t('community.forum')
-    : t('community.compare')
+  const typeHref: Record<string, string> = {
+    review: '/community/reviews', forum: '/community/forum',
+    news: '/community/news', compare: '/community/compare',
+    free: '/community', qa: '/community',
+  }
+  const typeLabel: Record<string, string> = {
+    review: t('community.reviews'), forum: t('community.forum'),
+    news: t('community.news'), compare: t('community.compare'),
+    free: t('community.all'), qa: t('community.all'),
+  }
+  const backHref  = post.clans ? `/clan/${post.clans.slug}` : (typeHref[post.type]  ?? '/community')
+  const backLabel = post.clans ? post.clans.name             : (typeLabel[post.type] ?? t('community.all'))
 
   const topComments   = comments.filter(c => !c.parent_id)
   const childComments = (parentId: string) => comments.filter(c => c.parent_id === parentId)

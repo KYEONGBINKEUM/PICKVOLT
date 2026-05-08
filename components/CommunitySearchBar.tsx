@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, X, Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
@@ -12,12 +13,19 @@ interface SearchResult {
 
 export default function CommunitySearchBar() {
   const { t } = useI18n()
+  const router = useRouter()
   const [q, setQ] = useState('')
   const [res, setRes] = useState<SearchResult | null>(null)
   const [searching, setSearching] = useState(false)
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const submit = () => {
+    if (!q.trim()) return
+    setOpen(false)
+    router.push(`/community/search?q=${encodeURIComponent(q.trim())}`)
+  }
 
   useEffect(() => {
     if (!q.trim()) { setRes(null); setOpen(false); return }
@@ -48,11 +56,14 @@ export default function CommunitySearchBar() {
 
   return (
     <div ref={wrapRef} className="relative w-full max-w-sm">
+    <form onSubmit={e => { e.preventDefault(); submit() }}>
       <div className="flex items-center gap-2 bg-surface border border-border rounded-full px-3.5 py-2 focus-within:border-white/20 transition-colors">
-        {searching
-          ? <Loader2 className="w-3.5 h-3.5 text-accent animate-spin flex-shrink-0" />
-          : <Search className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
-        }
+        <button type="submit" className="flex-shrink-0 text-white/30 hover:text-white/60 transition-colors">
+          {searching
+            ? <Loader2 className="w-3.5 h-3.5 text-accent animate-spin" />
+            : <Search className="w-3.5 h-3.5" />
+          }
+        </button>
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
@@ -104,8 +115,17 @@ export default function CommunitySearchBar() {
               ))}
             </>
           )}
+
+          {/* 전체 결과 보기 */}
+          {hasResults && (
+            <Link href={`/community/search?q=${encodeURIComponent(q)}`} onClick={clear}
+              className="flex items-center justify-center gap-1.5 px-4 py-3 border-t border-border/40 text-xs text-accent/70 hover:text-accent transition-colors w-full">
+              {t('search.view_all') ?? 'View all results'}
+            </Link>
+          )}
         </div>
       )}
+    </form>
     </div>
   )
 }
