@@ -110,22 +110,47 @@ export async function PUT(
 
   const supabase = makeServiceClient()
 
-  // Setting as default: handle atomically — set target true, clear all others
+  // Setting as default: handle atomically — set target true, clear all others,
+  // then sync specs_common + products.price_usd to match this variant
   if (rest.is_default === true) {
-    // Step 1: set THIS variant as default
+    // Step 1: fetch the variant's full specs
+    const { data: variant, error: fetchErr } = await supabase
+      .from('product_variants')
+      .select('cpu_id, cpu_name, gpu_id, gpu_name, ram_gb, storage_gb, price_usd, amazon_url')
+      .eq('id', variantId)
+      .single()
+    if (fetchErr || !variant) return NextResponse.json({ error: fetchErr?.message ?? 'variant not found' }, { status: 500 })
+
+    // Step 2: set THIS variant as default
     const { error: setErr } = await supabase
       .from('product_variants')
       .update({ is_default: true })
       .eq('id', variantId)
     if (setErr) return NextResponse.json({ error: setErr.message }, { status: 500 })
 
-    // Step 2: clear is_default on every OTHER variant of the same product
+    // Step 3: clear is_default on every OTHER variant of the same product
     const { error: clearErr } = await supabase
       .from('product_variants')
       .update({ is_default: false })
       .eq('product_id', id)
       .neq('id', variantId)
     if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 })
+
+    // Step 4: sync specs_common with this variant's CPU/GPU
+    const commonUpdates: Record<string, unknown> = {}
+    if (variant.cpu_id   != null) commonUpdates.cpu_id   = variant.cpu_id
+    if (variant.cpu_name != null) commonUpdates.cpu_name = variant.cpu_name
+    if (variant.gpu_id   != null) commonUpdates.gpu_id   = variant.gpu_id
+    if (variant.gpu_name != null) commonUpdates.gpu_name = variant.gpu_name
+    if (variant.ram_gb   != null) commonUpdates.ram_gb   = variant.ram_gb
+    if (Object.keys(commonUpdates).length > 0) {
+      await supabase.from('specs_common').update(commonUpdates).eq('product_id', id)
+    }
+
+    // Step 5: sync products.price_usd if variant has a price
+    if (variant.price_usd != null) {
+      await supabase.from('products').update({ price_usd: variant.price_usd }).eq('id', id)
+    }
 
     return NextResponse.json({ ok: true })
   }
