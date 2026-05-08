@@ -39,7 +39,6 @@ export async function GET(
     .from('product_variants')
     .select('id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, price_usd, source_url, amazon_url, sort_order, is_default, created_at')
     .eq('product_id', id)
-    .order('is_default', { ascending: false })
     .order('sort_order')
     .order('created_at')
 
