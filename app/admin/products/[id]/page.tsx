@@ -115,6 +115,7 @@ interface Variant {
   source_url: string | null
   amazon_url: string | null
   sort_order: number
+  is_default: boolean
 }
 
 type VariantForm = Omit<Variant, 'id' | 'sort_order'>
@@ -281,6 +282,17 @@ function VariantsSection({
     const res = await fetch(`/api/admin/products/${productId}/variants?variantId=${variantId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) await fetchVariants()
+    setSaving(null)
+  }
+
+  const handleSetDefault = async (variantId: string) => {
+    setSaving(variantId)
+    const res = await fetch(`/api/admin/products/${productId}/variants`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ variantId, is_default: true }),
     })
     if (res.ok) await fetchVariants()
     setSaving(null)
@@ -529,7 +541,12 @@ function VariantsSection({
                 {editingId === v.id ? VariantFormUI : (
                   <div className="flex items-start gap-3 py-2.5 border-b border-border/40 last:border-0">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{v.variant_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-white truncate">{v.variant_name}</p>
+                        {v.is_default && (
+                          <span className="text-[10px] text-accent font-bold bg-accent/10 border border-accent/30 rounded px-1.5 py-0.5 flex-shrink-0">기본</span>
+                        )}
+                      </div>
                       <p className="text-xs text-white/30 mt-0.5 space-x-2">
                         {v.cpu_name && <span>CPU: {v.cpu_name}</span>}
                         {v.gpu_name && <span>· GPU: {v.gpu_name}</span>}
@@ -539,6 +556,13 @@ function VariantsSection({
                       </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      {!v.is_default && (
+                        <button onClick={() => handleSetDefault(v.id)} disabled={isEditing || !!saving}
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-white/30 hover:text-accent hover:bg-accent/10 border border-border hover:border-accent/30 rounded-lg transition-colors disabled:opacity-30">
+                          {saving === v.id ? <RefreshCw size={11} className="animate-spin" /> : '★'}
+                          기본으로
+                        </button>
+                      )}
                       <button onClick={() => startEdit(v)} disabled={isEditing}
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-white/40 hover:text-accent hover:bg-accent/10 border border-border hover:border-accent/30 rounded-lg transition-colors disabled:opacity-30">
                         <Pencil size={11} />

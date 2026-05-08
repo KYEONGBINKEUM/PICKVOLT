@@ -37,8 +37,9 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('product_variants')
-    .select('id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, price_usd, source_url, amazon_url, sort_order, created_at')
+    .select('id, variant_name, cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, price_usd, source_url, amazon_url, sort_order, is_default, created_at')
     .eq('product_id', id)
+    .order('is_default', { ascending: false })
     .order('sort_order')
     .order('created_at')
 
@@ -109,6 +110,16 @@ export async function PUT(
   if ('sort_order'   in rest) updates.sort_order   = rest.sort_order
 
   const supabase = makeServiceClient()
+
+  // Setting as default: clear existing default first
+  if (rest.is_default === true) {
+    await supabase
+      .from('product_variants')
+      .update({ is_default: false })
+      .eq('product_id', id)
+    updates.is_default = true
+  }
+
   const { error } = await supabase
     .from('product_variants')
     .update(updates)

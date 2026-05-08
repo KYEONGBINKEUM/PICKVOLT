@@ -39,6 +39,7 @@ interface ProductVariant {
   storage_gb:   string | null
   price_usd:    number | null
   amazon_url:   string | null
+  is_default?:  boolean
 }
 
 interface Product {
@@ -145,7 +146,8 @@ export default function ProductClient({ product }: { product: Product }) {
   const cartFull = cart.length >= 4
 
   // variant 선택 상태 (null = 기본 모델)
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null)
+  const defaultVariant = product.variants?.find(v => v.is_default) ?? null
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(defaultVariant?.id ?? null)
   const selectedVariant = product.variants?.find((v) => v.id === selectedVariantId) ?? null
 
   // 선택된 variant 기준으로 표시할 스펙 계산
