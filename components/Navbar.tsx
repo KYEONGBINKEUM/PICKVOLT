@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
 import SearchBar from '@/components/SearchBar'
+import CommunitySearchBar from '@/components/CommunitySearchBar'
 import NotificationBell from '@/components/NotificationBell'
 
 interface NavbarProps {
@@ -104,10 +105,15 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
           </div>
         </div>
 
-        {/* ── 중앙: 검색 (Compare 섹션, showSearch 시) ── */}
+        {/* ── 중앙: 검색 ── */}
         {showSearch && !isCommunity && (
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <SearchBar />
+          </div>
+        )}
+        {isCommunity && (
+          <div className="hidden md:flex flex-1 max-w-sm mx-8">
+            <CommunitySearchBar />
           </div>
         )}
 
