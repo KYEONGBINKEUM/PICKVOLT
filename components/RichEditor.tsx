@@ -95,10 +95,42 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
     { icon: Link2,       title: '🔗', action: () => { const url = prompt(urlPrompt); if (url) exec('createLink', url) } },
   ]
 
+  // justifyCenter etc. sets text-align on block containers, but display:block images
+  // ignore text-align — so we additionally apply margin-based centering to any images
+  // inside the selection's common ancestor.
+  const applyAlignment = (cmd: string, align: 'left' | 'center' | 'right') => {
+    document.execCommand(cmd, false)
+    editorRef.current?.focus()
+
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount > 0 && editorRef.current) {
+      const range = sel.getRangeAt(0)
+      const ancestor = range.commonAncestorContainer
+      const el = ancestor.nodeType === Node.TEXT_NODE
+        ? ancestor.parentElement
+        : ancestor as HTMLElement
+
+      const imgs: HTMLImageElement[] = el
+        ? el.tagName === 'IMG'
+          ? [el as HTMLImageElement]
+          : Array.from(el.querySelectorAll<HTMLImageElement>('img'))
+        : []
+
+      if (imgs.length > 0) {
+        imgs.forEach(img => {
+          img.style.display = 'block'
+          img.style.marginLeft  = align === 'left'   ? '0'    : 'auto'
+          img.style.marginRight = align === 'right'  ? '0'    : 'auto'
+        })
+        onChange(editorRef.current.innerHTML)
+      }
+    }
+  }
+
   const alignTools = [
-    { icon: AlignLeft,   title: 'left',   action: () => exec('justifyLeft') },
-    { icon: AlignCenter, title: 'center', action: () => exec('justifyCenter') },
-    { icon: AlignRight,  title: 'right',  action: () => exec('justifyRight') },
+    { icon: AlignLeft,   title: 'left',   action: () => applyAlignment('justifyLeft',   'left') },
+    { icon: AlignCenter, title: 'center', action: () => applyAlignment('justifyCenter', 'center') },
+    { icon: AlignRight,  title: 'right',  action: () => applyAlignment('justifyRight',  'right') },
   ]
 
   return (
