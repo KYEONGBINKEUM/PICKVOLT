@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Settings, Users, Edit3, Loader2, Lock } from 'lucide-react'
 import Navbar from '@/components/Navbar'
@@ -41,39 +41,50 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
 
   const LIMIT = 20
 
+  const tokenRef = useRef<string | null>(null)
+  const clanRef  = useRef<Clan | null>(null)
+
+  // Main init effect
   useEffect(() => {
+    let active = true
     supabase.auth.getSession().then(async ({ data }) => {
       const tok = data.session?.access_token ?? null
-      setToken(tok)
-      const { data: { user } } = await supabase.auth.getUser()
-      setUserId(user?.id ?? null)
+      tokenRef.current = tok
+      if (active) { setToken(tok); setUserId(data.session?.user?.id ?? null) }
 
-      const headers: Record<string, string> = {}
-      if (tok) headers['Authorization'] = `Bearer ${tok}`
+      const headers: Record<string, string> = tok ? { Authorization: `Bearer ${tok}` } : {}
       const res = await fetch(`/api/clans/${slug}`, { headers })
-      if (res.ok) {
-        const json = await res.json()
-        setClan(json.clan)
+      if (!res.ok) { if (active) setLoading(false); return }
+      const json = await res.json()
+      const clanData = json.clan
+      clanRef.current = clanData
+      if (active) { setClan(clanData); setLoading(false) }
+
+      // Immediately fetch posts without waiting for React state
+      if (active) setPostsLoading(true)
+      const postsRes = await fetch(`/api/community/posts?clan_id=${clanData.id}&page=1&limit=${LIMIT}`, { headers })
+      const postsJson = await postsRes.json()
+      if (active) {
+        setPosts(postsJson.posts ?? [])
+        setTotal(postsJson.total ?? 0)
+        setPostsLoading(false)
       }
-      setLoading(false)
     })
+    return () => { active = false }
   }, [slug])
 
-  const loadPosts = useCallback(async (p: number) => {
-    if (!clan) return
-    setPostsLoading(true)
-    const headers: Record<string, string> = {}
-    if (token) headers['Authorization'] = `Bearer ${token}`
-    const res = await fetch(`/api/community/posts?clan_id=${clan.id}&page=${p}&limit=${LIMIT}`, { headers })
-    const json = await res.json()
-    setPosts(json.posts ?? [])
-    setTotal(json.total ?? 0)
-    setPostsLoading(false)
-  }, [clan, token])
-
+  // Page change effect (not initial load)
   useEffect(() => {
-    if (clan) loadPosts(page)
-  }, [clan, page, loadPosts])
+    if (page === 1) return
+    const cl = clanRef.current
+    const tok = tokenRef.current
+    if (!cl) return
+    setPostsLoading(true)
+    const headers: Record<string, string> = tok ? { Authorization: `Bearer ${tok}` } : {}
+    fetch(`/api/community/posts?clan_id=${cl.id}&page=${page}&limit=${LIMIT}`, { headers })
+      .then(r => r.json())
+      .then(j => { setPosts(j.posts ?? []); setTotal(j.total ?? 0); setPostsLoading(false) })
+  }, [page])
 
   const handleVote = async (postId: string) => {
     if (!token) return

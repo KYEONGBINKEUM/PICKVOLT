@@ -54,21 +54,32 @@ export default function NotificationBell() {
       const tok = data.session?.access_token ?? null
       setToken(tok)
       if (!tok) return
-      fetch('/api/notifications?limit=1', { headers: { Authorization: `Bearer ${tok}` } })
+      // Prefetch full list immediately (not just unread count)
+      fetch('/api/notifications', { headers: { Authorization: `Bearer ${tok}` } })
         .then(r => r.ok ? r.json() : null)
-        .then(j => j && setUnreadCount(j.unread_count ?? 0))
+        .then(j => {
+          if (!j) return
+          setUnreadCount(j.unread_count ?? 0)
+          setNotifs(j.notifications ?? [])
+          setLoaded(true)
+        })
     })
   }, [])
 
   useEffect(() => {
     if (!token) return
     const interval = setInterval(() => {
-      fetch('/api/notifications?limit=1', { headers: { Authorization: `Bearer ${token}` } })
+      fetch('/api/notifications', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : null)
-        .then(j => j && setUnreadCount(j.unread_count ?? 0))
+        .then(j => {
+          if (!j) return
+          setUnreadCount(j.unread_count ?? 0)
+          // Only update notifs list if panel is closed (don't disrupt open panel)
+          if (!open) setNotifs(j.notifications ?? [])
+        })
     }, 60000)
     return () => clearInterval(interval)
-  }, [token])
+  }, [token, open])
 
   useEffect(() => {
     if (!open) return

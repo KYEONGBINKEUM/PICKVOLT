@@ -35,8 +35,7 @@ export default function ClanMembersPage({ params }: { params: { slug: string } }
     supabase.auth.getSession().then(async ({ data }) => {
       const tok = data.session?.access_token ?? null
       setToken(tok)
-      const { data: { user } } = await supabase.auth.getUser()
-      setUserId(user?.id ?? null)
+      setUserId(data.session?.user?.id ?? null)
       if (!tok) { setLoading(false); return }
 
       const clanRes = await fetch(`/api/clans/${slug}`, { headers: { Authorization: `Bearer ${tok}` } })

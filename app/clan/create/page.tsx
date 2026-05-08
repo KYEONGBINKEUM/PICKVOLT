@@ -39,11 +39,10 @@ export default function ClanCreatePage() {
   const [error, setError]     = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       setToken(data.session?.access_token ?? null)
-      const { data: { user } } = await supabase.auth.getUser()
-      setAuthed(!!user)
-      setUserId(user?.id ?? null)
+      setAuthed(!!data.session?.user)
+      setUserId(data.session?.user?.id ?? null)
     })
   }, [])
 
