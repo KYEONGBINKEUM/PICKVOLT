@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { computeRelativeScores, computePPI, type CategoryStats } from '@/lib/scoring'
 
 // 모듈 레벨 캐싱 — 같은 서버 인스턴스에서 재사용
 let _supabase: SupabaseClient | null = null
@@ -103,40 +104,26 @@ export async function GET(req: NextRequest) {
       if (row.is_default) defaultVariantMap[row.product_id] = row
     }
 
+    // Pass 1 — build raw product rows (no final score yet)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const products = (data ?? []).map((p: any) => {
+    const rawProducts = (data ?? []).map((p: any) => {
       const common     = p.specs_common
       const smartphone = p.specs_smartphone
       const laptop     = p.specs_laptop
       const tablet     = p.specs_tablet
       const specSrc    = smartphone ?? laptop ?? tablet ?? {}
 
-      // Use default variant's cpu/gpu if available, otherwise fall back to common specs
-      const defVariant = defaultVariantMap[p.id]
+      const defVariant  = defaultVariantMap[p.id]
       const activeCpuId = defVariant?.cpu_id ?? common?.cpu_id ?? null
       const activeGpuId = defVariant?.gpu_id ?? common?.gpu_id ?? null
-      const cpuScore = activeCpuId ? (cpuMap[activeCpuId] ?? 0) : 0
-      const gpuScore = activeGpuId ? (gpuMap[activeGpuId] ?? 0) : 0
-      const hasCpu = cpuScore > 0
-      const hasGpu = gpuScore > 0
-      const performanceScore = hasCpu && hasGpu
-        ? Math.round(cpuScore * 0.6 + gpuScore * 0.4)
-        : hasCpu ? cpuScore : gpuScore
+      const cpuRelScore = activeCpuId ? (cpuMap[activeCpuId] ?? 0) : 0
+      const gpuRelScore = activeGpuId ? (gpuMap[activeGpuId] ?? 0) : 0
 
-      let ppi: number | null = null
-      if (specSrc.display_resolution && specSrc.display_inch) {
-        const match = String(specSrc.display_resolution).match(/(\d+)\s*[x×X]\s*(\d+)/)
-        if (match) {
-          const w = parseInt(match[1])
-          const h = parseInt(match[2])
-          ppi = Math.round(Math.sqrt(w * w + h * h) / specSrc.display_inch)
-        }
-      }
+      const ppi = computePPI(specSrc.display_resolution, specSrc.display_inch)
 
       return {
         id: p.id, name: p.name, brand: p.brand, category: p.category,
         price_usd: p.price_usd, image_url: p.image_url,
-        performance_score: performanceScore,
         cpu_name: common?.cpu_name ?? null, gpu_name: common?.gpu_name ?? null,
         ram_gb: common?.ram_gb ?? null, os: common?.os ?? null, launch_year: common?.launch_year ?? null,
         display_inch: specSrc.display_inch ?? null, display_hz: specSrc.display_hz ?? null, ppi,
@@ -146,7 +133,70 @@ export async function GET(req: NextRequest) {
         weight_kg: laptop?.weight_kg ?? null,
         stylus_support: tablet?.stylus_support ?? null,
         variants: variantMap[p.id] ?? [],
+        // raw scores for stats computation
+        _cpuRel: cpuRelScore,
+        _gpuRel: gpuRelScore,
       }
+    })
+
+    // Pass 2 — compute CategoryStats then score each product using the same
+    // formula as the compare page (lib/scoring.ts computeRelativeScores)
+    const maxOf = (arr: number[]) => arr.length ? Math.max(...arr) : 0
+    const minOf = (arr: number[]) => arr.length ? Math.min(...arr) : 0
+    const statsOf = (arr: number[]) => ({ min: minOf(arr), max: maxOf(arr) })
+    const firstNum = (v: string | number | null | undefined): number | null => {
+      if (v == null) return null
+      const n = parseFloat(String(v).split(',')[0].trim())
+      return isNaN(n) ? null : n
+    }
+
+    const cpuRels    = rawProducts.map((p) => p._cpuRel).filter((n) => n > 0)
+    const gpuRels    = rawProducts.map((p) => p._gpuRel).filter((n) => n > 0)
+    const rams       = rawProducts.map((p) => firstNum(p.ram_gb)).filter((n): n is number => n != null)
+    const ppis       = rawProducts.map((p) => p.ppi).filter((n): n is number => n != null)
+    const refreshes  = rawProducts.map((p) => p.display_hz).filter((n): n is number => n != null)
+    const batWhs     = rawProducts.map((p) => p.battery_wh).filter((n): n is number => n != null)
+    const batMahs    = rawProducts.map((p) => p.battery_mah).filter((n): n is number => n != null)
+    const weightGs   = rawProducts.map((p) => p.weight_g).filter((n): n is number => n != null)
+    const weightKgs  = rawProducts.map((p) => p.weight_kg).filter((n): n is number => n != null)
+    const storages   = rawProducts.map((p) => firstNum(p.variants[0]?.storage_gb ?? null)).filter((n): n is number => n != null)
+
+    const stats: CategoryStats = {
+      relativeScore: statsOf(cpuRels),
+      ram:           statsOf(rams),
+      storage:       statsOf(storages.length ? storages : [0]),
+      batteryMah:    statsOf(batMahs),
+      batteryWh:     statsOf(batWhs),
+      batteryHours:  { min: 0, max: 0 },
+      cameraMP:      { min: 0, max: 0 },
+      ppi:           statsOf(ppis),
+      refreshHz:     statsOf(refreshes),
+      weightG:       statsOf(weightGs),
+      weightKg:      statsOf(weightKgs),
+      gpuRelativeMax: maxOf(gpuRels),
+    }
+
+    // detect primary category for scoring formula
+    const primaryCategory = category || (rawProducts[0]?.category?.toLowerCase() ?? '')
+
+    const products = rawProducts.map((p) => {
+      const scored = computeRelativeScores(
+        {
+          category:         primaryCategory,
+          relativeScore:    p._cpuRel || null,
+          gpuRelativeScore: p._gpuRel || null,
+          ram_gb:           p.ram_gb,
+          battery_wh:       p.battery_wh,
+          battery_mah:      p.battery_mah,
+          display_resolution: null,
+          display_inch:     p.display_inch,
+          refresh_hz:       p.display_hz,
+        },
+        stats,
+      )
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _cpuRel, _gpuRel, ...rest } = p
+      return { ...rest, performance_score: scored.overall }
     })
 
     // RAM filter (client-side, needs parsed value)
