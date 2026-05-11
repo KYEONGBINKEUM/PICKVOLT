@@ -207,11 +207,10 @@ function WritePageInner() {
       const imgHtml = p.image_url
         ? `<img src="${p.image_url}" style="width:72px;height:72px;object-fit:contain;border-radius:10px;flex-shrink:0;display:block" />`
         : `<span style="width:72px;height:72px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:rgba(255,255,255,0.15);flex-shrink:0">${p.brand?.[0] ?? '?'}</span>`
-      // Score: max ~1000 → divide by 10 for percent; bar uses full flex width
       const scoreHtml = p.performance_score != null && p.performance_score > 0
         ? `<div style="display:flex;align-items:center;gap:8px;margin-top:7px;width:100%">` +
           `<div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden">` +
-          `<div style="height:100%;width:${Math.min(100, Math.round(p.performance_score / 10))}%;background:rgba(255,77,0,0.9);border-radius:2px"></div></div>` +
+          `<div style="height:100%;width:${Math.min(100, Math.round(p.performance_score))}%;background:rgba(255,77,0,0.9);border-radius:2px"></div></div>` +
           `<span style="font-size:11px;font-weight:700;color:rgba(255,77,0,0.9);white-space:nowrap">${Math.round(p.performance_score)}</span>` +
           `</div>`
         : ''
