@@ -211,7 +211,7 @@ function WritePageInner() {
         ? `<div style="display:flex;align-items:center;gap:8px;margin-top:7px;width:100%">` +
           `<div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);overflow:hidden">` +
           `<div style="height:100%;width:${Math.min(100, Math.round(p.performance_score))}%;background:rgba(255,77,0,0.9);border-radius:2px"></div></div>` +
-          `<span style="font-size:11px;font-weight:700;color:rgba(255,77,0,0.9);white-space:nowrap">${Math.round(p.performance_score)}</span>` +
+          `<span style="font-size:11px;font-weight:700;color:rgba(255,77,0,0.9);white-space:nowrap">${Math.round(p.performance_score * 10)}</span>` +
           `</div>`
         : ''
       const priceHtml = p.price_usd != null
@@ -286,14 +286,14 @@ function WritePageInner() {
         const scoreRow = () => {
           if (!embeddedProducts.some(p => p.performance_score != null)) return ''
           const cells = embeddedProducts.map((p, i) => {
-            const s = p.performance_score != null ? Math.round(p.performance_score) : null
+            const s = p.performance_score != null ? Math.round(p.performance_score * 10) : null
             const bar = s != null
               ? `<div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:5px;overflow:hidden">` +
-                `<div style="height:100%;width:${s}%;background:rgba(255,77,0,0.85);border-radius:2px"></div></div>`
+                `<div style="height:100%;width:${s / 10}%;background:rgba(255,77,0,0.85);border-radius:2px"></div></div>`
               : ''
             return `<td style="padding:8px 10px;text-align:center;${sep(i)}">` +
               `<span style="font-size:18px;font-weight:900;color:rgba(255,77,0,0.95)">${s ?? '—'}</span>` +
-              (s != null ? `<span style="font-size:10px;color:rgba(255,255,255,0.25)"> /100</span>` : '') +
+              (s != null ? `<span style="font-size:10px;color:rgba(255,255,255,0.25)"> /1000</span>` : '') +
               bar + `</td>`
           }).join('')
           return `<tr style="border-top:1px solid rgba(255,255,255,0.06)">` +

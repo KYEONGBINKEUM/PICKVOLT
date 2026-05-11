@@ -292,7 +292,7 @@ function ProductCard({
           {score > 0 && (
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
-              <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score)}</span>
+              <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score * 10)}</span>
             </div>
           )}
         </div>
