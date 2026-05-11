@@ -801,7 +801,13 @@ function applyClientFilters(products: Product[], filters: Filters): Product[] {
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-export default function CategoryClient({ category }: { category: string }) {
+interface InitialData {
+  products: Product[]
+  brands: string[]
+  total: number
+}
+
+export default function CategoryClient({ category, initialData }: { category: string; initialData?: InitialData }) {
   const { t } = useI18n()
   const router = useRouter()
   const Icon = CATEGORY_ICON[category]
@@ -817,13 +823,13 @@ export default function CategoryClient({ category }: { category: string }) {
     router.push(`/compare?ids=${ids}${hasVariants ? `&variants=${variants}` : ''}`)
   }
 
-  const [allProducts,     setAllProducts]     = useState<Product[]>([])
-  const [availableBrands, setAvailableBrands] = useState<string[]>([])
+  const [allProducts,     setAllProducts]     = useState<Product[]>(initialData?.products ?? [])
+  const [availableBrands, setAvailableBrands] = useState<string[]>(initialData?.brands ?? [])
   const [availableOsList, setAvailableOsList] = useState<string[]>([])
   const [categoryMaxScore, setCategoryMaxScore] = useState<number>(1)
-  const [loading,         setLoading]         = useState(true)
-  const [serverPage,      setServerPage]      = useState(1)
-  const [hasMoreServer,   setHasMoreServer]   = useState(false)
+  const [loading,         setLoading]         = useState(!initialData)
+  const [serverPage,      setServerPage]      = useState(initialData ? 1 : 0)
+  const [hasMoreServer,   setHasMoreServer]   = useState((initialData?.products.length ?? 0) >= 30)
   const [isLoadingMore,   setIsLoadingMore]   = useState(false)
   const [mobileSheet,     setMobileSheet]     = useState(false)
   const [mobileTrayOpen,  setMobileTrayOpen]  = useState(false)
@@ -893,6 +899,33 @@ export default function CategoryClient({ category }: { category: string }) {
 
   const PAGE_SIZE = 30
 
+  // 서버에서 받은 초기 데이터로 derived state 세팅 (fetch 없이 바로 렌더)
+  const skipInitialFetch = useRef(!!initialData)
+  useEffect(() => {
+    if (!initialData?.products.length) return
+    const products = initialData.products
+    setCategoryMaxScore(Math.max(1, ...products.map((p) => p.performance_score ?? 0)))
+    setAvailableOsList(
+      Array.from(new Set(products.map((p) => p.os).filter(Boolean).map((os) => osGroup(os as string)))).sort()
+    )
+    const maxPrice   = Math.ceil(Math.max(0, ...products.map((p) => p.price_usd   ?? 0)) / 50)  * 50  || DEFAULT_FILTERS.priceMax
+    const allRamVals = products.flatMap((p) =>
+      p.ram_gb != null ? String(p.ram_gb).split(',').map((v) => parseFloat(v.trim())).filter((n) => !isNaN(n)) : []
+    )
+    const maxRam     = allRamVals.length > 0 ? Math.ceil(Math.max(0, ...allRamVals) / 2) * 2 : DEFAULT_FILTERS.ramMax
+    const maxDisplay = Math.ceil(Math.max(0, ...products.map((p) => p.display_inch ?? 0)) * 10) / 10  || DEFAULT_FILTERS.displayMax
+    const maxBattery = Math.ceil(Math.max(0, ...products.map((p) => p.battery_mah  ?? 0)) / 100) * 100 || DEFAULT_FILTERS.batteryMax
+    setDataRanges({ priceMax: maxPrice, ramMax: maxRam, displayMax: maxDisplay, batteryMax: maxBattery })
+    setFilters((prev) => ({
+      ...prev,
+      priceMax:   prev.priceMax   === DEFAULT_FILTERS.priceMax   ? maxPrice   : prev.priceMax,
+      ramMax:     prev.ramMax     === DEFAULT_FILTERS.ramMax     ? maxRam     : prev.ramMax,
+      displayMax: prev.displayMax === DEFAULT_FILTERS.displayMax ? maxDisplay : prev.displayMax,
+      batteryMax: prev.batteryMax === DEFAULT_FILTERS.batteryMax ? maxBattery : prev.batteryMax,
+    }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const fetchProductsPage = useCallback(async (page: number, reset: boolean) => {
     if (reset) setLoading(true)
     else setIsLoadingMore(true)
@@ -953,7 +986,12 @@ export default function CategoryClient({ category }: { category: string }) {
   }, [category, filters.sort, filters.brands, filters.q])
 
   // Re-fetch from page 1 when primary filter keys change
+  // 서버 초기 데이터가 있으면 첫 마운트 fetch 스킵 — 필터 변경 시에는 정상 fetch
   useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false
+      return
+    }
     fetchProductsPage(1, true)
   }, [fetchProductsPage])
 

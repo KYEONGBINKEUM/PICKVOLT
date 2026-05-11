@@ -223,7 +223,7 @@ export async function GET(req: NextRequest) {
     const paginated  = filtered.slice((page - 1) * limit, page * limit)
 
     const res = NextResponse.json({ results: paginated, total, brands, page, limit })
-    res.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+    res.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300')
     return res
   } catch (e) {
     return NextResponse.json({ error: String(e), results: [] }, { status: 500 })

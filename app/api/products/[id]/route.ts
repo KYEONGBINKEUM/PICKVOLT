@@ -214,6 +214,6 @@ export async function GET(
       raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
       variants,
     },
-    { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } }
+    { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' } }
   )
 }

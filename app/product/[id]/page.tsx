@@ -3,13 +3,12 @@ import ProductClient from './ProductClient'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600  // 1시간 ISR
 
 function makeSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { fetch: (url, opts = {}) => fetch(url, { ...opts, cache: 'no-store' }) } }
   )
 }
 

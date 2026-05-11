@@ -44,7 +44,9 @@ export async function GET() {
         cnt: item.cnt,
       }))
 
-    return NextResponse.json({ items })
+    const res = NextResponse.json({ items })
+    res.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    return res
   } catch (e) {
     console.error('[popular] error:', e)
     return NextResponse.json({ items: [] })
