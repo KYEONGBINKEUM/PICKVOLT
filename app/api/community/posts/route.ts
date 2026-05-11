@@ -146,8 +146,10 @@ export async function GET(req: NextRequest) {
   }))
 
   const res = NextResponse.json({ posts, total: count ?? 0 })
-  // 비로그인 응답은 짧게 캐시
-  if (!userId) res.headers.set('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=30')
+  res.headers.set('Cache-Control', userId
+    ? 'private, s-maxage=30, stale-while-revalidate=60'
+    : 'public, s-maxage=30, stale-while-revalidate=60'
+  )
   return res
 }
 

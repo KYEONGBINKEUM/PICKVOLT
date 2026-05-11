@@ -1,147 +1,26 @@
-'use client'
+import CommunityClient from './CommunityClient'
+import type { FeedPost } from '@/components/PostFeed'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { LayoutList, LayoutGrid } from 'lucide-react'
-import Navbar from '@/components/Navbar'
-import { supabase } from '@/lib/supabase'
-import { useI18n } from '@/lib/i18n'
-import { CardPost, CompactPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
-import AdBanner from '@/components/AdBanner'
-
-const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
-
-function generateAdIndices(max = 200): Set<number> {
-  const set = new Set<number>()
-  let pos = 9
-  while (pos < max) {
-    set.add(pos)
-    pos += Math.floor(Math.random() * 21) + 20
-  }
-  return set
+function getBaseUrl() {
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 }
 
-export default function CommunityPage() {
-  const { t } = useI18n()
-  const [posts, setPosts]         = useState<FeedPost[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [page, setPage]           = useState(1)
-  const [hasMore, setHasMore]     = useState(true)
-  const [total, setTotal]         = useState(0)
-  const [token, setToken]         = useState<string | null>(null)
-  const [tokenReady, setTokenReady] = useState(false)
-  const [compact, setCompact]     = useState(false)
-  const [adIndices] = useState<Set<number>>(() => generateAdIndices())
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const tokenRef = useRef<string | null>(null)
-
-  const LIMIT = 25
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const t = data.session?.access_token ?? null
-      setToken(t)
-      tokenRef.current = t
-      setTokenReady(true)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!tokenReady) return
-    setLoading(true)
-    const params = new URLSearchParams({ sort: 'latest', page: '1', limit: String(LIMIT) })
-    const headers: Record<string, string> = {}
-    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
-    fetch(`/api/community/posts?${params}`, { headers })
-      .then(r => r.json())
-      .then(d => {
-        const fetched = d.posts ?? []
-        setPosts(fetched)
-        setTotal(d.total ?? 0)
-        setHasMore(fetched.length === LIMIT && fetched.length < (d.total ?? 0))
-        setPage(2)
-      })
-      .finally(() => setLoading(false))
-  }, [tokenReady])
-
-  const loadMore = useCallback(() => {
-    if (loadingMore || !hasMore) return
-    setLoadingMore(true)
-    const params = new URLSearchParams({ sort: 'latest', page: String(page), limit: String(LIMIT) })
-    const headers: Record<string, string> = {}
-    if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
-    fetch(`/api/community/posts?${params}`, { headers })
-      .then(r => r.json())
-      .then(d => {
-        const fetched = d.posts ?? []
-        setPosts(prev => [...prev, ...fetched])
-        setHasMore(fetched.length === LIMIT)
-        setPage(p => p + 1)
-      })
-      .finally(() => setLoadingMore(false))
-  }, [page, loadingMore, hasMore])
-
-  useEffect(() => {
-    if (!sentinelRef.current) return
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) loadMore()
-    }, { threshold: 0.1 })
-    observer.observe(sentinelRef.current)
-    return () => observer.disconnect()
-  }, [loadMore])
-
-  const handleVote = async (postId: string) => {
-    if (!token) return
-    const res = await fetch(`/api/community/posts/${postId}/vote`, {
-      method: 'POST', headers: { Authorization: `Bearer ${token}` },
-    })
-    if (res.ok) {
-      const d = await res.json()
-      setPosts(ps => ps.map(p => p.id === postId ? { ...p, upvotes: d.upvotes, my_vote: d.voted } : p))
-    }
+async function getInitialPosts(): Promise<{ posts: FeedPost[]; total: number }> {
+  try {
+    const res = await fetch(
+      `${getBaseUrl()}/api/community/posts?sort=latest&page=1&limit=25`,
+      { next: { revalidate: 30 } }
+    )
+    if (!res.ok) return { posts: [], total: 0 }
+    const data = await res.json()
+    return { posts: data.posts ?? [], total: data.total ?? 0 }
+  } catch {
+    return { posts: [], total: 0 }
   }
+}
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
-
-        <div className="flex items-center justify-between mb-3">
-          {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}
-          <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
-            <button onClick={() => setCompact(false)} className={`p-1.5 rounded-md transition-colors ${!compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}>
-              <LayoutGrid className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => setCompact(true)} className={`p-1.5 rounded-md transition-colors ${compact ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}>
-              <LayoutList className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <div>
-          {loading
-            ? Array.from({ length: 12 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)
-            : posts.length === 0
-            ? (
-              <div className="py-24 text-center">
-                <p className="text-sm text-white/20">{t('board.empty')}</p>
-              </div>
-            )
-            : posts.flatMap((post, idx) => {
-                const card = compact
-                  ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
-                  : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType />
-                const showAd = AD_HTML_INLINE && adIndices.has(idx) && idx < posts.length - 1
-                return showAd
-                  ? [card, <div key={`ad-${idx}`} className="my-3 w-full"><AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" /></div>]
-                  : [card]
-              })
-          }
-        </div>
-
-        <div ref={sentinelRef} className="h-4" />
-        {loadingMore && Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} compact={compact} />)}
-      </div>
-    </div>
-  )
+export default async function CommunityPage() {
+  const { posts, total } = await getInitialPosts()
+  return <CommunityClient initialPosts={posts} initialTotal={total} />
 }

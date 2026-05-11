@@ -200,19 +200,14 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
   const loadPost = useCallback(async () => {
     setLoading(true)
-    const headers: Record<string, string> = {}
-    const tok = (await supabase.auth.getSession()).data.session?.access_token
-    if (tok) headers['Authorization'] = `Bearer ${tok}`
-    const res = await fetch(`/api/community/posts/${id}`, { headers })
+    // auth 없이 즉시 fetch — vote 상태는 auth 로드 후 정확해짐
+    const res = await fetch(`/api/community/posts/${id}`)
     if (res.ok) setPost(await res.json())
     setLoading(false)
   }, [id])
 
   const loadComments = useCallback(async () => {
-    const headers: Record<string, string> = {}
-    const tok = (await supabase.auth.getSession()).data.session?.access_token
-    if (tok) headers['Authorization'] = `Bearer ${tok}`
-    const res = await fetch(`/api/community/posts/${id}/comments`, { headers })
+    const res = await fetch(`/api/community/posts/${id}/comments`)
     if (res.ok) {
       const data = await res.json()
       setComments((data.comments ?? []).map((c: Comment) => ({ downvotes: 0, my_downvote: false, ...c })))
