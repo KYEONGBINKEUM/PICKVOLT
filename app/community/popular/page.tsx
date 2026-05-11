@@ -22,5 +22,5 @@ async function getInitialPosts(): Promise<{ posts: FeedPost[]; total: number }> 
 
 export default async function PopularPage() {
   const { posts, total } = await getInitialPosts()
-  return <PopularClient initialPosts={posts} initialTotal={total} />
+  return <PopularClient initialPosts={posts.length > 0 ? posts : undefined} initialTotal={total} />
 }

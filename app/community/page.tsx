@@ -22,5 +22,5 @@ async function getInitialPosts(): Promise<{ posts: FeedPost[]; total: number }> 
 
 export default async function CommunityPage() {
   const { posts, total } = await getInitialPosts()
-  return <CommunityClient initialPosts={posts} initialTotal={total} />
+  return <CommunityClient initialPosts={posts.length > 0 ? posts : undefined} initialTotal={total} />
 }

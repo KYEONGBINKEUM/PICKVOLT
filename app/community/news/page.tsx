@@ -22,5 +22,5 @@ async function getInitialPosts(): Promise<{ posts: FeedPost[]; total: number }> 
 
 export default async function NewsPage() {
   const { posts, total } = await getInitialPosts()
-  return <NewsClient initialPosts={posts} initialTotal={total} />
+  return <NewsClient initialPosts={posts.length > 0 ? posts : undefined} initialTotal={total} />
 }
