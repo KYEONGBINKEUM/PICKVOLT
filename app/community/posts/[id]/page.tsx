@@ -126,7 +126,7 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
             <ThumbsUp className="w-3.5 h-3.5" /><span className="tabular-nums">{c.upvotes}</span>
           </button>
           <button onClick={() => onDownvote(c.id)}
-            className={`flex items-center gap-1 text-[11px] transition-colors ${c.my_downvote ? 'text-red-400' : 'text-white/25 hover:text-white/50'}`}>
+            className={`flex items-center gap-1 text-[11px] transition-colors ${c.my_downvote ? 'text-accent' : 'text-white/25 hover:text-white/50'}`}>
             <ThumbsDown className="w-3.5 h-3.5" />{(c.downvotes ?? 0) > 0 && <span className="tabular-nums">{c.downvotes}</span>}
           </button>
           <button onClick={() => onReply(c.id, c.user_display_name)}
@@ -651,7 +651,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 <button onClick={handleDownvote} disabled={downvoting}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                     post.my_downvote
-                      ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                      ? 'bg-accent/15 text-accent border-accent/30'
                       : 'text-white/40 border-border hover:text-white/70 hover:border-white/20'
                   }`}>
                   <ThumbsDown className="w-4 h-4" />
