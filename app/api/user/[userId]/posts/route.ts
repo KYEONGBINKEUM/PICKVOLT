@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
     .select(`
       id, type, category, title, body, rating, upvotes, comment_count, view_count,
       created_at, user_id, user_display_name, user_avatar_url,
+      clan_id, clans ( id, slug, name, avatar_url ),
       is_bot, source_url, source_name,
       community_post_products ( product_id, products ( id, name, image_url ) ),
       community_compare_options ( id, label, image_url, vote_count, sort_order, product_id )
