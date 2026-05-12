@@ -35,6 +35,7 @@ function getNotifText(notif: Notif, t: (k: string) => string) {
     case 'reply': return t('notif.reply').replace('{name}', name)
     case 'clan_post': return t('notif.clan_post').replace('{clan}', notif.body ?? '')
     case 'subscription_post': return t('notif.subscription_post').replace('{name}', name)
+    case 'upvote': return t('notif.upvote').replace('{name}', name)
     default: return notif.title
   }
 }

@@ -25,6 +25,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     supabase.from('community_post_downvotes').select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle(),
   ])
 
+  const isNewVote = !existing
+
   if (existing) {
     await supabase.from('community_post_votes').delete().eq('post_id', id).eq('user_id', user.id)
   } else {
@@ -44,6 +46,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     upvotes: upvoteCount ?? 0,
     downvotes: downvoteCount ?? 0,
   }).eq('id', id)
+
+  // 새 추천 시에만 글 작성자에게 알림 (본인 글 제외, best-effort)
+  if (isNewVote) {
+    try {
+      const [{ data: postData }, { data: profile }] = await Promise.all([
+        supabase.from('community_posts').select('user_id, title').eq('id', id).maybeSingle(),
+        supabase.from('profiles').select('nickname, avatar_url').eq('user_id', user.id).maybeSingle(),
+      ])
+      if (postData && postData.user_id !== user.id) {
+        const actorName   = profile?.nickname ?? user.email?.split('@')[0] ?? 'user'
+        const actorAvatar = profile?.avatar_url ?? null
+        await supabase.from('notifications').insert({
+          user_id:      postData.user_id,
+          type:         'upvote',
+          title:        postData.title,
+          link:         `/community/posts/${id}`,
+          actor_id:     user.id,
+          actor_name:   actorName,
+          actor_avatar: actorAvatar,
+        })
+      }
+    } catch {}
+  }
 
   return NextResponse.json({
     voted: !existing,
