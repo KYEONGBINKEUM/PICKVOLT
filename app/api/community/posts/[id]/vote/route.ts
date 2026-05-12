@@ -26,23 +26,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   ])
 
   if (existing) {
-    // 이미 추천 → 취소
     await supabase.from('community_post_votes').delete().eq('post_id', id).eq('user_id', user.id)
   } else {
-    // 추천 추가 + 비추천 제거(있으면)
     await supabase.from('community_post_votes').insert({ post_id: id, user_id: user.id })
     if (existingDown) {
       await supabase.from('community_post_downvotes').delete().eq('post_id', id).eq('user_id', user.id)
-      const { data: p } = await supabase.from('community_posts').select('downvotes').eq('id', id).single()
-      await supabase.from('community_posts').update({ downvotes: Math.max(0, (p?.downvotes ?? 1) - 1) }).eq('id', id)
     }
   }
 
-  const { data: post } = await supabase.from('community_posts').select('upvotes, downvotes').eq('id', id).single()
+  // 트리거 의존 없이 실제 카운트로 직접 동기화
+  const [{ count: upvoteCount }, { count: downvoteCount }] = await Promise.all([
+    supabase.from('community_post_votes').select('*', { count: 'exact', head: true }).eq('post_id', id),
+    supabase.from('community_post_downvotes').select('*', { count: 'exact', head: true }).eq('post_id', id),
+  ])
+
+  await supabase.from('community_posts').update({
+    upvotes: upvoteCount ?? 0,
+    downvotes: downvoteCount ?? 0,
+  }).eq('id', id)
+
   return NextResponse.json({
     voted: !existing,
-    upvotes: post?.upvotes ?? 0,
-    downvotes: post?.downvotes ?? 0,
+    upvotes: upvoteCount ?? 0,
+    downvotes: downvoteCount ?? 0,
     my_downvote: false,
   })
 }

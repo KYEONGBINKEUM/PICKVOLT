@@ -172,6 +172,9 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [translating, setTranslating] = useState(false)
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
 
+  // 로그인 유도 모달
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+
   // 신고 모달
   const [reportTarget, setReportTarget]   = useState<{ type: 'post' | 'comment'; id: string } | null>(null)
   const [reportReason, setReportReason]   = useState('')
@@ -217,7 +220,8 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   useEffect(() => { loadPost(); loadComments() }, [loadPost, loadComments])
 
   const handleVote = async () => {
-    if (!token || voting) return
+    if (!token) { setShowLoginPrompt(true); return }
+    if (voting) return
     setVoting(true)
     const res = await fetch(`/api/community/posts/${id}/vote`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
@@ -231,7 +235,8 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   }
 
   const handleDownvote = async () => {
-    if (!token || downvoting) return
+    if (!token) { setShowLoginPrompt(true); return }
+    if (downvoting) return
     setDownvoting(true)
     const res = await fetch(`/api/community/posts/${id}/downvote`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
@@ -286,7 +291,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   }
 
   const handleCommentVote = async (commentId: string) => {
-    if (!token) return
+    if (!token) { setShowLoginPrompt(true); return }
     const res = await fetch(`/api/community/posts/${id}/comments/${commentId}/vote`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
     })
@@ -355,7 +360,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   }
 
   const handleCommentDownvote = async (commentId: string) => {
-    if (!token) return
+    if (!token) { setShowLoginPrompt(true); return }
     const res = await fetch(`/api/community/posts/${id}/comments/${commentId}/downvote`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
     })
@@ -634,8 +639,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
               {/* 하단 추천 */}
               <div className={`flex items-center gap-3 flex-wrap ${post.community_post_products.length > 0 ? 'mt-4' : 'mt-4 pt-4 border-t border-border'}`}>
-                <button onClick={handleVote} disabled={voting || !token}
-                  title={!token ? t('post.login_vote') : undefined}
+                <button onClick={handleVote} disabled={voting}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                     post.my_vote
                       ? 'bg-accent/15 text-accent border-accent/30'
@@ -644,8 +648,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   <ThumbsUp className="w-4 h-4" />
                   <span className="tabular-nums">{post.upvotes}</span>
                 </button>
-                <button onClick={handleDownvote} disabled={downvoting || !token}
-                  title={!token ? t('post.login_vote') : undefined}
+                <button onClick={handleDownvote} disabled={downvoting}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                     post.my_downvote
                       ? 'bg-red-500/15 text-red-400 border-red-500/30'
@@ -784,6 +787,38 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       </main>
+
+      {/* ── 로그인 유도 모달 ── */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLoginPrompt(false) }}>
+          <div className="w-full max-w-xs bg-surface border border-border rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center">
+              <ThumbsUp className="w-5 h-5 text-accent" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-white mb-1">{t('post.login_vote')}</p>
+              <p className="text-xs text-white/40">{t('post.login_vote_desc')}</p>
+            </div>
+            <div className="flex gap-2 w-full">
+              <button onClick={() => setShowLoginPrompt(false)}
+                className="flex-1 px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 border border-border hover:border-white/20 transition-all">
+                {t('comment.cancel')}
+              </button>
+              <button onClick={async () => {
+                setShowLoginPrompt(false)
+                await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: { redirectTo: `${window.location.origin}/auth/callback` },
+                })
+              }}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold bg-accent hover:bg-accent/90 text-white transition-all">
+                {t('review.sign_in_cta')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 신고 모달 ── */}
       {reportTarget && (
