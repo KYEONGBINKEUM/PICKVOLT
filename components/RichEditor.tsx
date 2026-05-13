@@ -69,6 +69,110 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
     editorRef.current?.focus()
   }
 
+  // 외부 붙여넣기 HTML sanitizer — 화이트리스트 기반
+  const sanitizePaste = (html: string): string => {
+    if (typeof window === 'undefined') return ''
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+
+    // 위험 태그 전체 제거
+    const dangerousTags = ['script', 'style', 'iframe', 'frame', 'frameset',
+      'object', 'embed', 'applet', 'form', 'input', 'textarea', 'button',
+      'select', 'meta', 'link', 'base', 'noscript', 'template', 'svg', 'math']
+    dangerousTags.forEach(tag =>
+      doc.querySelectorAll(tag).forEach(el => el.remove())
+    )
+
+    // 허용 태그 외 나머지는 텍스트 노드로 치환
+    const ALLOWED_TAGS = new Set([
+      'p', 'br', 'div', 'span',
+      'b', 'strong', 'i', 'em', 'u', 's',
+      'ul', 'ol', 'li',
+      'blockquote', 'pre', 'code',
+      'h1', 'h2', 'h3', 'h4',
+      'a', 'img',
+      'table', 'thead', 'tbody', 'tr', 'td', 'th',
+    ])
+
+    // 모든 요소 순회하며 속성 sanitize
+    const SAFE_STYLE_PROPS = new Set(['text-align', 'font-weight', 'font-style', 'text-decoration'])
+
+    doc.body.querySelectorAll('*').forEach(el => {
+      const tag = el.tagName.toLowerCase()
+
+      // 허용되지 않은 태그 → 내용만 유지 (unwrap)
+      if (!ALLOWED_TAGS.has(tag)) {
+        const frag = doc.createDocumentFragment()
+        while (el.firstChild) frag.appendChild(el.firstChild)
+        el.replaceWith(frag)
+        return
+      }
+
+      // 속성 sanitize
+      const toRemove: string[] = []
+      for (const attr of Array.from(el.attributes)) {
+        const name = attr.name.toLowerCase()
+
+        // on* 이벤트 핸들러 전부 제거
+        if (name.startsWith('on')) { toRemove.push(attr.name); continue }
+
+        // href: http/https/상대경로만 허용
+        if (name === 'href') {
+          const v = attr.value.trim().toLowerCase()
+          if (!v.startsWith('http://') && !v.startsWith('https://') && !v.startsWith('/')) {
+            toRemove.push(attr.name)
+          }
+          continue
+        }
+
+        // src: img만 허용, https만 허용 (data:/javascript: 차단)
+        if (name === 'src') {
+          if (tag !== 'img') { toRemove.push(attr.name); continue }
+          const v = attr.value.trim().toLowerCase()
+          if (!v.startsWith('https://') && !v.startsWith('http://') && !v.startsWith('/')) {
+            toRemove.push(attr.name)
+          }
+          continue
+        }
+
+        // style: 안전한 속성만
+        if (name === 'style') {
+          const safe = attr.value.split(';')
+            .map(s => s.trim())
+            .filter(s => {
+              const prop = s.split(':')[0]?.trim().toLowerCase() ?? ''
+              return SAFE_STYLE_PROPS.has(prop)
+            })
+            .join('; ')
+          if (safe) el.setAttribute('style', safe)
+          else toRemove.push(attr.name)
+          continue
+        }
+
+        // alt, title 허용; 나머지 제거
+        if (name !== 'alt' && name !== 'title') {
+          toRemove.push(attr.name)
+        }
+      }
+      toRemove.forEach(a => el.removeAttribute(a))
+    })
+
+    return doc.body.innerHTML
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const html = e.clipboardData.getData('text/html')
+    if (html) {
+      const safe = sanitizePaste(html)
+      document.execCommand('insertHTML', false, safe)
+    } else {
+      // plain text 폴백
+      const text = e.clipboardData.getData('text/plain')
+      document.execCommand('insertText', false, text)
+    }
+    onChange(editorRef.current?.innerHTML ?? '')
+  }
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !token) return
@@ -178,6 +282,7 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(editorRef.current?.innerHTML ?? '')}
+        onPaste={handlePaste}
         data-placeholder={placeholder}
         className="px-4 py-3 text-sm text-white/85 leading-relaxed outline-none bg-surface empty:before:content-[attr(data-placeholder)] empty:before:text-white/20"
         style={{ minHeight, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
