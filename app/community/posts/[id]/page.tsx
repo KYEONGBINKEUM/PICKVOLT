@@ -161,6 +161,7 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [commentText, setCommentText]               = useState('')
   const [replyTo, setReplyTo]                       = useState<{ id: string; name: string } | null>(null)
   const [submittingComment, setSubmittingComment]   = useState(false)
+  const [commentError, setCommentError]             = useState('')
   const [voting, setVoting]                         = useState(false)
   const [downvoting, setDownvoting]                 = useState(false)
   const [compareVoting, setCompareVoting]           = useState(false)
@@ -329,9 +330,15 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     }
   }
 
+  const commentErrorMap: Record<string, string> = {
+    too_many_comments: 'write.error_too_many_comments',
+    duplicate_comment: 'write.error_duplicate_comment',
+  }
+
   const handleSubmitComment = async () => {
     if (!token || (!commentText.trim() && commentImages.length === 0) || submittingComment) return
     setSubmittingComment(true)
+    setCommentError('')
     const fullBody = commentImages.length > 0
       ? [commentText.trim(), ...commentImages.map(url => `![image](${url})`)].filter(Boolean).join('\n')
       : commentText.trim()
@@ -350,6 +357,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
       setCommentText('')
       setCommentImages([])
       setReplyTo(null)
+    } else {
+      const d = await res.json()
+      const errKey = commentErrorMap[d.error]
+      setCommentError(errKey ? t(errKey) : (d.error ?? t('write.error_network')))
     }
     setSubmittingComment(false)
   }
@@ -705,6 +716,12 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
             )}
             {token ? (
               <div>
+                {/* 도배 방지 에러 */}
+                {commentError && (
+                  <p className="mb-2 text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2">
+                    {commentError}
+                  </p>
+                )}
                 {/* 이미지 미리보기 */}
                 {commentImages.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">

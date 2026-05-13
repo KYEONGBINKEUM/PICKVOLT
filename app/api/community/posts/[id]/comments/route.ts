@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkCommentRateLimit } from '@/lib/rateLimitDb'
 
 function makeServiceClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!body?.trim() || body.trim().length < 2) return NextResponse.json({ error: 'body too short' }, { status: 400 })
 
   const supabase = makeServiceClient()
+
+  // Rate limit check
+  const rl = await checkCommentRateLimit(supabase, user.id, body)
+  if (rl.blocked) return NextResponse.json({ error: rl.errorCode }, { status: 429 })
 
   // 실명 노출 방지: profiles 테이블의 nickname + avatar 우선 사용
   const { data: profile } = await supabase
