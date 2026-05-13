@@ -339,5 +339,21 @@ export async function POST(req: NextRequest) {
     if (notifInserts.length > 0) await supabase.from('notifications').insert(notifInserts)
   } catch {}
 
+  // Award points for post creation (best-effort)
+  try {
+    const { data: setting } = await supabase
+      .from('app_settings').select('value').eq('key', 'community_points_per_post').maybeSingle()
+    const pts = parseInt(setting?.value ?? '0')
+    if (pts > 0) {
+      const { data: pd } = await supabase.from('profiles').select('points').eq('user_id', user.id).maybeSingle()
+      const cur = (pd as { points?: number } | null)?.points ?? 0
+      await supabase.from('profiles').update({ points: cur + pts }).eq('user_id', user.id)
+      await supabase.from('point_transactions').insert({
+        user_id: user.id, amount: pts, type: 'post_reward',
+        description: '글 작성 보상', reference_id: post.id,
+      })
+    }
+  } catch {}
+
   return NextResponse.json({ id: post.id }, { status: 201 })
 }
