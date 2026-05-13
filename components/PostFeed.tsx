@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight, Flag } from 'lucide-react'
+import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight, Flag, Lock } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { imgUrl } from '@/lib/utils'
 
@@ -29,6 +29,8 @@ export interface FeedPost {
   clans?: { id: string; slug: string; name: string; avatar_url?: string | null } | null
   community_post_products?: { products: { id: string; name: string } | null }[]
   community_compare_options?: { vote_count: number }[]
+  point_price?: number
+  is_unlocked?: boolean
 }
 
 // Remove product-card and compare-table blocks from HTML (for feed preview)
@@ -200,6 +202,31 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
   const { locale } = useI18n()
   const [translating, setTranslating] = useState(false)
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
+  const [localUnlocked, setLocalUnlocked] = useState(false)
+  const [unlocking, setUnlocking]         = useState(false)
+
+  const isLocked = (post.point_price ?? 0) > 0 && !post.is_unlocked && !localUnlocked
+
+  const handleUnlock = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!token || unlocking) return
+    setUnlocking(true)
+    try {
+      const res = await fetch(`/api/community/posts/${post.id}/unlock`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setLocalUnlocked(true)
+      } else {
+        const d = await res.json()
+        alert(d.error === 'insufficient_points' ? t('post.unlock_no_points') : d.error)
+      }
+    } finally {
+      setUnlocking(false)
+    }
+  }
 
   const isHtml = /<[a-z]/i.test(post.body ?? '')
   // Strip product-card / compare-table blocks before extracting preview images & text
@@ -298,6 +325,9 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
             {post.is_members_only && (
               <span className="text-[9px] font-semibold bg-accent/10 text-accent/60 border border-accent/20 rounded-full px-1.5 py-0.5">{t('clan.members_only')}</span>
             )}
+            {(post.is_unlocked || localUnlocked) && (post.point_price ?? 0) > 0 && (
+              <span className="text-[9px] font-semibold bg-green-500/10 text-green-400/80 border border-green-500/20 rounded-full px-1.5 py-0.5">{t('post.unlocked_badge')}</span>
+            )}
           </div>
 
           {linkedProduct && (
@@ -313,12 +343,28 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
             )}
           </p>
 
-          {displayPlain && (
+          {!isLocked && displayPlain && (
             <p className="text-xs text-white/30 line-clamp-2 mb-2 leading-relaxed">{displayPlain}</p>
+          )}
+
+          {isLocked && (
+            <div className="flex items-center gap-2 bg-white/[0.03] border border-border/60 rounded-xl px-3 py-2.5 mb-2">
+              <Lock className="w-3.5 h-3.5 text-white/25 flex-shrink-0" />
+              <span className="text-[12px] text-white/35 flex-1 leading-snug">
+                {t('post.locked').replace('{n}', String(post.point_price))}
+              </span>
+              <button
+                onClick={handleUnlock}
+                disabled={unlocking || !token}
+                className="text-[11px] font-bold text-accent hover:text-accent/80 disabled:opacity-40 transition-colors flex-shrink-0"
+              >
+                {unlocking ? t('post.unlocking') : t('post.unlock').replace('{n}', String(post.point_price))}
+              </button>
+            </div>
           )}
         </ContentWrapper>
 
-        {images.length > 0 && (
+        {!isLocked && images.length > 0 && (
           <ImageSlider images={images} postId={post.id} />
         )}
 
@@ -379,6 +425,31 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
   const { locale } = useI18n()
   const [translating, setTranslating] = useState(false)
   const [translated, setTranslated]   = useState<{ title: string; body: string } | null>(null)
+  const [localUnlocked, setLocalUnlocked] = useState(false)
+  const [unlocking, setUnlocking]         = useState(false)
+
+  const isLocked = (post.point_price ?? 0) > 0 && !post.is_unlocked && !localUnlocked
+
+  const handleUnlock = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!token || unlocking) return
+    setUnlocking(true)
+    try {
+      const res = await fetch(`/api/community/posts/${post.id}/unlock`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setLocalUnlocked(true)
+      } else {
+        const d = await res.json()
+        alert(d.error === 'insufficient_points' ? t('post.unlock_no_points') : d.error)
+      }
+    } finally {
+      setUnlocking(false)
+    }
+  }
 
   const isHtml = /<[a-z]/i.test(post.body ?? '')
   // Strip product-card / compare-table blocks before extracting preview images & text
@@ -429,7 +500,7 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
         </span>
       </div>
 
-      {compactThumb && (
+      {!isLocked && compactThumb && (
         isExternal ? (
           <a href={post.source_url!} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 self-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -466,6 +537,9 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
             {post.is_members_only && (
               <span className="text-[9px] font-semibold bg-accent/10 text-accent/60 border border-accent/20 rounded-full px-1.5 py-0.5">{t('clan.members_only')}</span>
             )}
+            {(post.is_unlocked || localUnlocked) && (post.point_price ?? 0) > 0 && (
+              <span className="text-[9px] font-semibold bg-green-500/10 text-green-400/80 border border-green-500/20 rounded-full px-1.5 py-0.5">{t('post.unlocked_badge')}</span>
+            )}
           </div>
         )}
         {isExternal ? (
@@ -473,7 +547,7 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
             <p className="text-sm font-medium text-white/75 group-hover:text-white transition-colors leading-snug line-clamp-1">
               {displayTitle}
             </p>
-            {displayPlain && (
+            {!isLocked && displayPlain && (
               <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed mt-0.5">{displayPlain}</p>
             )}
           </a>
@@ -485,10 +559,25 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
                 <span className="ml-1.5 text-[11px] text-accent font-semibold">[{post.comment_count}]</span>
               )}
             </p>
-            {displayPlain && (
+            {!isLocked && displayPlain && (
               <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed mt-0.5">{displayPlain}</p>
             )}
           </Link>
+        )}
+        {isLocked && (
+          <div className="flex items-center gap-1.5 mt-1 bg-white/[0.025] border border-border/50 rounded-lg px-2.5 py-1.5">
+            <Lock className="w-3 h-3 text-white/20 flex-shrink-0" />
+            <span className="text-[11px] text-white/30 flex-1 leading-snug">
+              {t('post.locked').replace('{n}', String(post.point_price))}
+            </span>
+            <button
+              onClick={handleUnlock}
+              disabled={unlocking || !token}
+              className="text-[10px] font-bold text-accent hover:text-accent/80 disabled:opacity-40 transition-colors flex-shrink-0"
+            >
+              {unlocking ? t('post.unlocking') : t('post.unlock').replace('{n}', String(post.point_price))}
+            </button>
+          </div>
         )}
         {post.is_bot && post.source_name && post.source_url && (
           <p className="text-[10px] mt-0.5 mb-0.5">

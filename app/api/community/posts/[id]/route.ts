@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       id, type, category, title, body, rating, upvotes, downvotes, comment_count, view_count,
       is_pinned, created_at, updated_at,
       user_id, user_display_name, user_avatar_url,
-      clan_id, clans ( id, slug, name, avatar_url ),
+      clan_id, point_price, clans ( id, slug, name, avatar_url ),
       community_post_products ( product_id, products ( id, name, brand, image_url, category ) ),
       community_compare_options ( id, label, image_url, vote_count, sort_order, product_id, products ( id, name, image_url ) )
     `)
@@ -52,22 +52,36 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   let my_vote = false
   let my_downvote = false
   let my_compare_option: string | null = null
+  let is_unlocked = true
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pointPrice = (post as any).point_price ?? 0
 
   if (userId) {
-    const [{ data: pv }, { data: dv }, { data: cv }] = await Promise.all([
+    const isAuthor = (post as any).user_id === userId
+    const queries: Promise<unknown>[] = [
       supabase.from('community_post_votes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
       supabase.from('community_post_downvotes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
       supabase.from('community_compare_votes').select('option_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
-    ])
-    my_vote = !!pv
-    my_downvote = !!dv
-    my_compare_option = cv?.option_id ?? null
+      pointPrice > 0 && !isAuthor
+        ? supabase.from('community_post_unlocks').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle()
+        : Promise.resolve({ data: true }),
+    ]
+    const [pvRes, dvRes, cvRes, ulRes] = await Promise.all(queries) as [
+      { data: unknown }, { data: unknown }, { data: { option_id: string } | null }, { data: unknown }
+    ]
+    my_vote = !!pvRes.data
+    my_downvote = !!dvRes.data
+    my_compare_option = cvRes.data?.option_id ?? null
+    is_unlocked = pointPrice === 0 || isAuthor || !!ulRes.data
+  } else {
+    is_unlocked = pointPrice === 0
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const options = ((post as any).community_compare_options ?? []).sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
 
-  return NextResponse.json({ ...post, community_compare_options: options, my_vote, my_downvote, my_compare_option })
+  return NextResponse.json({ ...post, community_compare_options: options, my_vote, my_downvote, my_compare_option, is_unlocked })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

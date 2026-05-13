@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Settings, Users, Edit3, Loader2, Lock } from 'lucide-react'
+import { Settings, Users, Edit3, Loader2, Lock, LayoutGrid, LayoutList } from 'lucide-react'
 import Navbar from '@/components/Navbar'
-import { CardPost, PostSkeleton, Pagination, FeedPost } from '@/components/PostFeed'
+import { CardPost, CompactPost, PostSkeleton, Pagination, FeedPost } from '@/components/PostFeed'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { imgUrl } from '@/lib/utils'
@@ -38,6 +38,7 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
   const [postsLoading, setPostsLoading] = useState(true)
   const [joining, setJoining]   = useState(false)
   const [leaving, setLeaving]   = useState(false)
+  const [view, setView]         = useState<'card' | 'compact'>('card')
 
   const LIMIT = 20
 
@@ -221,9 +222,25 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
 
         <div className="flex gap-6">
           {/* Posts */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pb-20">
+            <div className="flex items-center mb-2">
+              <div className="ml-auto flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5">
+                <button
+                  onClick={() => setView('card')}
+                  className={`p-1.5 rounded-md transition-colors ${view === 'card' ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setView('compact')}
+                  className={`p-1.5 rounded-md transition-colors ${view === 'compact' ? 'bg-white/10 text-white' : 'text-white/25 hover:text-white/50'}`}
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
             {postsLoading ? (
-              Array.from({ length: 5 }).map((_, i) => <PostSkeleton key={i} />)
+              Array.from({ length: 5 }).map((_, i) => <PostSkeleton key={i} compact={view === 'compact'} />)
             ) : posts.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-white/30 text-sm">{t('clan.no_posts')}</p>
@@ -237,9 +254,10 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
               </div>
             ) : (
               <>
-                {posts.map(p => (
-                  <CardPost key={p.id} post={p} token={token} onVote={handleVote} t={t} showType={false} />
-                ))}
+                {posts.map(p => view === 'compact'
+                  ? <CompactPost key={p.id} post={p} token={token} onVote={handleVote} t={t} showType={false} />
+                  : <CardPost key={p.id} post={p} token={token} onVote={handleVote} t={t} showType={false} />
+                )}
                 <Pagination page={page} totalPages={totalPages} onPage={p => { setPage(p); window.scrollTo(0, 0) }} />
               </>
             )}

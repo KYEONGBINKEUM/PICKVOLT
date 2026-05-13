@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       is_pinned, created_at, updated_at,
       user_id, user_display_name, user_avatar_url,
       is_bot, source_url, source_name,
-      clan_id, is_members_only,
+      clan_id, is_members_only, point_price,
       clans ( id, slug, name, avatar_url ),
       community_post_products ( product_id, products ( id, name, image_url ) ),
       community_compare_options ( id, label, image_url, vote_count, sort_order, product_id )
@@ -116,18 +116,23 @@ export async function GET(req: NextRequest) {
   const [{ count }, { data, error }] = await Promise.all([countQuery, query])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 내 vote 여부 — 병렬로 조회
+  // 내 vote / unlock 여부 — 병렬로 조회
   let myVotedIds = new Set<string>()
   let myCompareVotes: Record<string, string> = {}
+  let myUnlockedIds = new Set<string>()
 
   if (userId && data && data.length > 0) {
     const postIds = data.map((p: { id: string }) => p.id)
     const compareIds = data.filter((p: { type: string }) => p.type === 'compare').map((p: { id: string }) => p.id)
+    const paidIds = data.filter((p: { point_price: number }) => (p.point_price ?? 0) > 0).map((p: { id: string }) => p.id)
 
-    const [votesRes, compareRes] = await Promise.all([
+    const [votesRes, compareRes, unlockRes] = await Promise.all([
       supabase.from('community_post_votes').select('post_id').eq('user_id', userId).in('post_id', postIds),
       compareIds.length > 0
         ? supabase.from('community_compare_votes').select('post_id, option_id').eq('user_id', userId).in('post_id', compareIds)
+        : Promise.resolve({ data: [] }),
+      paidIds.length > 0
+        ? supabase.from('community_post_unlocks').select('post_id').eq('user_id', userId).in('post_id', paidIds)
         : Promise.resolve({ data: [] }),
     ])
 
@@ -135,6 +140,7 @@ export async function GET(req: NextRequest) {
     myCompareVotes = Object.fromEntries(
       ((compareRes.data ?? []) as { post_id: string; option_id: string }[]).map((v) => [v.post_id, v.option_id])
     )
+    myUnlockedIds = new Set((unlockRes.data ?? []).map((v: { post_id: string }) => v.post_id))
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,6 +148,7 @@ export async function GET(req: NextRequest) {
     ...p,
     my_vote: myVotedIds.has(p.id),
     my_compare_option: myCompareVotes[p.id] ?? null,
+    is_unlocked: (p.point_price ?? 0) === 0 || p.user_id === userId || myUnlockedIds.has(p.id),
     community_compare_options: (p.community_compare_options ?? []).sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order),
   }))
 
@@ -159,7 +166,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { type, category, title, body: postBody, rating, product_ids, compare_options, clan_id, is_members_only } = body
+  const { type, category, title, body: postBody, rating, product_ids, compare_options, clan_id, is_members_only, point_price } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
   const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
@@ -207,6 +214,7 @@ export async function POST(req: NextRequest) {
       rating: rating ?? null,
       clan_id: clan_id || null,
       is_members_only: is_members_only ?? false,
+      point_price: point_price > 0 ? Math.floor(point_price) : 0,
     })
     .select('id')
     .single()

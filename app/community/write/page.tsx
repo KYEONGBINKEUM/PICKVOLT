@@ -122,6 +122,7 @@ function WritePageInner() {
   const [myClans, setMyClans]             = useState<{ id: string; slug: string; name: string }[]>([])
   const [selectedClanId, setSelectedClanId]   = useState<string | null>(null)
   const [isMembersOnly, setIsMembersOnly]     = useState(false)
+  const [pointPrice, setPointPrice]           = useState(0)
 
 
   const editorRef     = useRef<HTMLDivElement | null>(null)
@@ -356,6 +357,7 @@ function WritePageInner() {
             compare_options: hasCompare ? options : undefined,
             clan_id: selectedClanId ?? null,
             is_members_only: selectedClanId ? isMembersOnly : false,
+            point_price: pointPrice > 0 ? pointPrice : 0,
           }),
         })
         const json = await res.json()
@@ -485,6 +487,29 @@ function WritePageInner() {
                   {t('clan.members_only_toggle')}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* 포인트 열람가 */}
+          {!editPostId && (
+            <div>
+              <p className={labelCls}>{t('write.point_price')}</p>
+              <div className="flex items-center gap-2">
+                {[0, 1, 2, 3, 5, 10].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPointPrice(n)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                      pointPrice === n
+                        ? 'border-accent bg-accent/15 text-white'
+                        : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                    }`}
+                  >
+                    {n === 0 ? t('write.point_price_free') : `${n} pt`}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
