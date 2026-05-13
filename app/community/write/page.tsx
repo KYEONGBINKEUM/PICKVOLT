@@ -244,6 +244,17 @@ function ClanDropdown({
   )
 }
 
+function mapApiError(code: string | undefined, t: (k: string) => string): string {
+  const map: Record<string, string> = {
+    too_many_posts:      'write.error_too_many_posts',
+    duplicate_post:      'write.error_duplicate_post',
+    too_many_comments:   'write.error_too_many_comments',
+    duplicate_comment:   'write.error_duplicate_comment',
+  }
+  if (!code) return ''
+  return map[code] ? t(map[code]) : code
+}
+
 function WritePageInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
@@ -495,7 +506,7 @@ function WritePageInner() {
           }),
         })
         const json = await res.json()
-        if (!res.ok) { setError(json.error ?? t('write.error_network')); return }
+        if (!res.ok) { setError(mapApiError(json.error, t) ?? t('write.error_network')); return }
         router.push(`/community/posts/${editPostId}`)
       } else {
         // Create mode — POST
@@ -516,7 +527,7 @@ function WritePageInner() {
           }),
         })
         const json = await res.json()
-        if (!res.ok) { setError(json.error ?? t('write.error_network')); return }
+        if (!res.ok) { setError(mapApiError(json.error, t) ?? t('write.error_network')); return }
         router.push(`/community/posts/${json.id}`)
       }
     } catch {

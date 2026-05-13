@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { checkPostRateLimit } from '@/lib/rateLimitDb'
 
 // 모듈 레벨 캐싱
 let _service: SupabaseClient | null = null
@@ -207,6 +208,12 @@ export async function POST(req: NextRequest) {
   const { type, category, title, body: postBody, rating, product_ids, compare_options, clan_id, is_members_only, point_price } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
+
+  // Rate limit check
+  const supabaseForLimit = makeServiceClient()
+  const rl = await checkPostRateLimit(supabaseForLimit, user.id, title)
+  if (rl.blocked) return NextResponse.json({ error: rl.errorCode }, { status: 429 })
+
   const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
   if (type === 'news' && !adminEmails.includes((user.email ?? '').toLowerCase())) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
