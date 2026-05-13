@@ -501,12 +501,12 @@ function WritePageInner() {
               {pointPriceEnabled && (
                 <div className="mt-2 flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3">
                   <input
-                    type="number"
-                    min={1}
-                    max={9999}
+                    type="text"
+                    inputMode="numeric"
                     value={pointPrice === 0 ? '' : pointPrice}
                     onChange={e => {
-                      const v = Math.max(1, Math.min(9999, parseInt(e.target.value) || 0))
+                      const raw = e.target.value.replace(/\D/g, '')
+                      const v = raw === '' ? 0 : Math.max(1, Math.min(9999, parseInt(raw)))
                       setPointPrice(v)
                     }}
                     placeholder={t('write.point_price_ph')}
