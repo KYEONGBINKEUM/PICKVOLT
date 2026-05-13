@@ -22,6 +22,7 @@ interface Clan {
   rules: string[] | null
   created_at: string
   owner_id: string
+  write_permission: 'everyone' | 'moderator' | 'owner'
   my_membership: { role: string; status: string } | null
 }
 
@@ -150,10 +151,17 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
     )
   }
 
-  const isMember   = clan.my_membership?.status === 'approved'
-  const isPending  = clan.my_membership?.status === 'pending'
-  const isOwnerOrMod = isMember && (clan.my_membership?.role === 'owner' || clan.my_membership?.role === 'moderator')
-  const isOwner    = clan.owner_id === userId
+  const isMember     = clan.my_membership?.status === 'approved'
+  const isPending    = clan.my_membership?.status === 'pending'
+  const myRole       = clan.my_membership?.role ?? null
+  const isOwnerOrMod = isMember && (myRole === 'owner' || myRole === 'moderator')
+  const isOwner      = clan.owner_id === userId
+  const writePerm    = clan.write_permission ?? 'everyone'
+  const canWrite     = isMember && (
+    writePerm === 'everyone' ||
+    (writePerm === 'moderator' && (myRole === 'owner' || myRole === 'moderator')) ||
+    (writePerm === 'owner' && isOwner)
+  )
   const totalPages = Math.ceil(total / LIMIT)
 
   return (
@@ -210,7 +218,7 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
                 {t('clan.join')}
               </button>
             )}
-            {isMember && (
+            {canWrite && (
               <Link href={`/community/write?clan=${slug}`}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-border text-white/60 hover:text-white hover:border-white/20 text-xs font-semibold transition-colors">
                 <Edit3 className="w-3.5 h-3.5" />
@@ -244,12 +252,15 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
             ) : posts.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-white/30 text-sm">{t('clan.no_posts')}</p>
-                {isMember && (
+                {canWrite && (
                   <Link href={`/community/write?clan=${slug}`}
                     className="mt-4 inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
                     <Edit3 className="w-4 h-4" />
                     {t('write.heading')}
                   </Link>
+                )}
+                {isMember && !canWrite && (
+                  <p className="mt-3 text-xs text-white/20">{t('clan.write_no_perm')}</p>
                 )}
               </div>
             ) : (
@@ -281,12 +292,15 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
                     {t('clan.join_approval')}
                   </div>
                 )}
-                {isMember && (
+                {canWrite && (
                   <Link href={`/community/write?clan=${slug}`}
                     className="flex items-center justify-center gap-2 w-full py-2.5 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-xl transition-colors">
                     <Edit3 className="w-4 h-4" />
                     {t('write.heading')}
                   </Link>
+                )}
+                {isMember && !canWrite && (
+                  <p className="text-[11px] text-white/25 text-center">{t('clan.write_no_perm')}</p>
                 )}
               </div>
 

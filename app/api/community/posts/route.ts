@@ -180,16 +180,21 @@ export async function POST(req: NextRequest) {
 
   const supabase = makeServiceClient()
 
-  // Validate clan membership if posting to a clan
+  // Validate clan membership and write permission if posting to a clan
   if (clan_id) {
-    const { data: membership } = await supabase
-      .from('clan_members')
-      .select('status')
-      .eq('clan_id', clan_id)
-      .eq('user_id', user.id)
-      .eq('status', 'approved')
-      .maybeSingle()
+    const [{ data: membership }, { data: clanInfo }] = await Promise.all([
+      supabase.from('clan_members').select('role, status').eq('clan_id', clan_id).eq('user_id', user.id).eq('status', 'approved').maybeSingle(),
+      supabase.from('clans').select('write_permission, owner_id').eq('id', clan_id).maybeSingle(),
+    ])
     if (!membership) return NextResponse.json({ error: 'not a clan member' }, { status: 403 })
+    const perm = clanInfo?.write_permission ?? 'everyone'
+    const role = membership.role
+    if (perm === 'owner' && clanInfo?.owner_id !== user.id) {
+      return NextResponse.json({ error: 'write_permission_denied' }, { status: 403 })
+    }
+    if (perm === 'moderator' && !['owner', 'moderator'].includes(role)) {
+      return NextResponse.json({ error: 'write_permission_denied' }, { status: 403 })
+    }
   }
 
   const { data: profile } = await supabase

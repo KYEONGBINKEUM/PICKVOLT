@@ -37,6 +37,7 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
   const [description, setDescription] = useState('')
   const [joinType, setJoinType]   = useState<'auto' | 'approval'>('auto')
   const [isPrivate, setIsPrivate] = useState(false)
+  const [writePerm, setWritePerm] = useState<'everyone' | 'moderator' | 'owner'>('everyone')
   const [rules, setRules]         = useState<string[]>([])
   const [newRule, setNewRule]     = useState('')
   const [clanName, setClanName]   = useState('')
@@ -68,6 +69,7 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
       setDescription(c.description ?? '')
       setJoinType(c.join_type)
       setIsPrivate(c.is_private)
+      setWritePerm(c.write_permission ?? 'everyone')
       setRules(Array.isArray(c.rules) ? c.rules : [])
       setAvatarUrl(c.avatar_url ?? null)
       setBannerUrl(c.banner_url ?? null)
@@ -98,7 +100,7 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
     await fetch(`/api/clans/${slug}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name, description, join_type: joinType, is_private: isPrivate, rules, avatar_url: finalAvatarUrl, banner_url: finalBannerUrl }),
+      body: JSON.stringify({ name, description, join_type: joinType, is_private: isPrivate, write_permission: writePerm, rules, avatar_url: finalAvatarUrl, banner_url: finalBannerUrl }),
     })
     setSaved(true)
     setSaving(false)
@@ -218,6 +220,23 @@ export default function ClanSettingsPage({ params }: { params: { slug: string } 
                     <p className="text-[11px] text-white/30">{t('clan.is_private_desc')}</p>
                   </div>
                 </button>
+              </div>
+
+              <div>
+                <p className={labelCls}>{t('clan.write_permission')}</p>
+                <div className="flex flex-col gap-2">
+                  {(['everyone', 'moderator', 'owner'] as const).map(perm => (
+                    <button key={perm} type="button" onClick={() => setWritePerm(perm)}
+                      className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left transition-all ${
+                        writePerm === perm ? 'border-accent bg-accent/10 text-white' : 'border-border text-white/40 hover:border-white/20'
+                      }`}>
+                      <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all flex items-center justify-center ${writePerm === perm ? 'border-accent bg-accent' : 'border-white/30'}`}>
+                        {writePerm === perm && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                      </span>
+                      <span className="text-sm font-semibold">{t(`clan.write_perm.${perm}` as Parameters<typeof t>[0])}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   const { data: clan, error } = await db
     .from('clans')
-    .select('id, slug, name, description, avatar_url, banner_url, join_type, is_private, member_count, rules, created_at, owner_id')
+    .select('id, slug, name, description, avatar_url, banner_url, join_type, is_private, member_count, rules, created_at, owner_id, write_permission')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -64,8 +64,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
   if (body.rules !== undefined)       updates.rules       = body.rules
   // Only owner can change these
   if (clan.owner_id === user.id) {
-    if (body.join_type !== undefined)  updates.join_type  = body.join_type
-    if (body.is_private !== undefined) updates.is_private = body.is_private
+    if (body.join_type !== undefined)        updates.join_type        = body.join_type
+    if (body.is_private !== undefined)       updates.is_private       = body.is_private
+    if (body.write_permission !== undefined) updates.write_permission = body.write_permission
   }
 
   const { error } = await db.from('clans').update(updates).eq('id', clan.id)
