@@ -122,7 +122,8 @@ function WritePageInner() {
   const [myClans, setMyClans]             = useState<{ id: string; slug: string; name: string }[]>([])
   const [selectedClanId, setSelectedClanId]   = useState<string | null>(null)
   const [isMembersOnly, setIsMembersOnly]     = useState(false)
-  const [pointPrice, setPointPrice]           = useState(0)
+  const [pointPriceEnabled, setPointPriceEnabled] = useState(false)
+  const [pointPrice, setPointPrice]               = useState(0)
 
 
   const editorRef     = useRef<HTMLDivElement | null>(null)
@@ -357,7 +358,7 @@ function WritePageInner() {
             compare_options: hasCompare ? options : undefined,
             clan_id: selectedClanId ?? null,
             is_members_only: selectedClanId ? isMembersOnly : false,
-            point_price: pointPrice > 0 ? pointPrice : 0,
+            point_price: pointPriceEnabled && pointPrice > 0 ? pointPrice : 0,
           }),
         })
         const json = await res.json()
@@ -444,33 +445,20 @@ function WritePageInner() {
           {myClans.length > 0 && !editPostId && (
             <div>
               <p className={labelCls}>{t('clan.post_in')}</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setSelectedClanId(null); setIsMembersOnly(false) }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    !selectedClanId
-                      ? 'border-white/30 bg-white/10 text-white'
-                      : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
-                  }`}
-                >
-                  {t('clan.none')}
-                </button>
+              <select
+                value={selectedClanId ?? ''}
+                onChange={e => {
+                  const val = e.target.value || null
+                  setSelectedClanId(val)
+                  if (!val) setIsMembersOnly(false)
+                }}
+                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors appearance-none cursor-pointer"
+              >
+                <option value="" style={{ background: '#1a1a1a' }}>{t('clan.none')}</option>
                 {myClans.map(c => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setSelectedClanId(selectedClanId === c.id ? null : c.id)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      selectedClanId === c.id
-                        ? 'border-accent bg-accent/15 text-white'
-                        : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
-                    }`}
-                  >
-                    c/{c.slug}
-                  </button>
+                  <option key={c.id} value={c.id} style={{ background: '#1a1a1a' }}>c/{c.slug}</option>
                 ))}
-              </div>
+              </select>
               {selectedClanId && (
                 <button
                   type="button"
@@ -494,22 +482,39 @@ function WritePageInner() {
           {!editPostId && (
             <div>
               <p className={labelCls}>{t('write.point_price')}</p>
-              <div className="flex items-center gap-2">
-                {[0, 1, 2, 3, 5, 10].map(n => (
+              <div className="flex gap-2">
+                {([false, true] as const).map(on => (
                   <button
-                    key={n}
+                    key={String(on)}
                     type="button"
-                    onClick={() => setPointPrice(n)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                      pointPrice === n
-                        ? 'border-accent bg-accent/15 text-white'
+                    onClick={() => { setPointPriceEnabled(on); if (!on) setPointPrice(0) }}
+                    className={`flex-1 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                      pointPriceEnabled === on
+                        ? on ? 'border-accent bg-accent/15 text-white' : 'border-white/30 bg-white/8 text-white'
                         : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
                     }`}
                   >
-                    {n === 0 ? t('write.point_price_free') : `${n} pt`}
+                    {on ? t('write.point_price_on') : t('write.point_price_off')}
                   </button>
                 ))}
               </div>
+              {pointPriceEnabled && (
+                <div className="mt-2 flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={9999}
+                    value={pointPrice === 0 ? '' : pointPrice}
+                    onChange={e => {
+                      const v = Math.max(1, Math.min(9999, parseInt(e.target.value) || 0))
+                      setPointPrice(v)
+                    }}
+                    placeholder={t('write.point_price_ph')}
+                    className="flex-1 bg-transparent text-sm text-white placeholder-white/25 outline-none"
+                  />
+                  <span className="text-xs font-bold text-white/30 flex-shrink-0">pt</span>
+                </div>
+              )}
             </div>
           )}
 
