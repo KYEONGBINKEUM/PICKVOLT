@@ -17,11 +17,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const user = await getUser(req)
   const db = svc()
 
-  const { data: clan, error } = await db
+  let { data: clan, error } = await db
     .from('clans')
     .select('id, slug, name, description, avatar_url, banner_url, join_type, is_private, member_count, rules, created_at, owner_id, write_permission')
     .eq('slug', slug)
     .maybeSingle()
+
+  // write_permission 컬럼이 아직 없을 때(마이그레이션 미실행) 폴백
+  if (error?.message?.includes('write_permission')) {
+    const { data: fallback, error: err2 } = await db
+      .from('clans')
+      .select('id, slug, name, description, avatar_url, banner_url, join_type, is_private, member_count, rules, created_at, owner_id')
+      .eq('slug', slug)
+      .maybeSingle()
+    if (err2 || !fallback) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    clan = { ...fallback, write_permission: 'everyone' } as typeof clan
+    error = null
+  }
 
   if (error || !clan) return NextResponse.json({ error: 'not found' }, { status: 404 })
 

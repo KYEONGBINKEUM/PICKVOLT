@@ -113,8 +113,46 @@ export async function GET(req: NextRequest) {
   if (filteredIds) countQuery = countQuery.in('id', filteredIds)
   if (q) countQuery = countQuery.ilike('title', `%${q}%`)
 
-  const [{ count }, { data, error }] = await Promise.all([countQuery, query])
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  let [{ count }, { data, error }] = await Promise.all([countQuery, query])
+
+  // point_price 컬럼이 아직 없을 때(마이그레이션 미실행) 폴백
+  if (error?.message?.includes('point_price')) {
+    const fallbackQuery = supabase
+      .from('community_posts')
+      .select(`
+        id, type, category, title, body, rating, upvotes, comment_count, view_count,
+        is_pinned, created_at, updated_at,
+        user_id, user_display_name, user_avatar_url,
+        is_bot, source_url, source_name,
+        clan_id, is_members_only,
+        clans ( id, slug, name, avatar_url ),
+        community_post_products ( product_id, products ( id, name, image_url ) ),
+        community_compare_options ( id, label, image_url, vote_count, sort_order, product_id )
+      `)
+      .eq('is_hidden', false)
+    const filters = [
+      type ? (q: typeof fallbackQuery) => q.eq('type', type) : null,
+      category ? (q: typeof fallbackQuery) => q.eq('category', category) : null,
+      clan_id ? (q: typeof fallbackQuery) => q.eq('clan_id', clan_id) : null,
+      !isClanMember ? (q: typeof fallbackQuery) => q.eq('is_members_only', false) : null,
+      filteredIds ? (q: typeof fallbackQuery) => q.in('id', filteredIds!) : null,
+      q ? (q2: typeof fallbackQuery) => q2.ilike('title', `%${q}%`) : null,
+    ]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let fq: any = fallbackQuery
+    for (const f of filters) if (f) fq = f(fq)
+    if (sort === 'hot') fq = fq.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
+    else if (sort === 'top') fq = fq.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
+    else fq = fq.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
+    fq = fq.range((page - 1) * limit, (page - 1) * limit + limit - 1)
+    const { data: fbData, error: fbErr } = await fq
+    if (fbErr) return NextResponse.json({ error: fbErr.message }, { status: 500 })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data = (fbData ?? []).map((p: any) => ({ ...p, point_price: 0 }))
+    error = null
+  } else if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   // 내 vote / unlock 여부 — 병렬로 조회
   let myVotedIds = new Set<string>()
@@ -182,11 +220,13 @@ export async function POST(req: NextRequest) {
 
   // Validate clan membership and write permission if posting to a clan
   if (clan_id) {
-    const [{ data: membership }, { data: clanInfo }] = await Promise.all([
+    const [{ data: membership }, clanRes] = await Promise.all([
       supabase.from('clan_members').select('role, status').eq('clan_id', clan_id).eq('user_id', user.id).eq('status', 'approved').maybeSingle(),
       supabase.from('clans').select('write_permission, owner_id').eq('id', clan_id).maybeSingle(),
     ])
     if (!membership) return NextResponse.json({ error: 'not a clan member' }, { status: 403 })
+    // write_permission 컬럼이 없으면(마이그레이션 미실행) 'everyone'으로 폴백
+    const clanInfo = clanRes.error?.message?.includes('write_permission') ? null : clanRes.data
     const perm = clanInfo?.write_permission ?? 'everyone'
     const role = membership.role
     if (perm === 'owner' && clanInfo?.owner_id !== user.id) {
