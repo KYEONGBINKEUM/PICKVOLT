@@ -93,7 +93,32 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ reports: data ?? [] })
+
+  const reports = data ?? []
+
+  // Batch-fetch post titles and comment bodies
+  const postIds     = Array.from(new Set(reports.filter(r => r.target_type === 'post').map(r => r.target_id)))
+  const commentIds  = Array.from(new Set(reports.filter(r => r.target_type === 'comment').map(r => r.target_id)))
+
+  const [postsRes, commentsRes] = await Promise.all([
+    postIds.length > 0
+      ? supabase.from('community_posts').select('id, title, user_display_name').in('id', postIds)
+      : Promise.resolve({ data: [] }),
+    commentIds.length > 0
+      ? supabase.from('community_comments').select('id, body, user_display_name, post_id').in('id', commentIds)
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const postMap    = Object.fromEntries(((postsRes.data ?? []) as { id: string; title: string; user_display_name: string }[]).map(p => [p.id, p]))
+  const commentMap = Object.fromEntries(((commentsRes.data ?? []) as { id: string; body: string; user_display_name: string; post_id: string }[]).map(c => [c.id, c]))
+
+  const enriched = reports.map(r => ({
+    ...r,
+    post:    r.target_type === 'post'    ? (postMap[r.target_id]    ?? null) : null,
+    comment: r.target_type === 'comment' ? (commentMap[r.target_id] ?? null) : null,
+  }))
+
+  return NextResponse.json({ reports: enriched })
 }
 
 // PATCH: 신고 상태 업데이트 (관리자)
