@@ -884,25 +884,48 @@ export default function AdminPage() {
 
   // ── Tabs ──────────────────────────────────────────────────────────────────
 
-  const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: 'dashboard', label: '대시보드', icon: <LayoutDashboard size={15} /> },
-    { key: 'products', label: '제품 관리', icon: <Package size={15} /> },
-    { key: 'users', label: '유저 관리', icon: <Users size={15} /> },
-    { key: 'comparisons', label: '비교 이력', icon: <BarChart2 size={15} /> },
-    { key: 'cpus', label: 'CPU 관리', icon: <Cpu size={15} /> },
-    { key: 'gpus', label: 'GPU 관리', icon: <Monitor size={15} /> },
-    { key: 'reports', label: '신고 관리', icon: <Flag size={15} /> },
-    { key: 'inquiries', label: '문의 관리', icon: <Mail size={15} /> },
-    { key: 'edit_requests', label: '수정 요청', icon: <Pencil size={15} /> },
-    { key: 'add_requests', label: '등록 요청', icon: <PlusCircle size={15} /> },
-    { key: 'verify_requests', label: '인증 신청', icon: <BadgeCheck size={15} /> },
-    { key: 'community', label: '커뮤니티', icon: <MessageSquare size={15} /> },
+  const NAV_GROUPS: { label: string | null; items: { key: Tab; label: string; icon: React.ReactNode }[] }[] = [
+    {
+      label: null,
+      items: [{ key: 'dashboard', label: '대시보드', icon: <LayoutDashboard size={14} /> }],
+    },
+    {
+      label: '제품',
+      items: [
+        { key: 'products',    label: '제품 관리', icon: <Package size={14} /> },
+        { key: 'cpus',        label: 'CPU',       icon: <Cpu size={14} /> },
+        { key: 'gpus',        label: 'GPU',       icon: <Monitor size={14} /> },
+      ],
+    },
+    {
+      label: '유저',
+      items: [
+        { key: 'users',           label: '유저 관리', icon: <Users size={14} /> },
+        { key: 'comparisons',     label: '비교 이력', icon: <BarChart2 size={14} /> },
+        { key: 'verify_requests', label: '인증 신청', icon: <BadgeCheck size={14} /> },
+      ],
+    },
+    {
+      label: '커뮤니티',
+      items: [
+        { key: 'community', label: '커뮤니티 관리', icon: <MessageSquare size={14} /> },
+        { key: 'reports',   label: '신고 관리',     icon: <Flag size={14} /> },
+      ],
+    },
+    {
+      label: '지원',
+      items: [
+        { key: 'inquiries',     label: '문의 관리', icon: <Mail size={14} /> },
+        { key: 'edit_requests', label: '수정 요청', icon: <Pencil size={14} /> },
+        { key: 'add_requests',  label: '등록 요청', icon: <PlusCircle size={14} /> },
+      ],
+    },
   ]
 
   return (
-    <div className="min-h-screen bg-background text-white">
+    <div className="min-h-screen bg-background text-white flex flex-col">
       {/* Header */}
-      <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+      <div className="border-b border-border px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-accent" />
@@ -923,27 +946,39 @@ export default function AdminPage() {
         <Link href="/mypage" className="text-sm text-white/40 hover:text-white transition-colors">my page</Link>
       </div>
 
-      {/* Tab nav */}
-      <div className="border-b border-border px-6">
-        <div className="flex gap-0 max-w-7xl mx-auto">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.key
-                  ? 'border-accent text-white'
-                  : 'border-transparent text-white/40 hover:text-white/70'
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Body: sidebar + content */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* ── Left Sidebar ── */}
+        <aside className="w-52 flex-shrink-0 border-r border-border overflow-y-auto bg-background/50">
+          <nav className="py-4 px-2">
+            {NAV_GROUPS.map((group, gi) => (
+              <div key={gi} className={gi > 0 ? 'mt-5' : ''}>
+                {group.label && (
+                  <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest px-3 mb-1">{group.label}</p>
+                )}
+                {group.items.map(item => (
+                  <button
+                    key={item.key}
+                    onClick={() => setTab(item.key)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
+                      tab === item.key
+                        ? 'bg-accent/15 text-white font-semibold'
+                        : 'text-white/45 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className={tab === item.key ? 'text-accent' : ''}>{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        {/* ── Main Content ── */}
+        <main className="flex-1 overflow-y-auto">
+      <div className="px-8 py-8">
 
         {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
@@ -1983,12 +2018,32 @@ export default function AdminPage() {
                           </span>
                           <span className="text-xs text-white/30">{formatDate(r.created_at)}</span>
                         </div>
-                        <p className="text-xs text-white/30 mb-1">
-                          <span className="text-white/50">대상 ID:</span> {r.target_id}
-                        </p>
+
+                        {/* 신고 대상 내용 */}
+                        {r.target_type === 'post' && r.post && (
+                          <a href={`/community/posts/${r.target_id}`} target="_blank" rel="noopener noreferrer"
+                            className="flex items-start gap-2 bg-background border border-border/50 rounded-lg px-3 py-2 mb-2 hover:border-white/20 transition-colors group">
+                            <Flag size={12} className="text-white/20 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-white/80 group-hover:text-white truncate">{r.post.title}</p>
+                              <p className="text-[10px] text-white/30 mt-0.5">작성자: {r.post.user_display_name} · 클릭하여 게시물 보기 →</p>
+                            </div>
+                          </a>
+                        )}
+                        {r.target_type === 'comment' && r.comment && (
+                          <a href={`/community/posts/${r.comment.post_id}`} target="_blank" rel="noopener noreferrer"
+                            className="flex items-start gap-2 bg-background border border-border/50 rounded-lg px-3 py-2 mb-2 hover:border-white/20 transition-colors group">
+                            <MessageSquare size={12} className="text-white/20 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm text-white/70 line-clamp-2 group-hover:text-white">{r.comment.body}</p>
+                              <p className="text-[10px] text-white/30 mt-0.5">작성자: {r.comment.user_display_name} · 게시물 보기 →</p>
+                            </div>
+                          </a>
+                        )}
+
                         {r.detail && (
-                          <p className="text-sm text-white/70 bg-background rounded-lg p-2 mt-2 border border-border/50">
-                            {r.detail}
+                          <p className="text-xs text-white/60 bg-white/4 rounded-lg px-3 py-2 border border-border/40 italic">
+                            신고 내용: {r.detail}
                           </p>
                         )}
                       </div>
@@ -2607,6 +2662,8 @@ export default function AdminPage() {
           </div>
         )}
 
+      </div>
+        </main>
       </div>
     </div>
   )
