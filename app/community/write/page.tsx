@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X, Plus, Search, ChevronLeft, Loader2 } from 'lucide-react'
+import { X, Plus, Search, ChevronLeft, Loader2, ChevronDown, Check } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import RichEditor, { RichEditorHandle } from '@/components/RichEditor'
 import { supabase } from '@/lib/supabase'
@@ -90,6 +90,160 @@ function ProductSearch({ onSelect, exclude, placeholder }: {
 }
 
 
+interface ClanItem { id: string; slug: string; name: string; avatar_url: string | null }
+
+function ClanDropdown({
+  clans, selectedId, onSelect,
+  isMembersOnly, onToggleMembersOnly,
+  labelCls, t,
+}: {
+  clans: ClanItem[]
+  selectedId: string | null
+  onSelect: (id: string | null) => void
+  isMembersOnly: boolean
+  onToggleMembersOnly: () => void
+  labelCls: string
+  t: (k: string) => string
+}) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ]       = useState('')
+  const wrapRef         = useRef<HTMLDivElement>(null)
+
+  const selected = clans.find(c => c.id === selectedId) ?? null
+  const filtered = q.trim()
+    ? clans.filter(c => c.name.toLowerCase().includes(q.toLowerCase()) || c.slug.toLowerCase().includes(q.toLowerCase()))
+    : clans
+
+  // 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false); setQ('')
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const choose = (id: string | null) => { onSelect(id); setOpen(false); setQ('') }
+
+  return (
+    <div>
+      <p className={labelCls}>{t('clan.post_in')}</p>
+      <div ref={wrapRef} className="relative">
+        {/* 트리거 버튼 */}
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          className="w-full flex items-center gap-3 bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-white transition-colors hover:border-white/20 focus:border-white/20"
+        >
+          {selected ? (
+            <>
+              {selected.avatar_url ? (
+                <div className="w-7 h-7 rounded-lg overflow-hidden relative flex-shrink-0">
+                  <Image src={selected.avatar_url} alt={selected.name} fill className="object-cover" unoptimized />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[11px] font-black text-white/40">{selected.name[0]?.toUpperCase()}</span>
+                </div>
+              )}
+              <span className="flex-1 text-left text-white/85 truncate">{selected.name}</span>
+              <span className="text-[10px] text-white/30 flex-shrink-0">c/{selected.slug}</span>
+            </>
+          ) : (
+            <span className="flex-1 text-left text-white/30">{t('clan.none')}</span>
+          )}
+          <ChevronDown className={`w-4 h-4 text-white/30 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* 드롭다운 패널 */}
+        {open && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-surface-2 border border-border rounded-xl overflow-hidden z-20 shadow-2xl">
+            {/* 검색 */}
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
+              <Search className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+              <input
+                autoFocus
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder={t('clan.search')}
+                className="flex-1 bg-transparent text-sm text-white placeholder-white/25 outline-none"
+              />
+              {q && (
+                <button type="button" onClick={() => setQ('')} className="text-white/25 hover:text-white/60 transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* 옵션 목록 */}
+            <div className="max-h-56 overflow-y-auto">
+              {/* 없음 옵션 */}
+              <button
+                type="button"
+                onClick={() => choose(null)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-lg bg-white/5 border border-border flex items-center justify-center flex-shrink-0">
+                  <X className="w-3 h-3 text-white/25" />
+                </div>
+                <span className="flex-1 text-left text-sm text-white/40">{t('clan.none')}</span>
+                {selectedId === null && <Check className="w-3.5 h-3.5 text-accent flex-shrink-0" />}
+              </button>
+
+              {filtered.length === 0 && q && (
+                <div className="px-4 py-3 text-xs text-white/25 text-center">{q} — 결과 없음</div>
+              )}
+
+              {filtered.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => choose(c.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors"
+                >
+                  {c.avatar_url ? (
+                    <div className="w-7 h-7 rounded-lg overflow-hidden relative flex-shrink-0">
+                      <Image src={c.avatar_url} alt={c.name} fill className="object-cover" unoptimized />
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[11px] font-black text-white/40">{c.name[0]?.toUpperCase()}</span>
+                    </div>
+                  )}
+                  <span className="flex-1 text-left text-sm text-white/85 truncate">{c.name}</span>
+                  <span className="text-[10px] text-white/30 flex-shrink-0">c/{c.slug}</span>
+                  {selectedId === c.id && <Check className="w-3.5 h-3.5 text-accent flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 멤버 전용 토글 */}
+      {selectedId && (
+        <button
+          type="button"
+          onClick={onToggleMembersOnly}
+          className={`mt-2 flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+            isMembersOnly
+              ? 'border-accent/40 bg-accent/10 text-accent'
+              : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+          }`}
+        >
+          <span className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all ${isMembersOnly ? 'border-accent bg-accent' : 'border-white/30'}`}>
+            {isMembersOnly && <span className="text-white text-[8px] font-black">✓</span>}
+          </span>
+          {t('clan.members_only_toggle')}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function WritePageInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
@@ -119,7 +273,7 @@ function WritePageInner() {
   const [hasCompare, setHasCompare]       = useState(false)
   const [embeddedProducts, setEmbeddedProducts] = useState<ProductResult[]>([])
   const [showEmbedSearch, setShowEmbedSearch]   = useState(false)
-  const [myClans, setMyClans]             = useState<{ id: string; slug: string; name: string }[]>([])
+  const [myClans, setMyClans]             = useState<{ id: string; slug: string; name: string; avatar_url: string | null }[]>([])
   const [selectedClanId, setSelectedClanId]   = useState<string | null>(null)
   const [isMembersOnly, setIsMembersOnly]     = useState(false)
   const [pointPriceEnabled, setPointPriceEnabled] = useState(false)
@@ -154,7 +308,7 @@ function WritePageInner() {
           fetch('/api/clans?my=1', { headers: { Authorization: `Bearer ${session.access_token}` } })
             .then(r => r.json())
             .then(d => {
-              const list = (d.clans ?? []).map((c: { id: string; slug: string; name: string }) => ({ id: c.id, slug: c.slug, name: c.name }))
+              const list = (d.clans ?? []).map((c: { id: string; slug: string; name: string; avatar_url?: string | null }) => ({ id: c.id, slug: c.slug, name: c.name, avatar_url: c.avatar_url ?? null }))
               setMyClans(list)
               if (clanSlugParam) {
                 const matched = list.find((c: { slug: string }) => c.slug === clanSlugParam)
@@ -443,39 +597,15 @@ function WritePageInner() {
 
           {/* 클랜 선택 */}
           {myClans.length > 0 && !editPostId && (
-            <div>
-              <p className={labelCls}>{t('clan.post_in')}</p>
-              <select
-                value={selectedClanId ?? ''}
-                onChange={e => {
-                  const val = e.target.value || null
-                  setSelectedClanId(val)
-                  if (!val) setIsMembersOnly(false)
-                }}
-                className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/20 transition-colors appearance-none cursor-pointer"
-              >
-                <option value="" style={{ background: '#1a1a1a' }}>{t('clan.none')}</option>
-                {myClans.map(c => (
-                  <option key={c.id} value={c.id} style={{ background: '#1a1a1a' }}>c/{c.slug}</option>
-                ))}
-              </select>
-              {selectedClanId && (
-                <button
-                  type="button"
-                  onClick={() => setIsMembersOnly(v => !v)}
-                  className={`mt-2 flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    isMembersOnly
-                      ? 'border-accent/40 bg-accent/10 text-accent'
-                      : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
-                  }`}
-                >
-                  <span className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all ${isMembersOnly ? 'border-accent bg-accent' : 'border-white/30'}`}>
-                    {isMembersOnly && <span className="text-white text-[8px] font-black">✓</span>}
-                  </span>
-                  {t('clan.members_only_toggle')}
-                </button>
-              )}
-            </div>
+            <ClanDropdown
+              clans={myClans}
+              selectedId={selectedClanId}
+              onSelect={id => { setSelectedClanId(id); if (!id) setIsMembersOnly(false) }}
+              isMembersOnly={isMembersOnly}
+              onToggleMembersOnly={() => setIsMembersOnly(v => !v)}
+              labelCls={labelCls}
+              t={t}
+            />
           )}
 
           {/* 포인트 열람가 */}
