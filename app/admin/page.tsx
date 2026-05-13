@@ -8,6 +8,7 @@ import {
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
   Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle, BadgeCheck,
+  MessageSquare, Pin, PinOff, Settings2, Coins,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -18,7 +19,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -203,6 +204,21 @@ export default function AdminPage() {
   const [verifyRequests, setVerifyRequests] = useState<any[]>([])
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [verifyFilter, setVerifyFilter] = useState('')
+
+  // Community
+  const [communityStats, setCommunityStats] = useState<{ totalPosts: number; totalComments: number; todayPosts: number; todayComments: number; hiddenPosts: number; pinnedPosts: number } | null>(null)
+  const [communitySettings, setCommunitySettings] = useState<{ pointsPerPost: number; pointsPerComment: number }>({ pointsPerPost: 5, pointsPerComment: 1 })
+  const [communityLoading, setCommunityLoading] = useState(false)
+  const [communityPosts, setCommunityPosts] = useState<any[]>([])
+  const [communityPostsTotal, setCommunityPostsTotal] = useState(0)
+  const [communityPostsPage, setCommunityPostsPage] = useState(1)
+  const [communityPostsSearch, setCommunityPostsSearch] = useState('')
+  const [communityPostsType, setCommunityPostsType] = useState('')
+  const [communityPostsHidden, setCommunityPostsHidden] = useState('')
+  const [communityPostsLoading, setCommunityPostsLoading] = useState(false)
+  const [communitySettingsSaving, setCommunitySettingsSaving] = useState(false)
+  const [communitySettingsSaved, setCommunitySettingsSaved] = useState(false)
+  const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -741,6 +757,77 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
+  const fetchCommunityOverview = useCallback(async (tok: string) => {
+    setCommunityLoading(true)
+    const res = await fetch('/api/admin/community', { headers: { Authorization: `Bearer ${tok}` } })
+    if (res.ok) {
+      const d = await res.json()
+      setCommunityStats(d.stats)
+      setCommunitySettings(d.settings)
+    }
+    setCommunityLoading(false)
+  }, [])
+
+  const fetchCommunityPosts = useCallback(async (tok: string, pg: number, q: string, type: string, hidden: string) => {
+    setCommunityPostsLoading(true)
+    const params = new URLSearchParams({ page: String(pg) })
+    if (q) params.set('q', q)
+    if (type) params.set('type', type)
+    if (hidden) params.set('hidden', hidden)
+    const res = await fetch(`/api/admin/community/posts?${params}`, { headers: { Authorization: `Bearer ${tok}` } })
+    if (res.ok) {
+      const d = await res.json()
+      setCommunityPosts(d.posts ?? [])
+      setCommunityPostsTotal(d.total ?? 0)
+    }
+    setCommunityPostsLoading(false)
+  }, [])
+
+  const handleCommunityPostAction = async (postId: string, action: string) => {
+    const res = await fetch('/api/admin/community/posts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ post_id: postId, action }),
+    })
+    if (res.ok) {
+      if (action === 'delete') {
+        setCommunityPosts(prev => prev.filter(p => p.id !== postId))
+        setCommunityPostsTotal(t => t - 1)
+      } else if (action === 'hide') {
+        setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, is_hidden: true } : p))
+      } else if (action === 'unhide') {
+        setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, is_hidden: false } : p))
+      } else if (action === 'pin') {
+        setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: true } : p))
+      } else if (action === 'unpin') {
+        setCommunityPosts(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: false } : p))
+      }
+    }
+  }
+
+  const handleSaveCommunitySettings = async () => {
+    setCommunitySettingsSaving(true)
+    const res = await fetch('/api/admin/community', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(communitySettings),
+    })
+    if (res.ok) { setCommunitySettingsSaved(true); setTimeout(() => setCommunitySettingsSaved(false), 2000) }
+    setCommunitySettingsSaving(false)
+  }
+
+  useEffect(() => {
+    if (!authed || !token || tab !== 'community') return
+    fetchCommunityOverview(token)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
+  useEffect(() => {
+    if (!authed || !token || tab !== 'community' || communitySubTab !== 'posts') return
+    fetchCommunityPosts(token, communityPostsPage, communityPostsSearch, communityPostsType, communityPostsHidden)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab, communitySubTab, communityPostsPage, communityPostsType, communityPostsHidden])
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const handleToggleVisible = async (id: string, current: boolean) => {
@@ -809,6 +896,7 @@ export default function AdminPage() {
     { key: 'edit_requests', label: '수정 요청', icon: <Pencil size={15} /> },
     { key: 'add_requests', label: '등록 요청', icon: <PlusCircle size={15} /> },
     { key: 'verify_requests', label: '인증 신청', icon: <BadgeCheck size={15} /> },
+    { key: 'community', label: '커뮤니티', icon: <MessageSquare size={15} /> },
   ]
 
   return (
@@ -880,17 +968,10 @@ export default function AdminPage() {
               </div>
             ) : stats ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
                   <StatCard icon={<Package size={18} />} label="전체 제품" value={stats.totalProducts} />
                   <StatCard icon={<Users size={18} />} label="전체 유저" value={stats.totalUsers} />
                   <StatCard icon={<BarChart2 size={18} />} label="오늘 비교" value={stats.todayComparisons} sub={`총 ${stats.totalComparisons}회`} />
-                  <StatCard icon={<ImageOff size={18} />} label="이미지 없음" value={stats.noImage} color={stats.noImage > 0 ? 'text-amber-400' : 'text-white'} />
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mb-8">
-                  <StatCard icon={<CheckCircle size={18} />} label="스크랩 완료" value={stats.scrapeOk} color="text-emerald-400" />
-                  <StatCard icon={<Clock size={18} />} label="스크랩 대기" value={stats.scrapePending} color="text-amber-400" />
-                  <StatCard icon={<AlertCircle size={18} />} label="스크랩 실패" value={stats.scrapeFailed} color={stats.scrapeFailed > 0 ? 'text-red-400' : 'text-white'} />
                 </div>
 
                 <div className="bg-surface border border-border rounded-card overflow-hidden">
@@ -2281,6 +2362,246 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── COMMUNITY ── */}
+        {tab === 'community' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black">커뮤니티 관리</h1>
+              <button onClick={() => fetchCommunityOverview(token)}
+                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white border border-border hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
+                <RefreshCw size={13} className={communityLoading ? 'animate-spin' : ''} /> 새로고침
+              </button>
+            </div>
+
+            {/* 서브탭 */}
+            <div className="flex gap-1 mb-6 bg-white/5 rounded-xl p-1 w-fit">
+              {(['overview', 'posts', 'settings'] as const).map(st => (
+                <button key={st} onClick={() => setCommunitySubTab(st)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    communitySubTab === st ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'
+                  }`}>
+                  {st === 'overview' ? '개요' : st === 'posts' ? '게시물 관리' : '설정'}
+                </button>
+              ))}
+            </div>
+
+            {/* 개요 */}
+            {communitySubTab === 'overview' && (
+              communityLoading && !communityStats ? (
+                <div className="flex gap-1.5 py-12 justify-center">
+                  {[0,1,2].map(i => <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+                </div>
+              ) : communityStats ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <StatCard icon={<MessageSquare size={18} />} label="전체 게시물" value={communityStats.totalPosts} />
+                    <StatCard icon={<MessageSquare size={18} />} label="전체 댓글" value={communityStats.totalComments} />
+                    <StatCard icon={<BarChart2 size={18} />} label="오늘 게시물" value={communityStats.todayPosts} color="text-accent" />
+                    <StatCard icon={<BarChart2 size={18} />} label="오늘 댓글" value={communityStats.todayComments} color="text-accent" />
+                    <StatCard icon={<EyeOff size={18} />} label="숨김 게시물" value={communityStats.hiddenPosts} color={communityStats.hiddenPosts > 0 ? 'text-amber-400' : 'text-white'} />
+                    <StatCard icon={<Pin size={18} />} label="고정 게시물" value={communityStats.pinnedPosts} />
+                  </div>
+                  <div className="bg-surface border border-border rounded-xl p-5">
+                    <p className="text-sm font-bold text-white/60 mb-3">현재 포인트 설정</p>
+                    <div className="flex gap-6">
+                      <div>
+                        <p className="text-xs text-white/30 mb-0.5">글 작성 보상</p>
+                        <p className="text-2xl font-black text-accent">{communitySettings.pointsPerPost} <span className="text-sm font-normal text-white/30">pt</span></p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-white/30 mb-0.5">댓글 작성 보상</p>
+                        <p className="text-2xl font-black text-accent">{communitySettings.pointsPerComment} <span className="text-sm font-normal text-white/30">pt</span></p>
+                      </div>
+                    </div>
+                    <button onClick={() => setCommunitySubTab('settings')}
+                      className="mt-3 text-xs text-white/40 hover:text-white underline">
+                      설정 변경 →
+                    </button>
+                  </div>
+                </div>
+              ) : null
+            )}
+
+            {/* 게시물 관리 */}
+            {communitySubTab === 'posts' && (
+              <div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex items-center gap-2 bg-surface border border-border rounded-xl px-3 py-2 flex-1 min-w-48">
+                    <Search size={14} className="text-white/30" />
+                    <input value={communityPostsSearch} onChange={e => setCommunityPostsSearch(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { setCommunityPostsPage(1); fetchCommunityPosts(token, 1, communityPostsSearch, communityPostsType, communityPostsHidden) } }}
+                      placeholder="제목 검색 (Enter)..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none" />
+                  </div>
+                  {(['', 'forum', 'review', 'free', 'qa', 'compare', 'news'] as const).map(t => (
+                    <button key={t} onClick={() => { setCommunityPostsType(t); setCommunityPostsPage(1) }}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                        communityPostsType === t ? 'border-accent text-accent bg-accent/10' : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                      }`}>
+                      {t === '' ? '전체' : t}
+                    </button>
+                  ))}
+                  {(['', 'false', 'true'] as const).map(h => (
+                    <button key={h} onClick={() => { setCommunityPostsHidden(h); setCommunityPostsPage(1) }}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                        communityPostsHidden === h ? 'border-accent text-accent bg-accent/10' : 'border-border text-white/40 hover:border-white/20 hover:text-white'
+                      }`}>
+                      {h === '' ? '전체' : h === 'false' ? '공개' : '숨김'}
+                    </button>
+                  ))}
+                </div>
+
+                {communityPostsLoading ? (
+                  <div className="text-white/30 py-12 text-center text-sm">로딩 중...</div>
+                ) : communityPosts.length === 0 ? (
+                  <div className="text-white/30 py-12 text-center text-sm">게시물 없음</div>
+                ) : (
+                  <>
+                    <div className="bg-surface border border-border rounded-xl overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-border bg-white/3">
+                            <th className="px-4 py-3 text-left text-white/40 font-medium">제목</th>
+                            <th className="px-3 py-3 text-left text-white/40 font-medium w-16">타입</th>
+                            <th className="px-3 py-3 text-left text-white/40 font-medium w-24">작성자</th>
+                            <th className="px-3 py-3 text-center text-white/40 font-medium w-12">👍</th>
+                            <th className="px-3 py-3 text-center text-white/40 font-medium w-12">💬</th>
+                            <th className="px-3 py-3 text-left text-white/40 font-medium w-24">날짜</th>
+                            <th className="px-3 py-3 text-right text-white/40 font-medium w-28">액션</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          {communityPosts.map((p: any) => (
+                            <tr key={p.id} className={`border-b border-border/50 last:border-0 hover:bg-white/2 transition-colors ${p.is_hidden ? 'opacity-40' : ''}`}>
+                              <td className="px-4 py-3 max-w-xs">
+                                <div className="flex items-center gap-1.5">
+                                  {p.is_pinned && <Pin size={10} className="text-accent flex-shrink-0" />}
+                                  {p.is_hidden && <EyeOff size={10} className="text-white/30 flex-shrink-0" />}
+                                  <a href={`/community/posts/${p.id}`} target="_blank" rel="noopener noreferrer"
+                                    className="text-white/80 hover:text-white truncate">{p.title}</a>
+                                </div>
+                                {p.clans?.name && <span className="text-[10px] text-white/25 mt-0.5 block">c/{p.clans.name}</span>}
+                              </td>
+                              <td className="px-3 py-3 text-accent/70">{p.type}</td>
+                              <td className="px-3 py-3 text-white/50 truncate max-w-[90px]">{p.user_display_name}</td>
+                              <td className="px-3 py-3 text-center text-white/50">{p.upvotes}</td>
+                              <td className="px-3 py-3 text-center text-white/50">{p.comment_count}</td>
+                              <td className="px-3 py-3 text-white/30">{formatDate(p.created_at)}</td>
+                              <td className="px-3 py-3">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button onClick={() => handleCommunityPostAction(p.id, p.is_pinned ? 'unpin' : 'pin')}
+                                    title={p.is_pinned ? '고정 해제' : '상단 고정'}
+                                    className={`p-1.5 rounded-lg border transition-all ${p.is_pinned ? 'border-accent/40 text-accent hover:bg-accent/10' : 'border-border text-white/30 hover:text-white hover:border-white/20'}`}>
+                                    {p.is_pinned ? <PinOff size={12} /> : <Pin size={12} />}
+                                  </button>
+                                  <button onClick={() => handleCommunityPostAction(p.id, p.is_hidden ? 'unhide' : 'hide')}
+                                    title={p.is_hidden ? '공개' : '숨기기'}
+                                    className="p-1.5 rounded-lg border border-border text-white/30 hover:text-white hover:border-white/20 transition-all">
+                                    {p.is_hidden ? <Eye size={12} /> : <EyeOff size={12} />}
+                                  </button>
+                                  <button onClick={() => { if (confirm('이 게시물을 삭제하시겠습니까?')) handleCommunityPostAction(p.id, 'delete') }}
+                                    title="삭제" className="p-1.5 rounded-lg border border-red-500/30 text-red-400/60 hover:text-red-400 hover:border-red-500/50 transition-all">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-xs text-white/30">총 {communityPostsTotal}개</p>
+                      <div className="flex gap-2">
+                        <button disabled={communityPostsPage <= 1}
+                          onClick={() => setCommunityPostsPage(p => p - 1)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-border text-white/40 hover:text-white hover:border-white/20 disabled:opacity-30 transition-all">
+                          이전
+                        </button>
+                        <span className="text-xs text-white/40 px-2 py-1.5">{communityPostsPage} / {Math.max(1, Math.ceil(communityPostsTotal / 30))}</span>
+                        <button disabled={communityPostsPage >= Math.ceil(communityPostsTotal / 30)}
+                          onClick={() => setCommunityPostsPage(p => p + 1)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-border text-white/40 hover:text-white hover:border-white/20 disabled:opacity-30 transition-all">
+                          다음
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* 설정 */}
+            {communitySubTab === 'settings' && (
+              <div className="max-w-lg space-y-6">
+                <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Coins size={16} className="text-accent" />
+                    <p className="text-sm font-bold text-white">포인트 적립 설정</p>
+                  </div>
+                  <p className="text-xs text-white/35 -mt-3">글 또는 댓글 작성 시 유저에게 지급되는 포인트를 설정합니다. 0으로 설정하면 지급되지 않습니다.</p>
+                  <div>
+                    <label className="text-xs text-white/40 block mb-1.5">글 작성 보상 (pt)</label>
+                    <div className="flex items-center gap-3 bg-background border border-border rounded-xl px-4 py-3">
+                      <input type="text" inputMode="numeric"
+                        value={communitySettings.pointsPerPost}
+                        onChange={e => {
+                          const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                          setCommunitySettings(s => ({ ...s, pointsPerPost: Math.min(999, v) }))
+                        }}
+                        className="flex-1 bg-transparent text-sm text-white outline-none" />
+                      <span className="text-xs text-white/30">pt / 글</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/40 block mb-1.5">댓글 작성 보상 (pt)</label>
+                    <div className="flex items-center gap-3 bg-background border border-border rounded-xl px-4 py-3">
+                      <input type="text" inputMode="numeric"
+                        value={communitySettings.pointsPerComment}
+                        onChange={e => {
+                          const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                          setCommunitySettings(s => ({ ...s, pointsPerComment: Math.min(999, v) }))
+                        }}
+                        className="flex-1 bg-transparent text-sm text-white outline-none" />
+                      <span className="text-xs text-white/30">pt / 댓글</span>
+                    </div>
+                  </div>
+                  <button onClick={handleSaveCommunitySettings} disabled={communitySettingsSaving}
+                    className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      communitySettingsSaved
+                        ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+                        : 'bg-accent hover:bg-accent/90 text-white disabled:opacity-40'
+                    }`}>
+                    {communitySettingsSaving ? '저장 중...' : communitySettingsSaved ? '✓ 저장됨' : '저장'}
+                  </button>
+                </div>
+
+                <div className="bg-surface border border-border rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Settings2 size={16} className="text-white/40" />
+                    <p className="text-sm font-bold text-white">도배 방지 현황</p>
+                  </div>
+                  <p className="text-xs text-white/35 mb-4">현재 코드에 고정된 값입니다. 변경이 필요하면 <code className="bg-white/5 px-1 rounded">lib/rateLimitDb.ts</code>를 수정하세요.</p>
+                  <div className="space-y-2">
+                    {[
+                      { label: '글쓰기 제한', value: '10분에 5개' },
+                      { label: '댓글 제한', value: '5분에 10개' },
+                      { label: '글 중복 방지', value: '동일 제목 30분' },
+                      { label: '댓글 중복 방지', value: '동일 내용 2분' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex justify-between items-center py-2 border-b border-border/50 last:border-0">
+                        <span className="text-xs text-white/50">{label}</span>
+                        <span className="text-xs font-medium text-white/70">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
