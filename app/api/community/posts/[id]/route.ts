@@ -59,20 +59,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (userId) {
     const isAuthor = (post as any).user_id === userId
-    const queries: Promise<unknown>[] = [
+    const unlockQuery = pointPrice > 0 && !isAuthor
+      ? supabase.from('community_post_unlocks').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle()
+      : Promise.resolve({ data: true as unknown })
+    const [pvRes, dvRes, cvRes, ulRes] = await Promise.all([
       supabase.from('community_post_votes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
       supabase.from('community_post_downvotes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
       supabase.from('community_compare_votes').select('option_id').eq('post_id', id).eq('user_id', userId).maybeSingle(),
-      pointPrice > 0 && !isAuthor
-        ? supabase.from('community_post_unlocks').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle()
-        : Promise.resolve({ data: true }),
-    ]
-    const [pvRes, dvRes, cvRes, ulRes] = await Promise.all(queries) as [
-      { data: unknown }, { data: unknown }, { data: { option_id: string } | null }, { data: unknown }
-    ]
+      unlockQuery,
+    ])
     my_vote = !!pvRes.data
     my_downvote = !!dvRes.data
-    my_compare_option = cvRes.data?.option_id ?? null
+    my_compare_option = (cvRes.data as { option_id: string } | null)?.option_id ?? null
     is_unlocked = pointPrice === 0 || isAuthor || !!ulRes.data
   } else {
     is_unlocked = pointPrice === 0
