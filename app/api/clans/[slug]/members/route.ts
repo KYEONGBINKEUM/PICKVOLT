@@ -28,13 +28,35 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
   const { data, error } = await db
     .from('clan_members')
-    .select('user_id, role, status, joined_at, display_name, profiles ( avatar_url )')
+    .select('user_id, role, status, joined_at, display_name')
     .eq('clan_id', clan.id)
     .eq('status', status)
     .order('joined_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ members: data ?? [] })
+
+  const members = data ?? []
+
+  // profiles는 FK join 대신 별도 조회 (user_id 컬럼 기반)
+  let avatarMap: Record<string, string | null> = {}
+  if (members.length > 0) {
+    const { data: profiles } = await db
+      .from('profiles')
+      .select('user_id, avatar_url')
+      .in('user_id', members.map(m => m.user_id))
+    if (profiles) {
+      avatarMap = Object.fromEntries(
+        profiles.map((p: { user_id: string; avatar_url: string | null }) => [p.user_id, p.avatar_url ?? null])
+      )
+    }
+  }
+
+  return NextResponse.json({
+    members: members.map(m => ({
+      ...m,
+      profiles: { avatar_url: avatarMap[m.user_id] ?? null },
+    })),
+  })
 }
 
 // PATCH /api/clans/[slug]/members — approve | kick | promote | demote
