@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
-import { getBotCharacter, buildPostPrompt, containsUnsafeContent } from '@/lib/ai-bots'
+import { buildPostPrompt, containsUnsafeContent } from '@/lib/ai-bots'
 
 function makeServiceClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -16,18 +16,15 @@ async function getUser(req: NextRequest) {
 }
 
 // POST /api/ai-bot/post
-// body: { character: string, topic: string, clan_id?: string, context?: string }
+// body: { topic: string, clan_id?: string, context?: string }
 export async function POST(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { character: characterKey, topic, clan_id, context } = await req.json()
-  if (!characterKey || !topic?.trim()) {
-    return NextResponse.json({ error: 'character and topic required' }, { status: 400 })
+  const { topic, clan_id, context } = await req.json()
+  if (!topic?.trim()) {
+    return NextResponse.json({ error: 'topic required' }, { status: 400 })
   }
-
-  const character = getBotCharacter(characterKey)
-  if (!character) return NextResponse.json({ error: 'invalid character' }, { status: 400 })
 
   const svc = makeServiceClient()
 
@@ -58,7 +55,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
-      contents: buildPostPrompt(character, topic.trim(), context?.trim()),
+      contents: buildPostPrompt(topic.trim(), context?.trim()),
     })
     const raw = (result.text ?? '').trim()
     // JSON 파싱
@@ -78,7 +75,7 @@ export async function POST(req: NextRequest) {
     await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
     await svc.from('point_transactions').insert({
       user_id: user.id, amount: -cost, type: 'ai_bot_post',
-      description: `AI봇(${character.name}) 글쓰기`,
+      description: 'AI봇 글쓰기',
     })
   }
 
@@ -86,14 +83,14 @@ export async function POST(req: NextRequest) {
   const userDisplayName = (profile as { nickname?: string | null } | null)?.nickname ?? user.email?.split('@')[0] ?? 'user'
   const { data: post, error } = await svc.from('community_posts').insert({
     user_id: user.id,
-    user_display_name: `${character.emoji} ${character.name}`,
+    user_display_name: '🤖 AI봇',
     user_avatar_url: null,
     title,
     body,
     type: 'forum',
     clan_id: clan_id ?? null,
     is_ai_generated: true,
-    ai_character: characterKey,
+    ai_character: null,
     ai_requester_name: userDisplayName,
   }).select('id, title').single()
 

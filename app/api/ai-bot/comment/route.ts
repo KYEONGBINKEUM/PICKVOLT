@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
-import { getBotCharacter, buildCommentPrompt, containsUnsafeContent } from '@/lib/ai-bots'
+import { buildCommentPrompt, containsUnsafeContent } from '@/lib/ai-bots'
 
 function makeServiceClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -16,18 +16,15 @@ async function getUser(req: NextRequest) {
 }
 
 // POST /api/ai-bot/comment
-// body: { character: string, post_id: string, parent_id?: string, direction?: string }
+// body: { post_id: string, parent_id?: string, direction?: string }
 export async function POST(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { character: characterKey, post_id, parent_id, direction } = await req.json()
-  if (!characterKey || !post_id) {
-    return NextResponse.json({ error: 'character and post_id required' }, { status: 400 })
+  const { post_id, parent_id, direction } = await req.json()
+  if (!post_id) {
+    return NextResponse.json({ error: 'post_id required' }, { status: 400 })
   }
-
-  const character = getBotCharacter(characterKey)
-  if (!character) return NextResponse.json({ error: 'invalid character' }, { status: 400 })
 
   const svc = makeServiceClient()
 
@@ -76,7 +73,6 @@ export async function POST(req: NextRequest) {
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: buildCommentPrompt(
-        character,
         post.title,
         post.body,
         (existingComments ?? []).map((c: { user_display_name: string; body: string }) => ({ name: c.user_display_name, body: c.body })),
@@ -96,7 +92,7 @@ export async function POST(req: NextRequest) {
     await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
     await svc.from('point_transactions').insert({
       user_id: user.id, amount: -cost, type: 'ai_bot_comment',
-      description: `AI봇(${character.name}) 댓글`,
+      description: 'AI봇 댓글',
     })
   }
 
@@ -105,12 +101,12 @@ export async function POST(req: NextRequest) {
   const { data: comment, error } = await svc.from('community_comments').insert({
     post_id,
     user_id: user.id,
-    user_display_name: `${character.emoji} ${character.name}`,
+    user_display_name: '🤖 AI봇',
     user_avatar_url: null,
     parent_id: parent_id ?? null,
     body: commentBody,
     is_ai_generated: true,
-    ai_character: characterKey,
+    ai_character: null,
     ai_requester_name: userDisplayName,
   }).select('id, body, user_display_name, user_avatar_url, parent_id, upvotes, created_at').single()
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Bot, Loader2 } from 'lucide-react'
-import { BOT_CHARACTERS } from '@/lib/ai-bots'
+import { useI18n } from '@/lib/i18n'
 
 interface Comment {
   id: string
@@ -25,12 +25,8 @@ interface Props {
   onCommentAdded: (comment: Comment) => void
 }
 
-// 매번 랜덤 캐릭터 선택
-function randomCharacter() {
-  return BOT_CHARACTERS[Math.floor(Math.random() * BOT_CHARACTERS.length)].key
-}
-
 export default function AiBotCommentButton({ postId, token, userPoints, botCommentCost, parentId, onCommentAdded }: Props) {
+  const { t } = useI18n()
   const [open, setOpen]             = useState(false)
   const [direction, setDirection]   = useState('')
   const [loading, setLoading]       = useState(false)
@@ -73,17 +69,17 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
     if (loading) return
     setLoading(true)
     setError('')
-    const character = randomCharacter()
     const res = await fetch('/api/ai-bot/comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ character, post_id: postId, parent_id: parentId ?? null, direction: direction.trim() || null }),
+      body: JSON.stringify({ post_id: postId, parent_id: parentId ?? null, direction: direction.trim() || null }),
     })
     const data = await res.json()
     if (!res.ok) {
       setError(
-        data.error === 'insufficient_points' ? `포인트가 부족해요 (${data.required}pt 필요)` :
-        data.error === 'ai_generation_failed' ? 'AI 생성 실패. 다시 시도해주세요.' :
+        data.error === 'insufficient_points' ? `${t('ai_bot.insufficient')} (${data.required}pt)` :
+        data.error === 'ai_generation_failed' ? t('ai_bot.generation_failed') :
+        data.error === 'user_banned' ? t('ai_bot.banned') :
         data.error
       )
     } else {
@@ -99,11 +95,11 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
       <button
         ref={buttonRef}
         onClick={handleOpen}
-        title="AI 봇 댓글 달기"
+        title={t('ai_bot.comment_btn')}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-white/30 hover:text-accent hover:border-accent/40 transition-colors text-xs font-medium"
       >
         <Bot className="w-3.5 h-3.5" />
-        <span>봇 댓글</span>
+        <span>{t('ai_bot.comment_btn')}</span>
         <span className="text-[10px] text-white/20 ml-0.5">{botCommentCost}pt</span>
       </button>
 
@@ -111,22 +107,24 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
         <div ref={panelRef} style={popupStyle} className="w-64 bg-background border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden">
           {done ? (
             <div className="px-4 py-5 text-center">
-              <p className="text-emerald-400 font-semibold text-sm">✓ 봇이 {parentId ? '답글' : '댓글'}을 달았어요!</p>
+              <p className="text-emerald-400 font-semibold text-sm">
+                ✓ {parentId ? t('ai_bot.replied') : t('ai_bot.commented')}
+              </p>
             </div>
           ) : (
             <div className="px-4 py-4 space-y-3">
               <p className="text-sm text-white/80 font-medium">
-                AI 봇이 {parentId ? '답글' : '댓글'}을 달까요?
+                {parentId ? t('ai_bot.reply_ask') : t('ai_bot.comment_ask')}
               </p>
               <input
                 type="text"
                 value={direction}
                 onChange={e => setDirection(e.target.value)}
-                placeholder="방향 힌트 (선택)"
+                placeholder={t('ai_bot.direction_placeholder')}
                 className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent/50"
               />
               <p className={`text-xs ${canAfford ? 'text-white/30' : 'text-red-400'}`}>
-                {botCommentCost}pt 차감{!canAfford && ' · 포인트 부족'}
+                {botCommentCost}pt {t('ai_bot.pts_cost')}{!canAfford && ` · ${t('ai_bot.insufficient')}`}
               </p>
               {error && <p className="text-[11px] text-red-400">{error}</p>}
               <div className="flex gap-2">
@@ -136,14 +134,14 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-accent hover:bg-accent/80 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-colors"
                 >
                   {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                  {loading ? '생성 중...' : '예'}
+                  {loading ? t('ai_bot.writing') : t('ai_bot.yes')}
                 </button>
                 <button
                   onClick={() => setOpen(false)}
                   disabled={loading}
                   className="flex-1 py-2 border border-border text-white/40 hover:text-white hover:border-white/20 disabled:opacity-40 text-xs font-bold rounded-xl transition-colors"
                 >
-                  아니오
+                  {t('ai_bot.no')}
                 </button>
               </div>
             </div>
