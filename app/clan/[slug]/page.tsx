@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Settings, Users, Edit3, Loader2, Lock, LayoutGrid, LayoutList } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { CardPost, CompactPost, PostSkeleton, Pagination, FeedPost } from '@/components/PostFeed'
+import ReportModal from '@/components/ReportModal'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { imgUrl } from '@/lib/utils'
@@ -190,6 +191,16 @@ export default function ClanPage({ params }: { params: { slug: string } }) {
             <p className="text-sm text-white/40">c/{clan.slug} · {t('clan.n_members').replace('{n}', String(clan.member_count))}</p>
           </div>
           <div className="flex items-center gap-2 pb-1">
+            {/* 신고 버튼 — 오너 본인 제외 */}
+            {token && !isOwner && (
+              <ReportModal
+                targetType="clan"
+                targetId={clan.id}
+                token={token}
+                iconOnly
+                triggerClassName="p-2 rounded-xl border border-border text-white/30 hover:text-red-400 hover:border-red-500/40 transition-colors"
+              />
+            )}
             {(isOwnerOrMod || isOwner) && (
               <Link href={`/clan/${clan.slug}/settings`}
                 className="p-2 rounded-xl border border-border text-white/40 hover:text-white hover:border-white/20 transition-colors">
