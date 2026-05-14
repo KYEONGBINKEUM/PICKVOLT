@@ -59,15 +59,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 구독 플랜
-    const planMap: Record<string, string> = {}
+    // 프로필 (닉네임, 아바타, 포인트)
+    const profileMap: Record<string, { nickname: string | null; avatar_url: string | null; points: number }> = {}
     if (userIds.length > 0) {
-      const { data: subRows } = await svc
-        .from('subscriptions')
-        .select('user_id, status')
+      const { data: profileRows } = await svc
+        .from('profiles')
+        .select('user_id, nickname, avatar_url, points')
         .in('user_id', userIds)
-      for (const row of subRows ?? []) {
-        planMap[row.user_id] = row.status
+      for (const row of profileRows ?? []) {
+        profileMap[row.user_id] = { nickname: row.nickname ?? null, avatar_url: row.avatar_url ?? null, points: row.points ?? 0 }
       }
     }
 
@@ -101,10 +101,12 @@ export async function GET(req: NextRequest) {
       created_at: u.created_at,
       last_sign_in_at: u.last_sign_in_at ?? null,
       comparisons: compMap[u.id] ?? 0,
-      plan: planMap[u.id] ?? 'free',
       provider: (u.app_metadata?.provider as string) ?? 'email',
       posts: postsMap[u.id] ?? 0,
       comments: commentsMap[u.id] ?? 0,
+      nickname: profileMap[u.id]?.nickname ?? null,
+      avatar_url: profileMap[u.id]?.avatar_url ?? null,
+      points: profileMap[u.id]?.points ?? 0,
     }))
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
