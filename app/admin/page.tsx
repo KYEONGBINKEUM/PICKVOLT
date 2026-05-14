@@ -111,12 +111,21 @@ export default function AdminPage() {
   const [duplicating, setDuplicating] = useState<string | null>(null)
 
   // Users
-  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; plan: string; provider: string; posts: number; comments: number }[]>([])
+  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; provider: string; posts: number; comments: number; nickname: string | null; avatar_url: string | null; points: number }[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersPage, setUsersPage] = useState(1)
   const [usersTotal, setUsersTotal] = useState(0)
   const [userSearch, setUserSearch] = useState('')
-  const [updatingPlan, setUpdatingPlan] = useState<string | null>(null)
+  // User detail panel
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedUser, setSelectedUser] = useState<any | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [userDetail, setUserDetail] = useState<{ profile: any; posts: any[]; comments: any[]; transactions: any[] } | null>(null)
+  const [userDetailLoading, setUserDetailLoading] = useState(false)
+  const [userDetailTab, setUserDetailTab] = useState<'posts' | 'comments' | 'points'>('posts')
+  const [pointAmount, setPointAmount] = useState('')
+  const [pointReason, setPointReason] = useState('')
+  const [pointSaving, setPointSaving] = useState(false)
 
   // Comparisons
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -296,18 +305,41 @@ export default function AdminPage() {
     setUsersLoading(false)
   }, [])
 
-  const handleUpdatePlan = async (userId: string, newPlan: string) => {
-    setUpdatingPlan(userId)
-    const res = await fetch('/api/admin/users', {
+  const openUserDetail = async (u: typeof users[0]) => {
+    setSelectedUser(u)
+    setUserDetail(null)
+    setUserDetailLoading(true)
+    setUserDetailTab('posts')
+    setPointAmount('')
+    setPointReason('')
+    const res = await fetch(`/api/admin/users/${u.id}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (res.ok) { const d = await res.json(); setUserDetail(d) }
+    setUserDetailLoading(false)
+  }
+
+  const handleAdjustPoints = async () => {
+    if (!selectedUser || !pointAmount) return
+    const amt = parseInt(pointAmount)
+    if (isNaN(amt) || amt === 0) return
+    setPointSaving(true)
+    const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ userId, plan: newPlan }),
+      body: JSON.stringify({ amount: amt, reason: pointReason }),
     })
     if (res.ok) {
-      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, plan: newPlan } : u))
+      const d = await res.json()
+      setSelectedUser((prev: typeof users[0]) => ({ ...prev, points: d.points }))
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, points: d.points } : u))
+      setPointAmount('')
+      setPointReason('')
+      // refresh detail
+      const dr = await fetch(`/api/admin/users/${selectedUser.id}`, { headers: { Authorization: `Bearer ${token}` } })
+      if (dr.ok) { const dd = await dr.json(); setUserDetail(dd) }
     }
-    setUpdatingPlan(null)
+    setPointSaving(false)
   }
+
 
   const fetchComparisons = useCallback(async (tok: string, pg: number) => {
     setCompLoading(true)
@@ -1238,54 +1270,203 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left px-4 py-3 text-white/40 font-medium">이메일</th>
+                      <th className="text-left px-4 py-3 text-white/40 font-medium">유저</th>
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">가입일</th>
-                      <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">마지막 로그인</th>
-                      <th className="text-right px-4 py-3 text-white/40 font-medium">비교</th>
+                      <th className="text-right px-4 py-3 text-white/40 font-medium">포인트</th>
+                      <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">비교</th>
                       <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">글</th>
                       <th className="text-right px-4 py-3 text-white/40 font-medium hidden md:table-cell">댓글</th>
-                      <th className="text-center px-4 py-3 text-white/40 font-medium">플랜</th>
                       <th className="text-center px-4 py-3 text-white/40 font-medium hidden md:table-cell">로그인</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((u, i) => (
-                      <tr key={u.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                        <td className="px-4 py-3 text-white/80 max-w-xs truncate">{u.email}</td>
-                        <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.created_at)}</td>
-                        <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.last_sign_in_at)}</td>
-                        <td className="px-4 py-3 text-white/70 text-right font-mono">{u.comparisons}</td>
-                        <td className="px-4 py-3 text-white/70 text-right font-mono hidden md:table-cell">{u.posts}</td>
-                        <td className="px-4 py-3 text-white/70 text-right font-mono hidden md:table-cell">{u.comments}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleUpdatePlan(u.id, u.plan === 'pro' ? 'free' : 'pro')}
-                            disabled={updatingPlan === u.id}
-                            className={`flex items-center justify-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full transition-colors mx-auto ${
-                              u.plan === 'pro'
-                                ? 'bg-accent/20 text-accent hover:bg-accent/30'
-                                : 'bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60'
-                            } disabled:opacity-40`}
-                          >
-                            {updatingPlan === u.id ? (
-                              <RefreshCw size={10} className="animate-spin" />
-                            ) : u.plan === 'pro' ? (
-                              <><Zap size={10} />pro</>
+                      <tr
+                        key={u.id}
+                        onClick={() => openUserDetail(u)}
+                        className={`border-b border-border/50 hover:bg-white/5 transition-colors cursor-pointer ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            {u.avatar_url ? (
+                              <img src={u.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 bg-white/10" />
                             ) : (
-                              'free'
+                              <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <Users size={13} className="text-white/30" />
+                              </div>
                             )}
-                          </button>
+                            <div className="min-w-0">
+                              <p className="text-white/90 font-medium text-sm truncate max-w-[160px]">
+                                {u.nickname ?? <span className="text-white/30 text-xs">닉네임 없음</span>}
+                              </p>
+                              <p className="text-white/30 text-xs truncate max-w-[160px]">{u.email}</p>
+                            </div>
+                          </div>
                         </td>
+                        <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">{formatDate(u.created_at)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-accent font-mono font-bold text-sm">{u.points.toLocaleString()}</span>
+                          <span className="text-white/30 text-xs ml-0.5">pt</span>
+                        </td>
+                        <td className="px-4 py-3 text-white/50 text-right font-mono text-xs hidden md:table-cell">{u.comparisons}</td>
+                        <td className="px-4 py-3 text-white/50 text-right font-mono text-xs hidden md:table-cell">{u.posts}</td>
+                        <td className="px-4 py-3 text-white/50 text-right font-mono text-xs hidden md:table-cell">{u.comments}</td>
                         <td className="px-4 py-3 text-center hidden md:table-cell">
                           <span className="text-xs text-white/30">{u.provider}</span>
                         </td>
                       </tr>
                     ))}
                     {users.length === 0 && (
-                      <tr><td colSpan={8} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-white/30">유저 없음</td></tr>
                     )}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* 유저 상세 패널 */}
+            {selectedUser && (
+              <div className="fixed inset-0 z-50 flex">
+                <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedUser(null)} />
+                <div className="w-full max-w-lg bg-background border-l border-border flex flex-col overflow-hidden">
+                  {/* 헤더 */}
+                  <div className="flex items-center gap-3 px-5 py-4 border-b border-border flex-shrink-0">
+                    {selectedUser.avatar_url ? (
+                      <img src={selectedUser.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover bg-white/10" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                        <Users size={18} className="text-white/30" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-bold truncate">{selectedUser.nickname ?? '닉네임 없음'}</p>
+                      <p className="text-white/40 text-xs truncate">{selectedUser.email}</p>
+                    </div>
+                    <button onClick={() => setSelectedUser(null)} className="text-white/30 hover:text-white transition-colors p-1">✕</button>
+                  </div>
+
+                  {/* 유저 통계 */}
+                  <div className="grid grid-cols-4 gap-px bg-border flex-shrink-0">
+                    {[
+                      { label: '포인트', value: `${selectedUser.points?.toLocaleString() ?? 0}pt`, accent: true },
+                      { label: '글', value: selectedUser.posts },
+                      { label: '댓글', value: selectedUser.comments },
+                      { label: '비교', value: selectedUser.comparisons },
+                    ].map(s => (
+                      <div key={s.label} className="bg-surface px-3 py-3 text-center">
+                        <p className={`text-base font-black ${s.accent ? 'text-accent' : 'text-white'}`}>{s.value}</p>
+                        <p className="text-[10px] text-white/30 mt-0.5">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 서브탭 */}
+                  <div className="flex border-b border-border flex-shrink-0">
+                    {(['posts', 'comments', 'points'] as const).map(t => (
+                      <button key={t} onClick={() => setUserDetailTab(t)}
+                        className={`flex-1 py-2.5 text-xs font-medium transition-colors ${userDetailTab === t ? 'text-accent border-b-2 border-accent' : 'text-white/40 hover:text-white'}`}>
+                        {t === 'posts' ? '작성글' : t === 'comments' ? '댓글' : '포인트 조정'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 컨텐츠 */}
+                  <div className="flex-1 overflow-y-auto">
+                    {userDetailLoading ? (
+                      <div className="flex gap-1.5 py-12 justify-center">
+                        {[0, 1, 2].map(i => <div key={i} className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}
+                      </div>
+                    ) : userDetail ? (
+                      <>
+                        {userDetailTab === 'posts' && (
+                          <div className="divide-y divide-border/50">
+                            {userDetail.posts.length === 0 ? (
+                              <p className="text-white/30 text-sm text-center py-12">작성글 없음</p>
+                            ) : userDetail.posts.map((p: { id: string; title: string; type: string; upvotes: number; created_at: string; is_hidden: boolean }) => (
+                              <a key={p.id} href={`/community/posts/${p.id}`} target="_blank" rel="noopener noreferrer"
+                                className="flex items-start gap-3 px-5 py-3 hover:bg-white/3 transition-colors group">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    {p.is_hidden && <EyeOff size={10} className="text-white/20 flex-shrink-0" />}
+                                    <p className="text-sm text-white/80 group-hover:text-white truncate">{p.title}</p>
+                                  </div>
+                                  <p className="text-[10px] text-white/30">{p.type} · 👍 {p.upvotes} · {formatDate(p.created_at)}</p>
+                                </div>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {userDetailTab === 'comments' && (
+                          <div className="divide-y divide-border/50">
+                            {userDetail.comments.length === 0 ? (
+                              <p className="text-white/30 text-sm text-center py-12">댓글 없음</p>
+                            ) : userDetail.comments.map((c: { id: string; body: string; post_id: string; upvotes: number; created_at: string; is_hidden: boolean }) => (
+                              <a key={c.id} href={`/community/posts/${c.post_id}`} target="_blank" rel="noopener noreferrer"
+                                className="flex items-start gap-3 px-5 py-3 hover:bg-white/3 transition-colors group">
+                                <div className="flex-1 min-w-0">
+                                  {c.is_hidden && <EyeOff size={10} className="text-white/20 mb-0.5" />}
+                                  <p className="text-sm text-white/70 group-hover:text-white line-clamp-2">{c.body}</p>
+                                  <p className="text-[10px] text-white/30 mt-0.5">👍 {c.upvotes} · {formatDate(c.created_at)}</p>
+                                </div>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {userDetailTab === 'points' && (
+                          <div className="px-5 py-5 space-y-5">
+                            {/* 포인트 조정 폼 */}
+                            <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
+                              <p className="text-sm font-semibold text-white">포인트 지급 / 차감</p>
+                              <p className="text-xs text-white/40">양수(+)는 지급, 음수(-)는 차감입니다.</p>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text" inputMode="numeric"
+                                  placeholder="예) 100 또는 -50"
+                                  value={pointAmount}
+                                  onChange={e => setPointAmount(e.target.value.replace(/[^0-9\-]/g, ''))}
+                                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                                />
+                                <button
+                                  onClick={handleAdjustPoints}
+                                  disabled={pointSaving || !pointAmount}
+                                  className="px-4 py-2 bg-accent text-white text-sm font-bold rounded-lg hover:bg-accent/80 disabled:opacity-40 transition-colors"
+                                >
+                                  {pointSaving ? '저장...' : '적용'}
+                                </button>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="사유 (선택)"
+                                value={pointReason}
+                                onChange={e => setPointReason(e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
+                              />
+                            </div>
+                            {/* 포인트 내역 */}
+                            <div>
+                              <p className="text-xs text-white/40 font-medium mb-2">최근 포인트 내역</p>
+                              <div className="space-y-1.5">
+                                {userDetail.transactions.length === 0 ? (
+                                  <p className="text-white/20 text-xs text-center py-4">내역 없음</p>
+                                ) : userDetail.transactions.map((tx: { id: string; amount: number; type: string; description: string; created_at: string }) => (
+                                  <div key={tx.id} className="flex items-center justify-between bg-surface border border-border/50 rounded-lg px-3 py-2">
+                                    <div>
+                                      <p className="text-xs text-white/70">{tx.description}</p>
+                                      <p className="text-[10px] text-white/30">{tx.type} · {formatDate(tx.created_at)}</p>
+                                    </div>
+                                    <span className={`text-sm font-bold ${tx.amount > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {tx.amount > 0 ? '+' : ''}{tx.amount}pt
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             )}
 
