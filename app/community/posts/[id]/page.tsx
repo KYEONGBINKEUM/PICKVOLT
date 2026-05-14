@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import AdBanner from '@/components/AdBanner'
+import AiBotCommentButton from '@/components/AiBotCommentButton'
 import { supabase } from '@/lib/supabase'
 import { imgUrl } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
@@ -167,6 +168,8 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
   const [compareVoting, setCompareVoting]           = useState(false)
   const [commentImages, setCommentImages]           = useState<string[]>([])
   const [uploadingImage, setUploadingImage]         = useState(false)
+  const [myPoints, setMyPoints]                     = useState(0)
+  const [botCommentCost, setBotCommentCost]         = useState(20)
   const fileInputRef                                = useRef<HTMLInputElement>(null)
 
   // 번역
@@ -190,11 +193,16 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
         // profiles 테이블에서 nickname + avatar 우선 사용 (실명/구글이미지 노출 방지)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('nickname, avatar_url')
+          .select('nickname, avatar_url, points')
           .eq('user_id', u.id)
           .maybeSingle()
         setDisplayName(profile?.nickname ?? u.email?.split('@')[0] ?? 'user')
         setAvatarUrl(profile?.avatar_url ?? null)
+        setMyPoints((profile as { points?: number } | null)?.points ?? 0)
+        // AI 봇 댓글 비용 조회
+        fetch('/api/admin/community').then(r => r.ok ? r.json() : null).then(d => {
+          if (d?.settings?.aiBotCommentPoints !== undefined) setBotCommentCost(d.settings.aiBotCommentPoints)
+        }).catch(() => {})
       }
     })
   }, [])
@@ -698,8 +706,18 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
         {/* 댓글 섹션 */}
         <div className="bg-surface border border-border rounded-xl overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border">
+          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">{t('community.comments')} {post.comment_count}</h2>
+            {token && (
+              <AiBotCommentButton
+                postId={id}
+                token={token}
+                userPoints={myPoints}
+                botCommentCost={botCommentCost}
+                parentId={null}
+                onCommentAdded={c => setComments(prev => [...prev, { post_id: id, user_id: '', ...c } as Comment])}
+              />
+            )}
           </div>
 
           {/* 댓글 입력 */}

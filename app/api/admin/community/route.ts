@@ -46,6 +46,8 @@ export async function GET(req: NextRequest) {
       'community_points_per_comment',
       'community_daily_max_post_points',
       'community_daily_max_comment_points',
+      'ai_bot_post_points',
+      'ai_bot_comment_points',
     ])
     for (const row of settingsRows ?? []) settingsMap[row.key] = row.value
   } catch { /* app_settings table may not exist yet */ }
@@ -64,6 +66,8 @@ export async function GET(req: NextRequest) {
       pointsPerComment:       parseInt(settingsMap['community_points_per_comment']        ?? '1'),
       dailyMaxPostPoints:     parseInt(settingsMap['community_daily_max_post_points']     ?? '0'),
       dailyMaxCommentPoints:  parseInt(settingsMap['community_daily_max_comment_points']  ?? '0'),
+      aiBotPostPoints:        parseInt(settingsMap['ai_bot_post_points']                  ?? '50'),
+      aiBotCommentPoints:     parseInt(settingsMap['ai_bot_comment_points']               ?? '20'),
     },
   })
 }
@@ -87,6 +91,12 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.dailyMaxCommentPoints === 'number') {
     updates.push({ key: 'community_daily_max_comment_points', value: String(Math.max(0, Math.floor(body.dailyMaxCommentPoints))) })
+  }
+  if (typeof body.aiBotPostPoints === 'number') {
+    updates.push({ key: 'ai_bot_post_points', value: String(Math.max(0, Math.floor(body.aiBotPostPoints))) })
+  }
+  if (typeof body.aiBotCommentPoints === 'number') {
+    updates.push({ key: 'ai_bot_comment_points', value: String(Math.max(0, Math.floor(body.aiBotCommentPoints))) })
   }
 
   if (updates.length === 0) return NextResponse.json({ ok: true })

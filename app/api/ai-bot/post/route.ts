@@ -1,0 +1,103 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import Anthropic from '@anthropic-ai/sdk'
+import { getBotCharacter, buildPostPrompt } from '@/lib/ai-bots'
+
+function makeServiceClient() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+}
+
+async function getUser(req: NextRequest) {
+  const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
+  if (!token) return null
+  const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  const { data: { user } } = await anon.auth.getUser(token)
+  return user ?? null
+}
+
+// POST /api/ai-bot/post
+// body: { character: string, topic: string, clan_id?: string, context?: string }
+export async function POST(req: NextRequest) {
+  const user = await getUser(req)
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const { character: characterKey, topic, clan_id, context } = await req.json()
+  if (!characterKey || !topic?.trim()) {
+    return NextResponse.json({ error: 'character and topic required' }, { status: 400 })
+  }
+
+  const character = getBotCharacter(characterKey)
+  if (!character) return NextResponse.json({ error: 'invalid character' }, { status: 400 })
+
+  const svc = makeServiceClient()
+
+  // 포인트 비용 확인
+  const { data: settingsRows } = await svc.from('app_settings').select('key, value')
+    .in('key', ['ai_bot_post_points'])
+  const sm: Record<string, string> = Object.fromEntries((settingsRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
+  const cost = parseInt(sm['ai_bot_post_points'] ?? '50')
+
+  // 포인트 확인 및 차감
+  const { data: profile } = await svc.from('profiles').select('points, is_banned, banned_until, nickname, avatar_url')
+    .eq('user_id', user.id).maybeSingle()
+  const curPoints = (profile as { points?: number } | null)?.points ?? 0
+  const isBanned = (profile as { is_banned?: boolean } | null)?.is_banned ?? false
+  const bannedUntil = (profile as { banned_until?: string | null } | null)?.banned_until
+
+  if (isBanned || (bannedUntil && new Date(bannedUntil) > new Date())) {
+    return NextResponse.json({ error: 'user_banned' }, { status: 403 })
+  }
+  if (cost > 0 && curPoints < cost) {
+    return NextResponse.json({ error: 'insufficient_points', required: cost, current: curPoints }, { status: 402 })
+  }
+
+  // Claude API 호출
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+  let title = ''
+  let body = ''
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: buildPostPrompt(character, topic.trim(), context?.trim()) }],
+    })
+    const raw = (msg.content[0] as { type: string; text: string }).text.trim()
+    // JSON 파싱
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('no json')
+    const parsed = JSON.parse(jsonMatch[0])
+    title = parsed.title?.trim() ?? ''
+    body = parsed.body?.trim() ?? ''
+    if (!title || !body) throw new Error('empty content')
+  } catch {
+    return NextResponse.json({ error: 'ai_generation_failed' }, { status: 500 })
+  }
+
+  // 포인트 차감
+  if (cost > 0) {
+    await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
+    await svc.from('point_transactions').insert({
+      user_id: user.id, amount: -cost, type: 'ai_bot_post',
+      description: `AI봇(${character.name}) 글쓰기`,
+    })
+  }
+
+  // 글 저장
+  const userDisplayName = (profile as { nickname?: string | null } | null)?.nickname ?? user.email?.split('@')[0] ?? 'user'
+  const { data: post, error } = await svc.from('community_posts').insert({
+    user_id: user.id,
+    user_display_name: `${character.emoji} ${character.name}`,
+    user_avatar_url: null,
+    title,
+    body,
+    type: 'forum',
+    clan_id: clan_id ?? null,
+    is_ai_generated: true,
+    ai_character: characterKey,
+    ai_requester_name: userDisplayName,
+  }).select('id, title').single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true, post, pointsUsed: cost, pointsLeft: Math.max(0, curPoints - cost) }, { status: 201 })
+}
