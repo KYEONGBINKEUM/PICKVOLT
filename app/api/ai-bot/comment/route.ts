@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
-import { getBotCharacter, buildCommentPrompt } from '@/lib/ai-bots'
+import { getBotCharacter, buildCommentPrompt, containsUnsafeContent } from '@/lib/ai-bots'
 
 function makeServiceClient() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
     })
     commentBody = (result.text ?? '').trim()
     if (!commentBody) throw new Error('empty')
+    if (containsUnsafeContent(commentBody)) throw new Error('unsafe content')
   } catch {
     return NextResponse.json({ error: 'ai_generation_failed' }, { status: 500 })
   }
