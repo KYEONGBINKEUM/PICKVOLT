@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenAI } from '@google/genai'
 import { getBotCharacter, buildPostPrompt } from '@/lib/ai-bots'
 
 function makeServiceClient() {
@@ -51,17 +51,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'insufficient_points', required: cost, current: curPoints }, { status: 402 })
   }
 
-  // Claude API 호출
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+  // Gemini API 호출
+  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
   let title = ''
   let body = ''
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: buildPostPrompt(character, topic.trim(), context?.trim()) }],
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: buildPostPrompt(character, topic.trim(), context?.trim()),
     })
-    const raw = (msg.content[0] as { type: string; text: string }).text.trim()
+    const raw = (result.text ?? '').trim()
     // JSON 파싱
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('no json')

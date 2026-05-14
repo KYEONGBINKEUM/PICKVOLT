@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenAI } from '@google/genai'
 import { getBotCharacter, buildCommentPrompt } from '@/lib/ai-bots'
 
 function makeServiceClient() {
@@ -69,26 +69,22 @@ export async function POST(req: NextRequest) {
     if (parent) parentComment = { name: parent.user_display_name, body: parent.body }
   }
 
-  // Claude API 호출
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+  // Gemini API 호출
+  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
   let commentBody = ''
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 512,
-      messages: [{
-        role: 'user',
-        content: buildCommentPrompt(
-          character,
-          post.title,
-          post.body,
-          (existingComments ?? []).map((c: { user_display_name: string; body: string }) => ({ name: c.user_display_name, body: c.body })),
-          parentComment,
-          direction?.trim(),
-        ),
-      }],
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: buildCommentPrompt(
+        character,
+        post.title,
+        post.body,
+        (existingComments ?? []).map((c: { user_display_name: string; body: string }) => ({ name: c.user_display_name, body: c.body })),
+        parentComment,
+        direction?.trim(),
+      ),
     })
-    commentBody = (msg.content[0] as { type: string; text: string }).text.trim()
+    commentBody = (result.text ?? '').trim()
     if (!commentBody) throw new Error('empty')
   } catch {
     return NextResponse.json({ error: 'ai_generation_failed' }, { status: 500 })
