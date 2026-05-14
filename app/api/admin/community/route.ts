@@ -44,6 +44,8 @@ export async function GET(req: NextRequest) {
     const { data: settingsRows } = await svc.from('app_settings').select('key, value').in('key', [
       'community_points_per_post',
       'community_points_per_comment',
+      'community_daily_max_post_points',
+      'community_daily_max_comment_points',
     ])
     for (const row of settingsRows ?? []) settingsMap[row.key] = row.value
   } catch { /* app_settings table may not exist yet */ }
@@ -58,8 +60,10 @@ export async function GET(req: NextRequest) {
       pinnedPosts:    pinnedPosts ?? 0,
     },
     settings: {
-      pointsPerPost:    parseInt(settingsMap['community_points_per_post']    ?? '5'),
-      pointsPerComment: parseInt(settingsMap['community_points_per_comment'] ?? '1'),
+      pointsPerPost:          parseInt(settingsMap['community_points_per_post']           ?? '5'),
+      pointsPerComment:       parseInt(settingsMap['community_points_per_comment']        ?? '1'),
+      dailyMaxPostPoints:     parseInt(settingsMap['community_daily_max_post_points']     ?? '0'),
+      dailyMaxCommentPoints:  parseInt(settingsMap['community_daily_max_comment_points']  ?? '0'),
     },
   })
 }
@@ -77,6 +81,12 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.pointsPerComment === 'number') {
     updates.push({ key: 'community_points_per_comment', value: String(Math.max(0, Math.floor(body.pointsPerComment))) })
+  }
+  if (typeof body.dailyMaxPostPoints === 'number') {
+    updates.push({ key: 'community_daily_max_post_points', value: String(Math.max(0, Math.floor(body.dailyMaxPostPoints))) })
+  }
+  if (typeof body.dailyMaxCommentPoints === 'number') {
+    updates.push({ key: 'community_daily_max_comment_points', value: String(Math.max(0, Math.floor(body.dailyMaxCommentPoints))) })
   }
 
   if (updates.length === 0) return NextResponse.json({ ok: true })

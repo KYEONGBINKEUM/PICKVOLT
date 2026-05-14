@@ -207,7 +207,7 @@ export default function AdminPage() {
 
   // Community
   const [communityStats, setCommunityStats] = useState<{ totalPosts: number; totalComments: number; todayPosts: number; todayComments: number; hiddenPosts: number; pinnedPosts: number } | null>(null)
-  const [communitySettings, setCommunitySettings] = useState<{ pointsPerPost: number; pointsPerComment: number }>({ pointsPerPost: 5, pointsPerComment: 1 })
+  const [communitySettings, setCommunitySettings] = useState<{ pointsPerPost: number; pointsPerComment: number; dailyMaxPostPoints: number; dailyMaxCommentPoints: number }>({ pointsPerPost: 5, pointsPerComment: 1, dailyMaxPostPoints: 0, dailyMaxCommentPoints: 0 })
   const [communityLoading, setCommunityLoading] = useState(false)
   const [communityPosts, setCommunityPosts] = useState<any[]>([])
   const [communityPostsTotal, setCommunityPostsTotal] = useState(0)
@@ -2463,14 +2463,22 @@ export default function AdminPage() {
                   </div>
                   <div className="bg-surface border border-border rounded-xl p-5">
                     <p className="text-sm font-bold text-white/60 mb-3">현재 포인트 설정</p>
-                    <div className="flex gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-xs text-white/30 mb-0.5">글 작성 보상</p>
-                        <p className="text-2xl font-black text-accent">{communitySettings.pointsPerPost} <span className="text-sm font-normal text-white/30">pt</span></p>
+                        <p className="text-[10px] text-white/30 mb-0.5">글 작성 보상</p>
+                        <p className="text-xl font-black text-accent">{communitySettings.pointsPerPost} <span className="text-xs font-normal text-white/30">pt</span></p>
                       </div>
                       <div>
-                        <p className="text-xs text-white/30 mb-0.5">댓글 작성 보상</p>
-                        <p className="text-2xl font-black text-accent">{communitySettings.pointsPerComment} <span className="text-sm font-normal text-white/30">pt</span></p>
+                        <p className="text-[10px] text-white/30 mb-0.5">댓글 작성 보상</p>
+                        <p className="text-xl font-black text-accent">{communitySettings.pointsPerComment} <span className="text-xs font-normal text-white/30">pt</span></p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-white/30 mb-0.5">글 일일 한도</p>
+                        <p className="text-xl font-black text-white/60">{communitySettings.dailyMaxPostPoints === 0 ? '무제한' : `${communitySettings.dailyMaxPostPoints}pt`}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-white/30 mb-0.5">댓글 일일 한도</p>
+                        <p className="text-xl font-black text-white/60">{communitySettings.dailyMaxCommentPoints === 0 ? '무제한' : `${communitySettings.dailyMaxCommentPoints}pt`}</p>
                       </div>
                     </div>
                     <button onClick={() => setCommunitySubTab('settings')}
@@ -2600,33 +2608,84 @@ export default function AdminPage() {
                     <Coins size={16} className="text-accent" />
                     <p className="text-sm font-bold text-white">포인트 적립 설정</p>
                   </div>
-                  <p className="text-xs text-white/35 -mt-3">글 또는 댓글 작성 시 유저에게 지급되는 포인트를 설정합니다. 0으로 설정하면 지급되지 않습니다.</p>
-                  <div>
-                    <label className="text-xs text-white/40 block mb-1.5">글 작성 보상 (pt)</label>
-                    <div className="flex items-center gap-3 bg-background border border-border rounded-xl px-4 py-3">
-                      <input type="text" inputMode="numeric"
-                        value={communitySettings.pointsPerPost}
-                        onChange={e => {
-                          const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
-                          setCommunitySettings(s => ({ ...s, pointsPerPost: Math.min(999, v) }))
-                        }}
-                        className="flex-1 bg-transparent text-sm text-white outline-none" />
-                      <span className="text-xs text-white/30">pt / 글</span>
+                  <p className="text-xs text-white/35 -mt-3">글 또는 댓글 작성 시 지급되는 포인트와 하루 최대 적립 한도를 설정합니다. 0 = 지급 안함 / 한도 없음.</p>
+
+                  {/* 글 */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">글 작성</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-white/30 block mb-1">작성 보상</label>
+                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5">
+                          <input type="text" inputMode="numeric"
+                            value={communitySettings.pointsPerPost}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                              setCommunitySettings(s => ({ ...s, pointsPerPost: Math.min(9999, v) }))
+                            }}
+                            className="flex-1 bg-transparent text-sm text-white outline-none min-w-0" />
+                          <span className="text-xs text-white/30 flex-shrink-0">pt / 글</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-white/30 block mb-1">일일 최대 (0=무제한)</label>
+                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5">
+                          <input type="text" inputMode="numeric"
+                            value={communitySettings.dailyMaxPostPoints}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                              setCommunitySettings(s => ({ ...s, dailyMaxPostPoints: Math.min(99999, v) }))
+                            }}
+                            className="flex-1 bg-transparent text-sm text-white outline-none min-w-0" />
+                          <span className="text-xs text-white/30 flex-shrink-0">pt / 일</span>
+                        </div>
+                      </div>
                     </div>
+                    {communitySettings.pointsPerPost > 0 && communitySettings.dailyMaxPostPoints > 0 && (
+                      <p className="text-[10px] text-white/30">
+                        → 하루 최대 {Math.floor(communitySettings.dailyMaxPostPoints / communitySettings.pointsPerPost)}개 글까지 보상 지급
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-xs text-white/40 block mb-1.5">댓글 작성 보상 (pt)</label>
-                    <div className="flex items-center gap-3 bg-background border border-border rounded-xl px-4 py-3">
-                      <input type="text" inputMode="numeric"
-                        value={communitySettings.pointsPerComment}
-                        onChange={e => {
-                          const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
-                          setCommunitySettings(s => ({ ...s, pointsPerComment: Math.min(999, v) }))
-                        }}
-                        className="flex-1 bg-transparent text-sm text-white outline-none" />
-                      <span className="text-xs text-white/30">pt / 댓글</span>
+
+                  {/* 댓글 */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">댓글 작성</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] text-white/30 block mb-1">작성 보상</label>
+                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5">
+                          <input type="text" inputMode="numeric"
+                            value={communitySettings.pointsPerComment}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                              setCommunitySettings(s => ({ ...s, pointsPerComment: Math.min(9999, v) }))
+                            }}
+                            className="flex-1 bg-transparent text-sm text-white outline-none min-w-0" />
+                          <span className="text-xs text-white/30 flex-shrink-0">pt / 댓글</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-white/30 block mb-1">일일 최대 (0=무제한)</label>
+                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5">
+                          <input type="text" inputMode="numeric"
+                            value={communitySettings.dailyMaxCommentPoints}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                              setCommunitySettings(s => ({ ...s, dailyMaxCommentPoints: Math.min(99999, v) }))
+                            }}
+                            className="flex-1 bg-transparent text-sm text-white outline-none min-w-0" />
+                          <span className="text-xs text-white/30 flex-shrink-0">pt / 일</span>
+                        </div>
+                      </div>
                     </div>
+                    {communitySettings.pointsPerComment > 0 && communitySettings.dailyMaxCommentPoints > 0 && (
+                      <p className="text-[10px] text-white/30">
+                        → 하루 최대 {Math.floor(communitySettings.dailyMaxCommentPoints / communitySettings.pointsPerComment)}개 댓글까지 보상 지급
+                      </p>
+                    )}
                   </div>
+
                   <button onClick={handleSaveCommunitySettings} disabled={communitySettingsSaving}
                     className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
                       communitySettingsSaved

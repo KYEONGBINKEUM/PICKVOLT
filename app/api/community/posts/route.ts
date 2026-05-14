@@ -339,19 +339,39 @@ export async function POST(req: NextRequest) {
     if (notifInserts.length > 0) await supabase.from('notifications').insert(notifInserts)
   } catch {}
 
-  // Award points for post creation (best-effort)
+  // Award points for post creation (best-effort, with daily cap)
   try {
-    const { data: setting } = await supabase
-      .from('app_settings').select('value').eq('key', 'community_points_per_post').maybeSingle()
-    const pts = parseInt(setting?.value ?? '0')
+    const { data: settingsRows } = await supabase
+      .from('app_settings').select('key, value')
+      .in('key', ['community_points_per_post', 'community_daily_max_post_points'])
+    const sm: Record<string, string> = Object.fromEntries((settingsRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
+    const pts     = parseInt(sm['community_points_per_post']         ?? '0')
+    const dayMax  = parseInt(sm['community_daily_max_post_points']   ?? '0')
+
     if (pts > 0) {
-      const { data: pd } = await supabase.from('profiles').select('points').eq('user_id', user.id).maybeSingle()
-      const cur = (pd as { points?: number } | null)?.points ?? 0
-      await supabase.from('profiles').update({ points: cur + pts }).eq('user_id', user.id)
-      await supabase.from('point_transactions').insert({
-        user_id: user.id, amount: pts, type: 'post_reward',
-        description: '글 작성 보상', reference_id: post.id,
-      })
+      // Check daily total already earned from posts
+      let award = pts
+      if (dayMax > 0) {
+        const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+        const { data: dayRows } = await supabase
+          .from('point_transactions')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('type', 'post_reward')
+          .gte('created_at', dayStart.toISOString())
+        const dayTotal = (dayRows ?? []).reduce((s: number, r: { amount: number }) => s + r.amount, 0)
+        award = Math.max(0, Math.min(pts, dayMax - dayTotal))
+      }
+
+      if (award > 0) {
+        const { data: pd } = await supabase.from('profiles').select('points').eq('user_id', user.id).maybeSingle()
+        const cur = (pd as { points?: number } | null)?.points ?? 0
+        await supabase.from('profiles').update({ points: cur + award }).eq('user_id', user.id)
+        await supabase.from('point_transactions').insert({
+          user_id: user.id, amount: award, type: 'post_reward',
+          description: '글 작성 보상', reference_id: post.id,
+        })
+      }
     }
   } catch {}
 
