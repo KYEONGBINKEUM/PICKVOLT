@@ -121,6 +121,29 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ reports: enriched })
 }
 
+// DELETE: 신고 삭제 (관리자)
+export async function DELETE(req: NextRequest) {
+  const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
+  if (!token) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  const { data: { user } } = await anon.auth.getUser(token)
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase())
+  if (!adminEmails.includes((user.email ?? '').toLowerCase())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const { id } = await req.json()
+  if (!id) return NextResponse.json({ error: 'missing id' }, { status: 400 })
+
+  const supabase = makeServiceClient()
+  const { error } = await supabase.from('community_reports').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // PATCH: 신고 상태 업데이트 (관리자)
 export async function PATCH(req: NextRequest) {
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
