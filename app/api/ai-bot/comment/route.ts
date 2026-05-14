@@ -80,10 +80,17 @@ export async function POST(req: NextRequest) {
         direction?.trim(),
       ),
     })
+    // Gemini safety block 체크
+    const candidate = result.candidates?.[0]
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP' && candidate.finishReason !== 'MAX_TOKENS') {
+      console.error('[ai-bot/comment] Gemini blocked:', candidate.finishReason, candidate.safetyRatings)
+      throw new Error(`blocked: ${candidate.finishReason}`)
+    }
     commentBody = (result.text ?? '').trim()
     if (!commentBody) throw new Error('empty')
     if (containsUnsafeContent(commentBody)) throw new Error('unsafe content')
-  } catch {
+  } catch (err) {
+    console.error('[ai-bot/comment] generation error:', err)
     return NextResponse.json({ error: 'ai_generation_failed' }, { status: 500 })
   }
 

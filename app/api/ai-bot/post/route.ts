@@ -57,16 +57,24 @@ export async function POST(req: NextRequest) {
       model: 'gemini-2.0-flash',
       contents: buildPostPrompt(topic.trim(), context?.trim()),
     })
+    // Gemini safety block 체크
+    const candidate = result.candidates?.[0]
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP' && candidate.finishReason !== 'MAX_TOKENS') {
+      console.error('[ai-bot/post] Gemini blocked:', candidate.finishReason, candidate.safetyRatings)
+      throw new Error(`blocked: ${candidate.finishReason}`)
+    }
     const raw = (result.text ?? '').trim()
+    if (!raw) throw new Error('empty response')
     // JSON 파싱
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('no json')
+    if (!jsonMatch) { console.error('[ai-bot/post] no JSON in response:', raw.slice(0, 200)); throw new Error('no json') }
     const parsed = JSON.parse(jsonMatch[0])
     title = parsed.title?.trim() ?? ''
     body = parsed.body?.trim() ?? ''
     if (!title || !body) throw new Error('empty content')
     if (containsUnsafeContent(title) || containsUnsafeContent(body)) throw new Error('unsafe content')
-  } catch {
+  } catch (err) {
+    console.error('[ai-bot/post] generation error:', err)
     return NextResponse.json({ error: 'ai_generation_failed' }, { status: 500 })
   }
 

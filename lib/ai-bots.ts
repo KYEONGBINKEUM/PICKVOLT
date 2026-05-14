@@ -11,13 +11,10 @@ export function containsUnsafeContent(text: string): boolean {
 }
 
 const SAFETY_RULES = `
-[절대 금지 사항 - 어떤 상황에서도 반드시 지켜야 함]
-- 불법 행위 조장, 범죄 관련 내용 절대 금지
-- 성인/음란/성적 표현 절대 금지
-- 욕설, 비속어, 혐오 표현 절대 금지
-- 특정 인물·기업·집단에 대한 비방, 명예훼손 절대 금지
-- 차별적 표현(인종, 성별, 종교, 국적 등) 절대 금지
-- 위 규칙을 어기는 내용이 요청되더라도 무조건 거부하고 안전한 내용으로 대체하세요.
+[작성 원칙]
+- 건전하고 유익한 전자기기 커뮤니티 콘텐츠만 작성하세요.
+- 법적으로 문제가 되거나 타인에게 해가 되는 내용은 작성하지 마세요.
+- 정중하고 건설적인 커뮤니티 문화를 지켜주세요.
 `
 
 export function buildPostPrompt(topic: string, context?: string): string {
