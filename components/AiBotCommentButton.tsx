@@ -94,6 +94,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
         data.error === 'insufficient_points' ? `${t('ai_bot.insufficient')} (${data.required}pt)` :
         data.error === 'ai_generation_failed' ? t('ai_bot.generation_failed') :
         data.error === 'user_banned' ? t('ai_bot.banned') :
+        data.error === 'ai_comments_disabled' ? t('ai_bot.comments_disabled') :
         data.error
       )
     } else {

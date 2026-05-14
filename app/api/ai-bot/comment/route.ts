@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   const svc = makeServiceClient()
+  const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+  const isAdmin = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
 
   // 포인트 비용 확인
   const { data: settingsRows } = await svc.from('app_settings').select('key, value')
@@ -50,8 +52,9 @@ export async function POST(req: NextRequest) {
 
   // 게시글 내용 조회
   const { data: post } = await svc.from('community_posts')
-    .select('title, body').eq('id', post_id).maybeSingle()
+    .select('title, body, ai_comments_enabled').eq('id', post_id).maybeSingle()
   if (!post) return NextResponse.json({ error: 'post not found' }, { status: 404 })
+  if (post.ai_comments_enabled === false) return NextResponse.json({ error: 'ai_comments_disabled' }, { status: 403 })
 
   // 기존 댓글 조회
   const { data: existingComments } = await svc.from('community_comments')
@@ -116,7 +119,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 포인트 차감 (INSERT 성공 후)
-  if (cost > 0) {
+  if (cost > 0 && !isAdmin) {
     await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
     await svc.from('point_transactions').insert({
       user_id: user.id, amount: -cost, type: 'ai_bot_comment',

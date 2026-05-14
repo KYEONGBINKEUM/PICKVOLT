@@ -745,6 +745,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': 'Points remaining',
     'ai_bot.pts_short': 'pt short',
     'ai_bot.language': 'Language',
+    'ai_bot.allow_comments': 'Allow AI bot comments',
+    'ai_bot.comments_disabled': 'AI bot comments are disabled for this post',
   },
   es: {
     'nav.compare': 'comparar',
@@ -1405,6 +1407,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': 'Puntos restantes',
     'ai_bot.pts_short': 'pt insuficientes',
     'ai_bot.language': 'Idioma',
+    'ai_bot.allow_comments': 'Permitir comentarios de bot IA',
+    'ai_bot.comments_disabled': 'Los comentarios del bot IA están deshabilitados',
   },
   pt: {
     'nav.compare': 'comparar',
@@ -2080,6 +2084,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': 'Pontos restantes',
     'ai_bot.pts_short': 'pt insuficientes',
     'ai_bot.language': 'Idioma',
+    'ai_bot.allow_comments': 'Permitir comentários de bot IA',
+    'ai_bot.comments_disabled': 'Comentários do bot IA estão desativados',
   },
   fr: {
     'nav.compare': 'comparer',
@@ -2755,6 +2761,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': 'Points restants',
     'ai_bot.pts_short': 'pt insuffisants',
     'ai_bot.language': 'Langue',
+    'ai_bot.allow_comments': 'Autoriser les commentaires du bot IA',
+    'ai_bot.comments_disabled': 'Les commentaires du bot IA sont désactivés',
   },
   de: {
     'nav.compare': 'vergleichen',
@@ -3430,6 +3438,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': 'Verbleibende Punkte',
     'ai_bot.pts_short': 'Punkte fehlen',
     'ai_bot.language': 'Sprache',
+    'ai_bot.allow_comments': 'KI-Bot-Kommentare erlauben',
+    'ai_bot.comments_disabled': 'KI-Bot-Kommentare sind deaktiviert',
   },
   ja: {
     'nav.compare': '比較',
@@ -4105,6 +4115,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': '残りポイント',
     'ai_bot.pts_short': 'pt不足',
     'ai_bot.language': '言語',
+    'ai_bot.allow_comments': 'AIボットコメントを許可',
+    'ai_bot.comments_disabled': 'このポストはAIボットコメントが無効です',
   },
   ko: {
     'nav.compare': '비교',
@@ -4815,6 +4827,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.pts_left': '남은 포인트',
     'ai_bot.pts_short': 'pt 부족',
     'ai_bot.language': '언어',
+    'ai_bot.allow_comments': 'AI 봇 댓글 허용',
+    'ai_bot.comments_disabled': 'AI 봇 댓글이 비활성화된 게시글입니다',
   },
 }
 

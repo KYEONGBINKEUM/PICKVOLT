@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { type, category, title, body: postBody, rating, product_ids, compare_options, clan_id, is_members_only, point_price } = body
+  const { type, category, title, body: postBody, rating, product_ids, compare_options, clan_id, is_members_only, point_price, ai_comments_enabled } = body
 
   if (!type || !title?.trim()) return NextResponse.json({ error: 'type and title required' }, { status: 400 })
 
@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
       clan_id: clan_id || null,
       is_members_only: is_members_only ?? false,
       point_price: point_price > 0 ? Math.floor(point_price) : 0,
+      ai_comments_enabled: ai_comments_enabled !== false,
     })
     .select('id')
     .single()

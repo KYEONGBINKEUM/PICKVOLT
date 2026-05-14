@@ -33,6 +33,7 @@ interface Post {
   is_pinned: boolean; created_at: string; updated_at: string
   user_id: string; user_display_name: string; user_avatar_url: string | null
   clan_id: string | null
+  ai_comments_enabled?: boolean
   clans: { id: string; slug: string; name: string; avatar_url: string | null } | null
   community_post_products: PostProduct[]
   community_compare_options: CompareOption[]
@@ -712,7 +713,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
         <div className="bg-surface border border-border rounded-xl overflow-hidden">
           <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">{t('community.comments')} {post.comment_count}</h2>
-            {token && (
+            {post.ai_comments_enabled === false && (
+              <p className="text-xs text-white/30 italic">{t('ai_bot.comments_disabled')}</p>
+            )}
+            {token && post.ai_comments_enabled !== false && (
               <AiBotCommentButton
                 postId={id}
                 token={token}

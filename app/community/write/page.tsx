@@ -289,6 +289,7 @@ function WritePageInner() {
   const [selectedClanId, setSelectedClanId]   = useState<string | null>(null)
   const [isMembersOnly, setIsMembersOnly]     = useState(false)
   const [pointPriceEnabled, setPointPriceEnabled] = useState(false)
+  const [aiCommentsEnabled, setAiCommentsEnabled] = useState(true)
   const [pointPrice, setPointPrice]               = useState(0)
   const [myPoints, setMyPoints]                   = useState(0)
   const [botPostCost, setBotPostCost]             = useState(50)
@@ -533,6 +534,7 @@ function WritePageInner() {
             clan_id: selectedClanId ?? null,
             is_members_only: selectedClanId ? isMembersOnly : false,
             point_price: pointPriceEnabled && pointPrice > 0 ? pointPrice : 0,
+            ai_comments_enabled: aiCommentsEnabled,
           }),
         })
         const json = await res.json()
@@ -665,6 +667,29 @@ function WritePageInner() {
                   <span className="text-xs font-bold text-white/30 flex-shrink-0">pt</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* AI 봇 댓글 허용 */}
+          {!editPostId && (
+            <div>
+              <p className={labelCls}>{t('ai_bot.allow_comments')}</p>
+              <div className="flex gap-2">
+                {([true, false] as const).map(on => (
+                  <button
+                    key={String(on)}
+                    type="button"
+                    onClick={() => setAiCommentsEnabled(on)}
+                    className={`flex-1 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                      aiCommentsEnabled === on
+                        ? on ? 'border-accent bg-accent/15 text-white' : 'border-red-500/40 bg-red-500/10 text-red-400'
+                        : 'border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                    }`}
+                  >
+                    {on ? t('ai_bot.yes') : t('ai_bot.no')}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
