@@ -4,13 +4,17 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
-import { User, Menu, X, PenSquare } from 'lucide-react'
+import { User, Menu, X, PenSquare, Home, Flame, Newspaper, Users, Plus } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
 import SearchBar from '@/components/SearchBar'
 import CommunitySearchBar from '@/components/CommunitySearchBar'
 import NotificationBell from '@/components/NotificationBell'
+
+// CommunitySidebar와 공유하는 클랜 캐시
+let clansCache: { data: { id: string; slug: string; name: string; avatar_url?: string | null }[]; ts: number } | null = null
+const CLANS_TTL = 30000
 
 interface NavbarProps {
   showSearch?: boolean
@@ -23,6 +27,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
   const [loggedIn, setLoggedIn] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [myClans, setMyClans] = useState<{ id: string; slug: string; name: string; avatar_url?: string | null }[]>([])
 
   useEffect(() => {
     let settled = false
@@ -30,6 +35,22 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
       settled = true
       setLoggedIn(!!data.session)
       setAuthReady(true)
+      // 클랜 fetch (로그인 시)
+      const token = data.session?.access_token
+      if (token) {
+        if (clansCache && Date.now() - clansCache.ts < CLANS_TTL) {
+          setMyClans(clansCache.data)
+        } else {
+          fetch('/api/clans?my=1', { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => r.json())
+            .then(d => {
+              const list = d.clans ?? []
+              clansCache = { data: list, ts: Date.now() }
+              setMyClans(list)
+            })
+            .catch(() => {})
+        }
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       if (!settled) return
@@ -46,14 +67,11 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
   const isCommunity = pathname.startsWith('/community') || pathname.startsWith('/clan') || communityContext === true
 
-  // 커뮤니티 섹션 우측 링크
+  // 커뮤니티 섹션 링크 (PC 사이드바와 동일)
   const communityLinks = [
-    { href: '/community',                  label: t('community.all'),           exact: true },
-    { href: '/community/forum',            label: t('community.forum') },
-    { href: '/community/reviews',          label: t('community.reviews') },
-    { href: '/community/free',             label: t('community.free') },
-    { href: '/community/qa',               label: t('community.qa') },
-    { href: '/community/subscriptions',    label: t('community.subscriptions') },
+    { href: '/community',         label: t('community.all'),     icon: Home,      exact: true },
+    { href: '/community/popular', label: t('community.popular'), icon: Flame },
+    { href: '/community/news',    label: t('community.news'),    icon: Newspaper },
   ]
 
   // Compare 섹션 우측 링크
@@ -222,21 +240,74 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
             </p>
           </div>
 
-          {(isCommunity ? communityLinks : compareLinks).map(l => (
-            <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
-              className={clsx('flex items-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors',
-                isActive(l.href, (l as { exact?: boolean }).exact)
-                  ? 'bg-white/8 text-white'
-                  : 'text-white/50 hover:text-white hover:bg-white/5')}>
-              {l.label}
-            </Link>
-          ))}
+          {isCommunity ? (
+            <>
+              {communityLinks.map(l => {
+                const Icon = l.icon
+                return (
+                  <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
+                    className={clsx('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                      isActive(l.href, l.exact)
+                        ? 'bg-white/10 text-white font-semibold'
+                        : 'text-white/50 hover:text-white hover:bg-white/5')}>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {l.label}
+                  </Link>
+                )
+              })}
 
-          {isCommunity && (
-            <Link href="/community/write" onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-accent hover:bg-accent/10 transition-colors">
-              <PenSquare className="w-4 h-4" /> {t('community.write')}
-            </Link>
+              {/* 클랜 섹션 */}
+              <div className="mt-3 pt-3 border-t border-border/30">
+                <div className="flex items-center justify-between px-3 mb-1">
+                  <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{t('clan.my_clans')}</span>
+                  <Link href="/clan/create" onClick={() => setMobileOpen(false)}
+                    className="text-white/30 hover:text-accent transition-colors" title={t('clan.create')}>
+                    <Plus className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+                {myClans.length === 0 ? (
+                  <Link href="/clan" onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/30 hover:text-white hover:bg-white/5 transition-colors w-full">
+                    <Users className="w-4 h-4 flex-shrink-0" />
+                    {t('clan.discover')}
+                  </Link>
+                ) : (
+                  myClans.map(c => {
+                    const active = pathname === `/clan/${c.slug}` || pathname.startsWith(`/clan/${c.slug}/`)
+                    return (
+                      <Link key={c.id} href={`/clan/${c.slug}`} onClick={() => setMobileOpen(false)}
+                        className={clsx(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full',
+                          active ? 'bg-white/10 text-white font-semibold' : 'text-white/50 hover:text-white hover:bg-white/5'
+                        )}>
+                        {c.avatar_url
+                          ? <img src={c.avatar_url} alt={c.name} className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                          : <span className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[8px] font-bold text-accent/70 flex-shrink-0">{c.name[0]?.toUpperCase()}</span>
+                        }
+                        <span className="truncate">{c.name}</span>
+                      </Link>
+                    )
+                  })
+                )}
+              </div>
+
+              <div className="pt-2">
+                <Link href="/community/write" onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-accent hover:bg-accent/10 transition-colors">
+                  <PenSquare className="w-4 h-4" /> {t('community.write')}
+                </Link>
+              </div>
+            </>
+          ) : (
+            compareLinks.map(l => (
+              <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
+                className={clsx('flex items-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors',
+                  isActive(l.href)
+                    ? 'bg-white/8 text-white'
+                    : 'text-white/50 hover:text-white hover:bg-white/5')}>
+                {l.label}
+              </Link>
+            ))
           )}
         </div>
 
