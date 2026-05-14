@@ -318,8 +318,8 @@ function WritePageInner() {
         setMyPoints((profile as { points?: number } | null)?.points ?? 0)
 
         // AI 봇 포인트 비용 조회
-        fetch('/api/admin/community').then(r => r.ok ? r.json() : null).then(d => {
-          if (d?.settings?.aiBotPostPoints !== undefined) setBotPostCost(d.settings.aiBotPostPoints)
+        fetch('/api/ai-bot/costs').then(r => r.ok ? r.json() : null).then(d => {
+          if (d?.postPoints !== undefined) setBotPostCost(d.postPoints)
         }).catch(() => {})
 
         // Load user's clans

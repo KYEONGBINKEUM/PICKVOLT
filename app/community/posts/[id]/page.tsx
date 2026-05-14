@@ -200,8 +200,8 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
         setAvatarUrl(profile?.avatar_url ?? null)
         setMyPoints((profile as { points?: number } | null)?.points ?? 0)
         // AI 봇 댓글 비용 조회
-        fetch('/api/admin/community').then(r => r.ok ? r.json() : null).then(d => {
-          if (d?.settings?.aiBotCommentPoints !== undefined) setBotCommentCost(d.settings.aiBotCommentPoints)
+        fetch('/api/ai-bot/costs').then(r => r.ok ? r.json() : null).then(d => {
+          if (d?.commentPoints !== undefined) setBotCommentCost(d.commentPoints)
         }).catch(() => {})
       }
     })
