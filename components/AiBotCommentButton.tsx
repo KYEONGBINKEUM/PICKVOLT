@@ -1,8 +1,18 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Bot, Loader2 } from 'lucide-react'
+import { Bot, Loader2, ChevronDown } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
+
+const LANG_OPTIONS = [
+  { code: 'ko', label: '한국어' },
+  { code: 'en', label: 'English' },
+  { code: 'ja', label: '日本語' },
+  { code: 'zh', label: '中文' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+  { code: 'de', label: 'Deutsch' },
+]
 
 interface Comment {
   id: string
@@ -26,15 +36,19 @@ interface Props {
 }
 
 export default function AiBotCommentButton({ postId, token, userPoints, botCommentCost, parentId, onCommentAdded }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [open, setOpen]             = useState(false)
   const [direction, setDirection]   = useState('')
+  const [lang, setLang]             = useState<string>(locale)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
   const [done, setDone]             = useState(false)
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({})
   const panelRef                    = useRef<HTMLDivElement>(null)
   const buttonRef                   = useRef<HTMLButtonElement>(null)
+
+  // locale 변경 시 lang 동기화
+  useEffect(() => { setLang(locale) }, [locale])
 
   useEffect(() => {
     if (!open) return
@@ -72,7 +86,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
     const res = await fetch('/api/ai-bot/comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ post_id: postId, parent_id: parentId ?? null, direction: direction.trim() || null }),
+      body: JSON.stringify({ post_id: postId, parent_id: parentId ?? null, direction: direction.trim() || null, lang }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -116,6 +130,25 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
               <p className="text-sm text-white/80 font-medium">
                 {parentId ? t('ai_bot.reply_ask') : t('ai_bot.comment_ask')}
               </p>
+
+              {/* 언어 선택 */}
+              <div className="relative">
+                <label className="text-[11px] text-white/30 mb-1 block">{t('ai_bot.language')}</label>
+                <div className="relative">
+                  <select
+                    value={lang}
+                    onChange={e => setLang(e.target.value)}
+                    className="w-full appearance-none bg-surface border border-border rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-accent/50 pr-7"
+                  >
+                    {LANG_OPTIONS.map(l => (
+                      <option key={l.code} value={l.code}>{l.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/30 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* 방향 힌트 */}
               <input
                 type="text"
                 value={direction}
@@ -123,6 +156,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
                 placeholder={t('ai_bot.direction_placeholder')}
                 className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent/50"
               />
+
               <p className={`text-xs ${canAfford ? 'text-white/30' : 'text-red-400'}`}>
                 {botCommentCost}pt {t('ai_bot.pts_cost')}{!canAfford && ` · ${t('ai_bot.insufficient')}`}
               </p>

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { post_id, parent_id, direction } = await req.json()
+  const { post_id, parent_id, direction, lang } = await req.json()
   if (!post_id) {
     return NextResponse.json({ error: 'post_id required' }, { status: 400 })
   }
@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
         (existingComments ?? []).map((c: { user_display_name: string; body: string }) => ({ name: c.user_display_name, body: c.body })),
         parentComment,
         direction?.trim(),
+        lang,
       ),
     })
     // Gemini safety block 체크
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
   const { data: comment, error } = await svc.from('community_comments').insert({
     post_id,
     user_id: user.id,
-    user_display_name: '🤖 AI봇',
+    user_display_name: 'AI Bot',
     user_avatar_url: null,
     parent_id: parent_id ?? null,
     body: commentBody,

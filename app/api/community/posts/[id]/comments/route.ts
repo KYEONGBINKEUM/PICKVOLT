@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const supabase = makeServiceClient()
   const { data: comments, error } = await supabase
     .from('community_comments')
-    .select('id, post_id, user_id, user_display_name, user_avatar_url, parent_id, body, upvotes, created_at')
+    .select('id, post_id, user_id, user_display_name, user_avatar_url, parent_id, body, upvotes, created_at, is_ai_generated')
     .eq('post_id', id)
     .eq('is_hidden', false)
     .order('created_at', { ascending: true })

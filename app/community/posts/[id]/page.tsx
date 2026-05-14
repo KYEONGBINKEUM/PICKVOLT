@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ThumbsUp, ThumbsDown, Tag,
-  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, Flag, Languages, X, Check
+  Send, Trash2, Eye, ArrowLeft, CornerDownRight, ImagePlus, Pencil, Flag, Languages, X, Check, Bot
 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import AdBanner from '@/components/AdBanner'
@@ -44,6 +44,7 @@ interface Comment {
   parent_id: string | null; body: string; upvotes: number
   created_at: string; my_vote: boolean
   downvotes?: number; my_downvote?: boolean
+  is_ai_generated?: boolean
 }
 
 function timeAgo(d: string, t: (k: string) => string) {
@@ -110,7 +111,10 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
     <div className={depth > 0 ? 'ml-8 border-l border-border pl-4' : ''}>
       <div className="py-3">
         <div className="flex items-center gap-2 mb-2">
-          <Avatar url={c.user_avatar_url} name={c.user_display_name} size={6} />
+          {c.is_ai_generated
+            ? <div className="w-6 h-6 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0"><Bot className="w-3.5 h-3.5 text-accent" /></div>
+            : <Avatar url={c.user_avatar_url} name={c.user_display_name} size={6} />
+          }
           <span className="text-xs font-semibold text-white/70">{c.user_display_name}</span>
           <span className="text-[10px] text-white/25">{timeAgo(c.created_at, t)}</span>
           {currentUserId === c.user_id && token && (

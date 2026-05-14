@@ -744,6 +744,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': 'This account is restricted.',
     'ai_bot.pts_left': 'Points remaining',
     'ai_bot.pts_short': 'pt short',
+    'ai_bot.language': 'Language',
   },
   es: {
     'nav.compare': 'comparar',
@@ -1403,6 +1404,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': 'Esta cuenta está restringida.',
     'ai_bot.pts_left': 'Puntos restantes',
     'ai_bot.pts_short': 'pt insuficientes',
+    'ai_bot.language': 'Idioma',
   },
   pt: {
     'nav.compare': 'comparar',
@@ -2077,6 +2079,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': 'Esta conta está restrita.',
     'ai_bot.pts_left': 'Pontos restantes',
     'ai_bot.pts_short': 'pt insuficientes',
+    'ai_bot.language': 'Idioma',
   },
   fr: {
     'nav.compare': 'comparer',
@@ -2751,6 +2754,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': 'Ce compte est restreint.',
     'ai_bot.pts_left': 'Points restants',
     'ai_bot.pts_short': 'pt insuffisants',
+    'ai_bot.language': 'Langue',
   },
   de: {
     'nav.compare': 'vergleichen',
@@ -3425,6 +3429,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': 'Dieses Konto ist eingeschränkt.',
     'ai_bot.pts_left': 'Verbleibende Punkte',
     'ai_bot.pts_short': 'Punkte fehlen',
+    'ai_bot.language': 'Sprache',
   },
   ja: {
     'nav.compare': '比較',
@@ -4099,6 +4104,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': 'このアカウントは制限されています。',
     'ai_bot.pts_left': '残りポイント',
     'ai_bot.pts_short': 'pt不足',
+    'ai_bot.language': '言語',
   },
   ko: {
     'nav.compare': '비교',
@@ -4808,6 +4814,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'ai_bot.banned': '이용이 제한된 계정입니다.',
     'ai_bot.pts_left': '남은 포인트',
     'ai_bot.pts_short': 'pt 부족',
+    'ai_bot.language': '언어',
   },
 }
 

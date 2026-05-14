@@ -1,9 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bot, ChevronDown, Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useRouter } from 'next/navigation'
+
+const LANG_OPTIONS = [
+  { code: 'ko', label: '한국어' },
+  { code: 'en', label: 'English' },
+  { code: 'ja', label: '日本語' },
+  { code: 'zh', label: '中文' },
+  { code: 'es', label: 'Español' },
+  { code: 'fr', label: 'Français' },
+  { code: 'de', label: 'Deutsch' },
+]
 
 interface Props {
   token: string | null
@@ -14,14 +24,17 @@ interface Props {
 }
 
 export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost, onSuccess }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const router = useRouter()
-  const [open, setOpen]     = useState(false)
-  const [topic, setTopic]   = useState('')
+  const [open, setOpen]       = useState(false)
+  const [topic, setTopic]     = useState('')
   const [context, setContext] = useState('')
+  const [lang, setLang]       = useState<string>(locale)
   const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState('')
-  const [result, setResult] = useState<{ postId: string; title: string; pointsLeft: number } | null>(null)
+  const [error, setError]     = useState('')
+  const [result, setResult]   = useState<{ postId: string; title: string; pointsLeft: number } | null>(null)
+
+  useEffect(() => { setLang(locale) }, [locale])
 
   const canAfford = userPoints >= botPostCost
 
@@ -32,7 +45,7 @@ export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost,
     const res = await fetch('/api/ai-bot/post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ topic: topic.trim(), clan_id: clanId ?? null, context: context.trim() || null }),
+      body: JSON.stringify({ topic: topic.trim(), clan_id: clanId ?? null, context: context.trim() || null, lang }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -104,6 +117,23 @@ export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost,
                   placeholder={t('ai_bot.topic_placeholder')}
                   className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+              </div>
+
+              {/* 언어 선택 */}
+              <div>
+                <p className="text-xs text-white/40 mb-1.5 font-medium">{t('ai_bot.language')}</p>
+                <div className="relative">
+                  <select
+                    value={lang}
+                    onChange={e => setLang(e.target.value)}
+                    className="w-full appearance-none bg-background border border-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-accent pr-8"
+                  >
+                    {LANG_OPTIONS.map(l => (
+                      <option key={l.code} value={l.code}>{l.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+                </div>
               </div>
 
               {/* 방향 힌트 (선택) */}

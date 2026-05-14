@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { topic, clan_id, context } = await req.json()
+  const { topic, clan_id, context, lang } = await req.json()
   if (!topic?.trim()) {
     return NextResponse.json({ error: 'topic required' }, { status: 400 })
   }
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
-      contents: buildPostPrompt(topic.trim(), context?.trim()),
+      contents: buildPostPrompt(topic.trim(), context?.trim(), lang),
     })
     // Gemini safety block 체크
     const candidate = result.candidates?.[0]
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   const userDisplayName = (profile as { nickname?: string | null } | null)?.nickname ?? user.email?.split('@')[0] ?? 'user'
   const { data: post, error } = await svc.from('community_posts').insert({
     user_id: user.id,
-    user_display_name: '🤖 AI봇',
+    user_display_name: 'AI Bot',
     user_avatar_url: null,
     title,
     body,
