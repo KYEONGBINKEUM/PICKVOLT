@@ -658,6 +658,16 @@ export default function AdminPage() {
     setReports(prev => prev.map(r => r.id === id ? { ...r, status } : r))
   }
 
+  const handleDeleteReport = async (id: string) => {
+    if (!confirm('이 신고를 삭제하시겠습니까?')) return
+    await fetch('/api/community/reports', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
+    })
+    setReports(prev => prev.filter(r => r.id !== id))
+  }
+
   const fetchInquiries = useCallback(async (statusFilter = '') => {
     if (!token) return
     setInquiriesLoading(true)
@@ -2072,6 +2082,12 @@ export default function AdminPage() {
                             대기로 변경
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDeleteReport(r.id)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-all"
+                        >
+                          삭제
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2500,14 +2516,6 @@ export default function AdminPage() {
                       onKeyDown={e => { if (e.key === 'Enter') { setCommunityPostsPage(1); fetchCommunityPosts(token, 1, communityPostsSearch, communityPostsType, communityPostsHidden) } }}
                       placeholder="제목 검색 (Enter)..." className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none" />
                   </div>
-                  {(['', 'forum', 'review', 'free', 'qa', 'compare', 'news'] as const).map(t => (
-                    <button key={t} onClick={() => { setCommunityPostsType(t); setCommunityPostsPage(1) }}
-                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                        communityPostsType === t ? 'border-accent text-accent bg-accent/10' : 'border-border text-white/40 hover:border-white/20 hover:text-white'
-                      }`}>
-                      {t === '' ? '전체' : t}
-                    </button>
-                  ))}
                   {(['', 'false', 'true'] as const).map(h => (
                     <button key={h} onClick={() => { setCommunityPostsHidden(h); setCommunityPostsPage(1) }}
                       className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
