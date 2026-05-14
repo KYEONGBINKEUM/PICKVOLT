@@ -13,7 +13,12 @@ interface AdBannerProps {
 // Global queue so multiple banners don't race to set atOptions simultaneously
 let adQueue = Promise.resolve()
 
-export default function AdBanner({ html, className, adWidth, adHeight }: AdBannerProps) {
+// Temporarily hidden while awaiting AdSense approval — revert to enable
+export default function AdBanner({ html: _html, className: _className, adWidth: _adWidth, adHeight: _adHeight }: AdBannerProps) {
+  return null
+}
+
+function AdBannerImpl({ html, className, adWidth, adHeight }: AdBannerProps) {
   const ref         = useRef<HTMLDivElement>(null)
   const wrapRef     = useRef<HTMLDivElement>(null)
   const initialized = useRef(false)
