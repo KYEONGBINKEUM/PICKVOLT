@@ -32,6 +32,7 @@ function randomCharacter() {
 
 export default function AiBotCommentButton({ postId, token, userPoints, botCommentCost, parentId, onCommentAdded }: Props) {
   const [open, setOpen]             = useState(false)
+  const [direction, setDirection]   = useState('')
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
   const [done, setDone]             = useState(false)
@@ -76,7 +77,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
     const res = await fetch('/api/ai-bot/comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ character, post_id: postId, parent_id: parentId ?? null }),
+      body: JSON.stringify({ character, post_id: postId, parent_id: parentId ?? null, direction: direction.trim() || null }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -88,7 +89,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
     } else {
       onCommentAdded(data.comment)
       setDone(true)
-      setTimeout(() => { setOpen(false); setDone(false) }, 1500)
+      setTimeout(() => { setOpen(false); setDone(false); setDirection('') }, 1500)
     }
     setLoading(false)
   }
@@ -107,7 +108,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
       </button>
 
       {open && (
-        <div ref={panelRef} style={popupStyle} className="w-56 bg-background border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden">
+        <div ref={panelRef} style={popupStyle} className="w-64 bg-background border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden">
           {done ? (
             <div className="px-4 py-5 text-center">
               <p className="text-emerald-400 font-semibold text-sm">✓ 봇이 {parentId ? '답글' : '댓글'}을 달았어요!</p>
@@ -117,6 +118,13 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
               <p className="text-sm text-white/80 font-medium">
                 AI 봇이 {parentId ? '답글' : '댓글'}을 달까요?
               </p>
+              <input
+                type="text"
+                value={direction}
+                onChange={e => setDirection(e.target.value)}
+                placeholder="방향 힌트 (선택)"
+                className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-accent/50"
+              />
               <p className={`text-xs ${canAfford ? 'text-white/30' : 'text-red-400'}`}>
                 {botCommentCost}pt 차감{!canAfford && ' · 포인트 부족'}
               </p>
