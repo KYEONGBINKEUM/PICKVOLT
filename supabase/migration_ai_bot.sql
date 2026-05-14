@@ -1,3 +1,9 @@
+-- app_settings 테이블 (없으면 생성)
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  key   text PRIMARY KEY,
+  value text NOT NULL DEFAULT ''
+);
+
 -- AI 봇 글/댓글 컬럼 추가
 ALTER TABLE public.community_posts
   ADD COLUMN IF NOT EXISTS is_ai_generated BOOLEAN NOT NULL DEFAULT FALSE,
