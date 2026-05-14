@@ -107,47 +107,6 @@ export default function CommunitySidebar() {
         </div>
       </aside>
 
-      {/* 모바일 가로 스크롤 탭바 */}
-      <div className="md:hidden fixed top-[57px] left-0 right-0 z-30 bg-background border-b border-border/40 overflow-x-auto">
-        <div className="flex items-center gap-1 px-3 py-2 min-w-max">
-          {allLinks.map(({ href, label, icon: Icon, exact }) => {
-            const active = isActive(href, exact)
-            return (
-              <Link key={href} href={href}
-                className={clsx(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0',
-                  active
-                    ? 'bg-white/12 text-white font-semibold'
-                    : 'text-white/45 hover:text-white hover:bg-white/5'
-                )}>
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                {label}
-              </Link>
-            )
-          })}
-          {myClans.map(c => {
-            const active = pathname === `/clan/${c.slug}` || pathname.startsWith(`/clan/${c.slug}/`)
-            return (
-              <Link key={c.id} href={`/clan/${c.slug}`}
-                className={clsx(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0',
-                  active ? 'bg-white/12 text-white font-semibold' : 'text-white/45 hover:text-white hover:bg-white/5'
-                )}>
-                {c.avatar_url
-                  ? <img src={c.avatar_url} alt={c.name} className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0" />
-                  : <span className="w-3.5 h-3.5 rounded-full bg-accent/20 flex items-center justify-center text-[7px] font-bold text-accent/70 flex-shrink-0">{c.name[0]?.toUpperCase()}</span>
-                }
-                {c.name}
-              </Link>
-            )
-          })}
-          <Link href="/clan"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white/35 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap flex-shrink-0">
-            <Users className="w-3.5 h-3.5 flex-shrink-0" />
-            {t('clan.title')}
-          </Link>
-        </div>
-      </div>
     </>
   )
 }
