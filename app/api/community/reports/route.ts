@@ -13,7 +13,7 @@ async function getUser(req: NextRequest) {
 }
 
 const VALID_REASONS = ['spam', 'hate', 'sexual', 'violence', 'privacy', 'false_info', 'other']
-const VALID_TYPES   = ['post', 'comment']
+const VALID_TYPES   = ['post', 'comment', 'clan']
 
 // POST: 신고 제출
 export async function POST(req: NextRequest) {

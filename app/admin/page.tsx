@@ -191,6 +191,8 @@ export default function AdminPage() {
   const [reports, setReports] = useState<any[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
   const [reportsFilter, setReportsFilter] = useState('')
+  const [reportActionLoading, setReportActionLoading] = useState<string | null>(null)
+  const [suspendDays, setSuspendDays] = useState<Record<string, string>>({})
 
   // Inquiries (contact form)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -698,6 +700,30 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     })
     setReports(prev => prev.filter(r => r.id !== id))
+  }
+
+  const handleReportAction = async (reportId: string, action: string, days?: number) => {
+    const confirmMsg =
+      action === 'delete_content' ? '콘텐츠를 삭제하시겠습니까? 되돌릴 수 없습니다.' :
+      action === 'suspend_user'   ? `유저를 ${days ?? 7}일 정지하시겠습니까?` :
+      action === 'ban_user'       ? '유저를 영구 차단하시겠습니까?' :
+      action === 'unban_user'     ? '유저 차단을 해제하시겠습니까?' : '진행하시겠습니까?'
+    if (!confirm(confirmMsg)) return
+    setReportActionLoading(reportId + action)
+    const res = await fetch('/api/admin/reports/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ report_id: reportId, action, suspend_days: days }),
+    })
+    if (res.ok) {
+      if (action === 'delete_content') {
+        // 신고 목록에서 콘텐츠 정보 비우기
+        setReports(prev => prev.map(r => r.id === reportId ? { ...r, status: 'reviewed', post: null, comment: null } : r))
+      } else {
+        setReports(prev => prev.map(r => r.id === reportId ? { ...r, status: 'reviewed' } : r))
+      }
+    }
+    setReportActionLoading(null)
   }
 
   const fetchInquiries = useCallback(async (statusFilter = '') => {
@@ -2267,9 +2293,59 @@ export default function AdminPage() {
                           onClick={() => handleDeleteReport(r.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-all"
                         >
-                          삭제
+                          신고삭제
                         </button>
                       </div>
+                    </div>
+
+                    {/* 관리 액션 */}
+                    <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] text-white/25 font-bold uppercase tracking-widest mr-1">액션</span>
+
+                      {/* 콘텐츠 삭제 */}
+                      <button
+                        onClick={() => handleReportAction(r.id, 'delete_content')}
+                        disabled={reportActionLoading === r.id + 'delete_content'}
+                        className="text-xs px-3 py-1 rounded-lg border border-orange-500/40 text-orange-400 hover:bg-orange-500/10 transition-all disabled:opacity-40"
+                      >
+                        콘텐츠 삭제
+                      </button>
+
+                      {/* 정지 (기간 설정) */}
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text" inputMode="numeric"
+                          value={suspendDays[r.id] ?? '7'}
+                          onChange={e => setSuspendDays(prev => ({ ...prev, [r.id]: e.target.value.replace(/\D/g,'') }))}
+                          className="w-10 bg-background border border-border rounded-lg px-2 py-1 text-xs text-white text-center focus:outline-none focus:border-accent"
+                        />
+                        <span className="text-xs text-white/30">일</span>
+                        <button
+                          onClick={() => handleReportAction(r.id, 'suspend_user', parseInt(suspendDays[r.id] ?? '7') || 7)}
+                          disabled={reportActionLoading === r.id + 'suspend_user'}
+                          className="text-xs px-3 py-1 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all disabled:opacity-40"
+                        >
+                          정지
+                        </button>
+                      </div>
+
+                      {/* 영구 차단 */}
+                      <button
+                        onClick={() => handleReportAction(r.id, 'ban_user')}
+                        disabled={reportActionLoading === r.id + 'ban_user'}
+                        className="text-xs px-3 py-1 rounded-lg border border-red-600/50 text-red-400 hover:bg-red-600/10 transition-all disabled:opacity-40"
+                      >
+                        영구 차단
+                      </button>
+
+                      {/* 차단 해제 */}
+                      <button
+                        onClick={() => handleReportAction(r.id, 'unban_user')}
+                        disabled={reportActionLoading === r.id + 'unban_user'}
+                        className="text-xs px-3 py-1 rounded-lg border border-border text-white/30 hover:text-white hover:border-white/20 transition-all disabled:opacity-40"
+                      >
+                        차단 해제
+                      </button>
                     </div>
                   </div>
                 ))}
