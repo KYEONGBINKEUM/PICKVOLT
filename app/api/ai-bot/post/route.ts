@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Gemini API 호출
-  const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
   let title = ''
   let body = ''
   try {
