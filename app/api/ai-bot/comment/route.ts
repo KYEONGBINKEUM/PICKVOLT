@@ -90,20 +90,12 @@ export async function POST(req: NextRequest) {
     if (!commentBody) throw new Error('empty')
     if (containsUnsafeContent(commentBody)) throw new Error('unsafe content')
   } catch (err) {
-    console.error('[ai-bot/comment] generation error:', err)
-    return NextResponse.json({ error: 'ai_generation_failed' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[ai-bot/comment] generation error:', msg)
+    return NextResponse.json({ error: 'ai_generation_failed', debug: msg }, { status: 500 })
   }
 
-  // 포인트 차감
-  if (cost > 0) {
-    await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
-    await svc.from('point_transactions').insert({
-      user_id: user.id, amount: -cost, type: 'ai_bot_comment',
-      description: 'AI봇 댓글',
-    })
-  }
-
-  // 댓글 저장
+  // 댓글 저장 (포인트 차감 전에 먼저 시도 — INSERT 실패 시 포인트 손실 방지)
   const userDisplayName = (profile as { nickname?: string | null } | null)?.nickname ?? user.email?.split('@')[0] ?? 'user'
   const { data: comment, error } = await svc.from('community_comments').insert({
     post_id,
@@ -117,7 +109,19 @@ export async function POST(req: NextRequest) {
     ai_requester_name: userDisplayName,
   }).select('id, body, user_display_name, user_avatar_url, parent_id, upvotes, created_at').single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[ai-bot/comment] insert error:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // 포인트 차감 (INSERT 성공 후)
+  if (cost > 0) {
+    await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
+    await svc.from('point_transactions').insert({
+      user_id: user.id, amount: -cost, type: 'ai_bot_comment',
+      description: 'AI봇 댓글',
+    })
+  }
 
   return NextResponse.json({
     ok: true,
