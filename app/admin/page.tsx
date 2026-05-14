@@ -218,7 +218,7 @@ export default function AdminPage() {
 
   // Community
   const [communityStats, setCommunityStats] = useState<{ totalPosts: number; totalComments: number; todayPosts: number; todayComments: number; hiddenPosts: number; pinnedPosts: number } | null>(null)
-  const [communitySettings, setCommunitySettings] = useState<{ pointsPerPost: number; pointsPerComment: number; dailyMaxPostPoints: number; dailyMaxCommentPoints: number }>({ pointsPerPost: 5, pointsPerComment: 1, dailyMaxPostPoints: 0, dailyMaxCommentPoints: 0 })
+  const [communitySettings, setCommunitySettings] = useState<{ pointsPerPost: number; pointsPerComment: number; dailyMaxPostPoints: number; dailyMaxCommentPoints: number; aiBotPostPoints: number; aiBotCommentPoints: number }>({ pointsPerPost: 5, pointsPerComment: 1, dailyMaxPostPoints: 0, dailyMaxCommentPoints: 0, aiBotPostPoints: 50, aiBotCommentPoints: 20 })
   const [communityLoading, setCommunityLoading] = useState(false)
   const [communityPosts, setCommunityPosts] = useState<any[]>([])
   const [communityPostsTotal, setCommunityPostsTotal] = useState(0)
@@ -2949,6 +2949,45 @@ export default function AdminPage() {
                         → 하루 최대 {Math.floor(communitySettings.dailyMaxCommentPoints / communitySettings.pointsPerComment)}개 댓글까지 보상 지급
                       </p>
                     )}
+                  </div>
+
+                  {/* AI 봇 포인트 설정 */}
+                  <div className="border-t border-border/50 pt-5 mt-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-base">🤖</span>
+                      <div>
+                        <p className="text-sm font-bold text-white">AI 봇 포인트 비용</p>
+                        <p className="text-[11px] text-white/30">유저가 AI 봇 활동 시 소모되는 포인트를 설정합니다.</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] text-white/30 block mb-1">봇 글쓰기 (pt)</label>
+                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5">
+                          <input type="text" inputMode="numeric"
+                            value={communitySettings.aiBotPostPoints}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                              setCommunitySettings(s => ({ ...s, aiBotPostPoints: Math.min(9999, v) }))
+                            }}
+                            className="flex-1 bg-transparent text-sm text-white outline-none min-w-0" />
+                          <span className="text-xs text-white/30 flex-shrink-0">pt</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-white/30 block mb-1">봇 댓글 (pt)</label>
+                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5">
+                          <input type="text" inputMode="numeric"
+                            value={communitySettings.aiBotCommentPoints}
+                            onChange={e => {
+                              const v = parseInt(e.target.value.replace(/\D/g,'')) || 0
+                              setCommunitySettings(s => ({ ...s, aiBotCommentPoints: Math.min(9999, v) }))
+                            }}
+                            className="flex-1 bg-transparent text-sm text-white outline-none min-w-0" />
+                          <span className="text-xs text-white/30 flex-shrink-0">pt</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <button onClick={handleSaveCommunitySettings} disabled={communitySettingsSaving}

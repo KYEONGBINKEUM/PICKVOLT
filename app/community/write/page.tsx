@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { X, Plus, Search, ChevronLeft, Loader2, ChevronDown, Check } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import RichEditor, { RichEditorHandle } from '@/components/RichEditor'
+import AiBotPostPanel from '@/components/AiBotPostPanel'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
@@ -289,6 +290,8 @@ function WritePageInner() {
   const [isMembersOnly, setIsMembersOnly]     = useState(false)
   const [pointPriceEnabled, setPointPriceEnabled] = useState(false)
   const [pointPrice, setPointPrice]               = useState(0)
+  const [myPoints, setMyPoints]                   = useState(0)
+  const [botPostCost, setBotPostCost]             = useState(50)
 
 
   const editorRef     = useRef<HTMLDivElement | null>(null)
@@ -309,9 +312,15 @@ function WritePageInner() {
 
       if (user) {
         const { data: profile } = await supabase
-          .from('profiles').select('nickname, avatar_url').eq('user_id', user.id).maybeSingle()
+          .from('profiles').select('nickname, avatar_url, points').eq('user_id', user.id).maybeSingle()
         setDisplayName(profile?.nickname ?? user.email?.split('@')[0] ?? 'user')
         setAvatarUrl(profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null)
+        setMyPoints((profile as { points?: number } | null)?.points ?? 0)
+
+        // AI 봇 포인트 비용 조회
+        fetch('/api/admin/community').then(r => r.ok ? r.json() : null).then(d => {
+          if (d?.settings?.aiBotPostPoints !== undefined) setBotPostCost(d.settings.aiBotPostPoints)
+        }).catch(() => {})
 
         // Load user's clans
         if (session?.access_token) {
@@ -828,6 +837,16 @@ function WritePageInner() {
               {submitting ? t('write.submitting') : t('write.submit')}
             </button>
           </div>
+
+          {/* AI 봇 글쓰기 패널 */}
+          {token && !editPostId && (
+            <AiBotPostPanel
+              token={token}
+              clanId={selectedClanId || null}
+              userPoints={myPoints}
+              botPostCost={botPostCost}
+            />
+          )}
         </div>
       </div>
     </div>
