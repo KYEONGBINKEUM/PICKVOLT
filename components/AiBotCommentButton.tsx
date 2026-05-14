@@ -33,16 +33,33 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState('')
   const [done, setDone]           = useState(false)
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({})
   const panelRef                  = useRef<HTMLDivElement>(null)
+  const buttonRef                 = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false)
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setPopupStyle({
+        position: 'fixed',
+        bottom: window.innerHeight - rect.top + 8,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setOpen(v => !v)
+  }
 
   if (!token) return null
 
@@ -75,9 +92,10 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
   const selectedChar = BOT_CHARACTERS.find(b => b.key === character)!
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       <button
-        onClick={() => setOpen(v => !v)}
+        ref={buttonRef}
+        onClick={handleOpen}
         title="AI 봇 댓글 달기"
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-white/30 hover:text-accent hover:border-accent/40 transition-colors text-xs font-medium"
       >
@@ -87,7 +105,7 @@ export default function AiBotCommentButton({ postId, token, userPoints, botComme
       </button>
 
       {open && (
-        <div className="absolute bottom-full mb-2 right-0 w-72 bg-background border border-border rounded-2xl shadow-2xl z-50 overflow-hidden">
+        <div ref={panelRef} style={popupStyle} className="w-72 bg-background border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Bot className="w-3.5 h-3.5 text-accent" />
