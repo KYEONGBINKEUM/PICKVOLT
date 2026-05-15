@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   let body = ''
   try {
     const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-2.5-flash',
       contents: buildPostPrompt(topic.trim(), context?.trim(), lang),
     })
     // Gemini safety block 체크
