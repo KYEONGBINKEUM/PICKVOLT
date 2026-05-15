@@ -88,6 +88,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // comment_count 동기화 (best-effort)
+  try {
+    const { count } = await supabase
+      .from('community_comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', id)
+      .eq('is_hidden', false)
+    await supabase.from('community_posts').update({ comment_count: count ?? 0 }).eq('id', id)
+  } catch {}
+
   // Create notifications (best-effort)
   try {
     const notifInserts: Record<string, unknown>[] = []

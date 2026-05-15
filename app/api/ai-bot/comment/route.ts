@@ -118,6 +118,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // comment_count 동기화 (best-effort)
+  try {
+    const { count } = await svc
+      .from('community_comments')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', post_id)
+      .eq('is_hidden', false)
+    await svc.from('community_posts').update({ comment_count: count ?? 0 }).eq('id', post_id)
+  } catch {}
+
   // 포인트 차감 (INSERT 성공 후)
   if (cost > 0 && !isAdmin) {
     await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
