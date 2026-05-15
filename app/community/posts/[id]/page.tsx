@@ -483,7 +483,22 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
     : t('community.all')
 
   const topComments   = comments.filter(c => !c.parent_id)
-  const childComments = (parentId: string) => comments.filter(c => c.parent_id === parentId)
+  const childComments = (parentId: string): Comment[] => {
+    const result: Comment[] = []
+    const queue = [parentId]
+    const seen = new Set<string>()
+    while (queue.length > 0) {
+      const pid = queue.shift()!
+      for (const c of comments) {
+        if (c.parent_id === pid && !seen.has(c.id)) {
+          seen.add(c.id)
+          result.push(c)
+          queue.push(c.id)
+        }
+      }
+    }
+    return result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  }
 
   const ratingLabel = (r: number) =>
     r >= 9 ? t('post.rating.excellent')
