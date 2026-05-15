@@ -47,6 +47,7 @@ interface Comment {
   downvotes?: number; my_downvote?: boolean
   is_ai_generated?: boolean
 }
+type BotComment = Omit<Comment, 'post_id' | 'user_id'>
 
 function timeAgo(d: string, t: (k: string) => string) {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
@@ -98,7 +99,10 @@ function Avatar({ url, name, size = 7 }: { url: string | null; name: string; siz
   )
 }
 
-function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, currentUserId, token, onDelete, t }: {
+function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, currentUserId, token, onDelete, t,
+  activeReplyId, replyText, setReplyText, onSubmitReply, onCancelReply, submittingReply, replyError, myAvatarUrl, myDisplayName,
+  postId, userPoints, botCommentCost, aiCommentsEnabled, onAiBotReply
+}: {
   c: Comment; depth?: number
   onVote: (id: string) => void
   onDownvote: (id: string) => void
@@ -107,6 +111,20 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
   currentUserId: string | null; token: string | null
   onDelete: (id: string) => void
   t: (k: string) => string
+  activeReplyId?: string | null
+  replyText?: string
+  setReplyText?: (v: string) => void
+  onSubmitReply?: () => void
+  onCancelReply?: () => void
+  submittingReply?: boolean
+  replyError?: string
+  myAvatarUrl?: string | null
+  myDisplayName?: string
+  postId?: string
+  userPoints?: number
+  botCommentCost?: number
+  aiCommentsEnabled?: boolean
+  onAiBotReply?: (c: BotComment) => void
 }) {
   return (
     <div className={depth > 0 ? 'ml-8 border-l border-border pl-4' : ''}>
@@ -139,6 +157,16 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
             className="flex items-center gap-1 text-[11px] text-white/25 hover:text-white/50 transition-colors">
             <CornerDownRight className="w-3 h-3" /> {t('post.reply')}
           </button>
+          {token && aiCommentsEnabled !== false && postId && onAiBotReply && (
+            <AiBotCommentButton
+              postId={postId}
+              token={token}
+              userPoints={userPoints ?? 0}
+              botCommentCost={botCommentCost ?? 20}
+              parentId={c.id}
+              onCommentAdded={onAiBotReply}
+            />
+          )}
           {token && currentUserId !== c.user_id && (
             <button onClick={() => onReport(c.id)}
               className="flex items-center gap-1 text-[11px] text-white/20 hover:text-orange-400 transition-colors ml-auto">
@@ -146,6 +174,34 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
             </button>
           )}
         </div>
+        {activeReplyId === c.id && token && (
+          <div className="mt-3 ml-8">
+            {replyError && (
+              <p className="mb-2 text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2">{replyError}</p>
+            )}
+            <div className="flex items-center gap-2">
+              <Avatar url={myAvatarUrl ?? null} name={myDisplayName || 'U'} size={6} />
+              <input
+                value={replyText ?? ''}
+                onChange={e => setReplyText?.(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmitReply?.() } }}
+                placeholder={`@${c.user_display_name}...`}
+                autoFocus
+                maxLength={500}
+                className="flex-1 bg-surface-2 border border-border rounded-xl px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
+              />
+              <button onClick={onCancelReply}
+                className="text-xs text-white/30 hover:text-white/60 px-2 py-2 transition-colors whitespace-nowrap">
+                {t('comment.cancel')}
+              </button>
+              <button onClick={onSubmitReply}
+                disabled={!replyText?.trim() || submittingReply}
+                className="bg-accent hover:bg-accent/90 disabled:opacity-40 text-white rounded-xl px-3 py-2 transition-all">
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -728,71 +784,63 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
             )}
           </div>
 
-          {/* 댓글 입력 */}
-          <div className="px-5 py-4 border-b border-border">
-            {replyTo && (
-              <div className="flex items-center justify-between mb-2 px-3 py-1.5 bg-surface-2 rounded-lg border border-border">
-                <span className="text-xs text-white/40 flex items-center gap-1">
-                  <CornerDownRight className="w-3 h-3" /> @{replyTo.name}
-                </span>
-                <button onClick={() => setReplyTo(null)} className="text-white/30 hover:text-white/60 text-xs">
-                  {t('comment.cancel')}
-                </button>
-              </div>
-            )}
-            {token ? (
-              <div>
-                {/* 도배 방지 에러 */}
-                {commentError && (
-                  <p className="mb-2 text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2">
-                    {commentError}
-                  </p>
-                )}
-                {/* 이미지 미리보기 */}
-                {commentImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {commentImages.map((url, i) => (
-                      <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                        <button onClick={() => setCommentImages(prev => prev.filter((_, j) => j !== i))}
-                          className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/70 rounded-full flex items-center justify-center text-white text-[10px]">×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Avatar url={avatarUrl} name={displayName || 'U'} size={7} />
-                  <div className="flex-1 flex gap-2">
-                    <input
-                      value={commentText}
-                      onChange={e => setCommentText(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitComment() } }}
-                      placeholder={replyTo ? `@${replyTo.name}...` : t('comment.placeholder')}
-                      maxLength={500}
-                      className="flex-1 bg-surface-2 border border-border rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
-                    />
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    <button onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingImage}
-                      className="flex items-center justify-center w-10 h-10 bg-surface-2 border border-border rounded-xl text-white/30 hover:text-white/60 hover:border-white/20 transition-all disabled:opacity-40">
-                      {uploadingImage ? <span className="text-[10px]">...</span> : <ImagePlus className="w-4 h-4" />}
-                    </button>
-                    <button onClick={handleSubmitComment}
-                      disabled={(!commentText.trim() && commentImages.length === 0) || submittingComment}
-                      className="bg-accent hover:bg-accent/90 disabled:opacity-40 text-white rounded-xl px-3 transition-all">
-                      <Send className="w-4 h-4" />
-                    </button>
+          {/* 댓글 입력 — 답글 모드일 때는 인라인 입력창으로 대체 */}
+          {(!token || !replyTo) && (
+            <div className="px-5 py-4 border-b border-border">
+              {token ? (
+                <div>
+                  {/* 도배 방지 에러 */}
+                  {commentError && (
+                    <p className="mb-2 text-xs text-red-400 bg-red-500/8 border border-red-500/15 rounded-xl px-3 py-2">
+                      {commentError}
+                    </p>
+                  )}
+                  {/* 이미지 미리보기 */}
+                  {commentImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {commentImages.map((url, i) => (
+                        <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => setCommentImages(prev => prev.filter((_, j) => j !== i))}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/70 rounded-full flex items-center justify-center text-white text-[10px]">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Avatar url={avatarUrl} name={displayName || 'U'} size={7} />
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        value={commentText}
+                        onChange={e => setCommentText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitComment() } }}
+                        placeholder={t('comment.placeholder')}
+                        maxLength={500}
+                        className="flex-1 bg-surface-2 border border-border rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-white/20 transition-colors"
+                      />
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      <button onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="flex items-center justify-center w-10 h-10 bg-surface-2 border border-border rounded-xl text-white/30 hover:text-white/60 hover:border-white/20 transition-all disabled:opacity-40">
+                        {uploadingImage ? <span className="text-[10px]">...</span> : <ImagePlus className="w-4 h-4" />}
+                      </button>
+                      <button onClick={handleSubmitComment}
+                        disabled={(!commentText.trim() && commentImages.length === 0) || submittingComment}
+                        className="bg-accent hover:bg-accent/90 disabled:opacity-40 text-white rounded-xl px-3 transition-all">
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <p className="text-xs text-white/30 text-center">
-                <Link href="/login" className="text-accent hover:underline">{t('auth.signin')}</Link>
-                {' '}{t('comment.login_required')}
-              </p>
-            )}
-          </div>
+              ) : (
+                <p className="text-xs text-white/30 text-center">
+                  <Link href="/login" className="text-accent hover:underline">{t('auth.signin')}</Link>
+                  {' '}{t('comment.login_required')}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* 댓글 목록 */}
           <div className="px-5 divide-y divide-border">
@@ -804,21 +852,49 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                   <CommentItem c={c} t={t}
                     onVote={handleCommentVote}
                     onDownvote={handleCommentDownvote}
-                    onReply={(pid, name) => setReplyTo({ id: pid, name })}
+                    onReply={(pid, name) => { setReplyTo({ id: pid, name }); setCommentText('') }}
                     onReport={(cid) => setReportTarget({ type: 'comment', id: cid })}
                     currentUserId={userId}
                     token={token}
                     onDelete={handleDeleteComment}
+                    activeReplyId={replyTo?.id ?? null}
+                    replyText={commentText}
+                    setReplyText={setCommentText}
+                    onSubmitReply={handleSubmitComment}
+                    onCancelReply={() => { setReplyTo(null); setCommentText('') }}
+                    submittingReply={submittingComment}
+                    replyError={commentError}
+                    myAvatarUrl={avatarUrl}
+                    myDisplayName={displayName}
+                    postId={id}
+                    userPoints={myPoints}
+                    botCommentCost={botCommentCost}
+                    aiCommentsEnabled={post?.ai_comments_enabled}
+                    onAiBotReply={bc => setComments(prev => [...prev, { post_id: id, user_id: '', ...bc } as Comment])}
                   />
                   {childComments(c.id).map(child => (
                     <CommentItem key={child.id} c={child} depth={1} t={t}
                       onVote={handleCommentVote}
                       onDownvote={handleCommentDownvote}
-                      onReply={(pid, name) => setReplyTo({ id: pid, name })}
+                      onReply={(pid, name) => { setReplyTo({ id: pid, name }); setCommentText('') }}
                       onReport={(cid) => setReportTarget({ type: 'comment', id: cid })}
                       currentUserId={userId}
                       token={token}
                       onDelete={handleDeleteComment}
+                      activeReplyId={replyTo?.id ?? null}
+                      replyText={commentText}
+                      setReplyText={setCommentText}
+                      onSubmitReply={handleSubmitComment}
+                      onCancelReply={() => { setReplyTo(null); setCommentText('') }}
+                      submittingReply={submittingComment}
+                      replyError={commentError}
+                      myAvatarUrl={avatarUrl}
+                      myDisplayName={displayName}
+                      postId={id}
+                      userPoints={myPoints}
+                      botCommentCost={botCommentCost}
+                      aiCommentsEnabled={post?.ai_comments_enabled}
+                      onAiBotReply={bc => setComments(prev => [...prev, { post_id: id, user_id: '', ...bc } as Comment])}
                     />
                   ))}
                 </div>
