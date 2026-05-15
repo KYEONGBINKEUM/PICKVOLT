@@ -20,13 +20,37 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const supabase = makeServiceClient()
-  const { data: comment } = await supabase.from('community_comments').select('user_id').eq('id', commentId).single()
+  const { data: comment } = await supabase
+    .from('community_comments')
+    .select('user_id, upvotes, downvotes')
+    .eq('id', commentId)
+    .single()
   if (!comment) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
   const isAdmin = ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
   if (comment.user_id !== user.id && !isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
+  // 답글 존재 여부 확인
+  const { count: replyCount } = await supabase
+    .from('community_comments')
+    .select('id', { count: 'exact', head: true })
+    .eq('parent_id', commentId)
+
+  const hasReplies = (replyCount ?? 0) > 0
+  const hasVotes   = (comment.upvotes ?? 0) > 0 || (comment.downvotes ?? 0) > 0
+
+  if (hasReplies || hasVotes) {
+    // 소프트 삭제: 내용만 지우고 형태 유지
+    const { error } = await supabase
+      .from('community_comments')
+      .update({ body: '__DELETED__' })
+      .eq('id', commentId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, soft: true })
+  }
+
+  // 하드 삭제
   const { error } = await supabase.from('community_comments').delete().eq('id', commentId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, soft: false })
 }

@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
   const userDisplayName = (profile as { nickname?: string | null } | null)?.nickname ?? user.email?.split('@')[0] ?? 'user'
   const { data: post, error } = await svc.from('community_posts').insert({
     user_id: user.id,
-    user_display_name: 'AI Bot',
+    user_display_name: 'Pickvolt AI',
     user_avatar_url: null,
     title,
     body,

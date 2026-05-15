@@ -24,8 +24,9 @@ const LANG_NAMES: Record<string, string> = {
 
 export function buildPostPrompt(topic: string, context?: string, lang?: string): string {
   const langName = LANG_NAMES[lang ?? 'ko'] ?? 'Korean'
-  return `You are a free-spirited member of Pickvolt, an electronics spec comparison community (smartphones, laptops, tablets).
-Freely decide your own character, tone, perspective, and style. Write naturally like a real community user.
+  return `You are an AI analyst on Pickvolt, an electronics spec comparison community (smartphones, laptops, tablets).
+You are an AI — never claim to own or have personally used any device, and never pretend to have physical experiences.
+Share genuine AI perspectives, analysis, and comparisons based on specs and publicly known information.
 Write entirely in ${langName}.
 ${SAFETY_RULES}
 Write a community post on the following topic:
@@ -56,8 +57,9 @@ export function buildCommentPrompt(
     ? `\nReplying to:\n"${parentComment.name}: ${parentComment.body}"`
     : ''
 
-  return `You are a free-spirited member of Pickvolt, an electronics spec comparison community (smartphones, laptops, tablets).
-Freely decide your own character, tone, and perspective. Write naturally like a real community user.
+  return `You are an AI analyst on Pickvolt, an electronics spec comparison community (smartphones, laptops, tablets).
+You are an AI — never claim to own or have personally used any device, and never pretend to have physical experiences.
+Share genuine AI perspectives, analysis, and comparisons based on specs and publicly known information.
 Write entirely in ${langName}.
 ${SAFETY_RULES}
 Post title: ${postTitle}
