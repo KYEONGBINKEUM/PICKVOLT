@@ -814,7 +814,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                 userPoints={myPoints}
                 botCommentCost={botCommentCost}
                 parentId={null}
-                onCommentAdded={c => setComments(prev => [...prev, { post_id: id, user_id: userId ?? '', ...c } as Comment])}
+                onCommentAdded={c => {
+                setComments(prev => [...prev, { post_id: id, user_id: userId ?? '', ...c } as Comment])
+                setPost(p => p ? { ...p, comment_count: p.comment_count + 1 } : p)
+              }}
               />
             )}
           </div>
@@ -905,7 +908,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                     userPoints={myPoints}
                     botCommentCost={botCommentCost}
                     aiCommentsEnabled={post?.ai_comments_enabled}
-                    onAiBotReply={bc => setComments(prev => [...prev, { post_id: id, user_id: userId ?? '', ...bc } as Comment])}
+                    onAiBotReply={bc => {
+                      setComments(prev => [...prev, { post_id: id, user_id: userId ?? '', ...bc } as Comment])
+                      setPost(p => p ? { ...p, comment_count: p.comment_count + 1 } : p)
+                    }}
                   />
                   {childComments(c.id).map(child => (
                     <CommentItem key={child.id} c={child} depth={1} t={t}
@@ -929,7 +935,10 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
                       userPoints={myPoints}
                       botCommentCost={botCommentCost}
                       aiCommentsEnabled={post?.ai_comments_enabled}
-                      onAiBotReply={bc => setComments(prev => [...prev, { post_id: id, user_id: userId ?? '', ...bc } as Comment])}
+                      onAiBotReply={bc => {
+                      setComments(prev => [...prev, { post_id: id, user_id: userId ?? '', ...bc } as Comment])
+                      setPost(p => p ? { ...p, comment_count: p.comment_count + 1 } : p)
+                    }}
                     />
                   ))}
                 </div>
