@@ -126,6 +126,20 @@ function CommentItem({ c, depth = 0, onVote, onDownvote, onReply, onReport, curr
   aiCommentsEnabled?: boolean
   onAiBotReply?: (c: BotComment) => void
 }) {
+  const isDeleted = c.body === '__DELETED__'
+
+  if (isDeleted) {
+    return (
+      <div className={depth > 0 ? 'ml-8 border-l border-border pl-4' : ''}>
+        <div className="py-3 flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-surface-2 flex-shrink-0" />
+          <span className="text-xs text-white/20 italic">{t('comment.deleted')}</span>
+          <span className="text-[10px] text-white/15">{timeAgo(c.created_at, t)}</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={depth > 0 ? 'ml-8 border-l border-border pl-4' : ''}>
       <div className="py-3">
@@ -370,11 +384,17 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
   const handleDeleteComment = async (commentId: string) => {
     if (!token || !confirm(t('comment.delete_confirm'))) return
-    await fetch(`/api/community/posts/${id}/comments/${commentId}`, {
+    const res = await fetch(`/api/community/posts/${id}/comments/${commentId}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
-    setComments(cs => cs.filter(c => c.id !== commentId))
-    setPost(p => p ? { ...p, comment_count: Math.max(0, p.comment_count - 1) } : p)
+    if (!res.ok) return
+    const d = await res.json()
+    if (d.soft) {
+      setComments(cs => cs.map(c => c.id === commentId ? { ...c, body: '__DELETED__' } : c))
+    } else {
+      setComments(cs => cs.filter(c => c.id !== commentId))
+      setPost(p => p ? { ...p, comment_count: Math.max(0, p.comment_count - 1) } : p)
+    }
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
