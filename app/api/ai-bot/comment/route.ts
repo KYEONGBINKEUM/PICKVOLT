@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
   const { data: comment, error } = await svc.from('community_comments').insert({
     post_id,
     user_id: user.id,
-    user_display_name: 'AI Bot',
+    user_display_name: 'Pickvolt AI',
     user_avatar_url: null,
     parent_id: parent_id ?? null,
     body: commentBody,
