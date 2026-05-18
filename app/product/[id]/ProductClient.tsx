@@ -50,7 +50,7 @@ interface Product {
   price_usd:  number | null
   image_url:  string | null
   amazon_url: string | null
-  ai_summary: string | null
+  ai_summary_i18n: Record<string, string> | null
   specs:      Specs
   variants?:  ProductVariant[]
 }
@@ -141,7 +141,7 @@ function SpecRow({ label, value }: { label: string; value: string | null }) {
 }
 
 export default function ProductClient({ product }: { product: Product }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { cart, add, remove } = useCompareCart()
   const inCart   = cart.some((i) => i.id === product.id)
   const cartFull = cart.length >= 4
@@ -568,6 +568,9 @@ ${priceHTML}
               </select>
             </div>
           )}
+          {(() => { const summary = product.ai_summary_i18n?.[locale] ?? product.ai_summary_i18n?.['en']; return summary ? (
+            <p className="text-sm text-white/60 leading-relaxed mb-4">{summary}</p>
+          ) : null })()}
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
             <SpecRow label={t('product.spec_cpu')}     value={effectiveSpecs.cpu} />
             {product.category === 'laptop' && (
@@ -587,14 +590,6 @@ ${priceHTML}
           {AD_HTML_INLINE && (
             <div className="mt-5" data-export-exclude="true">
               <AdBanner html={AD_HTML_INLINE} adWidth={728} adHeight={90} className="rounded-2xl overflow-hidden" />
-            </div>
-          )}
-          {product.ai_summary && (
-            <div className="mt-6 bg-surface border border-border rounded-2xl px-6 py-5">
-              <p className="text-[10px] font-semibold text-accent/70 uppercase tracking-widest mb-2">
-                {t('product.summary_title')}
-              </p>
-              <p className="text-sm text-white/70 leading-relaxed">{product.ai_summary}</p>
             </div>
           )}
           <ReviewSection productId={product.id} />

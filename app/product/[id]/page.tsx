@@ -17,7 +17,7 @@ async function getProduct(id: string) {
   const { data: product, error } = await supabase
     .from('products')
     .select(`
-      id, name, brand, category, price_usd, image_url, ai_summary,
+      id, name, brand, category, price_usd, image_url, ai_summary_i18n,
       specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version ),
       specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
       specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
@@ -90,7 +90,7 @@ async function getProduct(id: string) {
     price_usd:  product.price_usd,
     image_url:  product.image_url,
     amazon_url: common?.amazon_url ?? null,
-    ai_summary: (product as Record<string, unknown>).ai_summary as string | null ?? null,
+    ai_summary_i18n: (product as Record<string, unknown>).ai_summary_i18n as Record<string, string> | null ?? null,
     variants,
     specs: {
       cpu:             common?.cpu_name ?? null,
