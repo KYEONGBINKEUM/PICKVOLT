@@ -646,6 +646,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': 'Camera',
     'product.spec_os': 'OS',
     'product.spec_weight': 'Weight',
+    'product.summary_title': 'Editorial Summary',
     // Export
     'export.label': 'Export',
     'export.html': 'Copy HTML',
@@ -1345,6 +1346,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': 'Cámara',
     'product.spec_os': 'SO',
     'product.spec_weight': 'Peso',
+    'product.summary_title': 'Resumen editorial',
     // Avatar
     'avatar.title': 'Establece tu foto de perfil',
     'avatar.sub': 'Sube una foto o usa la inicial de tu apodo como avatar. Puedes cambiarlo en cualquier momento.',
@@ -2023,6 +2025,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': 'Câmera',
     'product.spec_os': 'SO',
     'product.spec_weight': 'Peso',
+    'product.summary_title': 'Resumo editorial',
     // Avatar
     'avatar.title': 'Defina sua foto de perfil',
     'avatar.sub': 'Envie uma foto ou use a inicial do seu apelido como avatar. Você pode alterar a qualquer momento.',
@@ -2701,6 +2704,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': 'Caméra',
     'product.spec_os': 'OS',
     'product.spec_weight': 'Poids',
+    'product.summary_title': 'Résumé éditorial',
     // Avatar
     'avatar.title': 'Définissez votre photo de profil',
     'avatar.sub': 'Téléchargez une photo ou utilisez l\'initiale de votre pseudo comme avatar. Vous pouvez le changer à tout moment.',
@@ -3379,6 +3383,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': 'Kamera',
     'product.spec_os': 'OS',
     'product.spec_weight': 'Gewicht',
+    'product.summary_title': 'Redaktionelle Zusammenfassung',
     // Avatar
     'avatar.title': 'Profilbild festlegen',
     'avatar.sub': 'Lade ein Foto hoch oder verwende den ersten Buchstaben deines Nicknamens als Avatar. Du kannst es jederzeit ändern.',
@@ -4057,6 +4062,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': 'カメラ',
     'product.spec_os': 'OS',
     'product.spec_weight': '重量',
+    'product.summary_title': '編集部コメント',
     // Avatar
     'avatar.title': 'プロフィール写真を設定',
     'avatar.sub': '写真をアップロードするか、ニックネームの頭文字をアバターとして使用できます。いつでも変更できます。',
@@ -4735,6 +4741,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'product.spec_camera': '카메라',
     'product.spec_os': 'OS',
     'product.spec_weight': '무게',
+    'product.summary_title': '에디터 코멘트',
     // Export
     'export.label': '내보내기',
     'export.html': 'HTML 코드 복사',

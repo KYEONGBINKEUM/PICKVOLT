@@ -95,6 +95,8 @@ export default function AdminPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [stats, setStats] = useState<any>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+  const [summaryRunning, setSummaryRunning] = useState(false)
+  const [summaryResult, setSummaryResult] = useState<{ processed: number; failed: number; total: number; message?: string } | null>(null)
 
   // Products
   const [products, setProducts] = useState<{
@@ -1075,6 +1077,51 @@ export default function AdminPage() {
                   <StatCard icon={<Package size={18} />} label="전체 제품" value={stats.totalProducts} />
                   <StatCard icon={<Users size={18} />} label="전체 유저" value={stats.totalUsers} />
                   <StatCard icon={<BarChart2 size={18} />} label="오늘 비교" value={stats.todayComparisons} sub={`총 ${stats.totalComparisons}회`} />
+                </div>
+
+                {/* AI 요약 생성 */}
+                <div className="bg-surface border border-border rounded-card px-5 py-4 mb-6">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">제품 AI 요약 생성</p>
+                      <p className="text-xs text-white/40 mt-0.5">요약이 없는 제품에 Gemini로 에디터 코멘트를 자동 생성합니다 (50개씩)</p>
+                    </div>
+                    <button
+                      disabled={summaryRunning}
+                      onClick={async () => {
+                        setSummaryRunning(true)
+                        setSummaryResult(null)
+                        try {
+                          const res = await fetch('/api/admin/generate-summary', {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ batch: true, limit: 50 }),
+                          })
+                          const d = await res.json()
+                          setSummaryResult(d)
+                        } catch {
+                          setSummaryResult({ processed: 0, failed: 0, total: 0, message: '오류가 발생했습니다.' })
+                        } finally {
+                          setSummaryRunning(false)
+                        }
+                      }}
+                      className="flex items-center gap-2 text-sm font-semibold bg-accent hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {summaryRunning ? (
+                        <><RefreshCw size={14} className="animate-spin" />생성 중...</>
+                      ) : (
+                        <>✦ 요약 생성 실행</>
+                      )}
+                    </button>
+                  </div>
+                  {summaryResult && (
+                    <div className="mt-3 text-xs rounded-lg px-3 py-2 bg-white/5 text-white/60">
+                      {summaryResult.message
+                        ? summaryResult.message
+                        : `완료 — 성공 ${summaryResult.processed}개 / 실패 ${summaryResult.failed}개 / 총 ${summaryResult.total}개 처리`
+                      }
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-surface border border-border rounded-card overflow-hidden">

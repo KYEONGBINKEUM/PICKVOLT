@@ -143,7 +143,7 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
 
   // 새 리뷰 작성
   const [content, setContent] = useState('')
-  const [rating, setRating] = useState(7)
+  const [rating, setRating] = useState(10)
   const [submitting, setSubmitting] = useState(false)
   const [errMsg, setErrMsg] = useState('')
 
@@ -212,7 +212,7 @@ export default function ReviewSection({ productId, compact = false, readOnly = f
     const savedRating = rating
     setReviews((prev) => [tempReview, ...prev])
     setContent('')
-    setRating(7)
+    setRating(10)
 
     try {
       const res = await fetch('/api/reviews', {

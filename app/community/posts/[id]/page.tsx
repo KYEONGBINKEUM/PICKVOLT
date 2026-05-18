@@ -388,13 +388,19 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) return
-    const d = await res.json()
-    if (d.soft) {
-      setComments(cs => cs.map(c => c.id === commentId ? { ...c, body: '__DELETED__' } : c))
-    } else {
-      setComments(cs => cs.filter(c => c.id !== commentId))
-      setPost(p => p ? { ...p, comment_count: Math.max(0, p.comment_count - 1) } : p)
-    }
+    // 삭제된 댓글 + 모든 하위 답글 id 수집
+    setComments(cs => {
+      const toRemove = new Set<string>()
+      const queue = [commentId]
+      while (queue.length > 0) {
+        const pid = queue.shift()!
+        toRemove.add(pid)
+        cs.filter(c => c.parent_id === pid).forEach(c => queue.push(c.id))
+      }
+      const removed = toRemove.size
+      setPost(p => p ? { ...p, comment_count: Math.max(0, p.comment_count - removed) } : p)
+      return cs.filter(c => !toRemove.has(c.id))
+    })
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
