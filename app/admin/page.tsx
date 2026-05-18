@@ -1095,9 +1095,10 @@ export default function AdminPage() {
                         let totalFailed = 0
                         try {
                           while (true) {
+                            const freshToken = (await supabase.auth.getSession()).data.session?.access_token ?? ''
                             const res = await fetch('/api/admin/generate-summary', {
                               method: 'POST',
-                              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                              headers: { Authorization: `Bearer ${freshToken}`, 'Content-Type': 'application/json' },
                               body: JSON.stringify({ batch: true }),
                             })
                             if (!res.ok) {
