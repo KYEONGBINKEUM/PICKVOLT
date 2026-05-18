@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     if (kind === 'amazon') {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-3.1-flash-lite-preview',
         contents: AMAZON_PROMPT(name),
         config: { tools: [{ googleSearch: {} }] },
       })
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     const prompt = kind === 'cpu' ? CPU_PROMPT(name) : GPU_PROMPT(name)
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: prompt,
       config: { tools: [{ googleSearch: {} }] },
     })
