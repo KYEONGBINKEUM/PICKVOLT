@@ -88,46 +88,57 @@ Write the summary now:`
 // body: { product_id: string } — 단일 제품
 // body: { batch: true }        — ai_summary 없는 전체 제품 순차 생성
 export async function POST(req: NextRequest) {
-  const user = await getUser(req)
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  if (!ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  }
-
-  const body = await req.json()
-  const supabase = makeServiceClient()
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-
-  // 단일 제품
-  if (body.product_id) {
-    const result = await generateSummaryForProduct(supabase, ai, body.product_id)
-    return NextResponse.json(result)
-  }
-
-  // 배치: ai_summary가 없는 제품 최대 50개씩 처리
-  if (body.batch) {
-    const { data: products } = await supabase
-      .from('products')
-      .select('id')
-      .is('ai_summary', null)
-      .limit(body.limit ?? 50)
-
-    if (!products || products.length === 0) {
-      return NextResponse.json({ ok: true, processed: 0, message: 'All products already have summaries' })
+  try {
+    const user = await getUser(req)
+    if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    if (!ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
-    let processed = 0
-    let failed = 0
-    for (const p of products) {
-      const result = await generateSummaryForProduct(supabase, ai, p.id)
-      if (result.ok) processed++
-      else failed++
-      // Rate limit 방지
-      await new Promise(r => setTimeout(r, 300))
+    const body = await req.json()
+    const supabase = makeServiceClient()
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+
+    // 단일 제품
+    if (body.product_id) {
+      const result = await generateSummaryForProduct(supabase, ai, body.product_id)
+      return NextResponse.json(result)
     }
 
-    return NextResponse.json({ ok: true, processed, failed, total: products.length })
-  }
+    // 배치: ai_summary가 없는 제품을 한 번에 5개씩 처리 (Vercel 타임아웃 대응)
+    if (body.batch) {
+      const { data: products, error: fetchError } = await supabase
+        .from('products')
+        .select('id')
+        .is('ai_summary', null)
+        .limit(5)
 
-  return NextResponse.json({ error: 'product_id or batch required' }, { status: 400 })
+      if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 })
+      if (!products || products.length === 0) {
+        return NextResponse.json({ ok: true, processed: 0, done: true, message: '모든 제품의 요약이 완료됐습니다.' })
+      }
+
+      let processed = 0
+      let failed = 0
+      for (const p of products) {
+        const result = await generateSummaryForProduct(supabase, ai, p.id)
+        if (result.ok) processed++
+        else failed++
+        await new Promise(r => setTimeout(r, 200))
+      }
+
+      // 남은 제품 수 확인
+      const { count: remaining } = await supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .is('ai_summary', null)
+
+      return NextResponse.json({ ok: true, processed, failed, total: products.length, remaining: remaining ?? 0 })
+    }
+
+    return NextResponse.json({ error: 'product_id or batch required' }, { status: 400 })
+  } catch (e) {
+    console.error('[generate-summary]', e)
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }

@@ -96,7 +96,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<any>(null)
   const [statsLoading, setStatsLoading] = useState(false)
   const [summaryRunning, setSummaryRunning] = useState(false)
-  const [summaryResult, setSummaryResult] = useState<{ processed: number; failed: number; total: number; message?: string } | null>(null)
+  const [summaryResult, setSummaryResult] = useState<{ processed: number; failed: number; total: number; remaining?: number; message?: string } | null>(null)
 
   // Products
   const [products, setProducts] = useState<{
@@ -1084,23 +1084,35 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
                       <p className="text-sm font-semibold text-white">제품 AI 요약 생성</p>
-                      <p className="text-xs text-white/40 mt-0.5">요약이 없는 제품에 Gemini로 에디터 코멘트를 자동 생성합니다 (50개씩)</p>
+                      <p className="text-xs text-white/40 mt-0.5">요약이 없는 제품에 Gemini로 에디터 코멘트를 자동 생성합니다 (5개씩 자동 반복)</p>
                     </div>
                     <button
                       disabled={summaryRunning}
                       onClick={async () => {
                         setSummaryRunning(true)
                         setSummaryResult(null)
+                        let totalProcessed = 0
+                        let totalFailed = 0
                         try {
-                          const res = await fetch('/api/admin/generate-summary', {
-                            method: 'POST',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ batch: true, limit: 50 }),
-                          })
-                          const d = await res.json()
-                          setSummaryResult(d)
-                        } catch {
-                          setSummaryResult({ processed: 0, failed: 0, total: 0, message: '오류가 발생했습니다.' })
+                          while (true) {
+                            const res = await fetch('/api/admin/generate-summary', {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ batch: true }),
+                            })
+                            if (!res.ok) {
+                              const err = await res.json().catch(() => ({}))
+                              setSummaryResult({ processed: totalProcessed, failed: totalFailed, total: totalProcessed + totalFailed, message: `오류: ${err.error ?? res.status}` })
+                              break
+                            }
+                            const d = await res.json()
+                            totalProcessed += d.processed ?? 0
+                            totalFailed += d.failed ?? 0
+                            setSummaryResult({ processed: totalProcessed, failed: totalFailed, total: totalProcessed + totalFailed, remaining: d.remaining })
+                            if (d.done || d.remaining === 0) break
+                          }
+                        } catch (e) {
+                          setSummaryResult({ processed: totalProcessed, failed: totalFailed, total: totalProcessed + totalFailed, message: `오류: ${String(e)}` })
                         } finally {
                           setSummaryRunning(false)
                         }
@@ -1118,7 +1130,9 @@ export default function AdminPage() {
                     <div className="mt-3 text-xs rounded-lg px-3 py-2 bg-white/5 text-white/60">
                       {summaryResult.message
                         ? summaryResult.message
-                        : `완료 — 성공 ${summaryResult.processed}개 / 실패 ${summaryResult.failed}개 / 총 ${summaryResult.total}개 처리`
+                        : summaryRunning
+                          ? `진행 중 — 성공 ${summaryResult.processed}개 / 실패 ${summaryResult.failed}개 (남은 제품 ${summaryResult.remaining ?? '?'}개)`
+                          : `완료 — 성공 ${summaryResult.processed}개 / 실패 ${summaryResult.failed}개`
                       }
                     </div>
                   )}
