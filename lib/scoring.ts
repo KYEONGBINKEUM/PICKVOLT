@@ -372,18 +372,17 @@ export function computeRelativeScores(
       ? relHigh(input.camera_main_mp, stats.cameraMP)
       : 0
 
-    // CPU 68% · RAM 12% · Battery 10% · Camera 8% · Refresh 2%
+    // CPU 55% · Camera 20% · Battery 13% · RAM 12%
     const overall = Math.round(
-      perf * 0.68 + ram * 0.12 + bat * 0.10 + cam * 0.08 + refresh * 0.02
+      perf * 0.55 + cam * 0.20 + bat * 0.13 + ram * 0.12
     )
     return {
       overall,
       details: [
-        { label: 'Performance',  score: perf,    weight: 68 },
-        { label: 'RAM',          score: ram,     weight: 12 },
-        { label: 'Battery',      score: bat,     weight: 10 },
-        { label: 'Camera',       score: cam,     weight:  8 },
-        { label: 'Refresh Rate', score: refresh, weight:  2 },
+        { label: 'Performance', score: perf, weight: 55 },
+        { label: 'Camera',      score: cam,  weight: 20 },
+        { label: 'Battery',     score: bat,  weight: 13 },
+        { label: 'RAM',         score: ram,  weight: 12 },
       ],
     }
   }
@@ -544,18 +543,18 @@ export function computeScores(input: ScoringInput, maxes?: CpuBenchmarkMaxes): S
     const cam = scoreCamera(input.camera_main_mp ?? null)
     const bat = scoreBatteryMah(input.battery_mah ?? null)
 
-    // CPU 68% · RAM 12% · Battery 10% · Camera 10%
+    // CPU 55% · Camera 20% · RAM 12% · Battery 13%
     const overall = Math.round(
-      cpu * 0.68 + ram * 0.12 + bat * 0.10 + cam * 0.10
+      cpu * 0.55 + cam * 0.20 + ram * 0.12 + bat * 0.13
     )
     return {
       overall,
       performance: cpu,
       details: [
-        { label: 'Performance', score: cpu, weight: 68 },
+        { label: 'Performance', score: cpu, weight: 55 },
+        { label: 'Camera',      score: cam, weight: 20 },
+        { label: 'Battery',     score: bat, weight: 13 },
         { label: 'RAM',         score: ram, weight: 12 },
-        { label: 'Battery',     score: bat, weight: 10 },
-        { label: 'Camera',      score: cam, weight: 10 },
       ],
     }
   }
@@ -563,17 +562,17 @@ export function computeScores(input: ScoringInput, maxes?: CpuBenchmarkMaxes): S
   if (category === 'laptop') {
     const bat = scoreBatteryWh(input.battery_wh ?? null)
 
-    // CPU 68% · RAM 20% · Battery 12%
+    // CPU 65% · RAM 20% · Battery 15%
     const overall = Math.round(
-      cpu * 0.68 + ram * 0.20 + bat * 0.12
+      cpu * 0.65 + ram * 0.20 + bat * 0.15
     )
     return {
       overall,
       performance: cpu,
       details: [
-        { label: 'Performance', score: cpu, weight: 68 },
+        { label: 'Performance', score: cpu, weight: 65 },
         { label: 'RAM',         score: ram, weight: 20 },
-        { label: 'Battery',     score: bat, weight: 12 },
+        { label: 'Battery',     score: bat, weight: 15 },
       ],
     }
   }
@@ -581,17 +580,17 @@ export function computeScores(input: ScoringInput, maxes?: CpuBenchmarkMaxes): S
   if (category === 'tablet') {
     const bat = scoreBatteryMah(input.battery_mah ?? null)
 
-    // CPU 78% · RAM 12% · Battery 10%
+    // CPU 65% · RAM 20% · Battery 15%
     const overall = Math.round(
-      cpu * 0.78 + ram * 0.12 + bat * 0.10
+      cpu * 0.65 + ram * 0.20 + bat * 0.15
     )
     return {
       overall,
       performance: cpu,
       details: [
-        { label: 'Performance', score: cpu, weight: 78 },
-        { label: 'RAM',         score: ram, weight: 12 },
-        { label: 'Battery',     score: bat, weight: 10 },
+        { label: 'Performance', score: cpu, weight: 65 },
+        { label: 'RAM',         score: ram, weight: 20 },
+        { label: 'Battery',     score: bat, weight: 15 },
       ],
     }
   }
