@@ -541,64 +541,57 @@ export function computeScores(input: ScoringInput, maxes?: CpuBenchmarkMaxes): S
   const disp = scorePPI(ppi)
 
   if (category === 'smartphone') {
-    const cam     = scoreCamera(input.camera_main_mp ?? null)
-    const bat     = scoreBatteryMah(input.battery_mah ?? null)
-    const weight  = scoreWeightPhone(input.weight_g ?? null)
+    const cam = scoreCamera(input.camera_main_mp ?? null)
+    const bat = scoreBatteryMah(input.battery_mah ?? null)
 
+    // CPU 68% · RAM 12% · Battery 10% · Camera 10%
     const overall = Math.round(
-      cpu * 0.35 + ram * 0.15 + cam * 0.20 + bat * 0.15 + disp * 0.10 + weight * 0.05
+      cpu * 0.68 + ram * 0.12 + bat * 0.10 + cam * 0.10
     )
     return {
       overall,
       performance: cpu,
       details: [
-        { label: 'Performance', score: cpu,    weight: 35 },
-        { label: 'Camera',      score: cam,    weight: 20 },
-        { label: 'RAM',         score: ram,    weight: 15 },
-        { label: 'Battery',     score: bat,    weight: 15 },
-        { label: 'Display',     score: disp,   weight: 10 },
-        { label: 'Weight',      score: weight, weight:  5 },
+        { label: 'Performance', score: cpu, weight: 68 },
+        { label: 'RAM',         score: ram, weight: 12 },
+        { label: 'Battery',     score: bat, weight: 10 },
+        { label: 'Camera',      score: cam, weight: 10 },
       ],
     }
   }
 
   if (category === 'laptop') {
-    const bat    = scoreBatteryWh(input.battery_wh ?? null)
-    const weight = scoreWeightLaptop(input.weight_kg ?? null)
+    const bat = scoreBatteryWh(input.battery_wh ?? null)
 
+    // CPU 68% · RAM 20% · Battery 12%
     const overall = Math.round(
-      cpu * 0.40 + ram * 0.20 + bat * 0.15 + stor * 0.10 + disp * 0.10 + weight * 0.05
+      cpu * 0.68 + ram * 0.20 + bat * 0.12
     )
     return {
       overall,
       performance: cpu,
       details: [
-        { label: 'Performance', score: cpu,    weight: 40 },
-        { label: 'RAM',         score: ram,    weight: 20 },
-        { label: 'Battery',     score: bat,    weight: 15 },
-        { label: 'Storage',     score: stor,   weight: 10 },
-        { label: 'Display',     score: disp,   weight: 10 },
-        { label: 'Weight',      score: weight, weight:  5 },
+        { label: 'Performance', score: cpu, weight: 68 },
+        { label: 'RAM',         score: ram, weight: 20 },
+        { label: 'Battery',     score: bat, weight: 12 },
       ],
     }
   }
 
   if (category === 'tablet') {
     const bat = scoreBatteryMah(input.battery_mah ?? null)
-    const cam = scoreCamera(input.camera_main_mp ?? null)
 
+    // CPU 78% · RAM 12% · Battery 10%
     const overall = Math.round(
-      cpu * 0.35 + ram * 0.20 + bat * 0.20 + disp * 0.15 + cam * 0.10
+      cpu * 0.78 + ram * 0.12 + bat * 0.10
     )
     return {
       overall,
       performance: cpu,
       details: [
-        { label: 'Performance', score: cpu,  weight: 35 },
-        { label: 'RAM',         score: ram,  weight: 20 },
-        { label: 'Battery',     score: bat,  weight: 20 },
-        { label: 'Display',     score: disp, weight: 15 },
-        { label: 'Camera',      score: cam,  weight: 10 },
+        { label: 'Performance', score: cpu, weight: 78 },
+        { label: 'RAM',         score: ram, weight: 12 },
+        { label: 'Battery',     score: bat, weight: 10 },
       ],
     }
   }
