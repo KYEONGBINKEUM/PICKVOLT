@@ -368,19 +368,22 @@ export function computeRelativeScores(
 
   if (category === 'smartphone') {
     const bat = relHigh(input.battery_mah ?? null, stats.batteryMah)
+    const cam = stats.cameraMP?.max > 0 && input.camera_main_mp != null
+      ? relHigh(input.camera_main_mp, stats.cameraMP)
+      : 0
 
-    // Performance 50% · RAM 20% · Battery 15% · Display 10% · Refresh 5%
+    // CPU 68% · RAM 12% · Battery 10% · Camera 8% · Refresh 2%
     const overall = Math.round(
-      perf * 0.50 + ram * 0.20 + bat * 0.15 + disp * 0.10 + refresh * 0.05
+      perf * 0.68 + ram * 0.12 + bat * 0.10 + cam * 0.08 + refresh * 0.02
     )
     return {
       overall,
       details: [
-        { label: 'Performance',  score: perf,    weight: 50 },
-        { label: 'RAM',          score: ram,     weight: 20 },
-        { label: 'Battery',      score: bat,     weight: 15 },
-        { label: 'Display',      score: disp,    weight: 10 },
-        { label: 'Refresh Rate', score: refresh, weight:  5 },
+        { label: 'Performance',  score: perf,    weight: 68 },
+        { label: 'RAM',          score: ram,     weight: 12 },
+        { label: 'Battery',      score: bat,     weight: 10 },
+        { label: 'Camera',       score: cam,     weight:  8 },
+        { label: 'Refresh Rate', score: refresh, weight:  2 },
       ],
     }
   }
@@ -397,34 +400,32 @@ export function computeRelativeScores(
       : null
 
     if (gpuScore != null) {
-      // GPU 데이터 있을 때: CPU Perf 25% · Graphics 25% · RAM 20% · Battery 15% · Display 10% · Refresh 5%
+      // GPU 있을 때: CPU 38% · GPU 30% · RAM 20% · Battery 10% · Refresh 2%
       const overall = Math.round(
-        perf * 0.25 + gpuScore * 0.25 + ram * 0.20 + bat * 0.15 + disp * 0.10 + refresh * 0.05
+        perf * 0.38 + gpuScore * 0.30 + ram * 0.20 + bat * 0.10 + refresh * 0.02
       )
       return {
         overall,
         details: [
-          { label: 'Performance',  score: perf,     weight: 25 },
-          { label: 'Graphics',     score: gpuScore, weight: 25 },
+          { label: 'Performance',  score: perf,     weight: 38 },
+          { label: 'Graphics',     score: gpuScore, weight: 30 },
           { label: 'RAM',          score: ram,      weight: 20 },
-          { label: 'Battery',      score: bat,      weight: 15 },
-          { label: 'Display',      score: disp,     weight: 10 },
-          { label: 'Refresh Rate', score: refresh,  weight:  5 },
+          { label: 'Battery',      score: bat,      weight: 10 },
+          { label: 'Refresh Rate', score: refresh,  weight:  2 },
         ],
       }
     }
 
-    // GPU 없을 때: Performance 50% · RAM 25% · Battery 15% · Display 7% · Refresh 3%
+    // GPU 없을 때: CPU 68% · RAM 20% · Battery 9% · Refresh 3%
     const overall = Math.round(
-      perf * 0.50 + ram * 0.25 + bat * 0.15 + disp * 0.07 + refresh * 0.03
+      perf * 0.68 + ram * 0.20 + bat * 0.09 + refresh * 0.03
     )
     return {
       overall,
       details: [
-        { label: 'Performance',  score: perf,    weight: 50 },
-        { label: 'RAM',          score: ram,     weight: 25 },
-        { label: 'Battery',      score: bat,     weight: 15 },
-        { label: 'Display',      score: disp,    weight:  7 },
+        { label: 'Performance',  score: perf,    weight: 68 },
+        { label: 'RAM',          score: ram,     weight: 20 },
+        { label: 'Battery',      score: bat,     weight:  9 },
         { label: 'Refresh Rate', score: refresh, weight:  3 },
       ],
     }
@@ -433,18 +434,17 @@ export function computeRelativeScores(
   if (category === 'tablet') {
     const bat = relHigh(input.battery_mah ?? null, stats.batteryMah)
 
-    // Performance 50% · RAM 20% · Battery 15% · Display 10% · Refresh 5%
+    // CPU 78% · RAM 12% · Battery 8% · Refresh 2%
     const overall = Math.round(
-      perf * 0.50 + ram * 0.20 + bat * 0.15 + disp * 0.10 + refresh * 0.05
+      perf * 0.78 + ram * 0.12 + bat * 0.08 + refresh * 0.02
     )
     return {
       overall,
       details: [
-        { label: 'Performance',  score: perf,    weight: 50 },
-        { label: 'RAM',          score: ram,     weight: 20 },
-        { label: 'Battery',      score: bat,     weight: 15 },
-        { label: 'Display',      score: disp,    weight: 10 },
-        { label: 'Refresh Rate', score: refresh, weight:  5 },
+        { label: 'Performance',  score: perf,    weight: 78 },
+        { label: 'RAM',          score: ram,     weight: 12 },
+        { label: 'Battery',      score: bat,     weight:  8 },
+        { label: 'Refresh Rate', score: refresh, weight:  2 },
       ],
     }
   }
