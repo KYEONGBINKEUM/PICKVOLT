@@ -1,9 +1,12 @@
+import type { Metadata } from 'next'
 import Navbar from '@/components/Navbar'
 import ProductClient from './ProductClient'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 export const revalidate = 3600  // 1시간 ISR
+
+const BASE_URL = 'https://www.pickvolt.com'
 
 function makeSupabase() {
   return createClient(
@@ -121,6 +124,48 @@ async function getProduct(id: string) {
   }
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const product = await getProduct(id)
+  if (!product) return {}
+
+  const title = `${product.name} — Pickvolt`
+  const description = [
+    product.specs.cpu     ? `CPU: ${product.specs.cpu}`         : null,
+    product.specs.ram     ? `RAM: ${product.specs.ram}`         : null,
+    product.specs.display ? `Display: ${product.specs.display}` : null,
+  ].filter(Boolean).join(' · ') || `${product.brand} ${product.name} specs & comparison.`
+
+  const ogParams = new URLSearchParams({ type: 'product', name: product.name })
+  if (product.brand)    ogParams.set('brand',    product.brand)
+  if (product.category) ogParams.set('category', product.category)
+  if (product.price_usd) ogParams.set('price',   String(product.price_usd))
+  const ogImageUrl = `${BASE_URL}/api/og?${ogParams.toString()}`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url:      `${BASE_URL}/product/${product.id}`,
+      siteName: 'Pickvolt',
+      images:   [{ url: ogImageUrl, width: 1200, height: 630, alt: product.name }],
+      type:     'website',
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title,
+      description,
+      images:      [ogImageUrl],
+    },
+  }
+}
+
 export default async function ProductPage({
   params,
 }: {
@@ -130,7 +175,6 @@ export default async function ProductPage({
   const product = await getProduct(id)
   if (!product) notFound()
 
-  const BASE_URL = 'https://www.pickvolt.com'
   const productUrl = `${BASE_URL}/product/${product.id}`
 
   const productSchema = {

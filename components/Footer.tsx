@@ -22,6 +22,7 @@ export default function Footer() {
           <Link href="/privacy" className="hover:text-white transition-colors">{t('footer.privacy')}</Link>
           <Link href="/terms"   className="hover:text-white transition-colors">{t('footer.terms')}</Link>
           <Link href="/cookies" className="hover:text-white transition-colors">{t('footer.cookies')}</Link>
+          <Link href="/faq"     className="hover:text-white transition-colors">{t('footer.faq')}</Link>
         </div>
 
         {/* Copyright */}
