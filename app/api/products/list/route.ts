@@ -209,12 +209,21 @@ export async function GET(req: NextRequest) {
         })
       : products
 
+    // 실제 표시 가격 = variant 최저가 우선, 없으면 product.price_usd
+    const effectivePrice = (p: typeof filtered[number]): number => {
+      const variantPrices = p.variants
+        .map((v: { price_usd: number | null }) => v.price_usd)
+        .filter((v: number | null): v is number => v != null && v > 0)
+      if (variantPrices.length > 0) return Math.min(...variantPrices)
+      return p.price_usd ?? 999999
+    }
+
     filtered.sort((a, b) => {
       switch (sort) {
-        case 'price_asc':  return (a.price_usd ?? 999999) - (b.price_usd ?? 999999)
-        case 'price_desc': return (b.price_usd ?? 0)      - (a.price_usd ?? 0)
-        case 'newest':     return (b.launch_year ?? 0)    - (a.launch_year ?? 0)
-        default:           return b.performance_score      - a.performance_score
+        case 'price_asc':  return effectivePrice(a) - effectivePrice(b)
+        case 'price_desc': return effectivePrice(b) - effectivePrice(a)
+        case 'newest':     return (b.launch_year ?? 0) - (a.launch_year ?? 0)
+        default:           return b.performance_score  - a.performance_score
       }
     })
 
