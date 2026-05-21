@@ -19,7 +19,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -231,6 +231,13 @@ export default function AdminPage() {
   const [communityPostsLoading, setCommunityPostsLoading] = useState(false)
   const [communitySettingsSaving, setCommunitySettingsSaving] = useState(false)
   const [communitySettingsSaved, setCommunitySettingsSaved] = useState(false)
+
+  // Newsletter
+  const [nlSubscribers, setNlSubscribers] = useState<{ id: string; email: string; active: boolean; created_at: string }[]>([])
+  const [nlLoading, setNlLoading] = useState(false)
+  const [nlSending, setNlSending] = useState(false)
+  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number } | null>(null)
+  const [nlSendError, setNlSendError] = useState('')
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
 
   // Errors
@@ -827,6 +834,47 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
+  const fetchNewsletter = useCallback(async (tok: string) => {
+    setNlLoading(true)
+    const { data } = await (await import('@supabase/supabase-js')).createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${tok}` } } }
+    ).from('newsletter_subscribers').select('id, email, active, created_at').order('created_at', { ascending: false })
+    setNlSubscribers(data ?? [])
+    setNlLoading(false)
+  }, [])
+
+  const sendNewsletter = useCallback(async () => {
+    if (!token) return
+    setNlSending(true)
+    setNlSendResult(null)
+    setNlSendError('')
+    try {
+      const res = await fetch('/api/admin/newsletter/send', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const d = await res.json()
+      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products })
+      else setNlSendError(d.error ?? d.reason ?? 'failed')
+    } catch (e) { setNlSendError(String(e)) }
+    setNlSending(false)
+  }, [token])
+
+  const toggleSubscriber = useCallback(async (id: string, active: boolean) => {
+    const { createClient } = await import('@supabase/supabase-js')
+    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { global: { headers: { Authorization: `Bearer ${token}` } } })
+    await sb.from('newsletter_subscribers').update({ active }).eq('id', id)
+    setNlSubscribers(prev => prev.map(s => s.id === id ? { ...s, active } : s))
+  }, [token])
+
+  useEffect(() => {
+    if (!authed || !token) return
+    if (tab === 'newsletter') fetchNewsletter(token)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, token, tab])
+
   const fetchCommunityOverview = useCallback(async (tok: string) => {
     setCommunityLoading(true)
     const res = await fetch('/api/admin/community', { headers: { Authorization: `Bearer ${tok}` } })
@@ -988,6 +1036,12 @@ export default function AdminPage() {
         { key: 'inquiries',     label: '문의 관리', icon: <Mail size={14} /> },
         { key: 'edit_requests', label: '수정 요청', icon: <Pencil size={14} /> },
         { key: 'add_requests',  label: '등록 요청', icon: <PlusCircle size={14} /> },
+      ],
+    },
+    {
+      label: '마케팅',
+      items: [
+        { key: 'newsletter', label: '뉴스레터', icon: <Mail size={14} /> },
       ],
     },
   ]
@@ -3082,6 +3136,89 @@ export default function AdminPage() {
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 뉴스레터 ── */}
+        {tab === 'newsletter' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">뉴스레터 구독자</h2>
+                <p className="text-xs text-white/30 mt-0.5">
+                  총 {nlSubscribers.length}명 · 활성 {nlSubscribers.filter(s => s.active).length}명
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <a href="/api/newsletter/preview" target="_blank"
+                  className="text-xs px-4 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors">
+                  이메일 미리보기
+                </a>
+                <button
+                  onClick={sendNewsletter}
+                  disabled={nlSending}
+                  className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors disabled:opacity-50"
+                >
+                  <Mail size={13} />
+                  {nlSending ? '발송 중...' : '지금 발송'}
+                </button>
+              </div>
+            </div>
+
+            {nlSendResult && (
+              <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
+                ✓ {nlSendResult.sent}명에게 발송 완료 · 제품 {nlSendResult.products}개 포함
+              </div>
+            )}
+            {nlSendError && (
+              <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                {nlSendError}
+              </div>
+            )}
+
+            {nlLoading ? (
+              <div className="text-white/30 text-sm py-8 text-center">로딩 중...</div>
+            ) : nlSubscribers.length === 0 ? (
+              <div className="text-white/20 text-sm py-8 text-center">구독자가 없습니다.</div>
+            ) : (
+              <div className="bg-surface border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">이메일</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">구독일</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">상태</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nlSubscribers.map((s) => (
+                      <tr key={s.id} className="border-b border-border/50 hover:bg-white/[0.02]">
+                        <td className="px-4 py-3 text-white/80 font-mono text-xs">{s.email}</td>
+                        <td className="px-4 py-3 text-white/30 text-xs">
+                          {new Date(s.created_at).toLocaleDateString('ko-KR')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            s.active ? 'bg-green-500/15 text-green-400' : 'bg-white/5 text-white/25'
+                          }`}>
+                            {s.active ? '활성' : '취소됨'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => toggleSubscriber(s.id, !s.active)}
+                            className="text-xs text-white/25 hover:text-white/60 transition-colors"
+                          >
+                            {s.active ? '비활성화' : '재활성화'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
