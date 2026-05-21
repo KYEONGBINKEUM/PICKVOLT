@@ -84,11 +84,6 @@ export default function TrendingSection({ items }: { items: TrendingCard[] }) {
                   <span className="flex-shrink-0 text-xs font-black text-white/20 px-1">vs</span>
                   <ProductThumb product={item.productB} />
                 </div>
-                {item.verdict && (
-                  <p className="mt-2.5 text-[11px] text-white/40 leading-snug line-clamp-2 border-t border-border pt-2.5">
-                    {item.verdict}
-                  </p>
-                )}
               </Link>
             </div>
           ))}
