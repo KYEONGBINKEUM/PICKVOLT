@@ -30,14 +30,14 @@ export async function GET(req: NextRequest) {
   // Resend API로 도메인 목록 조회
   try {
     const resend = new Resend(resendKey)
-    const { data: domains, error } = await resend.domains.list()
+    const { data: domainsRes, error } = await resend.domains.list()
     if (error) {
       result.domains = `❌ 도메인 조회 실패: ${error.message}`
     } else {
-      result.domains = (domains ?? []).map((d: { name: string; status: string }) => ({
-        name: d.name,
-        status: d.status,
-      }))
+      // ListDomainsResponseSuccess wraps the array in a .data property
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const list: { name: string; status: string }[] = (domainsRes as any)?.data ?? domainsRes ?? []
+      result.domains = list.map((d) => ({ name: d.name, status: d.status }))
     }
   } catch (e) {
     result.domains = `❌ 오류: ${String(e)}`
