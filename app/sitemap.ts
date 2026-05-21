@@ -13,19 +13,20 @@ function makeSupabase() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date()
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/`,                        priority: 1.0, changeFrequency: 'daily'   },
-    { url: `${BASE_URL}/compare`,                 priority: 0.9, changeFrequency: 'daily'   },
-    { url: `${BASE_URL}/categories/smartphone`,   priority: 0.8, changeFrequency: 'weekly'  },
-    { url: `${BASE_URL}/categories/laptop`,       priority: 0.8, changeFrequency: 'weekly'  },
-    { url: `${BASE_URL}/categories/tablet`,       priority: 0.8, changeFrequency: 'weekly'  },
-    { url: `${BASE_URL}/faq`,                     priority: 0.7, changeFrequency: 'monthly' },
-    { url: `${BASE_URL}/about`,                   priority: 0.6, changeFrequency: 'monthly' },
-    { url: `${BASE_URL}/contact`,                 priority: 0.6, changeFrequency: 'monthly' },
-    { url: `${BASE_URL}/privacy`,                 priority: 0.4, changeFrequency: 'yearly'  },
-    { url: `${BASE_URL}/terms`,                   priority: 0.4, changeFrequency: 'yearly'  },
-    { url: `${BASE_URL}/cookies`,                 priority: 0.4, changeFrequency: 'yearly'  },
-  ].map((r) => ({ ...r, lastModified: new Date() }))
+    { url: `${BASE_URL}/`,                      priority: 1.0, changeFrequency: 'daily'   as const, lastModified: now },
+    { url: `${BASE_URL}/compare`,               priority: 0.9, changeFrequency: 'daily'   as const, lastModified: now },
+    { url: `${BASE_URL}/categories/smartphone`, priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
+    { url: `${BASE_URL}/categories/laptop`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
+    { url: `${BASE_URL}/categories/tablet`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
+    { url: `${BASE_URL}/faq`,                   priority: 0.7, changeFrequency: 'monthly' as const, lastModified: now },
+    { url: `${BASE_URL}/about`,                 priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
+    { url: `${BASE_URL}/contact`,               priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
+    { url: `${BASE_URL}/privacy`,               priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
+    { url: `${BASE_URL}/terms`,                 priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
+    { url: `${BASE_URL}/cookies`,               priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
+  ]
 
   try {
     const supabase = makeSupabase()
