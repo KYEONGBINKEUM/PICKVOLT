@@ -836,12 +836,13 @@ export default function AdminPage() {
 
   const fetchNewsletter = useCallback(async (tok: string) => {
     setNlLoading(true)
-    const { data } = await (await import('@supabase/supabase-js')).createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${tok}` } } }
-    ).from('newsletter_subscribers').select('id, email, active, created_at').order('created_at', { ascending: false })
-    setNlSubscribers(data ?? [])
+    try {
+      const res = await fetch('/api/admin/newsletter/subscribers', {
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      const d = await res.json()
+      setNlSubscribers(d.subscribers ?? [])
+    } catch { setNlSubscribers([]) }
     setNlLoading(false)
   }, [])
 
@@ -863,9 +864,11 @@ export default function AdminPage() {
   }, [token])
 
   const toggleSubscriber = useCallback(async (id: string, active: boolean) => {
-    const { createClient } = await import('@supabase/supabase-js')
-    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { global: { headers: { Authorization: `Bearer ${token}` } } })
-    await sb.from('newsletter_subscribers').update({ active }).eq('id', id)
+    await fetch('/api/admin/newsletter/subscribers', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, active }),
+    })
     setNlSubscribers(prev => prev.map(s => s.id === id ? { ...s, active } : s))
   }, [token])
 
