@@ -8,6 +8,16 @@ function makeAnon() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 }
 
+const HOT_GRAVITY    = 1.2
+const HOT_POOL_DAYS  = 30
+const HOT_POOL_LIMIT = 200
+
+function computeHotScore(p: { upvotes: number; comment_count: number; view_count: number; created_at: string }) {
+  const engagement = p.upvotes * 3.0 + p.comment_count * 1.5 + p.view_count * 0.1
+  const ageHours   = (Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60)
+  return engagement / Math.pow(ageHours + 2, HOT_GRAVITY)
+}
+
 // GET /api/channels/feed?page=1&limit=20&sort=latest
 export async function GET(req: NextRequest) {
   const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
@@ -32,7 +42,8 @@ export async function GET(req: NextRequest) {
   const channelIds = (subs ?? []).map((s: { channel_id: string }) => s.channel_id)
   if (channelIds.length === 0) return NextResponse.json({ posts: [], total: 0 })
 
-  const offset = (page - 1) * limit
+  const offset    = (page - 1) * limit
+  const hotSince  = new Date(Date.now() - HOT_POOL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
   let query = supabase
     .from('community_posts')
@@ -46,28 +57,39 @@ export async function GET(req: NextRequest) {
     .in('user_id', channelIds)
     .eq('is_hidden', false)
 
-  const { count } = await supabase
+  let countQuery = supabase
     .from('community_posts')
     .select('id', { count: 'exact', head: true })
     .in('user_id', channelIds)
     .eq('is_hidden', false)
 
   if (sort === 'hot') {
-    query = query.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
+    query = query.gte('created_at', hotSince).order('created_at', { ascending: false }).limit(HOT_POOL_LIMIT)
+    countQuery = countQuery.gte('created_at', hotSince)
   } else if (sort === 'top') {
     query = query.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
   } else {
-    query = query.order('created_at', { ascending: false })
+    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1)
   }
 
-  query = query.range(offset, offset + limit - 1)
-
-  const { data, error } = await query
+  const [{ count }, { data: rawData, error }] = await Promise.all([countQuery, query])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Hot: JS-side time-decay scoring
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any[] = rawData ?? []
+  let total = count ?? 0
+  if (sort === 'hot') {
+    const scored = data.map((p) => ({ ...p, _hot_score: computeHotScore(p) }))
+    scored.sort((a, b) => b._hot_score - a._hot_score)
+    total = scored.length
+    data = scored.slice(offset, offset + limit)
+  }
 
   // Fetch my votes
   let myVotedIds = new Set<string>()
-  if (data && data.length > 0) {
+  if (data.length > 0) {
     const postIds = data.map((p: { id: string }) => p.id)
     const { data: votes } = await supabase
       .from('community_post_votes')
@@ -78,7 +100,7 @@ export async function GET(req: NextRequest) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const posts = (data ?? []).map((p: any) => ({
+  const posts = data.map((p: any) => ({
     ...p,
     my_vote: myVotedIds.has(p.id),
     community_compare_options: (p.community_compare_options ?? []).sort(
@@ -86,5 +108,5 @@ export async function GET(req: NextRequest) {
     ),
   }))
 
-  return NextResponse.json({ posts, total: count ?? 0 })
+  return NextResponse.json({ posts, total })
 }

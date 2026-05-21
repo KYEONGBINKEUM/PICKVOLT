@@ -17,6 +17,7 @@ interface TrendingCard {
   productB: Product
   href: string
   cnt: number
+  score?: number
   verdict: string | null
   verdictCount: number
 }

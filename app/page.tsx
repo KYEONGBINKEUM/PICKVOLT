@@ -13,6 +13,7 @@ interface TrendingCard {
   productB: { id: string; name: string; brand: string; image_url: string | null }
   href: string
   cnt: number
+  score?: number
   verdict: string | null
   verdictCount: number
 }

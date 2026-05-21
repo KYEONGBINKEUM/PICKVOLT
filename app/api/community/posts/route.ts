@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { checkPostRateLimit } from '@/lib/rateLimitDb'
 
+// ─── Hot Score (HN-inspired + engagement weights) ───────────────────────────
+// score = (upvotes×3 + comments×1.5 + views×0.1) / (age_hours + 2)^gravity
+// gravity 1.2 → gentle decay: popular old posts survive, fresh posts get a boost
+const HOT_GRAVITY  = 1.2
+const HOT_POOL_DAYS  = 30   // look-back window for hot feed
+const HOT_POOL_LIMIT = 200  // max posts to score before slicing
+
+function computeHotScore(p: { upvotes: number; comment_count: number; view_count: number; created_at: string }): number {
+  const engagement = p.upvotes * 3.0 + p.comment_count * 1.5 + p.view_count * 0.1
+  const ageHours   = (Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60)
+  return engagement / Math.pow(ageHours + 2, HOT_GRAVITY)
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // 모듈 레벨 캐싱
 let _service: SupabaseClient | null = null
 let _anon: SupabaseClient | null = null
@@ -91,16 +105,27 @@ export async function GET(req: NextRequest) {
   }
 
   const offset = (page - 1) * limit
+  const hotSince = new Date(Date.now() - HOT_POOL_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-  // 정렬 + range 먼저 적용
+  // 정렬 + range 적용
+  // hot: JS-side scoring → fetch pool first (no DB-level pagination), slice after scoring
   if (sort === 'hot') {
-    query = query.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
+    query = query
+      .gte('created_at', hotSince)
+      .order('created_at', { ascending: false })
+      .limit(HOT_POOL_LIMIT)
+    // range is intentionally omitted — applied in JS after hot scoring
   } else if (sort === 'top') {
-    query = query.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
+    query = query
+      .order('comment_count', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
   } else {
-    query = query.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
+    query = query
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
   }
-  query = query.range(offset, offset + limit - 1)
 
   // count + data 병렬 조회
   let countQuery = supabase
@@ -113,6 +138,8 @@ export async function GET(req: NextRequest) {
   if (!isClanMember) countQuery = countQuery.eq('is_members_only', false)
   if (filteredIds) countQuery = countQuery.in('id', filteredIds)
   if (q) countQuery = countQuery.ilike('title', `%${q}%`)
+  // hot: count only within the look-back window (pagination matches the hot pool)
+  if (sort === 'hot') countQuery = countQuery.gte('created_at', hotSince)
 
   let [{ count }, { data, error }] = await Promise.all([countQuery, query])
 
@@ -142,10 +169,15 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let fq: any = fallbackQuery
     for (const f of filters) if (f) fq = f(fq)
-    if (sort === 'hot') fq = fq.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
-    else if (sort === 'top') fq = fq.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
-    else fq = fq.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
-    fq = fq.range((page - 1) * limit, (page - 1) * limit + limit - 1)
+    if (sort === 'hot') {
+      fq = fq.gte('created_at', hotSince).order('created_at', { ascending: false }).limit(HOT_POOL_LIMIT)
+    } else if (sort === 'top') {
+      fq = fq.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+    } else {
+      fq = fq.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+    }
     const { data: fbData, error: fbErr } = await fq
     if (fbErr) return NextResponse.json({ error: fbErr.message }, { status: 500 })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,6 +185,16 @@ export async function GET(req: NextRequest) {
     error = null
   } else if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Hot: JS-side time-decay scoring → sort → paginate
+  if (sort === 'hot' && data) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scored = (data as any[]).map((p) => ({ ...p, _hot_score: computeHotScore(p) }))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    scored.sort((a: any, b: any) => b._hot_score - a._hot_score)
+    count = scored.length   // total within hot pool (used for pagination)
+    data = scored.slice(offset, offset + limit)
   }
 
   // 내 vote / unlock 여부 — 병렬로 조회
