@@ -188,16 +188,27 @@ export async function POST(req: NextRequest) {
   const resend = new Resend(resendKey)
   const subject = `이번 주 Pickvolt 인기 제품 Top ${hotProducts.length || '–'}${isTest ? ' [테스트]' : ''}`
 
+  // pickvolt.com 도메인이 Resend에서 인증됐으면 weekly@pickvolt.com,
+  // 아직 미인증이면 Resend 기본 주소 사용 (환경변수로 재정의 가능)
+  const fromAddress = process.env.RESEND_FROM_EMAIL ?? 'Pickvolt <weekly@pickvolt.com>'
+
   // ── 테스트: 어드민 본인에게만 ──────────────────────────────────────────────
   if (isTest) {
     const adminEmail = user.email!
-    const { error } = await resend.emails.send({
-      from: 'Pickvolt <weekly@pickvolt.com>',
+    const { data: sendData, error } = await resend.emails.send({
+      from: fromAddress,
       to: adminEmail,
       subject,
       html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=test`),
     })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.error('[newsletter/send] Resend error:', error)
+      return NextResponse.json({
+        error: `Resend 오류: ${error.message ?? JSON.stringify(error)}`,
+        detail: error,
+      }, { status: 500 })
+    }
+    console.log('[newsletter/send] test sent:', sendData)
     return NextResponse.json({ ok: true, sent: 1, mode: 'test', to: adminEmail, products: hotProducts.length })
   }
 
@@ -206,7 +217,6 @@ export async function POST(req: NextRequest) {
     if (selectedEmails.length === 0) {
       return NextResponse.json({ error: '발송할 이메일을 선택하세요.' }, { status: 400 })
     }
-    // unsubscribe_token은 선택 발송에서 실제 토큰이 없을 수 있으므로 이메일로 조회
     const { data: rows } = await supabase
       .from('newsletter_subscribers')
       .select('email, unsubscribe_token')
@@ -214,15 +224,22 @@ export async function POST(req: NextRequest) {
 
     const tokenMap = new Map((rows ?? []).map((r: { email: string; unsubscribe_token: string }) => [r.email, r.unsubscribe_token]))
 
-    const { error } = await resend.batch.send(
+    const { data: batchData, error } = await resend.batch.send(
       selectedEmails.map((email) => ({
-        from: 'Pickvolt <weekly@pickvolt.com>',
+        from: fromAddress,
         to: email,
         subject,
         html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${tokenMap.get(email) ?? 'na'}`),
       }))
     )
-    if (error) return NextResponse.json({ error: String(error) }, { status: 500 })
+    if (error) {
+      console.error('[newsletter/send] Resend batch error:', error)
+      return NextResponse.json({
+        error: `Resend 오류: ${error.message ?? JSON.stringify(error)}`,
+        detail: error,
+      }, { status: 500 })
+    }
+    console.log('[newsletter/send] selected sent:', batchData)
     return NextResponse.json({ ok: true, sent: selectedEmails.length, mode: 'selected', products: hotProducts.length })
   }
 
@@ -240,14 +257,22 @@ export async function POST(req: NextRequest) {
   const batchSize = 50
   for (let i = 0; i < subscribers.length; i += batchSize) {
     const batch = subscribers.slice(i, i + batchSize)
-    await resend.batch.send(
+    const { error } = await resend.batch.send(
       batch.map((s) => ({
-        from: 'Pickvolt <weekly@pickvolt.com>',
+        from: fromAddress,
         to: s.email,
         subject,
         html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${s.unsubscribe_token}`),
       }))
     )
+    if (error) {
+      console.error('[newsletter/send] Resend batch error (all):', error)
+      return NextResponse.json({
+        error: `Resend 오류 (${sent}명 발송 후 실패): ${error.message ?? JSON.stringify(error)}`,
+        detail: error,
+        sent,
+      }, { status: 500 })
+    }
     sent += batch.length
   }
 

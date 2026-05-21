@@ -37,7 +37,7 @@ export default function NewsletterSignup() {
           <h2 className="text-2xl font-bold text-white tracking-tight">
             {t('newsletter.title')}
           </h2>
-          <p className="text-sm text-white/40 max-w-xs mx-auto leading-relaxed">
+          <p className="text-sm text-white/40 max-w-sm mx-auto leading-relaxed">
             {t('newsletter.subtitle')}
           </p>
         </div>
