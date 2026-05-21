@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('comparison_verdicts')
     .select('winner_name, summary, comparison_count')
     .eq('pair_key', pair)
     .maybeSingle()
 
-  if (!data) return NextResponse.json({ verdict: null })
+  if (error || !data) return NextResponse.json({ verdict: null })
 
   return NextResponse.json({
     verdict: {

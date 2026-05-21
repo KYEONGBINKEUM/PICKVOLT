@@ -156,23 +156,27 @@ export async function POST(req: NextRequest) {
       pinned: false,
     })
 
-    // 누적 verdict upsert (2개 비교일 때만)
-    if ((productIds ?? []).length === 2) {
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-      if (serviceKey) {
-        const adminSupabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          serviceKey
-        )
-        const sortedIds = [...(productIds as string[])].sort()
-        const pairKey = sortedIds.join(':')
-        await adminSupabase.rpc('upsert_comparison_verdict', {
-          p_pair_key:    pairKey,
-          p_product_ids: sortedIds,
-          p_winner_name: result.winner ?? null,
-          p_summary:     result.summary ?? null,
-        })
+    // 누적 verdict upsert (2개 비교일 때만) — 실패해도 비교 결과에 영향 없음
+    try {
+      if ((productIds ?? []).length === 2) {
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        if (serviceKey) {
+          const adminSupabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            serviceKey
+          )
+          const sortedIds = [...(productIds as string[])].sort()
+          const pairKey = sortedIds.join(':')
+          await adminSupabase.rpc('upsert_comparison_verdict', {
+            p_pair_key:    pairKey,
+            p_product_ids: sortedIds,
+            p_winner_name: result.winner ?? null,
+            p_summary:     result.summary ?? null,
+          })
+        }
       }
+    } catch (e) {
+      console.warn('[verdict] upsert skipped:', e)
     }
 
     // 포인트 차감 (Pro / 어드민 제외) — AI 성공 후 원자적으로 차감
