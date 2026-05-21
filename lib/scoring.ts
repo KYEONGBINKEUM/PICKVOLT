@@ -356,7 +356,9 @@ export function computeRelativeScores(
     : (input.relativeScore != null && stats.relativeScore.max > 0
         ? Math.min(100, Math.round(input.relativeScore / stats.relativeScore.max * 100))
         : 0)
-  const ram  = relHigh(firstNum(input.ram_gb), stats.ram)
+  // 비교 페이지에서는 제품의 최대 RAM 기준으로 평가
+  // (예: 16" MBP의 "36,48,64,128" → 128GB 기준, 14"와 동등하게 취급)
+  const ram  = relHigh(maxNum(input.ram_gb), stats.ram)
   const ppi  = computePPI(input.display_resolution, input.display_inch)
   const disp = stats.ppi?.max > 0 && ppi != null
     ? relHigh(ppi, stats.ppi)
@@ -476,6 +478,13 @@ function firstNum(val: string | number | null | undefined): number | null {
   if (val == null) return null
   const n = parseFloat(String(val).split(',')[0].trim())
   return isNaN(n) ? null : n
+}
+
+/** 복수 값 문자열에서 최댓값 추출 — 비교 페이지 RAM 계산용 */
+function maxNum(val: string | number | null | undefined): number | null {
+  if (val == null) return null
+  const nums = String(val).split(',').map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n))
+  return nums.length ? Math.max(...nums) : null
 }
 
 // ─── 종합 점수 (0–100) ────────────────────────────────────────────────────────

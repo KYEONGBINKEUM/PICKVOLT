@@ -6,15 +6,13 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, DollarSign, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown, FileText, BadgeCheck } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown, FileText, BadgeCheck } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
-import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
 import { supabase } from '@/lib/supabase'
 
 function MyPageContent() {
   const { t, locale, setLocale } = useI18n()
-  const { currency, setCurrency } = useCurrency()
   const router = useRouter()
   const searchParams = useSearchParams()
   const fromCommunity = searchParams.get('from') === 'community'
@@ -31,7 +29,6 @@ function MyPageContent() {
     products: { id: string; name: string; brand: string; category: string; image_url: string | null; price_usd: number | null } | null
   }[]>([])
   const [showLangMenu, setShowLangMenu] = useState(false)
-  const [showCurrMenu, setShowCurrMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [nickname, setNickname] = useState<string | null>(null)
@@ -100,9 +97,6 @@ function MyPageContent() {
             if (p?.locale) {
               try { setLocale(p.locale as import('@/lib/i18n').Locale) } catch {}
             }
-            if (p?.currency) {
-              try { setCurrency(p.currency as import('@/lib/currency').CurrencyCode) } catch {}
-            }
           })
 
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -165,9 +159,11 @@ function MyPageContent() {
   }
 
   const reasonLabel = (reason: string) => {
-    if (reason === 'signup_bonus') return t('point.reason_signup_bonus')
-    if (reason === 'daily_login') return t('point.reason_daily_login')
-    if (reason === 'ai_comparison') return t('point.reason_ai_comparison')
+    if (reason === 'signup_bonus')           return t('point.reason_signup_bonus')
+    if (reason === 'daily_login')            return t('point.reason_daily_login')
+    if (reason === 'ai_comparison')          return t('point.reason_ai_comparison')
+    if (reason === 'post_unlock_spent')      return t('point.reason_post_unlock_spent')
+    if (reason === 'post_unlock_received')   return t('point.reason_post_unlock_received')
     return reason
   }
 
@@ -317,7 +313,6 @@ function MyPageContent() {
   }
 
   const currentLang = LANGUAGES.find((l) => l.code === locale)
-  const currentCurrency = CURRENCIES.find((c) => c.code === currency)
 
   return (
     <>
@@ -647,7 +642,7 @@ function MyPageContent() {
             {/* Language */}
             <div className="relative">
               <button
-                onClick={() => { setShowLangMenu(!showLangMenu); setShowCurrMenu(false) }}
+                onClick={() => setShowLangMenu(!showLangMenu)}
                 className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-2 transition-colors border-b border-border"
               >
                 <div className="flex items-center gap-3">
@@ -678,40 +673,6 @@ function MyPageContent() {
               )}
             </div>
 
-            {/* Currency */}
-            <div className="relative">
-              <button
-                onClick={() => { setShowCurrMenu(!showCurrMenu); setShowLangMenu(false) }}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface-2 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <DollarSign className="w-4 h-4 text-white/40" />
-                  <span className="text-sm text-white">{t('mypage.currency')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/50">{currentCurrency?.flag} {currentCurrency?.code} {currentCurrency?.symbol}</span>
-                  <ChevronRight className={`w-3.5 h-3.5 text-white/30 transition-transform ${showCurrMenu ? 'rotate-90' : ''}`} />
-                </div>
-              </button>
-              {showCurrMenu && (
-                <div className="bg-surface-2">
-                  {CURRENCIES.map((c) => (
-                    <button
-                      key={c.code}
-                      onClick={() => { setCurrency(c.code as CurrencyCode); setShowCurrMenu(false) }}
-                      className={`w-full flex items-center gap-3 px-8 py-3 text-sm transition-colors hover:bg-surface ${
-                        currency === c.code ? 'text-accent' : 'text-white/60'
-                      }`}
-                    >
-                      <span>{c.flag}</span>
-                      <span className="font-semibold">{c.symbol}</span>
-                      <span>{c.code}</span>
-                      <span className="ml-auto text-xs text-white/30">{c.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Verify */}
