@@ -2,6 +2,7 @@ import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import HomeHeading from './HomeHeading'
 import TrendingSection from './TrendingSection'
+import NewsletterSignup from '@/components/NewsletterSignup'
 
 function getBaseUrl() {
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
@@ -47,6 +48,7 @@ export default async function HomePage({
             <TrendingSection items={trending} />
           </div>
         )}
+        <NewsletterSignup />
       </div>
     </main>
   )

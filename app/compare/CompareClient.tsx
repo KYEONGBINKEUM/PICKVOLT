@@ -494,6 +494,19 @@ function ActionButtons({
     setTimeout(() => setToast(null), 2500)
   }
 
+  const handleGetEmbedCode = async () => {
+    const url = window.location.href
+    // extract ids param from current URL for the embed src
+    const ids = new URL(url).searchParams.get('ids') ?? ''
+    const embedSrc = `https://www.pickvolt.com/embed/compare?ids=${ids}`
+    const iframeCode = `<iframe src="${embedSrc}" width="100%" height="480" style="border:none;border-radius:12px;overflow:hidden;" loading="lazy" title="Product Comparison — Pickvolt"></iframe>`
+    try {
+      await navigator.clipboard.writeText(iframeCode)
+    } catch { /* ignore */ }
+    showToast(t('export.toast_embed'), '')
+    setOpen(false)
+  }
+
   const handleCopyLink = async () => {
     const url = window.location.href
     try {
@@ -576,6 +589,13 @@ function ActionButtons({
                 >
                   <FileDown className="w-4 h-4 flex-shrink-0" />
                   {t('export.pdf')}
+                </button>
+                <button
+                  onClick={handleGetEmbedCode}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+                >
+                  <Code2 className="w-4 h-4 flex-shrink-0" />
+                  {t('export.embed')}
                 </button>
               </div>
             </>
