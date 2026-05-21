@@ -17,6 +17,8 @@ interface TrendingCard {
   productB: Product
   href: string
   cnt: number
+  verdict: string | null
+  verdictCount: number
 }
 
 function ProductThumb({ product }: { product: Product }) {
@@ -74,13 +76,18 @@ export default function TrendingSection({ items }: { items: TrendingCard[] }) {
             <div key={i} className="flex-shrink-0" style={{ width: CARD_W, marginRight: GAP }}>
               <Link
                 href={item.href}
-                className="block bg-surface border border-border rounded-2xl px-4 py-4 hover:border-white/20 transition-colors"
+                className="block bg-surface border border-border rounded-2xl px-4 pt-4 pb-3 hover:border-white/20 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <ProductThumb product={item.productA} />
                   <span className="flex-shrink-0 text-xs font-black text-white/20 px-1">vs</span>
                   <ProductThumb product={item.productB} />
                 </div>
+                {item.verdict && (
+                  <p className="mt-2.5 text-[11px] text-white/40 leading-snug line-clamp-2 border-t border-border pt-2.5">
+                    {item.verdict}
+                  </p>
+                )}
               </Link>
             </div>
           ))}

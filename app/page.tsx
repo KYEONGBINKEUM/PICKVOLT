@@ -13,6 +13,8 @@ interface TrendingCard {
   productB: { id: string; name: string; brand: string; image_url: string | null }
   href: string
   cnt: number
+  verdict: string | null
+  verdictCount: number
 }
 
 async function getTrending(): Promise<TrendingCard[]> {

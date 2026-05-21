@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 interface RpcItem { title: string; products: string[]; cnt: number }
 interface Product { id: string; name: string; brand: string; image_url: string | null }
+interface Verdict { pair_key: string; winner_name: string | null; summary: string | null; comparison_count: number }
 
 export async function GET() {
   try {
@@ -34,15 +35,31 @@ export async function GET() {
       (products ?? []).map((p: Product) => [p.id, p])
     )
 
+    // 누적 verdict 조회
+    const pairKeys = pairs.map(item => [...item.products].sort().join(':'))
+    const { data: verdicts } = await supabase
+      .from('comparison_verdicts')
+      .select('pair_key, winner_name, summary, comparison_count')
+      .in('pair_key', pairKeys)
+    const verdictMap = new Map<string, Verdict>(
+      (verdicts ?? []).map((v: Verdict) => [v.pair_key, v])
+    )
+
     const items = pairs
       .filter(item => productMap.has(item.products[0]) && productMap.has(item.products[1]))
-      .map(item => ({
-        title: item.title,
-        productA: productMap.get(item.products[0])!,
-        productB: productMap.get(item.products[1])!,
-        href: `/compare?ids=${item.products.join(',')}`,
-        cnt: item.cnt,
-      }))
+      .map(item => {
+        const pairKey = [...item.products].sort().join(':')
+        const verdict = verdictMap.get(pairKey)
+        return {
+          title: item.title,
+          productA: productMap.get(item.products[0])!,
+          productB: productMap.get(item.products[1])!,
+          href: `/compare?ids=${item.products.join(',')}`,
+          cnt: item.cnt,
+          verdict: verdict?.summary ?? null,
+          verdictCount: verdict?.comparison_count ?? 0,
+        }
+      })
 
     const res = NextResponse.json({ items })
     res.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
