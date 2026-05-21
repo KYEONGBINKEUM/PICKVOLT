@@ -89,15 +89,11 @@ export async function GET() {
         <table width="560" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding: 0 0 32px 0;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="width:10px; height:10px; border-radius:50%;
-                             background:rgb(255,77,0); vertical-align:middle;"></td>
-                  <td style="padding-left:8px; font-size:16px; font-weight:800;
-                             color:#fff; vertical-align:middle;">pickvolt</td>
-                </tr>
-              </table>
-              <p style="margin:16px 0 4px; font-size:22px; font-weight:900; color:#fff;">
+              <a href="${BASE_URL}" style="display:inline-block; text-decoration:none;">
+                <img src="${BASE_URL}/logo.svg" alt="pickvolt" width="120" height="auto"
+                     style="display:block; width:120px; height:auto;" />
+              </a>
+              <p style="margin:20px 0 4px; font-size:22px; font-weight:900; color:#fff;">
                 이번 주 가장 많이 비교된 제품
               </p>
               <p style="margin:0; font-size:13px; color:#555;">
