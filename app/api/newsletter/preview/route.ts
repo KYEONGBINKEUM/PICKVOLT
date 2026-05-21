@@ -45,33 +45,50 @@ export async function GET() {
     smartphone: 'Smartphone', laptop: 'Laptop', tablet: 'Tablet',
   }
 
+  function emailImgUrl(url: string | null | undefined, width: number): string {
+    if (!url) return ''
+    if (!url.includes('/storage/v1/object/public/')) return url
+    return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') +
+      `?width=${width}&quality=80&resize=contain`
+  }
+
   const productCards = hotProducts.length > 0
-    ? hotProducts.map((p) => `
+    ? hotProducts.map((p) => {
+        const imgSrc = emailImgUrl(p.image_url, 160)
+        return `
       <tr>
-        <td style="padding: 0 0 16px 0;">
+        <td style="padding: 0 0 12px 0;">
           <table width="100%" cellpadding="0" cellspacing="0"
                  style="background:#161616; border:1px solid #2a2a2a; border-radius:12px; overflow:hidden;">
             <tr>
-              <td style="padding: 18px 20px;">
+              ${imgSrc ? `
+              <td width="88" style="padding:14px 0 14px 14px; vertical-align:middle;">
+                <div style="width:80px; height:80px; background:#1e1e1e; border-radius:10px; overflow:hidden;">
+                  <img src="${imgSrc}" alt="${p.name}" width="80" height="80"
+                       style="display:block; width:80px; height:80px; object-fit:contain;" />
+                </div>
+              </td>` : ''}
+              <td style="padding: 14px 16px; vertical-align:middle;">
                 <p style="margin:0 0 2px; font-size:10px; font-weight:700; text-transform:uppercase;
                            letter-spacing:.08em; color:#666;">
                   ${categoryLabel[p.category] ?? p.category} · ${p.brand}
                 </p>
-                <p style="margin:0 0 6px; font-size:16px; font-weight:800; color:#fff;">${p.name}</p>
+                <p style="margin:0 0 6px; font-size:15px; font-weight:800; color:#fff; line-height:1.3;">${p.name}</p>
                 <p style="margin:0 0 12px; font-size:12px; color:#555;">
                   이번 주 <span style="color:rgba(255,77,0,.85); font-weight:700;">${p.compare_count}회</span> 비교됨
                   ${p.price_usd ? ` &nbsp;·&nbsp; <span style="color:#888;">From $${p.price_usd.toLocaleString()}</span>` : ''}
                 </p>
                 <a href="${BASE_URL}/product/${p.id}"
                    style="display:inline-block; background:rgb(255,77,0); color:#fff; text-decoration:none;
-                          font-size:12px; font-weight:700; padding:8px 16px; border-radius:20px;">
+                          font-size:12px; font-weight:700; padding:7px 14px; border-radius:20px;">
                   스펙 보기 →
                 </a>
               </td>
             </tr>
           </table>
         </td>
-      </tr>`).join('')
+      </tr>`
+      }).join('')
     : `<tr><td style="padding:20px; color:#555; font-size:13px;">이번 주 비교 데이터가 없습니다.</td></tr>`
 
   const html = `<!DOCTYPE html>
