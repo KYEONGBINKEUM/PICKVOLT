@@ -13,23 +13,44 @@ function makeSupabase() {
 
 const BASE_URL = 'https://www.pickvolt.com'
 
-function buildEmailHtml(products: { id: string; name: string; brand: string; category: string; price_usd: number | null; image_url: string | null }[]) {
-  const categoryLabel: Record<string, string> = { smartphone: 'Smartphone', laptop: 'Laptop', tablet: 'Tablet' }
+interface HotProduct {
+  id: string
+  name: string
+  brand: string
+  category: string
+  price_usd: number | null
+  image_url: string | null
+  compare_count: number
+}
+
+function buildEmailHtml(
+  products: HotProduct[],
+  unsubscribeUrl: string,
+) {
+  const categoryLabel: Record<string, string> = {
+    smartphone: 'Smartphone', laptop: 'Laptop', tablet: 'Tablet',
+  }
 
   const productCards = products.map((p) => `
     <tr>
       <td style="padding: 0 0 16px 0;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#161616; border:1px solid #2a2a2a; border-radius:12px; overflow:hidden;">
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="background:#161616; border:1px solid #2a2a2a; border-radius:12px; overflow:hidden;">
           <tr>
             <td style="padding: 18px 20px;">
-              <p style="margin:0 0 2px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#666;">
+              <p style="margin:0 0 2px; font-size:10px; font-weight:700; text-transform:uppercase;
+                         letter-spacing:.08em; color:#666;">
                 ${categoryLabel[p.category] ?? p.category} · ${p.brand}
               </p>
-              <p style="margin:0 0 10px; font-size:16px; font-weight:800; color:#fff;">${p.name}</p>
-              ${p.price_usd ? `<p style="margin:0 0 12px; font-size:13px; color:rgba(255,77,0,.9); font-weight:700;">From $${p.price_usd.toLocaleString()}</p>` : ''}
+              <p style="margin:0 0 6px; font-size:16px; font-weight:800; color:#fff;">${p.name}</p>
+              <p style="margin:0 0 12px; font-size:12px; color:#555;">
+                이번 주 <span style="color:rgba(255,77,0,.85); font-weight:700;">${p.compare_count}회</span> 비교됨
+                ${p.price_usd ? ` &nbsp;·&nbsp; <span style="color:#888;">From $${p.price_usd.toLocaleString()}</span>` : ''}
+              </p>
               <a href="${BASE_URL}/product/${p.id}"
-                 style="display:inline-block; background:rgb(255,77,0); color:#fff; text-decoration:none; font-size:12px; font-weight:700; padding:8px 16px; border-radius:20px;">
-                View specs →
+                 style="display:inline-block; background:rgb(255,77,0); color:#fff; text-decoration:none;
+                        font-size:12px; font-weight:700; padding:8px 16px; border-radius:20px;">
+                스펙 보기 →
               </a>
             </td>
           </tr>
@@ -39,13 +60,14 @@ function buildEmailHtml(products: { id: string; name: string; brand: string; cat
   `).join('')
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pickvolt Weekly</title>
 </head>
-<body style="margin:0; padding:0; background:#0a0a0a; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<body style="margin:0; padding:0; background:#0a0a0a;
+             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td align="center" style="padding: 40px 16px;">
@@ -56,12 +78,18 @@ function buildEmailHtml(products: { id: string; name: string; brand: string; cat
             <td style="padding: 0 0 32px 0;">
               <table cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="width:10px; height:10px; border-radius:50%; background:rgb(255,77,0); vertical-align:middle;"></td>
-                  <td style="padding-left:8px; font-size:16px; font-weight:800; color:#fff; vertical-align:middle;">pickvolt</td>
+                  <td style="width:10px; height:10px; border-radius:50%;
+                             background:rgb(255,77,0); vertical-align:middle;"></td>
+                  <td style="padding-left:8px; font-size:16px; font-weight:800;
+                             color:#fff; vertical-align:middle;">pickvolt</td>
                 </tr>
               </table>
-              <p style="margin:16px 0 4px; font-size:22px; font-weight:900; color:#fff;">This week's new releases</p>
-              <p style="margin:0; font-size:13px; color:#555;">The latest products added to Pickvolt — ready to compare.</p>
+              <p style="margin:16px 0 4px; font-size:22px; font-weight:900; color:#fff;">
+                이번 주 가장 많이 비교된 제품
+              </p>
+              <p style="margin:0; font-size:13px; color:#555;">
+                지난 7일간 Pickvolt에서 가장 뜨거웠던 제품들입니다.
+              </p>
             </td>
           </tr>
 
@@ -78,8 +106,10 @@ function buildEmailHtml(products: { id: string; name: string; brand: string; cat
           <tr>
             <td style="padding: 16px 0 40px 0; text-align:center;">
               <a href="${BASE_URL}/compare"
-                 style="display:inline-block; background:rgb(255,77,0); color:#fff; text-decoration:none; font-size:14px; font-weight:800; padding:14px 32px; border-radius:40px;">
-                Compare them on Pickvolt →
+                 style="display:inline-block; background:rgb(255,77,0); color:#fff;
+                        text-decoration:none; font-size:14px; font-weight:800;
+                        padding:14px 32px; border-radius:40px;">
+                직접 비교해보기 →
               </a>
             </td>
           </tr>
@@ -87,9 +117,9 @@ function buildEmailHtml(products: { id: string; name: string; brand: string; cat
           <!-- Footer -->
           <tr>
             <td style="border-top:1px solid #1e1e1e; padding: 24px 0 0 0; text-align:center;">
-              <p style="margin:0; font-size:11px; color:#444;">
-                You're receiving this because you subscribed at <a href="${BASE_URL}" style="color:#666;">pickvolt.com</a>.<br>
-                No longer interested? Simply ignore this email.
+              <p style="margin:0; font-size:11px; color:#444; line-height:1.8;">
+                <a href="${BASE_URL}" style="color:#666;">pickvolt.com</a>에서 구독하셨습니다.<br>
+                <a href="${unsubscribeUrl}" style="color:#555;">구독 취소</a>
               </p>
             </td>
           </tr>
@@ -103,7 +133,6 @@ function buildEmailHtml(products: { id: string; name: string; brand: string; cat
 }
 
 export async function GET(req: NextRequest) {
-  // Verify Vercel Cron secret
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
@@ -116,24 +145,59 @@ export async function GET(req: NextRequest) {
 
   const supabase = makeSupabase()
 
-  // Fetch new products from the last 7 days
+  // 지난 7일간 가장 많이 비교된 제품 (comparison_history 기준)
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: newProducts } = await supabase
-    .from('products')
-    .select('id, name, brand, category, price_usd, image_url')
-    .eq('is_visible', true)
-    .gte('created_at', since)
-    .order('created_at', { ascending: false })
-    .limit(8)
 
-  if (!newProducts || newProducts.length === 0) {
-    return NextResponse.json({ ok: true, sent: 0, reason: 'no new products this week' })
+  const { data: recentHistory } = await supabase
+    .from('comparison_history')
+    .select('products')
+    .gte('created_at', since)
+
+  if (!recentHistory || recentHistory.length === 0) {
+    return NextResponse.json({ ok: true, sent: 0, reason: 'no comparisons this week' })
   }
 
-  // Fetch all subscribers
+  // 제품 ID별 비교 횟수 집계
+  const countMap = new Map<string, number>()
+  for (const row of recentHistory) {
+    for (const pid of (row.products ?? [])) {
+      countMap.set(pid, (countMap.get(pid) ?? 0) + 1)
+    }
+  }
+
+  // 상위 8개 제품 ID
+  const topIds = [...countMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([id]) => id)
+
+  if (topIds.length === 0) {
+    return NextResponse.json({ ok: true, sent: 0, reason: 'no products found' })
+  }
+
+  const { data: productRows } = await supabase
+    .from('products')
+    .select('id, name, brand, category, price_usd, image_url')
+    .in('id', topIds)
+    .eq('is_visible', true)
+
+  if (!productRows || productRows.length === 0) {
+    return NextResponse.json({ ok: true, sent: 0, reason: 'products not found' })
+  }
+
+  // 비교 횟수 붙이기 + 정렬 유지
+  const hotProducts: HotProduct[] = topIds
+    .map((id) => {
+      const p = productRows.find((r) => r.id === id)
+      if (!p) return null
+      return { ...p, compare_count: countMap.get(id) ?? 0 }
+    })
+    .filter(Boolean) as HotProduct[]
+
+  // 구독자 목록 (unsubscribe_token 포함)
   const { data: subscribers } = await supabase
     .from('newsletter_subscribers')
-    .select('email')
+    .select('email, unsubscribe_token')
     .eq('active', true)
 
   if (!subscribers || subscribers.length === 0) {
@@ -141,26 +205,26 @@ export async function GET(req: NextRequest) {
   }
 
   const resend = new Resend(resendKey)
-  const html = buildEmailHtml(newProducts)
-  const subject = `Pickvolt Weekly — ${newProducts.length} new ${newProducts.length === 1 ? 'product' : 'products'} to compare`
+  const subject = `이번 주 Pickvolt 인기 제품 Top ${hotProducts.length}`
 
-  // Send in batches of 50 (Resend batch limit)
-  const emails = subscribers.map((s) => s.email)
   let sent = 0
   const batchSize = 50
 
-  for (let i = 0; i < emails.length; i += batchSize) {
-    const batch = emails.slice(i, i + batchSize)
+  for (let i = 0; i < subscribers.length; i += batchSize) {
+    const batch = subscribers.slice(i, i + batchSize)
     await resend.batch.send(
-      batch.map((to) => ({
-        from: 'Pickvolt <weekly@pickvolt.com>',
-        to,
-        subject,
-        html,
-      }))
+      batch.map((s) => {
+        const unsubscribeUrl = `${BASE_URL}/api/newsletter/unsubscribe?token=${s.unsubscribe_token}`
+        return {
+          from: 'Pickvolt <weekly@pickvolt.com>',
+          to: s.email,
+          subject,
+          html: buildEmailHtml(hotProducts, unsubscribeUrl),
+        }
+      })
     )
     sent += batch.length
   }
 
-  return NextResponse.json({ ok: true, sent, products: newProducts.length })
+  return NextResponse.json({ ok: true, sent, products: hotProducts.length })
 }
