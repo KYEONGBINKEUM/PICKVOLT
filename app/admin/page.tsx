@@ -236,7 +236,8 @@ export default function AdminPage() {
   const [nlSubscribers, setNlSubscribers] = useState<{ id: string; email: string; active: boolean; created_at: string }[]>([])
   const [nlLoading, setNlLoading] = useState(false)
   const [nlSending, setNlSending] = useState(false)
-  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number } | null>(null)
+  const [nlTestSending, setNlTestSending] = useState(false)
+  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; test?: boolean; to?: string } | null>(null)
   const [nlSendError, setNlSendError] = useState('')
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
 
@@ -846,21 +847,24 @@ export default function AdminPage() {
     setNlLoading(false)
   }, [])
 
-  const sendNewsletter = useCallback(async () => {
+  const sendNewsletter = useCallback(async (test = false) => {
     if (!token) return
-    setNlSending(true)
+    if (test) setNlTestSending(true)
+    else setNlSending(true)
     setNlSendResult(null)
     setNlSendError('')
     try {
-      const res = await fetch('/api/admin/newsletter/send', {
+      const url = test ? '/api/admin/newsletter/send?test=true' : '/api/admin/newsletter/send'
+      const res = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
       const d = await res.json()
-      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products })
+      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, test: d.test, to: d.to })
       else setNlSendError(d.error ?? d.reason ?? 'failed')
     } catch (e) { setNlSendError(String(e)) }
-    setNlSending(false)
+    if (test) setNlTestSending(false)
+    else setNlSending(false)
   }, [token])
 
   const toggleSubscriber = useCallback(async (id: string, active: boolean) => {
@@ -3154,25 +3158,36 @@ export default function AdminPage() {
                   총 {nlSubscribers.length}명 · 활성 {nlSubscribers.filter(s => s.active).length}명
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <a href="/api/newsletter/preview" target="_blank"
                   className="text-xs px-4 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors">
-                  이메일 미리보기
+                  미리보기
                 </a>
                 <button
-                  onClick={sendNewsletter}
-                  disabled={nlSending}
+                  onClick={() => sendNewsletter(true)}
+                  disabled={nlTestSending || nlSending}
+                  className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg border border-border text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
+                >
+                  <Mail size={13} />
+                  {nlTestSending ? '발송 중...' : '테스트 발송'}
+                </button>
+                <button
+                  onClick={() => sendNewsletter(false)}
+                  disabled={nlSending || nlTestSending}
                   className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors disabled:opacity-50"
                 >
                   <Mail size={13} />
-                  {nlSending ? '발송 중...' : '지금 발송'}
+                  {nlSending ? '발송 중...' : '전체 발송'}
                 </button>
               </div>
             </div>
 
             {nlSendResult && (
               <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
-                ✓ {nlSendResult.sent}명에게 발송 완료 · 제품 {nlSendResult.products}개 포함
+                {nlSendResult.test
+                  ? `✓ 테스트 발송 완료 → ${nlSendResult.to} · 제품 ${nlSendResult.products}개 포함`
+                  : `✓ ${nlSendResult.sent}명에게 발송 완료 · 제품 ${nlSendResult.products}개 포함`
+                }
               </div>
             )}
             {nlSendError && (
