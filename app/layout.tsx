@@ -7,6 +7,7 @@ import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
 import CompareTray from '@/components/CompareTray'
 import Footer from '@/components/Footer'
+import NewsletterSignup from '@/components/NewsletterSignup'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 
 const inter = Inter({
@@ -95,6 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CurrencyProvider>
             <CompareCartProvider>
               {children}
+              <NewsletterSignup />
               <Footer />
               <CookieBanner />
               <CompareTray />
