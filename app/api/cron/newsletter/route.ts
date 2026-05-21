@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { getEmailStrings } from '@/lib/emailI18n'
 
 export const maxDuration = 60
 
@@ -33,7 +34,9 @@ function emailImgUrl(url: string | null | undefined, width: number): string {
 function buildEmailHtml(
   products: HotProduct[],
   unsubscribeUrl: string,
+  locale = 'en',
 ) {
+  const s = getEmailStrings(locale)
   const categoryLabel: Record<string, string> = {
     smartphone: 'Smartphone', laptop: 'Laptop', tablet: 'Tablet',
   }
@@ -61,13 +64,13 @@ function buildEmailHtml(
               </p>
               <p style="margin:0 0 6px; font-size:15px; font-weight:800; color:#fff; line-height:1.3;">${p.name}</p>
               <p style="margin:0 0 12px; font-size:12px; color:#555;">
-                이번 주 <span style="color:rgba(255,77,0,.85); font-weight:700;">${p.compare_count}회</span> 비교됨
-                ${p.price_usd ? ` &nbsp;·&nbsp; <span style="color:#888;">From $${p.price_usd.toLocaleString()}</span>` : ''}
+                <span style="color:rgba(255,77,0,.85); font-weight:700;">${s.comparedTimes(p.compare_count)}</span>
+                ${p.price_usd ? ` &nbsp;·&nbsp; <span style="color:#888;">${s.from} $${p.price_usd.toLocaleString()}</span>` : ''}
               </p>
               <a href="${BASE_URL}/product/${p.id}"
                  style="display:inline-block; background:rgb(255,77,0); color:#fff; text-decoration:none;
                         font-size:12px; font-weight:700; padding:7px 14px; border-radius:20px;">
-                스펙 보기 →
+                ${s.viewSpec}
               </a>
             </td>
           </tr>
@@ -77,7 +80,7 @@ function buildEmailHtml(
   }).join('')
 
   return `<!DOCTYPE html>
-<html lang="ko">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -98,10 +101,10 @@ function buildEmailHtml(
                      style="display:block; width:120px; height:auto;" />
               </a>
               <p style="margin:20px 0 4px; font-size:22px; font-weight:900; color:#fff;">
-                이번 주 가장 많이 비교된 제품
+                ${s.header}
               </p>
               <p style="margin:0; font-size:13px; color:#555;">
-                지난 7일간 Pickvolt에서 가장 뜨거웠던 제품들입니다.
+                ${s.subheader}
               </p>
             </td>
           </tr>
@@ -122,7 +125,7 @@ function buildEmailHtml(
                  style="display:inline-block; background:rgb(255,77,0); color:#fff;
                         text-decoration:none; font-size:14px; font-weight:800;
                         padding:14px 32px; border-radius:40px;">
-                직접 비교해보기 →
+                ${s.compareCta}
               </a>
             </td>
           </tr>
@@ -131,8 +134,8 @@ function buildEmailHtml(
           <tr>
             <td style="border-top:1px solid #1e1e1e; padding: 24px 0 0 0; text-align:center;">
               <p style="margin:0; font-size:11px; color:#444; line-height:1.8;">
-                <a href="${BASE_URL}" style="color:#666;">pickvolt.com</a>에서 구독하셨습니다.<br>
-                <a href="${unsubscribeUrl}" style="color:#555;">구독 취소</a>
+                ${s.footerSub}<br>
+                <a href="${unsubscribeUrl}" style="color:#555;">${s.unsubscribe}</a>
               </p>
             </td>
           </tr>
@@ -207,10 +210,10 @@ export async function GET(req: NextRequest) {
     })
     .filter(Boolean) as HotProduct[]
 
-  // 구독자 목록 (unsubscribe_token 포함)
+  // 구독자 목록 (locale 포함)
   const { data: subscribers } = await supabase
     .from('newsletter_subscribers')
-    .select('email, unsubscribe_token')
+    .select('email, unsubscribe_token, locale')
     .eq('active', true)
 
   if (!subscribers || subscribers.length === 0) {
@@ -218,7 +221,7 @@ export async function GET(req: NextRequest) {
   }
 
   const resend = new Resend(resendKey)
-  const subject = `이번 주 Pickvolt 인기 제품 Top ${hotProducts.length}`
+  const fromAddress = process.env.RESEND_FROM_EMAIL ?? 'Pickvolt <weekly@pickvolt.com>'
 
   let sent = 0
   const batchSize = 50
@@ -227,12 +230,14 @@ export async function GET(req: NextRequest) {
     const batch = subscribers.slice(i, i + batchSize)
     await resend.batch.send(
       batch.map((s) => {
+        const locale = s.locale ?? 'en'
+        const es = getEmailStrings(locale)
         const unsubscribeUrl = `${BASE_URL}/api/newsletter/unsubscribe?token=${s.unsubscribe_token}`
         return {
-          from: 'Pickvolt <weekly@pickvolt.com>',
+          from: fromAddress,
           to: s.email,
-          subject,
-          html: buildEmailHtml(hotProducts, unsubscribeUrl),
+          subject: es.subject(hotProducts.length),
+          html: buildEmailHtml(hotProducts, unsubscribeUrl, locale),
         }
       })
     )

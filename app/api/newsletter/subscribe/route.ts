@@ -10,15 +10,18 @@ function makeSupabase() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json()
+    const { email, locale } = await req.json()
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'invalid_email' }, { status: 400 })
     }
 
+    const validLocales = ['en', 'es', 'pt', 'fr', 'de', 'ja', 'ko']
+    const safeLocale = validLocales.includes(locale) ? locale : 'en'
+
     const supabase = makeSupabase()
     const { error } = await supabase
       .from('newsletter_subscribers')
-      .insert({ email: email.toLowerCase().trim() })
+      .insert({ email: email.toLowerCase().trim(), locale: safeLocale })
 
     if (error) {
       if (error.code === '23505') {

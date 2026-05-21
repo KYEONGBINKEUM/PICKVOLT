@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 
 export default function NewsletterSignup() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [email, setEmail]   = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'duplicate' | 'error'>('idle')
 
@@ -16,7 +16,7 @@ export default function NewsletterSignup() {
       const res = await fetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), locale }),
       })
       if (res.ok) {
         setStatus('success')

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { getEmailStrings } from '@/lib/emailI18n'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
@@ -24,7 +25,8 @@ function emailImgUrl(url: string | null | undefined, width: number): string {
     `?width=${width}&quality=80&resize=contain`
 }
 
-function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string) {
+function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string, locale = 'en') {
+  const s = getEmailStrings(locale)
   const categoryLabel: Record<string, string> = {
     smartphone: 'Smartphone', laptop: 'Laptop', tablet: 'Tablet',
   }
@@ -52,13 +54,13 @@ function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string) {
                 </p>
                 <p style="margin:0 0 6px; font-size:15px; font-weight:800; color:#fff; line-height:1.3;">${p.name}</p>
                 <p style="margin:0 0 12px; font-size:12px; color:#555;">
-                  이번 주 <span style="color:rgba(255,77,0,.85); font-weight:700;">${p.compare_count}회</span> 비교됨
-                  ${p.price_usd ? ` &nbsp;·&nbsp; <span style="color:#888;">From $${p.price_usd.toLocaleString()}</span>` : ''}
+                  <span style="color:rgba(255,77,0,.85); font-weight:700;">${s.comparedTimes(p.compare_count)}</span>
+                  ${p.price_usd ? ` &nbsp;·&nbsp; <span style="color:#888;">${s.from} $${p.price_usd.toLocaleString()}</span>` : ''}
                 </p>
                 <a href="${BASE_URL}/product/${p.id}"
                    style="display:inline-block; background:rgb(255,77,0); color:#fff; text-decoration:none;
                           font-size:12px; font-weight:700; padding:7px 14px; border-radius:20px;">
-                  스펙 보기 →
+                  ${s.viewSpec}
                 </a>
               </td>
             </tr>
@@ -66,10 +68,10 @@ function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string) {
         </td>
       </tr>`
       }).join('')
-    : `<tr><td style="padding:20px; color:#555; font-size:13px;">이번 주 비교 데이터가 없습니다.</td></tr>`
+    : `<tr><td style="padding:20px; color:#555; font-size:13px;">No comparison data this week.</td></tr>`
 
   return `<!DOCTYPE html>
-<html lang="ko">
+<html lang="${locale}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -88,10 +90,10 @@ function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string) {
                      style="display:block; width:120px; height:auto;" />
               </a>
               <p style="margin:20px 0 4px; font-size:22px; font-weight:900; color:#fff;">
-                이번 주 가장 많이 비교된 제품
+                ${s.header}
               </p>
               <p style="margin:0; font-size:13px; color:#555;">
-                지난 7일간 Pickvolt에서 가장 뜨거웠던 제품들입니다.
+                ${s.subheader}
               </p>
             </td>
           </tr>
@@ -108,15 +110,15 @@ function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string) {
                  style="display:inline-block; background:rgb(255,77,0); color:#fff;
                         text-decoration:none; font-size:14px; font-weight:800;
                         padding:14px 32px; border-radius:40px;">
-                직접 비교해보기 →
+                ${s.compareCta}
               </a>
             </td>
           </tr>
           <tr>
             <td style="border-top:1px solid #1e1e1e; padding: 24px 0 0 0; text-align:center;">
               <p style="margin:0; font-size:11px; color:#444; line-height:1.8;">
-                <a href="${BASE_URL}" style="color:#666;">pickvolt.com</a>에서 구독하셨습니다.<br>
-                <a href="${unsubscribeUrl}" style="color:#555;">구독 취소</a>
+                ${s.footerSub}<br>
+                <a href="${unsubscribeUrl}" style="color:#555;">${s.unsubscribe}</a>
               </p>
             </td>
           </tr>
@@ -199,20 +201,18 @@ export async function POST(req: NextRequest) {
   }
 
   const resend = new Resend(resendKey)
-  const subject = `이번 주 Pickvolt 인기 제품 Top ${hotProducts.length || '–'}${isTest ? ' [테스트]' : ''}`
-
-  // pickvolt.com 도메인이 Resend에서 인증됐으면 weekly@pickvolt.com,
-  // 아직 미인증이면 Resend 기본 주소 사용 (환경변수로 재정의 가능)
   const fromAddress = process.env.RESEND_FROM_EMAIL ?? 'Pickvolt <weekly@pickvolt.com>'
 
-  // ── 테스트: 어드민 본인에게만 ──────────────────────────────────────────────
+  // ── 테스트: 어드민 본인에게만 (어드민 locale 기본 ko) ──────────────────────
   if (isTest) {
     const adminEmail = user.email!
+    const testLocale = body.locale ?? 'ko'
+    const es = getEmailStrings(testLocale)
     const { data: sendData, error } = await resend.emails.send({
       from: fromAddress,
       to: adminEmail,
-      subject,
-      html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=test`),
+      subject: es.subject(hotProducts.length) + ' [테스트]',
+      html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=test`, testLocale),
     })
     if (error) {
       console.error('[newsletter/send] Resend error:', error)
@@ -236,18 +236,23 @@ export async function POST(req: NextRequest) {
     }
     const { data: rows } = await supabase
       .from('newsletter_subscribers')
-      .select('email, unsubscribe_token')
+      .select('email, unsubscribe_token, locale')
       .in('email', selectedEmails)
 
-    const tokenMap = new Map((rows ?? []).map((r: { email: string; unsubscribe_token: string }) => [r.email, r.unsubscribe_token]))
+    const subMap = new Map((rows ?? []).map((r: { email: string; unsubscribe_token: string; locale: string }) => [r.email, r]))
 
     const { data: batchData, error } = await resend.batch.send(
-      selectedEmails.map((email) => ({
-        from: fromAddress,
-        to: email,
-        subject,
-        html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${tokenMap.get(email) ?? 'na'}`),
-      }))
+      selectedEmails.map((email) => {
+        const sub = subMap.get(email)
+        const loc = sub?.locale ?? 'en'
+        const es = getEmailStrings(loc)
+        return {
+          from: fromAddress,
+          to: email,
+          subject: es.subject(hotProducts.length),
+          html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${sub?.unsubscribe_token ?? 'na'}`, loc),
+        }
+      })
     )
     if (error) {
       console.error('[newsletter/send] Resend batch error:', error)
@@ -263,7 +268,7 @@ export async function POST(req: NextRequest) {
   // ── 전체 발송 ──────────────────────────────────────────────────────────────
   const { data: subscribers } = await supabase
     .from('newsletter_subscribers')
-    .select('email, unsubscribe_token')
+    .select('email, unsubscribe_token, locale')
     .eq('active', true)
 
   if (!subscribers || subscribers.length === 0) {
@@ -275,12 +280,16 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < subscribers.length; i += batchSize) {
     const batch = subscribers.slice(i, i + batchSize)
     const { error } = await resend.batch.send(
-      batch.map((s) => ({
-        from: fromAddress,
-        to: s.email,
-        subject,
-        html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${s.unsubscribe_token}`),
-      }))
+      batch.map((s) => {
+        const loc = s.locale ?? 'en'
+        const es = getEmailStrings(loc)
+        return {
+          from: fromAddress,
+          to: s.email,
+          subject: es.subject(hotProducts.length),
+          html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${s.unsubscribe_token}`, loc),
+        }
+      })
     )
     if (error) {
       console.error('[newsletter/send] Resend batch error (all):', error)
