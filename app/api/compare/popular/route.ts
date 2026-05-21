@@ -35,15 +35,20 @@ export async function GET() {
       (products ?? []).map((p: Product) => [p.id, p])
     )
 
-    // 누적 verdict 조회
+    // 누적 verdict 조회 — 실패해도 trending 표시에 영향 없음
     const pairKeys = pairs.map(item => [...item.products].sort().join(':'))
-    const { data: verdicts } = await supabase
-      .from('comparison_verdicts')
-      .select('pair_key, winner_name, summary, comparison_count')
-      .in('pair_key', pairKeys)
-    const verdictMap = new Map<string, Verdict>(
-      (verdicts ?? []).map((v: Verdict) => [v.pair_key, v])
-    )
+    let verdictMap = new Map<string, Verdict>()
+    try {
+      const { data: verdicts } = await supabase
+        .from('comparison_verdicts')
+        .select('pair_key, winner_name, summary, comparison_count')
+        .in('pair_key', pairKeys)
+      verdictMap = new Map<string, Verdict>(
+        (verdicts ?? []).map((v: Verdict) => [v.pair_key, v])
+      )
+    } catch {
+      // verdict 테이블 없거나 에러 → 무시하고 계속
+    }
 
     const items = pairs
       .filter(item => productMap.has(item.products[0]) && productMap.has(item.products[1]))
