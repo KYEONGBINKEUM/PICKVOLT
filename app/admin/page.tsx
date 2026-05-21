@@ -240,7 +240,7 @@ export default function AdminPage() {
   const [nlChecked, setNlChecked] = useState<Set<string>>(new Set())
   const [nlRowSending, setNlRowSending] = useState<string | null>(null)
   const [nlDiag, setNlDiag] = useState<Record<string, unknown> | null>(null)
-  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; mode?: string; to?: string } | null>(null)
+  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; mode?: string; to?: string; resend_id?: string } | null>(null)
   const [nlSendError, setNlSendError] = useState('')
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
 
@@ -863,7 +863,7 @@ export default function AdminPage() {
         body: JSON.stringify({ mode, emails: emails ?? [] }),
       })
       const d = await res.json()
-      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, mode: d.mode, to: d.to })
+      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, mode: d.mode, to: d.to, resend_id: d.resend_id })
       else setNlSendError(d.error ?? d.reason ?? 'failed')
     } catch (e) { setNlSendError(String(e)) }
     if (mode === 'test') setNlTestSending(false)
@@ -3231,11 +3231,27 @@ export default function AdminPage() {
             </div>
 
             {nlSendResult && (
-              <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
-                {nlSendResult.mode === 'test'
-                  ? `✓ 테스트 발송 완료 → ${nlSendResult.to} · 제품 ${nlSendResult.products}개 포함`
-                  : `✓ ${nlSendResult.sent}명에게 발송 완료 · 제품 ${nlSendResult.products}개 포함${nlSendResult.to ? ` → ${nlSendResult.to}` : ''}`
-                }
+              <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400 space-y-0.5">
+                <div>
+                  {nlSendResult.mode === 'test'
+                    ? `✓ 테스트 발송 완료 → ${nlSendResult.to} · 제품 ${nlSendResult.products}개 포함`
+                    : `✓ ${nlSendResult.sent}명에게 발송 완료 · 제품 ${nlSendResult.products}개 포함${nlSendResult.to ? ` → ${nlSendResult.to}` : ''}`
+                  }
+                </div>
+                {nlSendResult.resend_id && (
+                  <div className="text-xs text-green-400/60 font-mono">
+                    Resend ID: {nlSendResult.resend_id}
+                    {' · '}
+                    <a
+                      href={`https://resend.com/emails/${nlSendResult.resend_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-green-400"
+                    >
+                      대시보드에서 확인
+                    </a>
+                  </div>
+                )}
               </div>
             )}
             {nlSendError && (

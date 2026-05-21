@@ -209,7 +209,11 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
     console.log('[newsletter/send] test sent:', sendData)
-    return NextResponse.json({ ok: true, sent: 1, mode: 'test', to: adminEmail, products: hotProducts.length })
+    return NextResponse.json({
+      ok: true, sent: 1, mode: 'test', to: adminEmail,
+      products: hotProducts.length,
+      resend_id: (sendData as { id?: string } | null)?.id ?? null,
+    })
   }
 
   // ── 선택 발송 ──────────────────────────────────────────────────────────────
