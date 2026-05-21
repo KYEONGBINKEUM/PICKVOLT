@@ -792,6 +792,7 @@ export default function CompareClient() {
   const [session, setSession] = useState<{ access_token: string; user: { id: string } } | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [popularItems, setPopularItems] = useState<PopularItem[]>([])
+  const [storedVerdict, setStoredVerdict] = useState<{ summary: string; count: number; winnerName: string | null } | null>(null)
   const [categoryStats, setCategoryStats] = useState<CategoryStats | null>(null)
   const [globalCpuMaxes, setGlobalCpuMaxes] = useState<CpuBenchmarkMaxes | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
@@ -855,6 +856,17 @@ export default function CompareClient() {
       .then((d) => setPopularItems(d.items ?? []))
       .catch(() => {})
   }, [])
+
+  // 이 제품 쌍의 누적 verdict 로드
+  useEffect(() => {
+    const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
+    if (ids.length !== 2) return
+    const pairKey = [...ids].sort().join(':')
+    fetch(`/api/compare/verdict?pair=${pairKey}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.verdict) setStoredVerdict(d.verdict) })
+      .catch(() => {})
+  }, [idsParam])
 
   // ref sync
   useEffect(() => { sessionRef.current = session }, [session])
@@ -928,6 +940,15 @@ export default function CompareClient() {
         if (cacheKey) aiCacheRef.current.set(cacheKey, compareData)
         if (compareData.points !== undefined && compareData.points !== null) {
           setUserPoints(compareData.points)
+        }
+        // verdict count 갱신
+        const ids2 = productIds.slice(0, 2)
+        if (ids2.length === 2) {
+          const pairKey = [...ids2].sort().join(':')
+          fetch(`/api/compare/verdict?pair=${pairKey}`)
+            .then((r) => r.json())
+            .then((d) => { if (d.verdict) setStoredVerdict(d.verdict) })
+            .catch(() => {})
         }
         fetch('/api/compare/popular')
           .then((r) => r.json())
@@ -1594,6 +1615,23 @@ export default function CompareClient() {
         {/* 결과 */}
         {!loading && products.length >= 2 && (
           <div className="mt-8">
+            {/* 누적 verdict 배너 — AI 실행 전/후 모두 표시 */}
+            {storedVerdict && storedVerdict.count > 0 && (
+              <div className="flex items-start gap-3 mb-6 px-4 py-3.5 rounded-xl border border-border bg-surface">
+                <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-full bg-white/5 flex items-center justify-center">
+                  <span className="text-xs font-black text-white/40">{storedVerdict.count}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-white/35 mb-0.5">
+                    {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
+                  </p>
+                  {storedVerdict.summary && (
+                    <p className="text-sm text-white/75 leading-snug">{storedVerdict.summary}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* AI Pick 영역 */}
             {loadingAI && <AIPickLoading t={t} />}
             {/* 자동 AI 비활성화 상태 + 미결과 + 로그인 → 수동 실행 버튼 */}
@@ -1623,6 +1661,11 @@ export default function CompareClient() {
                   onViewReasoning={() => setShowReasoning(true)}
                   t={t}
                 />
+                {storedVerdict && storedVerdict.count > 0 && (
+                  <p className="text-xs text-white/25 text-right -mt-5 mb-6 pr-1">
+                    {t('compare.verdict_yours').replace('{n}', String(storedVerdict.count))}
+                  </p>
+                )}
               </>
             )}
 
