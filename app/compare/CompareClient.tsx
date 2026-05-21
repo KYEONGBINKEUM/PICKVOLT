@@ -484,6 +484,7 @@ function ActionButtons({
   onExportPDF: () => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; sub: string } | null>(null)
@@ -493,21 +494,24 @@ function ActionButtons({
     setTimeout(() => setToast(null), 2500)
   }
 
-  const handleShare = async () => {
+  const handleCopyLink = async () => {
     const url = window.location.href
     try {
-      if (navigator.share) {
-        await navigator.share({ title: document.title, url })
-      } else {
-        await navigator.clipboard.writeText(url)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      }
-    } catch {
       await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // fallback
     }
+    setCopied(true)
+    setShareOpen(false)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleShareX = () => {
+    const url   = window.location.href
+    const title = document.title
+    const tweet = encodeURIComponent(`${title}\n${url}`)
+    window.open(`https://x.com/intent/tweet?text=${tweet}`, '_blank', 'noopener,noreferrer')
+    setShareOpen(false)
   }
 
   const wrap = async (key: string, fn: () => Promise<void>) => {
@@ -577,13 +581,40 @@ function ActionButtons({
             </>
           )}
         </div>
-        <button
-          onClick={handleShare}
-          className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
-        >
-          <Share2 className="w-4 h-4" />
-          {copied ? 'Copied!' : t('compare.share')}
-        </button>
+        {/* Share dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShareOpen((o) => !o)}
+            className="inline-flex items-center gap-2 bg-surface-2 border border-border text-white/70 hover:text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:border-white/20"
+          >
+            <Share2 className="w-4 h-4" />
+            {copied ? t('compare.share_copied') : t('compare.share')}
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+          {shareOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShareOpen(false)} />
+              <div className="absolute right-0 top-full mt-2 bg-surface-2 border border-border rounded-xl overflow-hidden shadow-xl min-w-[180px] z-20">
+                <button
+                  onClick={handleShareX}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.859L1.254 2.25h6.583l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+                  </svg>
+                  {t('compare.share_x')}
+                </button>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left border-t border-border"
+                >
+                  <Copy className="w-4 h-4 flex-shrink-0" />
+                  {t('compare.share_copy')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </>
   )

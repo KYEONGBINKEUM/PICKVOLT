@@ -65,6 +65,17 @@ async function getProduct(id: string) {
     specSrc.display_type       ?? null,
   ].filter(Boolean)
 
+  // review aggregate (for Schema.org AggregateRating)
+  const { data: reviewAgg } = await supabase
+    .from('reviews')
+    .select('rating')
+    .eq('product_id', id)
+
+  const reviewCount = (reviewAgg ?? []).length
+  const reviewAvg = reviewCount > 0
+    ? (reviewAgg!.reduce((s, r) => s + (r.rating ?? 0), 0) / reviewCount)
+    : null
+
   // variants 조회
   const { data: rawVariants } = await supabase
     .from('product_variants')
@@ -94,6 +105,8 @@ async function getProduct(id: string) {
     image_url:  product.image_url,
     amazon_url: common?.amazon_url ?? null,
     ai_summary_i18n: (product as Record<string, unknown>).ai_summary_i18n as Record<string, string> | null ?? null,
+    reviewCount,
+    reviewAvg,
     variants,
     specs: {
       cpu:             common?.cpu_name ?? null,
@@ -193,6 +206,15 @@ export default async function ProductPage({
             priceCurrency: 'USD',
             price: product.price_usd,
             availability: 'https://schema.org/InStock',
+          },
+        } : {}),
+        ...(product.reviewAvg !== null && product.reviewCount >= 3 ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Math.round(product.reviewAvg * 10) / 10,
+            bestRating: 10,
+            worstRating: 1,
+            ratingCount: product.reviewCount,
           },
         } : {}),
         description: [
