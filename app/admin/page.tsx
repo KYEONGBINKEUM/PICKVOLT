@@ -237,7 +237,9 @@ export default function AdminPage() {
   const [nlLoading, setNlLoading] = useState(false)
   const [nlSending, setNlSending] = useState(false)
   const [nlTestSending, setNlTestSending] = useState(false)
-  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; test?: boolean; to?: string } | null>(null)
+  const [nlChecked, setNlChecked] = useState<Set<string>>(new Set())
+  const [nlRowSending, setNlRowSending] = useState<string | null>(null)   // email of row currently sending
+  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; mode?: string; to?: string } | null>(null)
   const [nlSendError, setNlSendError] = useState('')
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
 
@@ -847,25 +849,43 @@ export default function AdminPage() {
     setNlLoading(false)
   }, [])
 
-  const sendNewsletter = useCallback(async (test = false) => {
+  const sendNewsletter = useCallback(async (mode: 'test' | 'selected' | 'all' = 'all', emails?: string[]) => {
     if (!token) return
-    if (test) setNlTestSending(true)
+    if (mode === 'test') setNlTestSending(true)
     else setNlSending(true)
     setNlSendResult(null)
     setNlSendError('')
     try {
-      const url = test ? '/api/admin/newsletter/send?test=true' : '/api/admin/newsletter/send'
-      const res = await fetch(url, {
+      const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, emails: emails ?? [] }),
       })
       const d = await res.json()
-      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, test: d.test, to: d.to })
+      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, mode: d.mode, to: d.to })
       else setNlSendError(d.error ?? d.reason ?? 'failed')
     } catch (e) { setNlSendError(String(e)) }
-    if (test) setNlTestSending(false)
+    if (mode === 'test') setNlTestSending(false)
     else setNlSending(false)
   }, [token])
+
+  const sendToRow = useCallback(async (email: string) => {
+    if (!token || nlRowSending) return
+    setNlRowSending(email)
+    setNlSendResult(null)
+    setNlSendError('')
+    try {
+      const res = await fetch('/api/admin/newsletter/send', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'selected', emails: [email] }),
+      })
+      const d = await res.json()
+      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, mode: 'selected', to: email })
+      else setNlSendError(d.error ?? d.reason ?? 'failed')
+    } catch (e) { setNlSendError(String(e)) }
+    setNlRowSending(null)
+  }, [token, nlRowSending])
 
   const toggleSubscriber = useCallback(async (id: string, active: boolean) => {
     await fetch('/api/admin/newsletter/subscribers', {
@@ -3164,16 +3184,26 @@ export default function AdminPage() {
                   미리보기
                 </a>
                 <button
-                  onClick={() => sendNewsletter(true)}
-                  disabled={nlTestSending || nlSending}
+                  onClick={() => sendNewsletter('test')}
+                  disabled={nlTestSending || nlSending || !!nlRowSending}
                   className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg border border-border text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
                 >
                   <Mail size={13} />
-                  {nlTestSending ? '발송 중...' : '테스트 발송'}
+                  {nlTestSending ? '발송 중...' : '내게 테스트'}
                 </button>
+                {nlChecked.size > 0 && (
+                  <button
+                    onClick={() => sendNewsletter('selected', Array.from(nlChecked))}
+                    disabled={nlSending || nlTestSending || !!nlRowSending}
+                    className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg border border-accent/50 text-accent hover:bg-accent/10 font-bold transition-colors disabled:opacity-50"
+                  >
+                    <Mail size={13} />
+                    {nlSending ? '발송 중...' : `선택 발송 (${nlChecked.size}명)`}
+                  </button>
+                )}
                 <button
-                  onClick={() => sendNewsletter(false)}
-                  disabled={nlSending || nlTestSending}
+                  onClick={() => sendNewsletter('all')}
+                  disabled={nlSending || nlTestSending || !!nlRowSending}
                   className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors disabled:opacity-50"
                 >
                   <Mail size={13} />
@@ -3184,9 +3214,9 @@ export default function AdminPage() {
 
             {nlSendResult && (
               <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
-                {nlSendResult.test
+                {nlSendResult.mode === 'test'
                   ? `✓ 테스트 발송 완료 → ${nlSendResult.to} · 제품 ${nlSendResult.products}개 포함`
-                  : `✓ ${nlSendResult.sent}명에게 발송 완료 · 제품 ${nlSendResult.products}개 포함`
+                  : `✓ ${nlSendResult.sent}명에게 발송 완료 · 제품 ${nlSendResult.products}개 포함${nlSendResult.to ? ` → ${nlSendResult.to}` : ''}`
                 }
               </div>
             )}
@@ -3205,6 +3235,17 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="px-4 py-3 w-8">
+                        <input
+                          type="checkbox"
+                          className="accent-accent w-3.5 h-3.5 cursor-pointer"
+                          checked={nlChecked.size === nlSubscribers.filter(s => s.active).length && nlSubscribers.filter(s => s.active).length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) setNlChecked(new Set(nlSubscribers.filter(s => s.active).map(s => s.email)))
+                            else setNlChecked(new Set())
+                          }}
+                        />
+                      </th>
                       <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">이메일</th>
                       <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">구독일</th>
                       <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">상태</th>
@@ -3213,7 +3254,22 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {nlSubscribers.map((s) => (
-                      <tr key={s.id} className="border-b border-border/50 hover:bg-white/[0.02]">
+                      <tr key={s.id} className={`border-b border-border/50 hover:bg-white/[0.02] ${nlChecked.has(s.email) ? 'bg-accent/5' : ''}`}>
+                        <td className="px-4 py-3 w-8">
+                          {s.active && (
+                            <input
+                              type="checkbox"
+                              className="accent-accent w-3.5 h-3.5 cursor-pointer"
+                              checked={nlChecked.has(s.email)}
+                              onChange={(e) => {
+                                const next = new Set(nlChecked)
+                                if (e.target.checked) next.add(s.email)
+                                else next.delete(s.email)
+                                setNlChecked(next)
+                              }}
+                            />
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-white/80 font-mono text-xs">{s.email}</td>
                         <td className="px-4 py-3 text-white/30 text-xs">
                           {new Date(s.created_at).toLocaleDateString('ko-KR')}
@@ -3226,12 +3282,24 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => toggleSubscriber(s.id, !s.active)}
-                            className="text-xs text-white/25 hover:text-white/60 transition-colors"
-                          >
-                            {s.active ? '비활성화' : '재활성화'}
-                          </button>
+                          <div className="flex items-center justify-end gap-3">
+                            {s.active && (
+                              <button
+                                onClick={() => sendToRow(s.email)}
+                                disabled={!!nlRowSending || nlSending || nlTestSending}
+                                className="flex items-center gap-1 text-xs text-accent/70 hover:text-accent transition-colors disabled:opacity-30"
+                              >
+                                <Mail size={11} />
+                                {nlRowSending === s.email ? '발송 중...' : '보내기'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => toggleSubscriber(s.id, !s.active)}
+                              className="text-xs text-white/25 hover:text-white/60 transition-colors"
+                            >
+                              {s.active ? '비활성화' : '재활성화'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

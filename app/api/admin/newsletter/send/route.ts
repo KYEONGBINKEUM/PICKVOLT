@@ -116,7 +116,10 @@ function buildEmailHtml(products: HotProduct[], unsubscribeUrl: string) {
 }
 
 // POST /api/admin/newsletter/send
-// ?test=true  →  어드민 본인 이메일로만 발송 (테스트용)
+// body.mode:
+//   'test'     → 어드민 본인에게만
+//   'selected' → body.emails 배열에 있는 주소들에게만
+//   'all'      → 활성 구독자 전체 (기본값)
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization') ?? ''
   const token = authHeader.replace('Bearer ', '')
@@ -134,7 +137,12 @@ export async function POST(req: NextRequest) {
   const resendKey = process.env.RESEND_API_KEY
   if (!resendKey) return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 })
 
-  const isTest = new URL(req.url).searchParams.get('test') === 'true'
+  const body = await req.json().catch(() => ({}))
+  const mode: 'test' | 'selected' | 'all' = body.mode ?? 'all'
+  const selectedEmails: string[] = body.emails ?? []
+
+  // legacy ?test=true support
+  const isTest = mode === 'test' || new URL(req.url).searchParams.get('test') === 'true'
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -180,21 +188,45 @@ export async function POST(req: NextRequest) {
   const resend = new Resend(resendKey)
   const subject = `이번 주 Pickvolt 인기 제품 Top ${hotProducts.length || '–'}${isTest ? ' [테스트]' : ''}`
 
+  // ── 테스트: 어드민 본인에게만 ──────────────────────────────────────────────
   if (isTest) {
-    // 테스트: 어드민 본인에게만 발송
     const adminEmail = user.email!
-    const unsubscribeUrl = `${BASE_URL}/api/newsletter/unsubscribe?token=test`
     const { error } = await resend.emails.send({
       from: 'Pickvolt <weekly@pickvolt.com>',
       to: adminEmail,
       subject,
-      html: buildEmailHtml(hotProducts, unsubscribeUrl),
+      html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=test`),
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ ok: true, sent: 1, test: true, to: adminEmail, products: hotProducts.length })
+    return NextResponse.json({ ok: true, sent: 1, mode: 'test', to: adminEmail, products: hotProducts.length })
   }
 
-  // 전체 발송
+  // ── 선택 발송 ──────────────────────────────────────────────────────────────
+  if (mode === 'selected') {
+    if (selectedEmails.length === 0) {
+      return NextResponse.json({ error: '발송할 이메일을 선택하세요.' }, { status: 400 })
+    }
+    // unsubscribe_token은 선택 발송에서 실제 토큰이 없을 수 있으므로 이메일로 조회
+    const { data: rows } = await supabase
+      .from('newsletter_subscribers')
+      .select('email, unsubscribe_token')
+      .in('email', selectedEmails)
+
+    const tokenMap = new Map((rows ?? []).map((r: { email: string; unsubscribe_token: string }) => [r.email, r.unsubscribe_token]))
+
+    const { error } = await resend.batch.send(
+      selectedEmails.map((email) => ({
+        from: 'Pickvolt <weekly@pickvolt.com>',
+        to: email,
+        subject,
+        html: buildEmailHtml(hotProducts, `${BASE_URL}/api/newsletter/unsubscribe?token=${tokenMap.get(email) ?? 'na'}`),
+      }))
+    )
+    if (error) return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json({ ok: true, sent: selectedEmails.length, mode: 'selected', products: hotProducts.length })
+  }
+
+  // ── 전체 발송 ──────────────────────────────────────────────────────────────
   const { data: subscribers } = await supabase
     .from('newsletter_subscribers')
     .select('email, unsubscribe_token')
@@ -219,5 +251,5 @@ export async function POST(req: NextRequest) {
     sent += batch.length
   }
 
-  return NextResponse.json({ ok: true, sent, products: hotProducts.length })
+  return NextResponse.json({ ok: true, sent, mode: 'all', products: hotProducts.length })
 }
