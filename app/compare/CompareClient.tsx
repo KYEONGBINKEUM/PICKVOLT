@@ -1615,19 +1615,6 @@ export default function CompareClient() {
         {/* 결과 */}
         {!loading && products.length >= 2 && (
           <div className="mt-8">
-            {/* 누적 verdict 배너 — AI 실행 전/후 모두 표시 */}
-            {storedVerdict && storedVerdict.count > 0 && (
-              <div className="mb-6 pl-4 border-l-2 border-accent/40">
-                <span className="inline-block text-[11px] font-bold text-accent/60 tracking-wide mb-1">
-                  {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
-                </span>
-                {storedVerdict.summary && (
-                  <p className="text-sm text-white/50 leading-relaxed italic">
-                    &ldquo;{storedVerdict.summary}&rdquo;
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* AI Pick 영역 */}
             {loadingAI && <AIPickLoading t={t} />}
@@ -1659,8 +1646,8 @@ export default function CompareClient() {
                   t={t}
                 />
                 {storedVerdict && storedVerdict.count > 0 && (
-                  <p className="text-xs text-white/25 text-right -mt-5 mb-6 pr-1">
-                    {t('compare.verdict_yours').replace('{n}', String(storedVerdict.count))}
+                  <p className="text-xs text-white/20 text-right -mt-5 mb-6 pr-1">
+                    {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
                   </p>
                 )}
               </>
