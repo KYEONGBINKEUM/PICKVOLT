@@ -238,7 +238,8 @@ export default function AdminPage() {
   const [nlSending, setNlSending] = useState(false)
   const [nlTestSending, setNlTestSending] = useState(false)
   const [nlChecked, setNlChecked] = useState<Set<string>>(new Set())
-  const [nlRowSending, setNlRowSending] = useState<string | null>(null)   // email of row currently sending
+  const [nlRowSending, setNlRowSending] = useState<string | null>(null)
+  const [nlDiag, setNlDiag] = useState<Record<string, unknown> | null>(null)
   const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; mode?: string; to?: string } | null>(null)
   const [nlSendError, setNlSendError] = useState('')
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
@@ -886,6 +887,17 @@ export default function AdminPage() {
     } catch (e) { setNlSendError(String(e)) }
     setNlRowSending(null)
   }, [token, nlRowSending])
+
+  const checkNewsletter = useCallback(async () => {
+    if (!token) return
+    setNlDiag(null)
+    try {
+      const res = await fetch('/api/admin/newsletter/check', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setNlDiag(await res.json())
+    } catch (e) { setNlDiag({ error: String(e) }) }
+  }, [token])
 
   const toggleSubscriber = useCallback(async (id: string, active: boolean) => {
     await fetch('/api/admin/newsletter/subscribers', {
@@ -3179,6 +3191,12 @@ export default function AdminPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={checkNewsletter}
+                  className="text-xs px-4 py-2 rounded-lg border border-border text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
+                >
+                  진단
+                </button>
                 <a href="/api/newsletter/preview" target="_blank"
                   className="text-xs px-4 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors">
                   미리보기
@@ -3223,6 +3241,18 @@ export default function AdminPage() {
             {nlSendError && (
               <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
                 {nlSendError}
+              </div>
+            )}
+            {nlDiag && (
+              <div className="px-4 py-3 rounded-lg bg-surface border border-border text-xs font-mono space-y-1">
+                {Object.entries(nlDiag).map(([k, v]) => (
+                  <div key={k} className="flex gap-2">
+                    <span className="text-white/30 shrink-0">{k}:</span>
+                    <span className={String(v).startsWith('❌') ? 'text-red-400' : 'text-white/70'}>
+                      {typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
 
