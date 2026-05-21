@@ -200,7 +200,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
       {/* 모바일 드로어 */}
       <div className={clsx(
         'fixed top-0 left-0 right-0 z-40 md:hidden bg-background border-b border-border shadow-2xl transition-transform duration-300 ease-in-out',
-        mobileOpen ? 'translate-y-0' : '-translate-y-full'
+        mobileOpen ? 'translate-y-0 pointer-events-auto' : '-translate-y-full pointer-events-none'
       )}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
           <Link href={isCommunity ? "/community" : "/"} className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
