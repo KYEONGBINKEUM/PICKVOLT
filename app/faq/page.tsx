@@ -12,7 +12,6 @@ const faqSchema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: [
-    { '@type': 'Question', name: 'How is the overall score calculated?', acceptedAnswer: { '@type': 'Answer', text: 'Each product is scored based on CPU/SoC performance (55%), camera (20%), battery (13%), and RAM (12%) for smartphones. Tablets emphasize CPU performance at 65%. Laptops with a discrete GPU split weight between CPU and GPU.' } },
     { '@type': 'Question', name: 'How many products can I compare at once?', acceptedAnswer: { '@type': 'Answer', text: 'You can add up to 4 products to the compare tray at the same time.' } },
     { '@type': 'Question', name: 'Are the prices shown real-time?', acceptedAnswer: { '@type': 'Answer', text: 'Prices are updated regularly but may not reflect real-time fluctuations. We recommend checking the retailer link for the most current price.' } },
     { '@type': 'Question', name: 'Can anyone write a review?', acceptedAnswer: { '@type': 'Answer', text: 'Yes — any registered user can leave a star rating and written review. Sign in with your Google account to get started.' } },
@@ -50,7 +49,6 @@ export default function FAQPage() {
   const { t } = useI18n()
 
   const faqs = [
-    { q: t('faq.q1'), a: t('faq.a1') },
     { q: t('faq.q2'), a: t('faq.a2') },
     { q: t('faq.q3'), a: t('faq.a3') },
     { q: t('faq.q4'), a: t('faq.a4') },
