@@ -3,11 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Globe } from 'lucide-react'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
-import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency'
 
 export function LocalePopup() {
   const { locale, setLocale } = useI18n()
-  const { currency, setCurrency } = useCurrency()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -48,26 +46,6 @@ export function LocalePopup() {
             </button>
           ))}
 
-          <div className="border-t border-border mx-4 my-1" />
-
-          {/* Currency */}
-          <div className="px-4 pt-1 pb-1">
-            <p className="text-[10px] text-white/30 uppercase tracking-widest">Currency</p>
-          </div>
-          {CURRENCIES.map((c) => (
-            <button
-              key={c.code}
-              onClick={() => { setCurrency(c.code as CurrencyCode); setOpen(false) }}
-              className={`w-full flex items-center gap-2.5 px-4 py-2 text-xs transition-colors hover:bg-surface ${
-                currency === c.code ? 'text-accent' : 'text-white/60'
-              }`}
-            >
-              <span className="text-base">{c.flag}</span>
-              <span className="font-semibold">{c.symbol}</span>
-              <span>{c.code}</span>
-              {currency === c.code && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
-            </button>
-          ))}
           <div className="pb-2" />
         </div>
       )}
@@ -119,47 +97,3 @@ export function LanguageSwitcher() {
   )
 }
 
-export function CurrencySwitcher() {
-  const { currency, setCurrency } = useCurrency()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const current = CURRENCIES.find((c) => c.code === currency)!
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors py-1"
-      >
-        <span>{current.flag} {current.symbol} {current.code}</span>
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full mb-2 right-0 bg-surface-2 border border-border rounded-2xl overflow-hidden shadow-2xl w-52 z-50">
-          {CURRENCIES.map((c) => (
-            <button
-              key={c.code}
-              onClick={() => { setCurrency(c.code as CurrencyCode); setOpen(false) }}
-              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs transition-colors hover:bg-surface ${
-                currency === c.code ? 'text-accent' : 'text-white/60'
-              }`}
-            >
-              <span className="text-base">{c.flag}</span>
-              <span className="font-semibold">{c.symbol}</span>
-              <span>{c.code}</span>
-              <span className="ml-auto text-white/30">{c.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
