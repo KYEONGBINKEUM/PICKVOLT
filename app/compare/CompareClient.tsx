@@ -1617,18 +1617,15 @@ export default function CompareClient() {
           <div className="mt-8">
             {/* 누적 verdict 배너 — AI 실행 전/후 모두 표시 */}
             {storedVerdict && storedVerdict.count > 0 && (
-              <div className="flex items-start gap-3 mb-6 px-4 py-3.5 rounded-xl border border-border bg-surface">
-                <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-full bg-white/5 flex items-center justify-center">
-                  <span className="text-xs font-black text-white/40">{storedVerdict.count}</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-white/35 mb-0.5">
-                    {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
+              <div className="mb-6 pl-4 border-l-2 border-accent/40">
+                <span className="inline-block text-[11px] font-bold text-accent/60 tracking-wide mb-1">
+                  {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
+                </span>
+                {storedVerdict.summary && (
+                  <p className="text-sm text-white/50 leading-relaxed italic">
+                    &ldquo;{storedVerdict.summary}&rdquo;
                   </p>
-                  {storedVerdict.summary && (
-                    <p className="text-sm text-white/75 leading-snug">{storedVerdict.summary}</p>
-                  )}
-                </div>
+                )}
               </div>
             )}
 
