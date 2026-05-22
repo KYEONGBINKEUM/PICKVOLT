@@ -484,6 +484,7 @@ ${priceHTML}
                 src={imgUrl(product.image_url, 768)}
                 alt={product.name}
                 fill
+                unoptimized
                 className="object-contain p-8"
                 sizes="(max-width: 1024px) 100vw, 384px"
               />
