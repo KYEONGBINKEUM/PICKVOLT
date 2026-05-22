@@ -34,7 +34,7 @@ export default async function CategoryPage({
   try {
     const res = await fetch(
       `${getBaseUrl()}/api/products/list?category=${category}&sort=performance&page=1&limit=30`,
-      { next: { revalidate: 60 } }
+      { next: { revalidate: 0 } }
     )
     if (res.ok) {
       const json = await res.json()
