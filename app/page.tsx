@@ -2,31 +2,10 @@ import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import HomeHeading from './HomeHeading'
 import TrendingSection from './TrendingSection'
+import { getPopularComparisons } from '@/lib/getPopularComparisons'
+import NewsletterSignup from '@/components/NewsletterSignup'
 
-function getBaseUrl() {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-}
-
-interface TrendingCard {
-  productA: { id: string; name: string; brand: string; image_url: string | null }
-  productB: { id: string; name: string; brand: string; image_url: string | null }
-  href: string
-  cnt: number
-  verdict: string | null
-  verdictCount: number
-}
-
-async function getTrending(): Promise<TrendingCard[]> {
-  try {
-    const res = await fetch(`${getBaseUrl()}/api/compare/popular`, { next: { revalidate: 300 } })
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.items ?? []
-  } catch {
-    return []
-  }
-}
+export const revalidate = 0
 
 export default async function HomePage({
   searchParams,
@@ -34,7 +13,7 @@ export default async function HomePage({
   searchParams: Promise<{ q?: string }>
 }) {
   const { q } = await searchParams
-  const trending = await getTrending()
+  const trending = await getPopularComparisons()
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
@@ -50,6 +29,7 @@ export default async function HomePage({
           </div>
         )}
       </div>
+      <NewsletterSignup />
     </main>
   )
 }
