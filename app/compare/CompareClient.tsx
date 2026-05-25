@@ -1694,19 +1694,6 @@ export default function CompareClient() {
                     {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
                   </p>
                 )}
-                {/* 게스트 체험 완료 → 회원가입 유도 배너 */}
-                {guestTrialDone && !session && (
-                  <div className="mb-6 p-4 rounded-xl border border-accent/30 bg-accent/5 flex items-center gap-4">
-                    <Zap className="w-5 h-5 text-accent flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-bold">{t('compare.guest_trial_done_title')}</p>
-                      <p className="text-white/40 text-xs mt-0.5">{t('compare.guest_trial_done_desc')}</p>
-                    </div>
-                    <Link href="/login" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-xs font-bold px-4 py-2 rounded-full transition-colors whitespace-nowrap">
-                      {t('auth.signup')}
-                    </Link>
-                  </div>
-                )}
               </>
             )}
 
