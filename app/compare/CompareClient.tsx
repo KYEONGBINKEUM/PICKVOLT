@@ -1605,14 +1605,13 @@ export default function CompareClient() {
         )}
         {/* 2) 게스트 체험 이미 소진 */}
         {error === 'guest_used' && !loading && (
-          <div className="mt-8 p-6 bg-surface border border-accent/30 rounded-card flex items-center gap-4">
-            <Zap className="w-5 h-5 text-accent flex-shrink-0" />
+          <div className="mt-8 p-6 bg-surface border border-border rounded-card flex items-center gap-4">
             <div className="flex-1">
               <p className="text-white font-bold text-sm mb-1">{t('compare.guest_used_title')}</p>
               <p className="text-white/40 text-xs">{t('compare.guest_used_desc')}</p>
             </div>
             <Link href="/login" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
-              {t('auth.signup')}
+              {t('auth.signin')}
             </Link>
           </div>
         )}
