@@ -3,7 +3,6 @@ import SearchBar from '@/components/SearchBar'
 import HomeHeading from './HomeHeading'
 import TrendingSection from './TrendingSection'
 import { getPopularComparisons } from '@/lib/getPopularComparisons'
-import NewsletterSignup from '@/components/NewsletterSignup'
 
 export const revalidate = 0
 
@@ -29,7 +28,6 @@ export default async function HomePage({
           </div>
         )}
       </div>
-      <NewsletterSignup />
     </main>
   )
 }
