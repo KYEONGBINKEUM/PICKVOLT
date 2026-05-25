@@ -539,6 +539,7 @@ function WritePageInner() {
         })
         const json = await res.json()
         if (!res.ok) { setError(mapApiError(json.error, t) ?? t('write.error_network')); return }
+        router.refresh()  // invalidate community feed cache so new post appears immediately
         router.push(`/community/posts/${json.id}`)
       }
     } catch {

@@ -193,8 +193,8 @@ export async function GET(req: NextRequest) {
 
   const res = NextResponse.json({ posts, total: count ?? 0 })
   res.headers.set('Cache-Control', userId
-    ? 'private, s-maxage=30, stale-while-revalidate=60'
-    : 'public, s-maxage=30, stale-while-revalidate=60'
+    ? 'private, no-cache'
+    : 'public, s-maxage=20, stale-while-revalidate=30'
   )
   return res
 }

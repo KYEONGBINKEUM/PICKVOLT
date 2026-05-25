@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 import { shortenProductName } from '@/lib/utils'
+
+const GUEST_AI_COOKIE = 'pv_guest_ai'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
@@ -65,11 +68,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '제품을 2개 이상 선택해주세요.' }, { status: 400 })
     }
 
-    // 로그인 필수
-    if (!accessToken) {
-      return NextResponse.json({ error: 'login_required' }, { status: 401 })
+    // ── 게스트 무료 체험 처리 ────────────────────────────────────────────────
+    const isGuest = !accessToken
+    if (isGuest) {
+      const cookieStore = await cookies()
+      const guestUsed = cookieStore.get(GUEST_AI_COOKIE)?.value
+      if (guestUsed === '1') {
+        // 이미 체험 사용 → 로그인 유도
+        return NextResponse.json({ error: 'login_required', guestUsed: true }, { status: 401 })
+      }
+      // 첫 방문 → AI 실행 후 쿠키 세팅해 반환 (히스토리/포인트 차감 없음)
+      const productList = products
+        .map((p: { name: string; specs: Record<string, unknown> }) => `- ${p.name}: ${JSON.stringify(p.specs)}`)
+        .join('\n')
+      const prefText = preferences
+        ? `User priorities: budget sensitivity ${preferences.budget}/5, photography ${preferences.photography}/5, performance ${preferences.performance}/5, battery life ${preferences.battery}/5.`
+        : ''
+      const prompt = PROMPT_TEMPLATE(productList, prefText, lang)
+      const MAX_RETRIES = 3
+      let guestResult; let lastErr: unknown
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          guestResult = process.env.GEMINI_API_KEY ? await runWithGemini(prompt) : await runWithClaude(prompt)
+          break
+        } catch (e) {
+          lastErr = e
+          if (attempt < MAX_RETRIES) await new Promise((r) => setTimeout(r, 1000 * attempt))
+        }
+      }
+      if (!guestResult) throw lastErr
+
+      // verdict upsert (best-effort)
+      try {
+        if ((productIds ?? []).length === 2 && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          const adminSb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY)
+          const sorted = [...(productIds as string[])].sort()
+          await adminSb.rpc('upsert_comparison_verdict', {
+            p_pair_key: sorted.join(':'), p_product_ids: sorted,
+            p_winner_name: guestResult.winner ?? null, p_summary: guestResult.summary ?? null,
+          })
+        }
+      } catch {}
+
+      const res = NextResponse.json({
+        ...guestResult,
+        provider: process.env.GEMINI_API_KEY ? 'gemini' : 'claude',
+        guestTrial: true,
+      })
+      res.cookies.set(GUEST_AI_COOKIE, '1', {
+        maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax', httpOnly: true,
+      })
+      return res
     }
 
+    // ── 로그인 유저 처리 ──────────────────────────────────────────────────────
     // 유저 토큰으로 인증된 Supabase 클라이언트
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

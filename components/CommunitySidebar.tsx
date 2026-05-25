@@ -79,30 +79,30 @@ export default function CommunitySidebar() {
                 <Plus className="w-3.5 h-3.5" />
               </Link>
             </div>
-            {myClans.length === 0 ? (
-              <Link href="/clan"
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/30 hover:text-white hover:bg-white/5 transition-colors w-full">
-                <Users className="w-4 h-4 flex-shrink-0" />
-                {t('clan.discover')}
-              </Link>
-            ) : (
-              myClans.map(c => {
-                const active = pathname === `/clan/${c.slug}` || pathname.startsWith(`/clan/${c.slug}/`)
-                return (
-                  <Link key={c.id} href={`/clan/${c.slug}`}
-                    className={clsx(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full',
-                      active ? 'bg-white/10 text-white font-semibold' : 'text-white/50 hover:text-white hover:bg-white/5'
-                    )}>
-                    {c.avatar_url
-                      ? <img src={c.avatar_url} alt={c.name} className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                      : <span className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[8px] font-bold text-accent/70 flex-shrink-0">{c.name[0]?.toUpperCase()}</span>
-                    }
-                    <span className="truncate">{c.name}</span>
-                  </Link>
-                )
-              })
-            )}
+            {myClans.map(c => {
+              const active = pathname === `/clan/${c.slug}` || pathname.startsWith(`/clan/${c.slug}/`)
+              return (
+                <Link key={c.id} href={`/clan/${c.slug}`}
+                  className={clsx(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full',
+                    active ? 'bg-white/10 text-white font-semibold' : 'text-white/50 hover:text-white hover:bg-white/5'
+                  )}>
+                  {c.avatar_url
+                    ? <img src={c.avatar_url} alt={c.name} className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+                    : <span className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[8px] font-bold text-accent/70 flex-shrink-0">{c.name[0]?.toUpperCase()}</span>
+                  }
+                  <span className="truncate">{c.name}</span>
+                </Link>
+              )
+            })}
+            <Link href="/clan"
+              className={clsx(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full',
+                pathname === '/clan' ? 'bg-white/10 text-white font-semibold' : 'text-white/30 hover:text-white hover:bg-white/5'
+              )}>
+              <Users className="w-4 h-4 flex-shrink-0" />
+              {t('clan.discover')}
+            </Link>
           </div>
         </div>
       </aside>

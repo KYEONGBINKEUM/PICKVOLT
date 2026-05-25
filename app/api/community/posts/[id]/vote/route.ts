@@ -20,9 +20,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const supabase = makeServiceClient()
 
-  const [{ data: existing }, { data: existingDown }] = await Promise.all([
+  const [{ data: existing }, { data: existingDown }, { data: postBefore }] = await Promise.all([
     supabase.from('community_post_votes').select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle(),
     supabase.from('community_post_downvotes').select('post_id').eq('post_id', id).eq('user_id', user.id).maybeSingle(),
+    supabase.from('community_posts').select('upvotes, user_id').eq('id', id).maybeSingle(),
   ])
 
   if (existing) {
@@ -39,6 +40,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const { data: post } = await supabase.from('community_posts').select('upvotes, downvotes').eq('id', id).single()
+
+  // 추천 추가 시 20개 달성 마일스톤 보상 (글 작성자에게 10포인트, 포스트당 1회)
+  if (!existing && post && postBefore) {
+    const prevUpvotes = postBefore.upvotes ?? 0
+    const newUpvotes  = post.upvotes ?? 0
+    const authorId    = postBefore.user_id
+    // 직전에 19이하 → 이번에 20이상으로 처음 돌파, 자신 글 추천 제외
+    if (prevUpvotes < 20 && newUpvotes >= 20 && authorId && authorId !== user.id) {
+      try {
+        // 해당 포스트에 대해 이미 지급한 적 있으면 스킵
+        const { data: alreadyRewarded } = await supabase
+          .from('point_transactions')
+          .select('id')
+          .eq('user_id', authorId)
+          .eq('type', 'upvote_milestone')
+          .eq('reference_id', id)
+          .maybeSingle()
+        if (!alreadyRewarded) {
+          const { data: pd } = await supabase.from('profiles').select('points').eq('user_id', authorId).maybeSingle()
+          const cur = (pd as { points?: number } | null)?.points ?? 0
+          await supabase.from('profiles').update({ points: cur + 10 }).eq('user_id', authorId)
+          await supabase.from('point_transactions').insert({
+            user_id: authorId, amount: 10, type: 'upvote_milestone',
+            description: '인기 글 달성 보상 (추천 20개)', reference_id: id,
+          })
+        }
+      } catch {}
+    }
+  }
+
   return NextResponse.json({
     voted: !existing,
     upvotes: post?.upvotes ?? 0,

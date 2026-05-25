@@ -54,7 +54,7 @@ export default function CommunityClient({ initialPosts, initialTotal }: Props) {
   useEffect(() => {
     if (initialPosts) return
     setLoading(true)
-    fetch(`/api/community/posts?sort=latest&page=1&limit=${LIMIT}`)
+    fetch(`/api/community/posts?sort=latest&page=1&limit=${LIMIT}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         const fetched = d.posts ?? []

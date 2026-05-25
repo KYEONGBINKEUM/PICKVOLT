@@ -797,6 +797,7 @@ export default function CompareClient() {
   const [globalCpuMaxes, setGlobalCpuMaxes] = useState<CpuBenchmarkMaxes | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
   const [showBottomBar, setShowBottomBar] = useState(false)
+  const [guestTrialDone, setGuestTrialDone] = useState(false)  // 게스트 무료 체험 완료 여부
 
   // 동일한 ids+user 조합으로 이미 실행한 비교는 재실행 방지
   const ranKeyRef = useRef<string>('')
@@ -888,7 +889,7 @@ export default function CompareClient() {
 
   // ── AI 비교 호출 (스펙 로드 완료 후 단독 실행 가능) ─────────────────────
   const callAI = useCallback(async (loadedProducts: Product[], productIds: string[], cacheKey?: string) => {
-    if (!session) return
+    // 비로그인(게스트)도 체험 1회 허용 — session 없어도 진행
     setLoadingAI(true)
     setError(null)
 
@@ -909,7 +910,7 @@ export default function CompareClient() {
           },
         })),
         productIds,
-        accessToken: session.access_token,
+        accessToken: session?.access_token ?? null,  // null = 게스트
         locale: locale as Locale,
       })
 
@@ -929,7 +930,12 @@ export default function CompareClient() {
         })
       }
 
-      if (compareRes.status === 401) { setError('login_required'); return }
+      if (compareRes.status === 401) {
+        const errData = await compareRes.json().catch(() => ({}))
+        // guestUsed=true → 체험 이미 사용, 로그인 유도
+        setError(errData.guestUsed ? 'guest_used' : 'login_required')
+        return
+      }
       if (compareRes.status === 402) { setError('no_points'); return }
 
       const compareData = await compareRes.json()
@@ -941,6 +947,8 @@ export default function CompareClient() {
         if (compareData.points !== undefined && compareData.points !== null) {
           setUserPoints(compareData.points)
         }
+        // 게스트 체험 완료 플래그
+        if (compareData.guestTrial) setGuestTrialDone(true)
         // verdict count 갱신
         const ids2 = productIds.slice(0, 2)
         if (ids2.length === 2) {
@@ -1035,7 +1043,7 @@ export default function CompareClient() {
     }
   }, [t, callAI])
 
-  // 수동 AI 실행 (autoAI=false일 때 버튼 클릭)
+  // 수동 AI 실행 (autoAI=false일 때 버튼 클릭, 로그인 유저만)
   const handleManualAI = useCallback(() => {
     if (!session || products.length < 2 || loadingAI) return
     const ids = products.map((p) => p.id)
@@ -1055,7 +1063,7 @@ export default function CompareClient() {
     if (ranKeyRef.current === key) return
 
     ranKeyRef.current = key
-    // autoAI=false이고 로그인 상태면 AI 자동 실행 건너뜀
+    // autoAI=false이고 로그인 상태면 AI 자동 실행 건너뜀 (게스트는 항상 자동 실행)
     runComparison(ids, historyId || undefined, !autoAI && !!session)
   }, [idsParam, historyId, runComparison, session, sessionLoaded, settingsLoaded, autoAI])
 
@@ -1582,31 +1590,66 @@ export default function CompareClient() {
         {loading && <LoadingState message={loadingMsg} />}
 
         {/* 에러 */}
+        {/* 1) 로그인 필요 (체험 미사용) */}
         {error === 'login_required' && !loading && sessionLoaded && (
           <div className="mt-8 p-6 bg-surface border border-border rounded-card flex items-center gap-4">
             <Lock className="w-5 h-5 text-white/30 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-white font-bold text-sm mb-1">Sign in to use AI Pick</p>
-              <p className="text-white/40 text-xs">Create a free account to see AI-powered comparisons.</p>
+              <p className="text-white font-bold text-sm mb-1">{t('auth.signin')} — AI Pick</p>
+              <p className="text-white/40 text-xs">{t('compare.guest_trial_done_desc')}</p>
             </div>
             <Link href="/login" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
               {t('auth.signin')}
             </Link>
           </div>
         )}
-        {error === 'no_points' && !loading && (
-          <div className="mt-8 p-6 bg-surface border border-amber-500/30 rounded-card flex items-center gap-4">
-            <Zap className="w-5 h-5 text-amber-400 flex-shrink-0" />
+        {/* 2) 게스트 체험 이미 소진 */}
+        {error === 'guest_used' && !loading && (
+          <div className="mt-8 p-6 bg-surface border border-accent/30 rounded-card flex items-center gap-4">
+            <Zap className="w-5 h-5 text-accent flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-white font-bold text-sm mb-1">{t('compare.no_points_title')}</p>
-              <p className="text-white/40 text-xs">{t('compare.no_points_desc')}</p>
+              <p className="text-white font-bold text-sm mb-1">{t('compare.guest_used_title')}</p>
+              <p className="text-white/40 text-xs">{t('compare.guest_used_desc')}</p>
             </div>
-            <Link href="/mypage" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
-              {t('compare.no_points_cta')}
+            <Link href="/login" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-sm font-bold px-4 py-2 rounded-full transition-colors">
+              {t('auth.signup')}
             </Link>
           </div>
         )}
-        {error && error !== 'login_required' && error !== 'daily_limit' && !loading && (
+        {/* 3) 포인트 부족 — 획득 방법 안내 */}
+        {error === 'no_points' && !loading && (
+          <div className="mt-8 p-6 bg-surface border border-amber-500/30 rounded-card">
+            <div className="flex items-start gap-4 mb-4">
+              <Zap className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-white font-bold text-sm mb-1">{t('compare.no_points_title')}</p>
+                <p className="text-white/40 text-xs">{t('compare.no_points_desc')}</p>
+              </div>
+            </div>
+            <div className="border-t border-border/30 pt-4 mt-2">
+              <p className="text-white/50 text-xs font-semibold mb-2 uppercase tracking-wider">{t('compare.earn_points_title')}</p>
+              <ul className="space-y-1.5 text-xs text-white/50 mb-4">
+                <li className="flex items-center gap-2">
+                  <span className="text-accent font-bold">+5P</span>
+                  <span>{t('compare.earn_points_post')}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-accent font-bold">+1P</span>
+                  <span>{t('compare.earn_points_comment')}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-accent font-bold">+10P</span>
+                  <span>{t('compare.earn_points_popular')}</span>
+                </li>
+              </ul>
+              <Link href="/community/write" className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-white text-xs font-bold px-4 py-2 rounded-full transition-colors">
+                <Zap className="w-3.5 h-3.5" />
+                {t('compare.no_points_cta')}
+              </Link>
+            </div>
+          </div>
+        )}
+        {error && error !== 'login_required' && error !== 'guest_used' && error !== 'no_points' && error !== 'daily_limit' && !loading && (
           <div className="mt-8 p-6 bg-red-500/10 border border-red-500/20 rounded-card text-center">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
@@ -1636,6 +1679,7 @@ export default function CompareClient() {
                 </button>
               </div>
             )}
+            {/* 비로그인+에러없음+결과없음 → 로딩 전이거나 아직 아무것도 없을 때만 잠금 표시 */}
             {sessionLoaded && !session && !loadingAI && !aiResult && !error && <AIPickLocked t={t} />}
             {!loadingAI && aiResult && (
               <>
@@ -1649,6 +1693,19 @@ export default function CompareClient() {
                   <p className="text-xs text-white/20 text-right -mt-5 mb-6 pr-1">
                     {t('compare.verdict_count').replace('{n}', String(storedVerdict.count))}
                   </p>
+                )}
+                {/* 게스트 체험 완료 → 회원가입 유도 배너 */}
+                {guestTrialDone && !session && (
+                  <div className="mb-6 p-4 rounded-xl border border-accent/30 bg-accent/5 flex items-center gap-4">
+                    <Zap className="w-5 h-5 text-accent flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-bold">{t('compare.guest_trial_done_title')}</p>
+                      <p className="text-white/40 text-xs mt-0.5">{t('compare.guest_trial_done_desc')}</p>
+                    </div>
+                    <Link href="/login" className="flex-shrink-0 bg-accent hover:bg-accent/90 text-white text-xs font-bold px-4 py-2 rounded-full transition-colors whitespace-nowrap">
+                      {t('auth.signup')}
+                    </Link>
+                  </div>
                 )}
               </>
             )}
