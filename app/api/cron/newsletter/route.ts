@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 상위 8개 제품 ID
-  const topIds = [...countMap.entries()]
+  const topIds = Array.from(countMap.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
     .map(([id]) => id)
