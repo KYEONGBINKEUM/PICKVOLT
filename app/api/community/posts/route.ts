@@ -182,12 +182,25 @@ export async function GET(req: NextRequest) {
     myUnlockedIds = new Set((unlockRes.data ?? []).map((v: { post_id: string }) => v.post_id))
   }
 
+  // is_official 배치 조회
+  const uniqueUserIds = Array.from(new Set((data ?? []).map((p: { user_id: string | null }) => p.user_id).filter(Boolean))) as string[]
+  let officialSet = new Set<string>()
+  if (uniqueUserIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, is_official')
+      .in('user_id', uniqueUserIds)
+      .eq('is_official', true)
+    officialSet = new Set((profiles ?? []).map((p: { user_id: string }) => p.user_id))
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const posts = (data ?? []).map((p: any) => ({
     ...p,
     my_vote: myVotedIds.has(p.id),
     my_compare_option: myCompareVotes[p.id] ?? null,
     is_unlocked: (p.point_price ?? 0) === 0 || p.user_id === userId || myUnlockedIds.has(p.id),
+    is_official: officialSet.has(p.user_id ?? ''),
     community_compare_options: (p.community_compare_options ?? []).sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order),
   }))
 

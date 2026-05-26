@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight, Flag, Lock } from 'lucide-react'
+import { ChevronUp, MessageSquare, Eye, Languages, ChevronLeft, ChevronRight, Flag, Lock, BadgeCheck } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { imgUrl } from '@/lib/utils'
 
@@ -31,6 +31,7 @@ export interface FeedPost {
   community_compare_options?: { vote_count: number }[]
   point_price?: number
   is_unlocked?: boolean
+  is_official?: boolean
 }
 
 // Remove product-card and compare-table blocks from HTML (for feed preview)
@@ -311,8 +312,9 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
                     : <span className="w-3.5 h-3.5 rounded-full bg-white/15 flex items-center justify-center text-[8px] text-white/50 flex-shrink-0">{post.user_display_name?.[0]?.toUpperCase()}</span>
                   }
                   <span className="text-[10px] text-white/25 hover:text-white/60 transition-colors">{post.user_display_name}</span>
+                  {post.is_official && <BadgeCheck className="w-3 h-3 flex-shrink-0" style={{ color: 'rgb(255,77,0)' }} />}
                 </Link>
-              : <span className="text-[10px] text-white/25">{post.user_display_name}</span>
+              : <span className="flex items-center gap-0.5 text-[10px] text-white/25">{post.user_display_name}{post.is_official && <BadgeCheck className="w-3 h-3 flex-shrink-0" style={{ color: 'rgb(255,77,0)' }} />}</span>
             }
             <span className="text-white/15 text-[10px]">·</span>
             <span className="text-[10px] text-white/20">{timeAgo(post.created_at, t)}</span>
@@ -605,8 +607,9 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
                   : <span className="w-3 h-3 rounded-full bg-white/15 flex items-center justify-center text-[7px] text-white/50 flex-shrink-0">{post.user_display_name?.[0]?.toUpperCase()}</span>
                 }
                 <span className="hover:text-white/50 transition-colors">{post.user_display_name}</span>
+                {post.is_official && <BadgeCheck className="w-3 h-3 flex-shrink-0" style={{ color: 'rgb(255,77,0)' }} />}
               </Link>
-            : <span>{post.user_display_name}</span>
+            : <span className="flex items-center gap-0.5">{post.user_display_name}{post.is_official && <BadgeCheck className="w-3 h-3 flex-shrink-0" style={{ color: 'rgb(255,77,0)' }} />}</span>
           }
           <span>{timeAgo(post.created_at, t)}</span>
           <span className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" />{post.comment_count}</span>
