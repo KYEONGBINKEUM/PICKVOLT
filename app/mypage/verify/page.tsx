@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BadgeCheck, ChevronLeft, Loader2, Upload, CheckCircle2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
 type Status = 'pending' | 'approved' | 'rejected' | null
