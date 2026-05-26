@@ -2776,6 +2776,17 @@ export default function AdminPage() {
                         <p className="text-sm font-bold text-white mb-0.5">{r.nickname}</p>
                         <p className="text-xs text-white/40 mb-1">{r.email}</p>
                         <p className="text-xs text-white/60 bg-background rounded-lg p-2 border border-border/50 mb-2 leading-relaxed">{r.reason}</p>
+                        {r.id_image_url && (
+                          <div className="mb-2">
+                            <a href={r.id_image_url} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={r.id_image_url}
+                                alt="신분증/명함"
+                                className="max-h-40 rounded-lg border border-border object-contain bg-black/20 cursor-pointer hover:opacity-80 transition-opacity"
+                              />
+                            </a>
+                          </div>
+                        )}
                         <div className="flex flex-col gap-0.5 text-xs text-white/40">
                           {r.website && <a href={r.website} target="_blank" rel="noopener noreferrer" className="hover:text-white/70 underline truncate">{r.website}</a>}
                           {r.social_links && <p>{r.social_links}</p>}
