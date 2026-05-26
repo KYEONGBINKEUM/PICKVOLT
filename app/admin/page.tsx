@@ -113,7 +113,7 @@ export default function AdminPage() {
   const [duplicating, setDuplicating] = useState<string | null>(null)
 
   // Users
-  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; provider: string; posts: number; comments: number; nickname: string | null; avatar_url: string | null; points: number }[]>([])
+  const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; provider: string; posts: number; comments: number; nickname: string | null; avatar_url: string | null; points: number; is_official?: boolean; suspended_until?: string | null; is_banned?: boolean }[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersPage, setUsersPage] = useState(1)
   const [usersTotal, setUsersTotal] = useState(0)
@@ -233,11 +233,13 @@ export default function AdminPage() {
   const [communitySettingsSaved, setCommunitySettingsSaved] = useState(false)
 
   // Newsletter
-  const [nlSubscribers, setNlSubscribers] = useState<{ id: string; email: string; active: boolean; created_at: string }[]>([])
+  const [nlSubscribers, setNlSubscribers] = useState<{ id: string; email: string; active: boolean; created_at: string; locale?: string }[]>([])
   const [nlLoading, setNlLoading] = useState(false)
   const [nlSending, setNlSending] = useState(false)
-  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number } | null>(null)
+  const [nlSendResult, setNlSendResult] = useState<{ sent: number; products: number; mode?: string } | null>(null)
   const [nlSendError, setNlSendError] = useState('')
+  const [nlChecked, setNlChecked] = useState<Set<string>>(new Set())
+  const [nlRowSending, setNlRowSending] = useState<string | null>(null)
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
 
   // Errors
@@ -665,6 +667,16 @@ export default function AdminPage() {
     if (tab === 'comparisons') fetchComparisons(token, compPage)
   }, [authed, token, tab, compPage, fetchComparisons])
 
+  const deleteComparison = useCallback(async (id: string) => {
+    if (!token || !confirm('이 비교 기록을 삭제하시겠습니까?')) return
+    const res = await fetch('/api/admin/comparisons', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
+    })
+    if (res.ok) setComparisons(prev => prev.filter(c => c.id !== id))
+  }, [token])
+
   useEffect(() => {
     if (!authed) return
     if (tab === 'cpus') fetchCpus(cpuSearch)
@@ -816,7 +828,7 @@ export default function AdminPage() {
     setVerifyLoading(false)
   }, [token])
 
-  const handleVerifyAction = async (id: string, action: 'approve' | 'reject', adminNote = '') => {
+  const handleVerifyAction = async (id: string, action: 'approve' | 'reject' | 'revoke', adminNote = '') => {
     const res = await fetch('/api/admin/verify-requests', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -824,7 +836,7 @@ export default function AdminPage() {
     })
     if (res.ok) {
       const d = await res.json()
-      setVerifyRequests(prev => prev.map(r => r.id === id ? { ...r, status: d.status } : r))
+      setVerifyRequests(prev => prev.map(r => r.id === id ? { ...r, status: d.status, admin_note: adminNote || r.admin_note } : r))
     }
   }
 
@@ -840,12 +852,12 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { global: { headers: { Authorization: `Bearer ${tok}` } } }
-    ).from('newsletter_subscribers').select('id, email, active, created_at').order('created_at', { ascending: false })
+    ).from('newsletter_subscribers').select('id, email, active, created_at, locale').order('created_at', { ascending: false })
     setNlSubscribers(data ?? [])
     setNlLoading(false)
   }, [])
 
-  const sendNewsletter = useCallback(async () => {
+  const sendNewsletter = useCallback(async (mode: 'all' | 'test' | 'selected' = 'all', emails?: string[]) => {
     if (!token) return
     setNlSending(true)
     setNlSendResult(null)
@@ -853,13 +865,30 @@ export default function AdminPage() {
     try {
       const res = await fetch('/api/admin/newsletter/send', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode, emails }),
       })
       const d = await res.json()
-      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products })
+      if (d.ok) setNlSendResult({ sent: d.sent, products: d.products, mode })
       else setNlSendError(d.error ?? d.reason ?? 'failed')
     } catch (e) { setNlSendError(String(e)) }
     setNlSending(false)
+  }, [token])
+
+  const sendToRow = useCallback(async (email: string) => {
+    if (!token) return
+    setNlRowSending(email)
+    setNlSendError('')
+    try {
+      const res = await fetch('/api/admin/newsletter/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mode: 'selected', emails: [email] }),
+      })
+      const d = await res.json()
+      if (!d.ok) setNlSendError(d.error ?? 'failed')
+    } catch (e) { setNlSendError(String(e)) }
+    setNlRowSending(null)
   }, [token])
 
   const toggleSubscriber = useCallback(async (id: string, active: boolean) => {
@@ -1438,9 +1467,18 @@ export default function AdminPage() {
                               </div>
                             )}
                             <div className="min-w-0">
-                              <p className="text-white/90 font-medium text-sm truncate max-w-[160px]">
-                                {u.nickname ?? <span className="text-white/30 text-xs">닉네임 없음</span>}
-                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-white/90 font-medium text-sm truncate max-w-[130px]">
+                                  {u.nickname ?? <span className="text-white/30 text-xs">닉네임 없음</span>}
+                                </p>
+                                {u.is_official && <BadgeCheck size={12} className="text-accent flex-shrink-0" />}
+                                {u.suspended_until && new Date(u.suspended_until) > new Date() && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400 font-bold flex-shrink-0">정지</span>
+                                )}
+                                {u.is_banned && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 font-bold flex-shrink-0">밴</span>
+                                )}
+                              </div>
                               <p className="text-white/30 text-xs truncate max-w-[160px]">{u.email}</p>
                             </div>
                           </div>
@@ -1659,6 +1697,7 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-3 text-white/40 font-medium">비교 제목</th>
                       <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">유저</th>
                       <th className="text-right px-4 py-3 text-white/40 font-medium">날짜</th>
+                      <th className="w-10 px-4 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1667,6 +1706,12 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-white/80 max-w-xs truncate">{c.title}</td>
                         <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell truncate max-w-[180px]">{c.user_email}</td>
                         <td className="px-4 py-3 text-white/30 text-xs text-right whitespace-nowrap">{formatDate(c.created_at)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button onClick={(e) => { e.stopPropagation(); deleteComparison(c.id) }}
+                            className="text-white/20 hover:text-red-400 transition-colors">
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                     {comparisons.length === 0 && (
@@ -2774,7 +2819,8 @@ export default function AdminPage() {
                           <span className="text-xs text-white/30">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
                         </div>
                         <p className="text-sm font-bold text-white mb-0.5">{r.nickname}</p>
-                        <p className="text-xs text-white/40 mb-1">{r.email}</p>
+                        <p className="text-xs text-white/40 mb-0.5">{r.email}</p>
+                        {r.work_email && <p className="text-xs text-accent/70 mb-1">업무 이메일: {r.work_email}</p>}
                         <p className="text-xs text-white/60 bg-background rounded-lg p-2 border border-border/50 mb-2 leading-relaxed">{r.reason}</p>
                         {r.id_image_url && (
                           <div className="mb-2">
@@ -2795,8 +2841,8 @@ export default function AdminPage() {
                           <p className="mt-2 text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">{r.admin_note}</p>
                         )}
                       </div>
-                      {r.status === 'pending' && (
-                        <div className="flex flex-col gap-2 shrink-0">
+                      <div className="flex flex-col gap-2 shrink-0 min-w-[90px]">
+                        {r.status === 'pending' && (<>
                           <button
                             onClick={() => handleVerifyAction(r.id, 'approve')}
                             className="text-xs px-3 py-1.5 rounded-lg border border-accent/40 text-accent hover:bg-accent/10 transition-all"
@@ -2805,15 +2851,40 @@ export default function AdminPage() {
                           </button>
                           <button
                             onClick={() => {
-                              const note = window.prompt('거절 사유 (선택)')
-                              handleVerifyAction(r.id, 'reject', note ?? '')
+                              const TEMPLATES = ['신분 확인 불가', '정보 불충분', '기준 미충족', '중복 계정 의심']
+                              const note = window.prompt(
+                                `거절 사유를 입력하거나 아래 중 선택:\n${TEMPLATES.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
+                              )
+                              if (note === null) return
+                              const idx = parseInt(note) - 1
+                              const reason = TEMPLATES[idx] ?? note
+                              handleVerifyAction(r.id, 'reject', reason)
                             }}
                             className="text-xs px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-all"
                           >
                             거절
                           </button>
-                        </div>
-                      )}
+                        </>)}
+                        {r.status === 'approved' && (
+                          <button
+                            onClick={() => {
+                              if (!confirm('인증을 취소하시겠습니까? is_official 뱃지가 제거됩니다.')) return
+                              handleVerifyAction(r.id, 'revoke', '관리자에 의해 인증 취소')
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition-all"
+                          >
+                            승인 취소
+                          </button>
+                        )}
+                        {r.status === 'rejected' && (
+                          <button
+                            onClick={() => handleVerifyAction(r.id, 'approve')}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-white/20 text-white/40 hover:border-accent/40 hover:text-accent transition-all"
+                          >
+                            재승인
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -3162,25 +3233,41 @@ export default function AdminPage() {
                   총 {nlSubscribers.length}명 · 활성 {nlSubscribers.filter(s => s.active).length}명
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
                 <a href="/api/newsletter/preview" target="_blank"
-                  className="text-xs px-4 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors">
-                  이메일 미리보기
+                  className="text-xs px-3 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors">
+                  미리보기
                 </a>
                 <button
-                  onClick={sendNewsletter}
+                  onClick={() => sendNewsletter('test')}
+                  disabled={nlSending}
+                  className="text-xs px-3 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50"
+                >
+                  내게 테스트
+                </button>
+                {nlChecked.size > 0 && (
+                  <button
+                    onClick={() => sendNewsletter('selected', Array.from(nlChecked))}
+                    disabled={nlSending}
+                    className="text-xs px-3 py-2 rounded-lg border border-white/30 text-white/70 hover:border-white/50 transition-colors disabled:opacity-50"
+                  >
+                    선택 발송 ({nlChecked.size}명)
+                  </button>
+                )}
+                <button
+                  onClick={() => sendNewsletter('all')}
                   disabled={nlSending}
                   className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors disabled:opacity-50"
                 >
                   <Mail size={13} />
-                  {nlSending ? '발송 중...' : '지금 발송'}
+                  {nlSending ? '발송 중...' : '전체 발송'}
                 </button>
               </div>
             </div>
 
             {nlSendResult && (
               <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
-                ✓ {nlSendResult.sent}명에게 발송 완료 · 제품 {nlSendResult.products}개 포함
+                ✓ {nlSendResult.mode === 'test' ? '테스트 발송 완료' : `${nlSendResult.sent}명에게 발송 완료`} · 제품 {nlSendResult.products}개 포함
               </div>
             )}
             {nlSendError && (
@@ -3198,8 +3285,19 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="w-10 px-4 py-3">
+                        <input type="checkbox"
+                          checked={nlChecked.size === nlSubscribers.filter(s => s.active).length && nlSubscribers.filter(s => s.active).length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) setNlChecked(new Set(nlSubscribers.filter(s => s.active).map(s => s.email)))
+                            else setNlChecked(new Set())
+                          }}
+                          className="accent-accent"
+                        />
+                      </th>
                       <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">이메일</th>
-                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">구독일</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold hidden md:table-cell">구독일</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold hidden md:table-cell">언어</th>
                       <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">상태</th>
                       <th className="px-4 py-3"></th>
                     </tr>
@@ -3207,10 +3305,24 @@ export default function AdminPage() {
                   <tbody>
                     {nlSubscribers.map((s) => (
                       <tr key={s.id} className="border-b border-border/50 hover:bg-white/[0.02]">
+                        <td className="px-4 py-3">
+                          {s.active && (
+                            <input type="checkbox"
+                              checked={nlChecked.has(s.email)}
+                              onChange={(e) => {
+                                const next = new Set(nlChecked)
+                                e.target.checked ? next.add(s.email) : next.delete(s.email)
+                                setNlChecked(next)
+                              }}
+                              className="accent-accent"
+                            />
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-white/80 font-mono text-xs">{s.email}</td>
-                        <td className="px-4 py-3 text-white/30 text-xs">
+                        <td className="px-4 py-3 text-white/30 text-xs hidden md:table-cell">
                           {new Date(s.created_at).toLocaleDateString('ko-KR')}
                         </td>
+                        <td className="px-4 py-3 text-xs text-white/40 hidden md:table-cell uppercase">{s.locale ?? 'en'}</td>
                         <td className="px-4 py-3">
                           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                             s.active ? 'bg-green-500/15 text-green-400' : 'bg-white/5 text-white/25'
@@ -3218,7 +3330,16 @@ export default function AdminPage() {
                             {s.active ? '활성' : '취소됨'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right flex items-center gap-2 justify-end">
+                          {s.active && (
+                            <button
+                              onClick={() => sendToRow(s.email)}
+                              disabled={nlRowSending === s.email}
+                              className="text-xs text-white/25 hover:text-accent transition-colors disabled:opacity-40"
+                            >
+                              {nlRowSending === s.email ? '...' : '발송'}
+                            </button>
+                          )}
                           <button
                             onClick={() => toggleSubscriber(s.id, !s.active)}
                             className="text-xs text-white/25 hover:text-white/60 transition-colors"

@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest) {
   if (!await getAdmin(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   const { id, action, admin_note } = await req.json()
-  if (!id || !['approve', 'reject'].includes(action)) {
+  if (!id || !['approve', 'reject', 'revoke'].includes(action)) {
     return NextResponse.json({ error: 'id and action required' }, { status: 400 })
   }
 
@@ -74,7 +74,7 @@ export async function PATCH(req: NextRequest) {
 
   if (!vr) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-  const newStatus = action === 'approve' ? 'approved' : 'rejected'
+  const newStatus = action === 'approve' ? 'approved' : action === 'revoke' ? 'rejected' : 'rejected'
 
   const [updateReq] = await Promise.all([
     supabase.from('verify_requests').update({
@@ -84,7 +84,9 @@ export async function PATCH(req: NextRequest) {
     }).eq('id', id),
     action === 'approve'
       ? supabase.from('profiles').update({ is_official: true }).eq('user_id', vr.user_id)
-      : Promise.resolve(),
+      : (action === 'revoke' || action === 'reject')
+        ? supabase.from('profiles').update({ is_official: false }).eq('user_id', vr.user_id)
+        : Promise.resolve(),
   ])
 
   if (updateReq.error) return NextResponse.json({ error: updateReq.error.message }, { status: 500 })
