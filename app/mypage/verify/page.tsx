@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BadgeCheck, ChevronLeft, Loader2, Upload, CheckCircle2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 
 type Status = 'pending' | 'approved' | 'rejected' | null
@@ -24,7 +23,6 @@ export default function VerifyPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [token, setToken]       = useState<string | null>(null)
-  const [userId, setUserId]     = useState<string | null>(null)
   const [loading, setLoading]   = useState(true)
   const [existing, setExisting] = useState<VerifyRequest | null>(null)
 
@@ -63,7 +61,6 @@ export default function VerifyPage() {
       const tok = data.session?.access_token ?? null
       if (!tok) { router.replace('/login'); return }
       setToken(tok)
-      setUserId(data.session?.user?.id ?? null)
       const res = await fetch('/api/user/verify-request', {
         headers: { Authorization: `Bearer ${tok}` },
       })
@@ -128,19 +125,22 @@ export default function VerifyPage() {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !userId) return
+    if (!file || !token) return
     setUploadingFile(true)
+    setError('')
     try {
-      const ext = file.name.split('.').pop()
-      const path = `${userId}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('verify-docs')
-        .upload(path, file, { upsert: true })
-      if (upErr) throw upErr
-      const { data: { publicUrl } } = supabase.storage.from('verify-docs').getPublicUrl(path)
-      setIdImageUrl(publicUrl)
-    } catch {
-      setError('Upload failed.')
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/user/verify-upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'upload failed')
+      setIdImageUrl(json.url)
+    } catch (err) {
+      setError(t('verify.upload_failed'))
     } finally {
       setUploadingFile(false)
     }
