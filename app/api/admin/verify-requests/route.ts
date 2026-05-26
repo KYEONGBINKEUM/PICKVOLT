@@ -35,7 +35,23 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ requests: data ?? [] })
+
+  // id_image_url에 대해 signed URL 생성 (버킷 공개 여부 무관하게 어드민이 볼 수 있도록)
+  const requests = await Promise.all((data ?? []).map(async (r: { id_image_url: string | null; [key: string]: unknown }) => {
+    if (!r.id_image_url) return r
+    try {
+      const path = r.id_image_url.split('/verify-docs/')[1]?.split('?')[0]
+      if (!path) return r
+      const { data: signed } = await supabase.storage
+        .from('verify-docs')
+        .createSignedUrl(path, 60 * 60) // 1시간 유효
+      return { ...r, id_image_url: signed?.signedUrl ?? r.id_image_url }
+    } catch {
+      return r
+    }
+  }))
+
+  return NextResponse.json({ requests })
 }
 
 // PATCH /api/admin/verify-requests — approve or reject
