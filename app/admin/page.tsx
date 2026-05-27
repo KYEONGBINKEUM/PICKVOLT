@@ -8,7 +8,7 @@ import {
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
   Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle, BadgeCheck,
-  MessageSquare, Pin, PinOff, Settings2, Coins,
+  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -1091,6 +1091,7 @@ export default function AdminPage() {
       label: '마케팅',
       items: [
         { key: 'newsletter', label: '뉴스레터', icon: <Mail size={14} /> },
+        { key: 'twitter',    label: 'Twitter',  icon: <Twitter size={14} /> },
       ],
     },
   ]
@@ -3296,38 +3297,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Twitter 자동 트윗 */}
-            <div className="bg-surface border border-border rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    🐦 Twitter 자동 트윗
-                  </h3>
-                  <p className="text-xs text-white/30 mt-0.5">매일 오후 6시(KST) 자동 실행 · 지난 7일 인기 비교 페어 트윗</p>
-                </div>
-                <button
-                  onClick={testTweet}
-                  disabled={tweetSending}
-                  className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-[#1d9bf0]/20 hover:bg-[#1d9bf0]/30 text-[#1d9bf0] border border-[#1d9bf0]/30 font-bold transition-colors disabled:opacity-50"
-                >
-                  {tweetSending ? '트윗 중...' : '지금 트윗하기'}
-                </button>
-              </div>
-              {tweetResult && (
-                <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
-                  {tweetResult.skipped
-                    ? `⚠️ 스킵됨: ${tweetResult.reason}`
-                    : `✓ 트윗 완료! ${tweetResult.pair} · ${tweetResult.count}회 비교 · ID: ${tweetResult.tweetId}`
-                  }
-                </div>
-              )}
-              {tweetError && (
-                <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-                  {tweetError}
-                </div>
-              )}
-            </div>
-
             {nlLoading ? (
               <div className="text-white/30 text-sm py-8 text-center">로딩 중...</div>
             ) : nlSubscribers.length === 0 ? (
@@ -3405,6 +3374,77 @@ export default function AdminPage() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Twitter ── */}
+        {tab === 'twitter' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Twitter size={18} className="text-[#1d9bf0]" /> Twitter 자동 트윗
+                </h2>
+                <p className="text-xs text-white/30 mt-0.5">
+                  매일 오후 6시(KST) 자동 실행 · 지난 7일 인기 비교 페어 트윗
+                </p>
+              </div>
+              <button
+                onClick={testTweet}
+                disabled={tweetSending}
+                className="flex items-center gap-2 text-sm px-5 py-2.5 rounded-lg bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold transition-colors disabled:opacity-50"
+              >
+                <Twitter size={14} />
+                {tweetSending ? '트윗 중...' : '지금 트윗하기'}
+              </button>
+            </div>
+
+            {tweetResult && (
+              <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
+                {tweetResult.skipped
+                  ? `⚠️ 스킵됨: ${tweetResult.reason}`
+                  : `✓ 트윗 완료! "${tweetResult.pair}" · ${tweetResult.count}회 비교 · Tweet ID: ${tweetResult.tweetId}`
+                }
+              </div>
+            )}
+            {tweetError && (
+              <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                ❌ {tweetError}
+              </div>
+            )}
+
+            {/* 안내 카드 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { icon: '🤖', title: 'AI 자동 선택', desc: '지난 7일 중 가장 많이 비교된 제품 페어를 자동으로 선택합니다.' },
+                { icon: '📅', title: '요일별 템플릿', desc: '월~일 7가지 다른 스타일로 홍보 문구가 자동 생성됩니다.' },
+                { icon: '🔗', title: '커뮤니티 링크', desc: '비교 페이지 + 커뮤니티 링크를 함께 포함해 유입을 극대화합니다.' },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} className="bg-surface border border-border rounded-xl p-4">
+                  <div className="text-2xl mb-2">{icon}</div>
+                  <div className="text-sm font-bold text-white mb-1">{title}</div>
+                  <div className="text-xs text-white/40 leading-relaxed">{desc}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 스케줄 & 설정 안내 */}
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <h3 className="text-sm font-bold text-white mb-3">스케줄 & 설정</h3>
+              <div className="space-y-2">
+                {[
+                  { label: '자동 실행', value: '매일 오전 9시 UTC (한국 오후 6시)' },
+                  { label: '트위터 계정', value: '@Pickvolt (pickvolt.official@gmail.com)' },
+                  { label: '중복 방지', value: '20시간 이내 재트윗 차단' },
+                  { label: '해시태그', value: '#Pickvolt #TechComparison + 제품 브랜드 태그' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                    <span className="text-xs text-white/40">{label}</span>
+                    <span className="text-xs text-white/70 font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
