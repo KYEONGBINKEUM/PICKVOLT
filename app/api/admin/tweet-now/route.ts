@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { TwitterApi } from 'twitter-api-v2'
 import { buildTweetText } from '@/lib/buildTweetText'
+import { postTweet } from '@/lib/twitterOAuth'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
@@ -15,16 +15,15 @@ async function verifyAdmin(req: NextRequest) {
   return user
 }
 
-
 export async function POST(req: NextRequest) {
   if (!await verifyAdmin(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
-  const appKey    = process.env.TWITTER_API_KEY
-  const appSecret = process.env.TWITTER_API_SECRET
+  const apiKey            = process.env.TWITTER_API_KEY
+  const apiSecret         = process.env.TWITTER_API_SECRET
   const accessToken       = process.env.TWITTER_ACCESS_TOKEN
   const accessTokenSecret = process.env.TWITTER_ACCESS_TOKEN_SECRET
 
-  if (!appKey || !appSecret || !accessToken || !accessTokenSecret) {
+  if (!apiKey || !apiSecret || !accessToken || !accessTokenSecret) {
     return NextResponse.json({ error: 'Twitter API credentials not configured' }, { status: 500 })
   }
 
@@ -78,8 +77,7 @@ export async function POST(req: NextRequest) {
   const tweetText = buildTweetText(pA, pB, count)
 
   try {
-    const twitter = new TwitterApi({ appKey, appSecret, accessToken, accessSecret: accessTokenSecret })
-    const { data: tweet } = await twitter.readWrite.v2.tweet(tweetText)
+    const tweet = await postTweet(tweetText, { apiKey, apiSecret, accessToken, accessTokenSecret })
 
     await supabase.from('twitter_log').insert({
       tweet_id: tweet.id,
