@@ -63,7 +63,7 @@ const websiteSchema = {
       '@id': 'https://www.pickvolt.com/#organization',
       name: 'Pickvolt',
       url: 'https://www.pickvolt.com',
-      email: 'vandalroof@gmail.com',
+      email: 'pickvolt.official@gmail.com',
       description: 'AI-powered tech product comparison — unbiased verdicts for smartphones, laptops, and tablets.',
       sameAs: [],
     },

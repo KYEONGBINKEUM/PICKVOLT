@@ -17,7 +17,7 @@ const contactSchema = {
     '@type': 'Organization',
     name: 'Pickvolt',
     url: 'https://www.pickvolt.com',
-    email: 'vandalroof@gmail.com',
+    email: 'pickvolt.official@gmail.com',
   },
 }
 
