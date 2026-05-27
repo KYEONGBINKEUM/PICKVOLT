@@ -622,18 +622,6 @@ export default function ProductEditPage() {
   const [form, setForm] = useState<Record<string, unknown>>({})
   const [commonSpecs, setCommonSpecs] = useState<Record<string, unknown>>({})
   const [categorySpecs, setCategorySpecs] = useState<Record<string, unknown>>({})
-  const [cpuScores, setCpuScores] = useState<{
-    relative_score: number | null
-    gb6_single: number | null; gb6_multi: number | null
-    tdmark_score: number | null; antutu_score: number | null
-    cinebench_single: number | null; cinebench_multi: number | null
-    score_source: string
-  }>({
-    relative_score: null, gb6_single: null, gb6_multi: null,
-    tdmark_score: null, antutu_score: null,
-    cinebench_single: null, cinebench_multi: null,
-    score_source: '',
-  })
   // CPU 검색 & 연결
   const [cpuQuery, setCpuQuery]       = useState('')
   const [cpuResults, setCpuResults]   = useState<{ id: string; name: string; cores: number | null; clock_base: number | null; clock_boost: number | null; gpu_name: string | null; gpu_id: string | null; gpus: { name: string } | null; relative_score: number | null; gb6_single: number | null; gb6_multi: number | null; tdmark_score: number | null; antutu_score: number | null; cinebench_single: number | null; cinebench_multi: number | null; score_source: string | null }[]>([])
@@ -744,24 +732,12 @@ export default function ProductEditPage() {
         if (cpuId) {
           supabase
             .from('cpus')
-            .select('name, relative_score, gb6_single, gb6_multi, tdmark_score, antutu_score, cinebench_single, cinebench_multi, score_source')
+            .select('name')
             .eq('id', cpuId)
             .single()
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .then(({ data: cpu }: { data: any }) => {
-              if (cpu) {
-                setCpuScores({
-                  relative_score:   cpu.relative_score   ?? null,
-                  gb6_single:       cpu.gb6_single       ?? null,
-                  gb6_multi:        cpu.gb6_multi        ?? null,
-                  tdmark_score:     cpu.tdmark_score     ?? null,
-                  antutu_score:     cpu.antutu_score     ?? null,
-                  cinebench_single: cpu.cinebench_single ?? null,
-                  cinebench_multi:  cpu.cinebench_multi  ?? null,
-                  score_source:     cpu.score_source     ?? '',
-                })
-                setLinkedCpuName(cpu.name ?? '')
-              }
+              if (cpu) setLinkedCpuName(cpu.name ?? '')
             })
         }
 
@@ -813,18 +789,6 @@ export default function ProductEditPage() {
     }))
     setLinkedCpuName(cpu.name)
     if (resolvedGpuName) setLinkedGpuName(resolvedGpuName)
-    // CPU의 모든 벤치마크 점수 자동 로드
-    const full = cpu as Record<string, unknown>
-    setCpuScores({
-      relative_score:   (full.relative_score   as number | null) ?? null,
-      gb6_single:       (full.gb6_single       as number | null) ?? null,
-      gb6_multi:        (full.gb6_multi        as number | null) ?? null,
-      tdmark_score:     (full.tdmark_score     as number | null) ?? null,
-      antutu_score:     (full.antutu_score     as number | null) ?? null,
-      cinebench_single: (full.cinebench_single as number | null) ?? null,
-      cinebench_multi:  (full.cinebench_multi  as number | null) ?? null,
-      score_source:     (full.score_source     as string)        ?? '',
-    })
     setCpuSearchOpen(false)
     setCpuQuery('')
     setCpuResults([])
@@ -910,7 +874,6 @@ export default function ProductEditPage() {
       specs_common: updatedCommon,
       [`specs_${category}`]: categorySpecs,
       cpu_id: base.cpu_id,
-      cpu_scores: cpuScores,
     }
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
@@ -1012,8 +975,7 @@ export default function ProductEditPage() {
           specs_common: commonSpecs,
           [`specs_${category}`]: categorySpecs,
           cpu_id: commonSpecs.cpu_id,
-          cpu_scores: cpuScores,
-        }
+            }
         const patchRes = await fetch(`/api/admin/products/${newId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1037,8 +999,7 @@ export default function ProductEditPage() {
         specs_common: commonSpecs,
         [`specs_${category}`]: categorySpecs,
         cpu_id: commonSpecs.cpu_id,
-        cpu_scores: cpuScores,
-      }
+        }
       const res = await fetch(`/api/admin/products/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1326,10 +1287,7 @@ export default function ProductEditPage() {
                   <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 rounded-lg px-3 py-2 flex-1">
                     <Link2 size={13} className="text-accent flex-shrink-0" />
                     <span className="text-sm text-white font-semibold truncate">{linkedCpuName || (commonSpecs.cpu_id as string)}</span>
-                    {cpuScores.relative_score != null && (
-                      <span className="ml-auto text-xs text-accent/70 flex-shrink-0">score {cpuScores.relative_score}</span>
-                    )}
-                    <button onClick={() => { setCommonSpecs((p) => ({ ...p, cpu_id: undefined })); setLinkedCpuName(''); setCpuScores({ relative_score: null, gb6_single: null, gb6_multi: null, tdmark_score: null, antutu_score: null, cinebench_single: null, cinebench_multi: null, score_source: '' }) }}
+                    <button onClick={() => { setCommonSpecs((p) => ({ ...p, cpu_id: undefined })); setLinkedCpuName('') }}
                       className="ml-1 text-white/30 hover:text-red-400 transition-colors flex-shrink-0">
                       <X size={13} />
                     </button>
@@ -1569,96 +1527,6 @@ export default function ProductEditPage() {
             onSaveBase={category === 'laptop' ? handleSaveBase : undefined}
           />
         )}
-
-        {/* ── 벤치마크 점수 ── */}
-        <SectionCard title="벤치마크 점수 (cpus 테이블)" defaultOpen={false}>
-          {!commonSpecs.cpu_id ? (
-            <p className="text-xs text-white/30 py-2">
-              공통 스펙에서 <code className="text-accent/70">cpu_id</code>가 설정되어야 편집 가능합니다.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-xs text-white/30 pb-1">
-                CPU ID: <span className="text-white/60 font-mono">{commonSpecs.cpu_id as string}</span>
-                &nbsp;·&nbsp;이 값들은 상대 점수 산출 및 레이더 차트의 Performance 축에 직접 반영됩니다.
-              </p>
-              {/* 점수 참고 링크 */}
-              {linkedCpuName && (
-                <div className="flex flex-wrap gap-2 pb-2">
-                  <span className="text-xs text-white/30 self-center">점수 참고:</span>
-                  {(category === 'smartphone' || category === 'tablet') ? (
-                    <>
-                      <a
-                        href={`https://nanoreview.net/en/search?q=${encodeURIComponent(linkedCpuName)}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
-                      >
-                        <ExternalLink size={11} /> NanoReview
-                      </a>
-                      <a
-                        href={`https://antutu.com/en/search.htm?q=${encodeURIComponent(linkedCpuName)}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
-                      >
-                        <ExternalLink size={11} /> AnTuTu
-                      </a>
-                    </>
-                  ) : (
-                    <>
-                      <a
-                        href={`https://www.cpu-monkey.com/en/search/?q=${encodeURIComponent(linkedCpuName)}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
-                      >
-                        <ExternalLink size={11} /> CPU-Monkey
-                      </a>
-                      <a
-                        href={`https://www.cpubenchmark.net/cpu.php?cpu=${encodeURIComponent(linkedCpuName)}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
-                      >
-                        <ExternalLink size={11} /> Passmark CPU
-                      </a>
-                      <a
-                        href={`https://www.videocardbenchmark.net/gpu.php?gpu=${encodeURIComponent(linkedCpuName)}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-border text-xs text-white/70 hover:text-white hover:border-white/30 transition-colors"
-                      >
-                        <ExternalLink size={11} /> Passmark GPU
-                      </a>
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Relative Score (0 – 1000)">
-                  <NumberInput value={cpuScores.relative_score} onChange={(v) => setCpuScores((p) => ({ ...p, relative_score: v }))} />
-                </Field>
-                <Field label="점수 출처">
-                  <TextInput value={cpuScores.score_source} onChange={(v) => setCpuScores((p) => ({ ...p, score_source: v }))} placeholder="geekbench6" />
-                </Field>
-                <Field label="GB6 Single-Core">
-                  <NumberInput value={cpuScores.gb6_single} onChange={(v) => setCpuScores((p) => ({ ...p, gb6_single: v }))} />
-                </Field>
-                <Field label="GB6 Multi-Core">
-                  <NumberInput value={cpuScores.gb6_multi} onChange={(v) => setCpuScores((p) => ({ ...p, gb6_multi: v }))} />
-                </Field>
-                <Field label="3DMark Steel Nomad Light">
-                  <NumberInput value={cpuScores.tdmark_score} onChange={(v) => setCpuScores((p) => ({ ...p, tdmark_score: v }))} />
-                </Field>
-                <Field label="AnTuTu">
-                  <NumberInput value={cpuScores.antutu_score} onChange={(v) => setCpuScores((p) => ({ ...p, antutu_score: v }))} />
-                </Field>
-                <Field label="Cinebench Single">
-                  <NumberInput value={cpuScores.cinebench_single} onChange={(v) => setCpuScores((p) => ({ ...p, cinebench_single: v }))} />
-                </Field>
-                <Field label="Cinebench Multi">
-                  <NumberInput value={cpuScores.cinebench_multi} onChange={(v) => setCpuScores((p) => ({ ...p, cinebench_multi: v }))} />
-                </Field>
-              </div>
-            </div>
-          )}
-        </SectionCard>
 
         {/* ── 카테고리 스펙 ── */}
         {category === 'laptop' && (
