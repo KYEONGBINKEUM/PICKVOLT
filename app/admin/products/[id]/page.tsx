@@ -1556,28 +1556,6 @@ export default function ProductEditPage() {
               <Field label="배터리 용량 (Wh)">
                 <NumberInput value={gn(categorySpecs, 'battery_wh')} onChange={(v) => patchCat('battery_wh', v)} />
               </Field>
-              <Field label="배터리 사용시간 (h)">
-                <NumberInput value={gn(categorySpecs, 'battery_hours')} onChange={(v) => patchCat('battery_hours', v)} />
-              </Field>
-              <Field label="충전 와트 (W)">
-                <NumberInput value={gn(categorySpecs, 'charging_watt')} onChange={(v) => patchCat('charging_watt', v)} />
-              </Field>
-              <Field label="웹캠 해상도">
-                <TextInput value={g(categorySpecs, 'webcam_resolution')} onChange={(v) => patchCat('webcam_resolution', v)} placeholder="1080p" />
-              </Field>
-              <div className="md:col-span-2">
-                <Field label="포트 (JSON)">
-                  <TextInput value={g(categorySpecs, 'ports')} onChange={(v) => patchCat('ports', v)} placeholder='{"usb_c":3,"hdmi":1,"sd_card":true}' />
-                </Field>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs text-white/40 mb-2">옵션</label>
-                <div className="flex flex-wrap gap-2">
-                  <Toggle value={gb(categorySpecs, 'display_touch')} onChange={(v) => patchCat('display_touch', v)} label="터치 디스플레이" />
-                  <Toggle value={gb(categorySpecs, 'has_fingerprint')} onChange={(v) => patchCat('has_fingerprint', v)} label="지문인식" />
-                  <Toggle value={gb(categorySpecs, 'has_face_id')} onChange={(v) => patchCat('has_face_id', v)} label="Face ID" />
-                </div>
-              </div>
             </div>
           </SectionCard>
         )}
@@ -1671,9 +1649,6 @@ export default function ProductEditPage() {
               <Field label="배터리 (mAh)">
                 <NumberInput value={gn(categorySpecs, 'battery_mah')} onChange={(v) => patchCat('battery_mah', v)} />
               </Field>
-              <Field label="배터리 사용시간 (h)">
-                <NumberInput value={gn(categorySpecs, 'battery_hours')} onChange={(v) => patchCat('battery_hours', v)} />
-              </Field>
               <Field label="메인 카메라 (MP)">
                 <NumberInput value={gn(categorySpecs, 'camera_main_mp')} onChange={(v) => patchCat('camera_main_mp', v)} />
               </Field>
@@ -1710,9 +1685,6 @@ export default function ProductEditPage() {
               </Field>
               <Field label="칩 이름">
                 <TextInput value={g(categorySpecs, 'chip_name')} onChange={(v) => patchCat('chip_name', v)} placeholder="S10, Exynos W1000..." />
-              </Field>
-              <Field label="배터리 사용시간 (h)">
-                <NumberInput value={gn(categorySpecs, 'battery_hours')} onChange={(v) => patchCat('battery_hours', v)} />
               </Field>
               <Field label="무게 (g)">
                 <NumberInput value={gn(categorySpecs, 'weight_g')} onChange={(v) => patchCat('weight_g', v)} />
