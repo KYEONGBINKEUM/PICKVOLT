@@ -17,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`,                      priority: 1.0, changeFrequency: 'daily'   as const, lastModified: now },
     { url: `${BASE_URL}/compare`,               priority: 0.9, changeFrequency: 'daily'   as const, lastModified: now },
+    { url: `${BASE_URL}/community`,             priority: 0.8, changeFrequency: 'daily'   as const, lastModified: now },
     { url: `${BASE_URL}/categories/smartphone`, priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
     { url: `${BASE_URL}/categories/laptop`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
     { url: `${BASE_URL}/categories/tablet`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
@@ -58,7 +59,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .limit(8)
 
       const ids = (top ?? []).map((p) => p.id)
-      // all pairwise combinations
       for (let i = 0; i < ids.length; i++) {
         for (let j = i + 1; j < ids.length; j++) {
           compareRoutes.push({
@@ -71,9 +71,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
 
-    return [...staticRoutes, ...productRoutes, ...compareRoutes]
+    // --- 3. Community posts (공개글만) ---
+    const { data: posts } = await supabase
+      .from('community_posts')
+      .select('id, updated_at, created_at')
+      .eq('is_hidden', false)
+      .order('created_at', { ascending: false })
+      .limit(500) // 최신 500개만
+
+    const postRoutes: MetadataRoute.Sitemap = (posts ?? []).map((p) => ({
+      url:             `${BASE_URL}/community/post/${p.id}`,
+      lastModified:    p.updated_at ? new Date(p.updated_at) : new Date(p.created_at),
+      changeFrequency: 'weekly' as const,
+      priority:        0.5,
+    }))
+
+    return [...staticRoutes, ...productRoutes, ...compareRoutes, ...postRoutes]
   } catch {
-    // fallback to static only if DB unreachable
     return staticRoutes
   }
 }

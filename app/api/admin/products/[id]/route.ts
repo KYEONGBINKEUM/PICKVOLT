@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { pingGoogle } from '@/lib/pingGoogle'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',')
@@ -99,6 +100,11 @@ export async function PATCH(
 
   if (errors.length > 0) {
     return NextResponse.json({ error: errors.join('; ') }, { status: 500 })
+  }
+
+  // 제품이 공개로 전환될 때 구글에 사이트맵 업데이트 알림
+  if (productUpdates.is_visible === true) {
+    pingGoogle()
   }
 
   return NextResponse.json({ ok: true })
