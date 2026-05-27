@@ -241,6 +241,9 @@ export default function AdminPage() {
   const [nlChecked, setNlChecked] = useState<Set<string>>(new Set())
   const [nlRowSending, setNlRowSending] = useState<string | null>(null)
   const [communitySubTab, setCommunitySubTab] = useState<'overview' | 'posts' | 'settings'>('overview')
+  const [tweetSending, setTweetSending] = useState(false)
+  const [tweetResult, setTweetResult] = useState<{ tweetId?: string; pair?: string; count?: number; skipped?: boolean; reason?: string } | null>(null)
+  const [tweetError, setTweetError] = useState('')
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -856,6 +859,23 @@ export default function AdminPage() {
     setNlSubscribers(data ?? [])
     setNlLoading(false)
   }, [])
+
+  const testTweet = useCallback(async () => {
+    if (!token) return
+    setTweetSending(true)
+    setTweetResult(null)
+    setTweetError('')
+    try {
+      const res = await fetch('/api/admin/tweet-now', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const d = await res.json()
+      if (d.ok) setTweetResult(d)
+      else setTweetError(d.error ?? 'failed')
+    } catch (e) { setTweetError(String(e)) }
+    setTweetSending(false)
+  }, [token])
 
   const sendNewsletter = useCallback(async (mode: 'all' | 'test' | 'selected' = 'all', emails?: string[]) => {
     if (!token) return
@@ -3275,6 +3295,38 @@ export default function AdminPage() {
                 {nlSendError}
               </div>
             )}
+
+            {/* Twitter 자동 트윗 */}
+            <div className="bg-surface border border-border rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    🐦 Twitter 자동 트윗
+                  </h3>
+                  <p className="text-xs text-white/30 mt-0.5">매일 오후 6시(KST) 자동 실행 · 지난 7일 인기 비교 페어 트윗</p>
+                </div>
+                <button
+                  onClick={testTweet}
+                  disabled={tweetSending}
+                  className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-[#1d9bf0]/20 hover:bg-[#1d9bf0]/30 text-[#1d9bf0] border border-[#1d9bf0]/30 font-bold transition-colors disabled:opacity-50"
+                >
+                  {tweetSending ? '트윗 중...' : '지금 트윗하기'}
+                </button>
+              </div>
+              {tweetResult && (
+                <div className="px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-400">
+                  {tweetResult.skipped
+                    ? `⚠️ 스킵됨: ${tweetResult.reason}`
+                    : `✓ 트윗 완료! ${tweetResult.pair} · ${tweetResult.count}회 비교 · ID: ${tweetResult.tweetId}`
+                  }
+                </div>
+              )}
+              {tweetError && (
+                <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                  {tweetError}
+                </div>
+              )}
+            </div>
 
             {nlLoading ? (
               <div className="text-white/30 text-sm py-8 text-center">로딩 중...</div>
