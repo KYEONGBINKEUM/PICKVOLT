@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { TwitterApi } from 'twitter-api-v2'
+import { buildTweetText } from '@/lib/buildTweetText'
 
 export const maxDuration = 30
-
-const BASE_URL = 'https://www.pickvolt.com'
 
 function makeSupabase() {
   return createClient(
@@ -121,17 +120,7 @@ export async function GET(req: NextRequest) {
   const pA = products.find((p) => p.id === idA) ?? products[0]
   const pB = products.find((p) => p.id === idB) ?? products[1]
 
-  const compareUrl = `${BASE_URL}/compare?ids=${idA},${idB}`
-
-  // 트윗 문구 (280자 이하)
-  const tweetText = [
-    `🔥 This week's most compared: ${pA.brand} ${pA.name} vs ${pB.brand} ${pB.name}`,
-    ``,
-    `Compared ${count} times on Pickvolt — see the full AI breakdown 👇`,
-    compareUrl,
-    ``,
-    `#TechComparison #${pA.brand.replace(/\s/g,'')} #${pB.brand.replace(/\s/g,'')}`,
-  ].join('\n')
+  const tweetText = buildTweetText(pA, pB, count)
 
   try {
     const rwClient = twitter.readWrite

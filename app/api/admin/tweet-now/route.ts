@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { TwitterApi } from 'twitter-api-v2'
+import { buildTweetText } from '@/lib/buildTweetText'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
@@ -14,7 +15,6 @@ async function verifyAdmin(req: NextRequest) {
   return user
 }
 
-const BASE_URL = 'https://www.pickvolt.com'
 
 export async function POST(req: NextRequest) {
   if (!await verifyAdmin(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
@@ -75,16 +75,7 @@ export async function POST(req: NextRequest) {
 
   const pA = products.find((p) => p.id === idA) ?? products[0]
   const pB = products.find((p) => p.id === idB) ?? products[1]
-  const compareUrl = `${BASE_URL}/compare?ids=${idA},${idB}`
-
-  const tweetText = [
-    `🔥 This week's most compared: ${pA.brand} ${pA.name} vs ${pB.brand} ${pB.name}`,
-    ``,
-    `Compared ${count} times on Pickvolt — see the full AI breakdown 👇`,
-    compareUrl,
-    ``,
-    `#TechComparison #${pA.brand.replace(/\s/g, '')} #${pB.brand.replace(/\s/g, '')}`,
-  ].join('\n')
+  const tweetText = buildTweetText(pA, pB, count)
 
   try {
     const twitter = new TwitterApi({ appKey, appSecret, accessToken, accessSecret: accessTokenSecret })
