@@ -19,7 +19,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
