@@ -214,6 +214,21 @@ export async function POST(
     }
   }
 
+  // 제품 옵션(variants) 전체 복사
+  const { data: variants } = await supabase
+    .from('product_variants')
+    .select('*')
+    .eq('product_id', id)
+    .order('sort_order')
+
+  if (variants && variants.length > 0) {
+    const newVariants = variants.map(({ id: _vid, product_id: _pid, created_at: _ca, ...rest }: Record<string, unknown> & { id: unknown; product_id: unknown; created_at: unknown }) => {
+      void _vid; void _pid; void _ca
+      return { product_id: newId, ...rest }
+    })
+    await supabase.from('product_variants').insert(newVariants)
+  }
+
   return NextResponse.json({ id: newId })
 }
 

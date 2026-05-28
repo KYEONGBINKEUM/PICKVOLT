@@ -423,41 +423,6 @@ function VariantsSection({
           />
         </div>
 
-        {!editingBase && (
-          <div>
-            <label className="block text-xs text-white/40 mb-1">소스 URL</label>
-            <input type="text" value={form.source_url ?? ''}
-              onChange={(e) => pf('source_url', e.target.value || null)}
-              placeholder="https://..."
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-            />
-          </div>
-        )}
-
-        <div>
-          <label className="block text-xs text-white/40 mb-1">아마존 경유 링크 (affiliate)</label>
-          <div className="flex gap-2">
-            <input type="text" value={form.amazon_url ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value.trim()
-                const asin = raw.toUpperCase()
-                if (/^[A-Z0-9]{10}$/.test(asin)) {
-                  pf('amazon_url', `https://www.amazon.com/dp/${asin}?tag=pickvolt-20`)
-                } else {
-                  pf('amazon_url', raw || null)
-                }
-              }}
-              placeholder="ASIN 또는 전체 URL"
-              className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
-            />
-            {form.amazon_url && (
-              <a href={form.amazon_url} target="_blank" rel="noopener noreferrer"
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-border text-white/40 hover:text-white text-xs rounded-lg transition-colors">
-                <ExternalLink size={12} />
-              </a>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="flex gap-2 justify-end pt-1">
@@ -1222,48 +1187,6 @@ export default function ProductEditPage() {
                 label={form.is_visible !== false ? '공개' : '비공개'}
               />
             </Field>
-            <div className="md:col-span-2">
-              <Field label="소스 URL">
-                <TextInput value={g(form, 'source_url')} onChange={(v) => patchForm('source_url', v)} placeholder="https://..." />
-              </Field>
-            </div>
-            <div className="md:col-span-2">
-              <Field label="아마존 경유 링크 (affiliate)">
-                <div className="flex gap-2">
-                  <TextInput
-                    value={(() => { const m = g(commonSpecs, 'amazon_url').match(/\/dp\/([A-Z0-9]{10})/); return m ? m[1] : g(commonSpecs, 'amazon_url') })()}
-                    onChange={(v) => {
-                      const asin = v.trim().toUpperCase()
-                      if (/^[A-Z0-9]{10}$/.test(asin)) {
-                        patchCommon('amazon_url', `https://www.amazon.com/dp/${asin}?tag=pickvolt-20`)
-                      } else {
-                        patchCommon('amazon_url', v)
-                      }
-                    }}
-                    placeholder="ASIN (예: B0XXXXXXXX)"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAmazonFill}
-                    disabled={amazonFilling || !g(form, 'name')}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/30 text-orange-300 text-xs font-medium rounded-lg transition-colors disabled:opacity-40 whitespace-nowrap"
-                  >
-                    {amazonFilling ? <RefreshCw size={12} className="animate-spin" /> : <span>🔗</span>}
-                    {amazonFilling ? '검색 중...' : 'AI 자동생성'}
-                  </button>
-                  {g(commonSpecs, 'amazon_url') && (
-                    <a
-                      href={g(commonSpecs, 'amazon_url')}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-border text-white/40 hover:text-white text-xs rounded-lg transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-              </Field>
-            </div>
           </div>
         </SectionCard>
 
