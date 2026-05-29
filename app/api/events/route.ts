@@ -9,9 +9,11 @@ function makeService() {
 }
 
 // GET /api/events — upcoming approved tech events, public
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = makeService()
   const today = new Date().toISOString().split('T')[0]
+  const url = new URL(req.url)
+  const limit = parseInt(url.searchParams.get('limit') ?? '10', 10)
 
   const { data, error } = await supabase
     .from('tech_events')
@@ -19,7 +21,7 @@ export async function GET() {
     .eq('is_approved', true)
     .gte('event_date', today)
     .order('event_date', { ascending: true })
-    .limit(10)
+    .limit(Math.min(limit, 200))
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ events: data ?? [] })
