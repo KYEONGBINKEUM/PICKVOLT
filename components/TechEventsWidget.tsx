@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 
 interface TechEvent {
@@ -39,9 +40,10 @@ export default function TechEventsWidget() {
         {!loading && events.length > 0 && (
           <Link
             href="/community/events"
-            className="text-white/30 hover:text-accent transition-colors text-[10px]"
+            className="text-white/30 hover:text-accent transition-colors"
+            title={t('events.view_all')}
           >
-            {t('events.view_all')}
+            <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         )}
       </div>
