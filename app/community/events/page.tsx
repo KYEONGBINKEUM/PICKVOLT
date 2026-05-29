@@ -127,7 +127,7 @@ export default async function EventsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-4xl mx-auto px-4 py-8 md:pl-56">
+      <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <Link href="/community" className="text-white/30 hover:text-white/60 transition-colors">
