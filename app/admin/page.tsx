@@ -252,6 +252,9 @@ export default function AdminPage() {
   const [eventForm, setEventForm] = useState<Partial<TechEvent>>({})
   const [eventEditing, setEventEditing] = useState<string | null>(null) // id or 'new'
   const [eventSaving, setEventSaving] = useState(false)
+  const [collectingEvents, setCollectingEvents] = useState(false)
+  const [collectResult, setCollectResult] = useState<{ inserted: number; skipped: number } | null>(null)
+  const [collectError, setCollectError] = useState<string | null>(null)
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -901,6 +904,27 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     })
     fetchEvents()
+  }, [token, fetchEvents])
+
+  const collectNow = useCallback(async () => {
+    if (!token) return
+    setCollectingEvents(true)
+    setCollectResult(null)
+    setCollectError(null)
+    try {
+      const res = await fetch('/api/admin/collect-events', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const d = await res.json()
+      if (!res.ok) { setCollectError(d.error ?? 'Failed'); return }
+      setCollectResult(d)
+      fetchEvents()
+    } catch (e: unknown) {
+      setCollectError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setCollectingEvents(false)
+    }
   }, [token, fetchEvents])
 
   const testTweet = useCallback(async () => {
@@ -3503,13 +3527,35 @@ export default function AdminPage() {
                 </h2>
                 <p className="text-xs text-white/30 mt-0.5">커뮤니티 사이드바에 표시될 테크 행사 목록</p>
               </div>
-              <button
-                onClick={() => { setEventForm({ is_approved: true, is_recurring: false }); setEventEditing('new') }}
-                className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors"
-              >
-                <Plus size={14} /> 이벤트 추가
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={collectNow}
+                  disabled={collectingEvents}
+                  className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-border text-white/60 hover:text-white hover:border-white/30 disabled:opacity-50 transition-colors"
+                >
+                  <RefreshCw size={14} className={collectingEvents ? 'animate-spin' : ''} />
+                  {collectingEvents ? '수집 중...' : '자동 수집'}
+                </button>
+                <button
+                  onClick={() => { setEventForm({ is_approved: true, is_recurring: false }); setEventEditing('new') }}
+                  className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors"
+                >
+                  <Plus size={14} /> 이벤트 추가
+                </button>
+              </div>
             </div>
+
+            {/* 수집 결과 */}
+            {collectResult && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400">
+                ✅ 수집 완료: <strong>{collectResult.inserted}개</strong> 신규 추가, {collectResult.skipped}개 중복 스킵
+              </div>
+            )}
+            {collectError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+                ❌ 수집 오류: {collectError}
+              </div>
+            )}
 
             {/* 추가/수정 폼 */}
             {eventEditing && (
