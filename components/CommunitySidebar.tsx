@@ -7,6 +7,7 @@ import { clsx } from 'clsx'
 import { Home, Flame, Newspaper, Users, Plus } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import TechEventsWidget from '@/components/TechEventsWidget'
 
 let clansCache: { data: { id: string; slug: string; name: string; avatar_url?: string | null }[]; ts: number } | null = null
 const CLANS_TTL = 30000 // 30 seconds
@@ -104,6 +105,12 @@ export default function CommunitySidebar() {
               {t('clan.discover')}
             </Link>
           </div>
+
+          {/* 테크 이벤트 캘린더 */}
+          <div className="mt-4 pt-4 border-t border-border/30">
+            <TechEventsWidget />
+          </div>
+
         </div>
       </aside>
 

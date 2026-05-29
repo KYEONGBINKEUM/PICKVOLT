@@ -8,7 +8,7 @@ import {
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
   Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle, BadgeCheck,
-  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter,
+  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter, CalendarDays,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -19,7 +19,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -244,6 +244,14 @@ export default function AdminPage() {
   const [tweetSending, setTweetSending] = useState(false)
   const [tweetResult, setTweetResult] = useState<{ tweetId?: string; pair?: string; count?: number; skipped?: boolean; reason?: string } | null>(null)
   const [tweetError, setTweetError] = useState('')
+
+  // Events
+  type TechEvent = { id: string; name: string; organizer: string | null; event_date: string; end_date: string | null; location: string | null; url: string | null; description: string | null; is_approved: boolean; is_recurring: boolean }
+  const [events, setEvents] = useState<TechEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventForm, setEventForm] = useState<Partial<TechEvent>>({})
+  const [eventEditing, setEventEditing] = useState<string | null>(null) // id or 'new'
+  const [eventSaving, setEventSaving] = useState(false)
 
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -860,6 +868,41 @@ export default function AdminPage() {
     setNlLoading(false)
   }, [])
 
+  const fetchEvents = useCallback(async () => {
+    if (!token) return
+    setEventsLoading(true)
+    const res = await fetch('/api/admin/events', { headers: { Authorization: `Bearer ${token}` } })
+    const d = await res.json()
+    setEvents(d.events ?? [])
+    setEventsLoading(false)
+  }, [token])
+
+  const saveEvent = useCallback(async () => {
+    if (!token || !eventForm.name || !eventForm.event_date) return
+    setEventSaving(true)
+    const method = eventEditing === 'new' ? 'POST' : 'PATCH'
+    const body = eventEditing === 'new' ? eventForm : { ...eventForm, id: eventEditing }
+    await fetch('/api/admin/events', {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    })
+    setEventEditing(null)
+    setEventForm({})
+    fetchEvents()
+    setEventSaving(false)
+  }, [token, eventForm, eventEditing, fetchEvents])
+
+  const deleteEvent = useCallback(async (id: string) => {
+    if (!token || !confirm('이벤트를 삭제하시겠어요?')) return
+    await fetch('/api/admin/events', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
+    })
+    fetchEvents()
+  }, [token, fetchEvents])
+
   const testTweet = useCallback(async () => {
     if (!token) return
     setTweetSending(true)
@@ -921,6 +964,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed || !token) return
     if (tab === 'newsletter') fetchNewsletter(token)
+    if (tab === 'events') fetchEvents()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
@@ -1090,8 +1134,9 @@ export default function AdminPage() {
     {
       label: '마케팅',
       items: [
-        { key: 'newsletter', label: '뉴스레터', icon: <Mail size={14} /> },
-        { key: 'twitter',    label: 'Twitter',  icon: <Twitter size={14} /> },
+        { key: 'newsletter', label: '뉴스레터',    icon: <Mail size={14} /> },
+        { key: 'twitter',    label: 'Twitter',    icon: <Twitter size={14} /> },
+        { key: 'events',     label: '이벤트 캘린더', icon: <CalendarDays size={14} /> },
       ],
     },
   ]
@@ -3445,6 +3490,142 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── 이벤트 캘린더 ── */}
+        {tab === 'events' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <CalendarDays size={18} className="text-accent" /> 이벤트 캘린더
+                </h2>
+                <p className="text-xs text-white/30 mt-0.5">커뮤니티 사이드바에 표시될 테크 행사 목록</p>
+              </div>
+              <button
+                onClick={() => { setEventForm({ is_approved: true, is_recurring: false }); setEventEditing('new') }}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-white font-bold transition-colors"
+              >
+                <Plus size={14} /> 이벤트 추가
+              </button>
+            </div>
+
+            {/* 추가/수정 폼 */}
+            {eventEditing && (
+              <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
+                <h3 className="text-sm font-bold text-white">{eventEditing === 'new' ? '새 이벤트 추가' : '이벤트 수정'}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">이벤트명 *</label>
+                    <input value={eventForm.name ?? ''} onChange={e => setEventForm(p => ({ ...p, name: e.target.value }))}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                      placeholder="WWDC 2026" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">주최사</label>
+                    <input value={eventForm.organizer ?? ''} onChange={e => setEventForm(p => ({ ...p, organizer: e.target.value || null }))}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                      placeholder="Apple" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">시작일 *</label>
+                    <input type="date" value={eventForm.event_date ?? ''} onChange={e => setEventForm(p => ({ ...p, event_date: e.target.value }))}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">종료일</label>
+                    <input type="date" value={eventForm.end_date ?? ''} onChange={e => setEventForm(p => ({ ...p, end_date: e.target.value || null }))}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">장소</label>
+                    <input value={eventForm.location ?? ''} onChange={e => setEventForm(p => ({ ...p, location: e.target.value || null }))}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                      placeholder="San Jose, CA / Online" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">공식 URL</label>
+                    <input value={eventForm.url ?? ''} onChange={e => setEventForm(p => ({ ...p, url: e.target.value || null }))}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+                      placeholder="https://..." />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-white/40 mb-1">설명</label>
+                    <textarea value={eventForm.description ?? ''} onChange={e => setEventForm(p => ({ ...p, description: e.target.value || null }))}
+                      rows={2}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent resize-none"
+                      placeholder="행사 간략 설명" />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={eventForm.is_approved ?? true} onChange={e => setEventForm(p => ({ ...p, is_approved: e.target.checked }))} className="accent-accent" />
+                      <span className="text-xs text-white/60">공개</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={eventForm.is_recurring ?? false} onChange={e => setEventForm(p => ({ ...p, is_recurring: e.target.checked }))} className="accent-accent" />
+                      <span className="text-xs text-white/60">매년 반복</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => { setEventEditing(null); setEventForm({}) }}
+                    className="px-4 py-2 text-sm text-white/40 hover:text-white border border-border rounded-lg transition-colors">취소</button>
+                  <button onClick={saveEvent} disabled={eventSaving || !eventForm.name || !eventForm.event_date}
+                    className="px-4 py-2 text-sm bg-accent hover:bg-accent/90 text-white font-bold rounded-lg disabled:opacity-50 transition-colors">
+                    {eventSaving ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 이벤트 목록 */}
+            {eventsLoading ? (
+              <div className="text-white/30 text-sm py-8 text-center">로딩 중...</div>
+            ) : events.length === 0 ? (
+              <div className="text-white/20 text-sm py-8 text-center">등록된 이벤트가 없습니다.</div>
+            ) : (
+              <div className="bg-surface border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">이벤트</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold hidden md:table-cell">날짜</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold hidden md:table-cell">장소</th>
+                      <th className="text-left px-4 py-3 text-xs text-white/30 font-semibold">상태</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.sort((a, b) => a.event_date.localeCompare(b.event_date)).map(ev => (
+                      <tr key={ev.id} className="border-b border-border/50 hover:bg-white/[0.02]">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-white text-sm">{ev.name}</div>
+                          {ev.organizer && <div className="text-xs text-white/40">{ev.organizer}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-white/60 hidden md:table-cell">
+                          {ev.event_date}{ev.end_date ? ` ~ ${ev.end_date}` : ''}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-white/50 hidden md:table-cell">{ev.location ?? '—'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${ev.is_approved ? 'bg-green-500/15 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                            {ev.is_approved ? '공개' : '비공개'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center gap-2 justify-end">
+                            <button onClick={() => { setEventForm(ev); setEventEditing(ev.id) }}
+                              className="text-xs text-white/30 hover:text-accent transition-colors">수정</button>
+                            <button onClick={() => deleteEvent(ev.id)}
+                              className="text-xs text-white/30 hover:text-red-400 transition-colors">삭제</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
