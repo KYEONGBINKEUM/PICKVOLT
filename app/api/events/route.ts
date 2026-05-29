@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-function makeAnon() {
+function makeService() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
 
 // GET /api/events — upcoming approved tech events, public
 export async function GET() {
-  const supabase = makeAnon()
+  const supabase = makeService()
   const today = new Date().toISOString().split('T')[0]
 
   const { data, error } = await supabase
