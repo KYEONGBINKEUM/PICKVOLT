@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   if (!devices || devices.length === 0) return NextResponse.json({ rows: [] })
 
   // 유저 정보
-  const userIds = [...new Set(devices.map(d => d.user_id))]
+  const userIds = Array.from(new Set(devices.map(d => d.user_id)))
   const { data: profiles } = await sb
     .from('profiles')
     .select('user_id, nickname')
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   const profileMap = new Map((profiles ?? []).map(p => [p.user_id, p.nickname]))
 
   // 제품 정보
-  const productIds = [...new Set(devices.map(d => d.product_id))]
+  const productIds = Array.from(new Set(devices.map(d => d.product_id)))
   const { data: products } = await sb
     .from('products')
     .select('id, name, brand, category')
