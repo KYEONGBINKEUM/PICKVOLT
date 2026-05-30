@@ -83,7 +83,7 @@ export default function EventsPage() {
   // Build a map: dateStr → events[]
   const dateEventMap = new Map<string, TechEvent[]>()
   for (const ev of events) {
-    for (const dateStr of getEventDates(ev)) {
+    for (const dateStr of Array.from(getEventDates(ev))) {
       if (!dateEventMap.has(dateStr)) dateEventMap.set(dateStr, [])
       dateEventMap.get(dateStr)!.push(ev)
     }
