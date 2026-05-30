@@ -66,6 +66,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
   }, [mobileOpen])
 
   const isCommunity = pathname.startsWith('/community') || pathname.startsWith('/clan') || communityContext === true
+  const isEvents = pathname.startsWith('/events')
 
   // 커뮤니티 섹션 링크 (PC 사이드바와 동일)
   const communityLinks = [
@@ -109,7 +110,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
             <Link href="/"
               className={clsx(
                 'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                !isCommunity ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
+                !isCommunity && !isEvents ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
               )}>
               {t('nav.compare')}
             </Link>
@@ -119,6 +120,13 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
                 isCommunity ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
               )}>
               {t('nav.community')}
+            </Link>
+            <Link href="/events"
+              className={clsx(
+                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
+                isEvents ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
+              )}>
+              {t('nav.events')}
             </Link>
           </div>
         </div>
@@ -225,7 +233,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
         <div className="px-4 py-3 space-y-1">
           <Link href="/" onClick={() => setMobileOpen(false)}
             className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
-              !isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
+              !isCommunity && !isEvents ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
             {t('nav.compare')}
           </Link>
           <Link href="/community" onClick={() => setMobileOpen(false)}
@@ -233,10 +241,15 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
               isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
             {t('nav.community')}
           </Link>
+          <Link href="/events" onClick={() => setMobileOpen(false)}
+            className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
+              isEvents ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
+            {t('nav.events')}
+          </Link>
 
           <div className="pt-2 pb-1 px-3">
             <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest">
-              {isCommunity ? t('nav.community') : t('nav.compare')}
+              {isCommunity ? t('nav.community') : isEvents ? t('nav.events') : t('nav.compare')}
             </p>
           </div>
 
