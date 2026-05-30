@@ -440,7 +440,7 @@ function WritePageInner() {
   const handleTranslate = async () => {
     const curTitle = title
     const curHtml  = editorRef.current?.innerHTML ?? body
-    const curText  = editorRef.current?.innerText ?? ''
+    if (!curTitle.trim() && !curHtml.trim()) return
 
     // save originals for restore
     setOriginalTitle(curTitle)
@@ -448,22 +448,41 @@ function WritePageInner() {
     setTranslating(true)
 
     try {
-      const translateText = (q: string) =>
+      const doTranslate = (q: string) =>
         fetch(`/api/translate?q=${encodeURIComponent(q)}&tl=${translateLang}`)
           .then(r => r.json())
-          .then(d => d.text as string)
+          .then(d => (d.text ?? q) as string)
+
+      // ── 본문: img / product-card / compare-table 을 플레이스홀더로 보존 ──
+      const temp = document.createElement('div')
+      temp.innerHTML = curHtml
+
+      const preserved: string[] = []
+      temp.querySelectorAll('[data-product-card], [data-compare-table], img').forEach(el => {
+        const ph = `PVPH${preserved.length}END`
+        preserved.push(el.outerHTML)
+        el.replaceWith(document.createTextNode(ph))
+      })
+
+      // <br> → 줄바꿈 문자, 나머지 태그 제거 후 plain text 추출
+      temp.querySelectorAll('br').forEach(br => br.replaceWith('\n'))
+      const plainText = temp.textContent ?? ''
 
       const [newTitle, newText] = await Promise.all([
-        curTitle.trim() ? translateText(curTitle) : Promise.resolve(curTitle),
-        curText.trim()  ? translateText(curText)  : Promise.resolve(''),
+        curTitle.trim() ? doTranslate(curTitle) : Promise.resolve(curTitle),
+        plainText.trim() ? doTranslate(plainText) : Promise.resolve(plainText),
       ])
 
       setTitle(newTitle)
 
-      if (editorRef.current && curText.trim()) {
-        const newHtml = newText.replace(/\n/g, '<br>')
-        editorRef.current.innerHTML = newHtml
-        setBody(newHtml)
+      if (editorRef.current) {
+        // 줄바꿈 → <br>, 플레이스홀더 원복
+        let result = newText.replace(/\n/g, '<br>')
+        preserved.forEach((html, i) => {
+          result = result.replace(new RegExp(`PVPH${i}END`, 'g'), html)
+        })
+        editorRef.current.innerHTML = result
+        setBody(editorRef.current.innerHTML)
       }
     } catch {
       // leave content unchanged on error
