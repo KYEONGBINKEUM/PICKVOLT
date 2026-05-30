@@ -267,8 +267,11 @@ function ProductCard({
       )}
 
       <div
-        className={`relative z-10 bg-surface border rounded-2xl overflow-hidden flex flex-row h-full transition-all duration-[160ms] hover:shadow-lg hover:shadow-black/20
-          ${hasVariants ? 'border-white/10 hover:border-white/20' : 'border-border hover:border-white/15'}
+        className={`relative z-10 bg-surface border rounded-2xl overflow-hidden flex flex-row h-full transition-all duration-[160ms] hover:shadow-lg
+          ${isOwned
+            ? 'border-accent/50 hover:border-accent/70 shadow-[0_0_0_1px_rgba(255,77,0,0.25)] hover:shadow-[0_0_0_1px_rgba(255,77,0,0.45)]'
+            : hasVariants ? 'border-white/10 hover:border-white/20 hover:shadow-black/20' : 'border-border hover:border-white/15 hover:shadow-black/20'
+          }
           ${animating
             ? animDir === 'left'
               ? '-translate-x-2 opacity-0 scale-[0.98]'
