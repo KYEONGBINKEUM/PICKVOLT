@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { X, Plus, Search, ChevronLeft, Loader2, ChevronDown, Check } from 'lucide-react'
+import { X, Plus, Search, ChevronLeft, Loader2, ChevronDown, Check, Languages, RotateCcw } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import RichEditor, { RichEditorHandle } from '@/components/RichEditor'
 import AiBotPostPanel from '@/components/AiBotPostPanel'
@@ -293,6 +293,10 @@ function WritePageInner() {
   const [pointPrice, setPointPrice]               = useState(0)
   const [myPoints, setMyPoints]                   = useState(0)
   const [botPostCost, setBotPostCost]             = useState(50)
+  const [translateLang, setTranslateLang]         = useState('en')
+  const [translating, setTranslating]             = useState(false)
+  const [originalTitle, setOriginalTitle]         = useState<string | null>(null)
+  const [originalBody, setOriginalBody]           = useState<string | null>(null)
 
 
   const editorRef     = useRef<HTMLDivElement | null>(null)
@@ -421,6 +425,62 @@ function WritePageInner() {
     setOptions(prev => prev.map((o, i) => i === idx ? { ...o, label: o.label || p.name, product_id: p.id, image_url: p.image_url } : o))
     setProducts(prev => prev.find(x => x.id === p.id) ? prev : [...prev, p])
   }, [])
+
+  const TRANSLATE_LANGS = [
+    { code: 'ko', label: '한국어' },
+    { code: 'en', label: 'English' },
+    { code: 'ja', label: '日本語' },
+    { code: 'zh-CN', label: '中文' },
+    { code: 'es', label: 'Español' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
+    { code: 'pt', label: 'Português' },
+  ]
+
+  const handleTranslate = async () => {
+    const curTitle = title
+    const curHtml  = editorRef.current?.innerHTML ?? body
+    const curText  = editorRef.current?.innerText ?? ''
+
+    // save originals for restore
+    setOriginalTitle(curTitle)
+    setOriginalBody(curHtml)
+    setTranslating(true)
+
+    try {
+      const translateText = (q: string) =>
+        fetch(`/api/translate?q=${encodeURIComponent(q)}&tl=${translateLang}`)
+          .then(r => r.json())
+          .then(d => d.text as string)
+
+      const [newTitle, newText] = await Promise.all([
+        curTitle.trim() ? translateText(curTitle) : Promise.resolve(curTitle),
+        curText.trim()  ? translateText(curText)  : Promise.resolve(''),
+      ])
+
+      setTitle(newTitle)
+
+      if (editorRef.current && curText.trim()) {
+        const newHtml = newText.replace(/\n/g, '<br>')
+        editorRef.current.innerHTML = newHtml
+        setBody(newHtml)
+      }
+    } catch {
+      // leave content unchanged on error
+    } finally {
+      setTranslating(false)
+    }
+  }
+
+  const handleRestoreOriginal = () => {
+    if (originalTitle !== null) setTitle(originalTitle)
+    if (originalBody !== null && editorRef.current) {
+      editorRef.current.innerHTML = originalBody
+      setBody(originalBody)
+    }
+    setOriginalTitle(null)
+    setOriginalBody(null)
+  }
 
   const canSubmit = () => {
     if (!title.trim()) return false
@@ -700,6 +760,42 @@ function WritePageInner() {
             <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120}
               placeholder={t('write.placeholder.title')}
               className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-white/20 transition-colors" />
+          </div>
+
+          {/* 번역 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Languages className="w-3.5 h-3.5 text-white/30 shrink-0" />
+            <span className="text-xs text-white/30">{t('write.translate_to')}</span>
+            <select
+              value={translateLang}
+              onChange={e => setTranslateLang(e.target.value)}
+              className="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs text-white/70 outline-none focus:border-white/20 transition-colors"
+            >
+              {TRANSLATE_LANGS.map(l => (
+                <option key={l.code} value={l.code}>{l.label}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleTranslate}
+              disabled={translating || (!title.trim() && !body.trim())}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white/6 border border-border text-xs font-semibold text-white/60 hover:text-white hover:border-white/20 disabled:opacity-40 transition-all"
+            >
+              {translating
+                ? <><Loader2 className="w-3 h-3 animate-spin" />{t('write.translating')}</>
+                : t('write.translate_btn')
+              }
+            </button>
+            {originalTitle !== null && (
+              <button
+                type="button"
+                onClick={handleRestoreOriginal}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-white/10 text-xs font-semibold text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
+              >
+                <RotateCcw className="w-3 h-3" />
+                {t('write.restore_original')}
+              </button>
+            )}
           </div>
 
           {/* 본문 에디터 */}
