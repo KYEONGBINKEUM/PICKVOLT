@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { LogOut, ChevronRight, Zap, BarChart2, Globe, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown, FileText, BadgeCheck } from 'lucide-react'
+import { LogOut, ChevronRight, Zap, BarChart2, Globe, Trash2, Pencil, Check, X, User, Camera, MessageSquare, Heart, Star, Coins, ChevronDown, FileText, BadgeCheck, Smartphone, Plus, Search, Loader2 } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { useI18n, LANGUAGES, type Locale } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
@@ -28,6 +28,15 @@ function MyPageContent() {
     id: string; product_id: string; created_at: string
     products: { id: string; name: string; brand: string; category: string; image_url: string | null; price_usd: number | null } | null
   }[]>([])
+  const [myDevices, setMyDevices] = useState<{
+    id: string; product_id: string
+    product: { id: string; name: string; brand: string; category: string; image_url: string | null } | null
+  }[]>([])
+  const [showDeviceSearch, setShowDeviceSearch] = useState(false)
+  const [deviceQuery, setDeviceQuery] = useState('')
+  const [deviceResults, setDeviceResults] = useState<{ id: string; name: string; brand: string; image_url: string | null }[]>([])
+  const [deviceSearching, setDeviceSearching] = useState(false)
+  const deviceSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -55,6 +64,45 @@ function MyPageContent() {
   const [showPointsHistory, setShowPointsHistory] = useState(false)
   const [transactions, setTransactions] = useState<{ id: string; amount: number; reason: string; created_at: string }[]>([])
   const [txLoading, setTxLoading] = useState(false)
+
+  // ── 내 기기 검색 ────────────────────────────────────────────────
+  useEffect(() => {
+    if (deviceSearchTimer.current) clearTimeout(deviceSearchTimer.current)
+    if (deviceQuery.trim().length < 2) { setDeviceResults([]); return }
+    deviceSearchTimer.current = setTimeout(() => {
+      setDeviceSearching(true)
+      fetch(`/api/products/search?q=${encodeURIComponent(deviceQuery)}&limit=8`)
+        .then(r => r.json())
+        .then(d => setDeviceResults((d.results ?? []).filter((p: { id: string }) => !myDevices.find(dv => dv.product_id === p.id))))
+        .finally(() => setDeviceSearching(false))
+    }, 300)
+    return () => { if (deviceSearchTimer.current) clearTimeout(deviceSearchTimer.current) }
+  }, [deviceQuery, myDevices])
+
+  const addDevice = async (p: { id: string; name: string; brand: string; image_url: string | null }) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const res = await fetch('/api/user/devices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ product_id: p.id }),
+    })
+    if (res.ok) {
+      const j = await res.json()
+      setMyDevices(prev => [{ id: j.device.id, product_id: p.id, product: p as { id: string; name: string; brand: string; category: string; image_url: string | null } }, ...prev])
+    }
+    setDeviceQuery(''); setDeviceResults([]); setShowDeviceSearch(false)
+  }
+
+  const removeDevice = async (productId: string) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await fetch(`/api/user/devices?product_id=${productId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+    setMyDevices(prev => prev.filter(d => d.product_id !== productId))
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -107,6 +155,9 @@ function MyPageContent() {
             .then((r) => r.json()).then((j) => setMyReviews(j.reviews ?? []))
           fetch('/api/wishlist', { headers: { Authorization: `Bearer ${token}` } })
             .then((r) => r.json()).then((j) => setWishlist(j.wishlist ?? []))
+          fetch('/api/user/devices', { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.json()).then((j) => setMyDevices(j.devices ?? []))
+            .catch(() => {})
           fetch('/api/community/my-activity', { headers: { Authorization: `Bearer ${token}` } })
             .then((r) => r.json()).then((j) => { setMyPosts(j.posts ?? []); setMyComments(j.comments ?? []) })
             .catch(() => {})
@@ -462,6 +513,100 @@ function MyPageContent() {
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-white/30" />
             </button>
+          </div>
+
+          {/* ── 내 기기 ── */}
+          <div className="bg-surface border border-border rounded-card overflow-hidden mb-4">
+            <div className="flex items-center gap-2 px-5 py-3 border-b border-border">
+              <Smartphone className="w-4 h-4" style={{ color: 'rgb(255,77,0)' }} />
+              <p className="text-sm font-bold text-white">
+                {t('mydevices.title')}
+                {myDevices.length > 0 && (
+                  <span className="text-white/30 font-normal text-xs ml-1">{myDevices.length}{t('mypage.count_unit')}</span>
+                )}
+              </p>
+              <button
+                onClick={() => { setShowDeviceSearch(v => !v); setDeviceQuery(''); setDeviceResults([]) }}
+                className="ml-auto flex items-center gap-1 text-xs font-semibold text-white/40 hover:text-white transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {t('mydevices.add')}
+              </button>
+            </div>
+
+            {/* 기기 검색 패널 */}
+            {showDeviceSearch && (
+              <div className="px-4 pt-3 pb-2 border-b border-border">
+                <div className="flex items-center gap-2 bg-surface-2 border border-border rounded-xl px-3 py-2.5 mb-2">
+                  <Search className="w-3.5 h-3.5 text-white/30 shrink-0" />
+                  <input
+                    autoFocus
+                    value={deviceQuery}
+                    onChange={e => setDeviceQuery(e.target.value)}
+                    placeholder={t('write.product_search')}
+                    className="flex-1 bg-transparent text-sm text-white placeholder-white/25 outline-none"
+                  />
+                  {deviceSearching && <Loader2 className="w-3 h-3 text-white/30 animate-spin shrink-0" />}
+                </div>
+                {deviceResults.length > 0 && (
+                  <div className="bg-surface-2 border border-border rounded-xl overflow-hidden">
+                    {deviceResults.map(p => (
+                      <button key={p.id} onClick={() => addDevice(p)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left">
+                        <div className="w-9 h-9 rounded-lg bg-surface flex-shrink-0 overflow-hidden relative">
+                          {p.image_url
+                            ? <Image src={p.image_url} alt={p.name} fill className="object-contain p-1" unoptimized />
+                            : <span className="w-full h-full flex items-center justify-center text-xs font-black text-white/15">{p.brand?.[0]}</span>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-white/80 truncate">{p.name}</p>
+                          <p className="text-[10px] text-white/30">{p.brand}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {myDevices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 px-5">
+                <Smartphone className="w-6 h-6 text-white/10 mb-2" />
+                <p className="text-xs text-white/25">{t('mydevices.empty')}</p>
+                <p className="text-[10px] text-white/15 mt-0.5">{t('mydevices.empty_sub')}</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {myDevices.map(dv => {
+                  const p = dv.product
+                  if (!p) return null
+                  return (
+                    <div key={dv.id} className="flex items-center gap-3 px-5 py-3">
+                      <Link href={`/product/${p.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                        <div className="w-10 h-10 rounded-xl bg-surface-2 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                          {p.image_url
+                            ? <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-contain w-full h-full" unoptimized />
+                            : <span className="text-white/20 text-xs font-bold">{p.brand?.[0]}</span>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white/30 truncate">{p.brand}</p>
+                          <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                        </div>
+                      </Link>
+                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: 'rgba(255,77,0,0.12)', color: 'rgb(255,77,0)' }}>
+                        {t('mydevices.using')}
+                      </span>
+                      <button onClick={() => removeDevice(dv.product_id)}
+                        className="text-white/20 hover:text-white/60 transition-colors shrink-0">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* 찜 목록 */}

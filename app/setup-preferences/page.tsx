@@ -121,7 +121,7 @@ export default function SetupPreferencesPage() {
     // Apply to client-side state
     setLocale(locale)
     setCurrency(currency)
-    router.replace('/mypage')
+    router.replace('/setup-devices')
   }
 
   const handleSkip = () => {

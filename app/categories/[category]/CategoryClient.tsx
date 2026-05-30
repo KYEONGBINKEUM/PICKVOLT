@@ -141,12 +141,14 @@ function ProductCard({
   onWishlistToggle,
   isAdmin,
   maxScore,
+  isOwned,
 }: {
   product: Product
   wishlisted: boolean
   onWishlistToggle: (productId: string, e: React.MouseEvent) => void
   isAdmin: boolean
   maxScore: number
+  isOwned?: boolean
 }) {
   const { t } = useI18n()
   const { cart, add, remove } = useCompareCart()
@@ -294,6 +296,12 @@ function ProductCard({
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm border border-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
               <div className="w-1 h-1 rounded-full bg-accent" />
               <span className="text-[10px] font-bold text-white tabular-nums">{Math.round(score * 10)}</span>
+            </div>
+          )}
+          {/* 사용 중 뱃지 */}
+          {isOwned && (
+            <div className="absolute top-2 left-2 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: 'rgba(255,77,0,0.85)', color: '#fff' }}>
+              {t('mydevices.using')}
             </div>
           )}
         </div>
@@ -836,9 +844,10 @@ export default function CategoryClient({ category, initialData }: { category: st
   const [mobileTrayOpen,  setMobileTrayOpen]  = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  // ── Auth / Wishlist ──────────────────────────────────────────────────────────
+  // ── Auth / Wishlist / Devices ────────────────────────────────────────────────
   const [authToken,     setAuthToken]     = useState<string | null>(null)
   const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set())
+  const [myDeviceIds,   setMyDeviceIds]   = useState<Set<string>>(new Set())
   const [isAdmin,       setIsAdmin]       = useState(false)
 
   useEffect(() => {
@@ -852,6 +861,12 @@ export default function CategoryClient({ category, initialData }: { category: st
         .then((json) => {
           setWishlistedIds(new Set((json.wishlist ?? []).map((w: { product_id: string }) => w.product_id)))
         })
+      fetch('/api/user/devices', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then((r) => r.json())
+        .then((json) => {
+          setMyDeviceIds(new Set((json.devices ?? []).map((d: { product_id: string }) => d.product_id)))
+        })
+        .catch(() => {})
     })
   }, [])
 
@@ -1166,6 +1181,7 @@ export default function CategoryClient({ category, initialData }: { category: st
                       onWishlistToggle={toggleWishlist}
                       isAdmin={isAdmin}
                       maxScore={categoryMaxScore}
+                      isOwned={myDeviceIds.has(product.id)}
                     />
                     {/* 인라인 배너: 10번째 뒤 첫 노출, 이후 20~40개 랜덤 간격 */}
                     {AD_HTML_INLINE && adIndices.has(idx) && idx < products.length - 1 && (
