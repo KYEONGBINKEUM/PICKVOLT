@@ -8,7 +8,7 @@ import {
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
   Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle, BadgeCheck,
-  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter, CalendarDays,
+  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter, CalendarDays, Smartphone, Download,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -19,7 +19,7 @@ const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events' | 'devices'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -880,6 +880,59 @@ export default function AdminPage() {
     setEventsLoading(false)
   }, [token])
 
+  // ── 기기 등록 현황 ────────────────────────────────────────────────────────────
+  const [deviceRows, setDeviceRows] = useState<{
+    id: string
+    user_id: string
+    product_id: string
+    created_at: string
+    user_email: string | null
+    user_nickname: string | null
+    product_name: string | null
+    product_brand: string | null
+    product_category: string | null
+  }[]>([])
+  const [devicesLoading, setDevicesLoading] = useState(false)
+  const [deviceSearch, setDeviceSearch] = useState('')
+
+  const fetchDevices = useCallback(async () => {
+    if (!token) return
+    setDevicesLoading(true)
+    const res = await fetch('/api/admin/devices', { headers: { Authorization: `Bearer ${token}` } })
+    const d = await res.json()
+    setDeviceRows(d.rows ?? [])
+    setDevicesLoading(false)
+  }, [token])
+
+  const downloadDevicesExcel = () => {
+    const rows = deviceRows.filter(r =>
+      !deviceSearch.trim() ||
+      [r.user_email, r.user_nickname, r.product_name, r.product_brand, r.product_category]
+        .some(v => v?.toLowerCase().includes(deviceSearch.toLowerCase()))
+    )
+    const headers = ['No', '이메일', '닉네임', '제품명', '브랜드', '카테고리', '등록일']
+    const csvRows = [
+      headers.join(','),
+      ...rows.map((r, i) => [
+        i + 1,
+        r.user_email ?? '',
+        r.user_nickname ?? '',
+        r.product_name ?? '',
+        r.product_brand ?? '',
+        r.product_category ?? '',
+        new Date(r.created_at).toLocaleDateString('ko-KR'),
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')),
+    ]
+    const bom = '﻿'
+    const blob = new Blob([bom + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `user_devices_${new Date().toISOString().slice(0,10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const saveEvent = useCallback(async () => {
     if (!token || !eventForm.name || !eventForm.event_date) return
     setEventSaving(true)
@@ -989,6 +1042,7 @@ export default function AdminPage() {
     if (!authed || !token) return
     if (tab === 'newsletter') fetchNewsletter(token)
     if (tab === 'events') fetchEvents()
+    if (tab === 'devices') fetchDevices()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
@@ -1135,9 +1189,10 @@ export default function AdminPage() {
     {
       label: '유저',
       items: [
-        { key: 'users',           label: '유저 관리', icon: <Users size={14} /> },
-        { key: 'comparisons',     label: '비교 이력', icon: <BarChart2 size={14} /> },
-        { key: 'verify_requests', label: '인증 신청', icon: <BadgeCheck size={14} /> },
+        { key: 'users',           label: '유저 관리',       icon: <Users size={14} /> },
+        { key: 'comparisons',     label: '비교 이력',       icon: <BarChart2 size={14} /> },
+        { key: 'verify_requests', label: '인증 신청',       icon: <BadgeCheck size={14} /> },
+        { key: 'devices',         label: '기기 등록 현황',  icon: <Smartphone size={14} /> },
       ],
     },
     {
@@ -3674,6 +3729,103 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+        {/* ── 기기 등록 현황 ── */}
+        {tab === 'devices' && (() => {
+          const filtered = deviceRows.filter(r =>
+            !deviceSearch.trim() ||
+            [r.user_email, r.user_nickname, r.product_name, r.product_brand, r.product_category]
+              .some(v => v?.toLowerCase().includes(deviceSearch.toLowerCase()))
+          )
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Smartphone size={18} className="text-accent" /> 기기 등록 현황
+                  </h2>
+                  <p className="text-xs text-white/30 mt-0.5">
+                    유저가 등록한 사용 중 기기 전체 목록 ({filtered.length}건)
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 bg-surface border border-border rounded-lg px-3 py-2">
+                    <Search size={13} className="text-white/30" />
+                    <input
+                      value={deviceSearch}
+                      onChange={e => setDeviceSearch(e.target.value)}
+                      placeholder="이메일 / 닉네임 / 제품 검색"
+                      className="bg-transparent text-xs text-white placeholder-white/25 outline-none w-52"
+                    />
+                  </div>
+                  <button
+                    onClick={() => fetchDevices()}
+                    className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border text-white/50 hover:text-white hover:border-white/30 transition-colors"
+                  >
+                    <RefreshCw size={13} /> 새로고침
+                  </button>
+                  <button
+                    onClick={downloadDevicesExcel}
+                    disabled={filtered.length === 0}
+                    className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-accent/40 bg-accent/10 text-accent hover:bg-accent/20 disabled:opacity-40 transition-colors"
+                  >
+                    <Download size={13} /> CSV 다운로드
+                  </button>
+                </div>
+              </div>
+
+              {devicesLoading ? (
+                <div className="flex justify-center py-16">
+                  <RefreshCw size={20} className="animate-spin text-white/20" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-16 text-white/20 text-sm">등록된 기기 데이터가 없습니다.</div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-surface-2">
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40 w-10">#</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40">이메일</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40">닉네임</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40">제품명</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40">브랜드</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40">카테고리</th>
+                        <th className="text-left px-4 py-3 text-xs font-bold text-white/40">등록일</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filtered.map((r, i) => (
+                        <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-3 text-xs text-white/25">{i + 1}</td>
+                          <td className="px-4 py-3 text-xs text-white/70">{r.user_email ?? '—'}</td>
+                          <td className="px-4 py-3 text-xs text-white/60">{r.user_nickname ?? '—'}</td>
+                          <td className="px-4 py-3">
+                            <Link href={`/product/${r.product_id}`} target="_blank"
+                              className="text-xs text-white hover:text-accent transition-colors font-medium">
+                              {r.product_name ?? r.product_id}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-white/50">{r.product_brand ?? '—'}</td>
+                          <td className="px-4 py-3">
+                            {r.product_category && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-white/40">
+                                {r.product_category}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-white/30">
+                            {new Date(r.created_at).toLocaleDateString('ko-KR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
       </div>
         </main>
