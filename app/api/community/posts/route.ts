@@ -382,8 +382,7 @@ export async function POST(req: NextRequest) {
         const cur = (pd as { points?: number } | null)?.points ?? 0
         await supabase.from('profiles').update({ points: cur + award }).eq('user_id', user.id)
         await supabase.from('point_transactions').insert({
-          user_id: user.id, amount: award, type: 'post_reward',
-          description: '글 작성 보상', reference_id: post.id,
+          user_id: user.id, amount: award, reason: 'post_reward', reference_id: post.id,
         })
       }
     }

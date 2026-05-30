@@ -210,12 +210,21 @@ function MyPageContent() {
   }
 
   const reasonLabel = (reason: string) => {
-    if (reason === 'signup_bonus')           return t('point.reason_signup_bonus')
-    if (reason === 'daily_login')            return t('point.reason_daily_login')
-    if (reason === 'ai_comparison')          return t('point.reason_ai_comparison')
-    if (reason === 'post_unlock_spent')      return t('point.reason_post_unlock_spent')
-    if (reason === 'post_unlock_received')   return t('point.reason_post_unlock_received')
-    return reason
+    const map: Record<string, string> = {
+      signup_bonus:          'point.reason_signup_bonus',
+      daily_login:           'point.reason_daily_login',
+      ai_comparison:         'point.reason_ai_comparison',
+      post_unlock_spent:     'point.reason_post_unlock_spent',
+      post_unlock_received:  'point.reason_post_unlock_received',
+      ai_bot_post:           'point.reason_ai_bot_post',
+      ai_bot_comment:        'point.reason_ai_bot_comment',
+      post_reward:           'point.reason_post_reward',
+      comment_reward:        'point.reason_comment_reward',
+      upvote_milestone:      'point.reason_upvote_milestone',
+      admin_grant:           'point.reason_admin_grant',
+      admin_deduct:          'point.reason_admin_deduct',
+    }
+    return map[reason] ? t(map[reason]) : reason
   }
 
   const handleAutoAiToggle = async () => {

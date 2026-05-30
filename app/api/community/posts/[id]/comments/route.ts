@@ -172,8 +172,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const cur = (pd as { points?: number } | null)?.points ?? 0
         await supabase.from('profiles').update({ points: cur + award }).eq('user_id', user.id)
         await supabase.from('point_transactions').insert({
-          user_id: user.id, amount: award, type: 'comment_reward',
-          description: '댓글 작성 보상', reference_id: data.id,
+          user_id: user.id, amount: award, reason: 'comment_reward', reference_id: data.id,
         })
       }
     }

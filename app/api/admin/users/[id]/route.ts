@@ -69,8 +69,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await svc.from('point_transactions').insert({
     user_id: id,
     amount,
-    type: amount > 0 ? 'admin_grant' : 'admin_deduct',
-    description: reason?.trim() || (amount > 0 ? '관리자 지급' : '관리자 차감'),
+    reason: amount > 0 ? 'admin_grant' : 'admin_deduct',
   })
 
   return NextResponse.json({ ok: true, points: next })

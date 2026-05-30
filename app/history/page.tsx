@@ -10,18 +10,18 @@ import { getLocalHistory, deleteLocalHistory, type LocalHistory } from '@/lib/lo
 import { useI18n } from '@/lib/i18n'
 import { shortenCompareTitle } from '@/lib/utils'
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, t: (k: string) => string, locale: string): string {
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffHours = diffMs / (1000 * 60 * 60)
   const diffDays = diffMs / (1000 * 60 * 60 * 24)
 
-  if (diffHours < 1) return 'just now'
-  if (diffHours < 24) return `${Math.floor(diffHours)}h ago`
-  if (diffDays < 2) return 'yesterday'
-  if (diffDays < 7) return `${Math.floor(diffDays)} days ago`
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  if (diffHours < 1) return t('history.just_now')
+  if (diffHours < 24) return t('history.hours_ago').replace('{n}', String(Math.floor(diffHours)))
+  if (diffDays < 2) return t('history.yesterday')
+  if (diffDays < 7) return t('history.days_ago').replace('{n}', String(Math.floor(diffDays)))
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function isRecent(dateStr: string): boolean {
@@ -38,7 +38,7 @@ function HistoryCard({
   onPin: (id: string, pinned: boolean) => void
   onDelete: (id: string) => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   return (
     <div className={`group relative flex items-center justify-between px-5 py-4 bg-surface rounded-card border transition-all hover:border-white/10 ${item.pinned ? 'border-l-2 border-l-accent border-border' : 'border-border'}`}>
@@ -48,7 +48,7 @@ function HistoryCard({
             {t('history.pinned')}
           </span>
         )}
-        <p className="text-xs text-white/30 mb-1">{formatDate(item.created_at)}</p>
+        <p className="text-xs text-white/30 mb-1">{formatDate(item.created_at, t, locale)}</p>
         <p className="text-sm font-bold text-white truncate pr-4">{shortenCompareTitle(item.title)}</p>
         {item.result?.winner && (
           <p className="text-xs text-accent/70 mt-1">

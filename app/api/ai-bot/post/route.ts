@@ -105,8 +105,7 @@ export async function POST(req: NextRequest) {
   if (cost > 0 && !isAdmin) {
     await svc.from('profiles').update({ points: Math.max(0, curPoints - cost) }).eq('user_id', user.id)
     await svc.from('point_transactions').insert({
-      user_id: user.id, amount: -cost, type: 'ai_bot_post',
-      description: 'AI봇 글쓰기',
+      user_id: user.id, amount: -cost, reason: 'ai_bot_post',
     })
   }
 
