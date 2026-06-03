@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 const GPU_FIELDS = 'id, name, brand, type, cores, gb6_single, gb6_ml_single, gb6_ml_half, gb6_ml_quantized, relative_score, score_source'
@@ -23,7 +23,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   const { data: { user }, error } = await anon.auth.getUser(token)
   if (error || !user) return false
   const email = (user.email ?? '').toLowerCase()
-  return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email)
+  return ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(email)
 }
 
 export async function PATCH(

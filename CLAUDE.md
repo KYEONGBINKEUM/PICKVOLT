@@ -51,6 +51,45 @@ en → es → pt → fr → de → ja → ko
 
 ---
 
+### 9. 보안 자동 점검 (모든 작업 후 필수)
+
+모든 수정·추가 작업 완료 후, 아래 체크리스트를 반드시 확인하고 위험 발견 시 즉시 보완하여 사용자에게 보고한다.
+
+#### 점검 항목
+
+**인증 / 권한**
+- `ADMIN_EMAILS.length === 0 ||` 패턴 → `length > 0 &&` 로 수정 (env 미설정 시 전체 허용 버그)
+- 어드민 API 라우트에 `verifyAdmin()` 호출 누락 여부
+- cron/webhook 엔드포인트에 `CRON_SECRET` 무조건 검증 (조건부 검증 금지)
+
+**환경 변수 노출**
+- 서버 전용 시크릿(`SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` 등)에 `NEXT_PUBLIC_` 접두사 절대 사용 금지
+- 클라이언트 컴포넌트에서 시크릿 값 직접 참조 금지
+
+**XSS**
+- `dangerouslySetInnerHTML` 사용 시 반드시 `sanitizeHtml()` (DOMPurify) 거친 값만 주입
+- 사용자 입력 HTML을 raw로 렌더링하는 경로 없는지 확인
+
+**파일 업로드**
+- 모든 업로드 엔드포인트에 MIME 타입 허용목록(`ALLOWED_TYPES`) + 크기 제한(`MAX_BYTES`) 필수
+- 확장자는 `file.name`이 아닌 MIME → EXT 매핑으로 결정
+- 신분증 등 민감 서류는 `getPublicUrl` 대신 `createSignedUrl` 사용
+
+**DB 보안**
+- 새 Supabase 테이블 생성 시 `ENABLE ROW LEVEL SECURITY` + 적절한 Policy 함께 추가
+- 정책 없이 RLS만 켜면 service_role 전용이 됨 — 의도적인 경우에만 허용
+
+**발견 시 보고 형식**
+```
+⚠️ 보안 위험 발견:
+- 위치: app/api/xxx/route.ts:42
+- 종류: [인증 우회 / XSS / 파일업로드 / 환경변수 노출 / RLS 누락]
+- 내용: (구체적 설명)
+- 수정: (적용한 수정 내용)
+```
+
+---
+
 ## 프로젝트 개요
 
 - **프레임워크**: Next.js 14 App Router (`app/` 디렉토리)

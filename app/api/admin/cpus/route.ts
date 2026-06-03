@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recalculateCpuRelativeScores } from '@/lib/cpu-relative-score'
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 const CPU_FIELDS = 'id, name, brand, type, cores, clock_base, clock_boost, gpu_name, gb6_single, gb6_multi, igpu_gb6_single, tdmark_score, antutu_score, cinebench_single, cinebench_multi, passmark_single, passmark_multi, tdp, process_nm, gpu_id, gpus!cpus_gpu_id_fkey(name), relative_score, score_source'
@@ -24,7 +24,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   const { data: { user }, error } = await anon.auth.getUser(token)
   if (error || !user) return false
   const email = (user.email ?? '').toLowerCase()
-  return ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email)
+  return ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(email)
 }
 
 // GET /api/admin/cpus?q=snapdragon

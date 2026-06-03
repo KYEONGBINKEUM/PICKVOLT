@@ -59,12 +59,11 @@ function toShortExcerpt(raw: string | undefined): string {
 }
 
 export async function GET(req: NextRequest) {
+  // CRON_SECRET 미설정 시에도 반드시 차단 (환경변수 누락으로 우회되는 버그 수정)
   const secret = process.env.CRON_SECRET
-  if (secret) {
-    const auth = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
-    if (auth !== secret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const auth = (req.headers.get('authorization') ?? '').replace('Bearer ', '')
+  if (!secret || auth !== secret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const parser = new Parser<Record<string, unknown>, CustomItem>({

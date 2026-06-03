@@ -71,14 +71,35 @@ function renderMarkdown(text: string): string {
     .replace(/\n/g, '<br />')
 }
 
+function sanitizeHtml(html: string): string {
+  if (typeof window === 'undefined') return html // SSR: 클라이언트에서만 실행
+  try {
+    const DOMPurify = require('dompurify')
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'p','br','b','strong','i','em','u','s','ul','ol','li',
+        'blockquote','code','pre','a','img','div','span','h1','h2','h3',
+        'h4','h5','h6','table','thead','tbody','tr','td','th','colgroup','col',
+      ],
+      ALLOWED_ATTR: [
+        'href','src','alt','class','style','target','rel',
+        'data-product-card','data-compare-table','data-delete-card',
+        'draggable','contenteditable','width','height',
+      ],
+      ALLOW_DATA_ATTR: false,
+    })
+  } catch {
+    return html
+  }
+}
+
 function MarkdownBody({ text }: { text: string }) {
   const isHtml = /<[a-z][\s\S]*>/i.test(text)
+  const safeHtml = isHtml ? sanitizeHtml(text) : `<p class="mb-3">${renderMarkdown(text)}</p>`
   return (
     <div
       className="text-sm text-white/75 leading-relaxed prose-custom"
-      dangerouslySetInnerHTML={{
-        __html: isHtml ? text : `<p class="mb-3">${renderMarkdown(text)}</p>`
-      }}
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
     />
   )
 }

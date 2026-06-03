@@ -19,7 +19,20 @@ export async function POST(req: NextRequest) {
   const file = formData.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'no file' }, { status: 400 })
 
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+  const MAX_BYTES = 20 * 1024 * 1024 // 20MB
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return NextResponse.json({ error: 'invalid_type' }, { status: 400 })
+  }
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json({ error: 'too_large' }, { status: 400 })
+  }
+
+  const EXT_MAP: Record<string, string> = {
+    'image/jpeg': 'jpg', 'image/png': 'png',
+    'image/webp': 'webp', 'application/pdf': 'pdf',
+  }
+  const ext = EXT_MAP[file.type] ?? 'jpg'
   const path = `${user.id}/${Date.now()}.${ext}`
   const buffer = await file.arrayBuffer()
 
@@ -33,6 +46,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: upErr.message }, { status: 500 })
   }
 
-  const { data: { publicUrl } } = supabase.storage.from('verify-docs').getPublicUrl(path)
-  return NextResponse.json({ url: publicUrl })
+  // 공개 URL 대신 서명 URL 사용 (1시간) — 신분증 등 민감 서류 보호
+  const { data: signedData, error: signErr } = await supabase.storage
+    .from('verify-docs')
+    .createSignedUrl(path, 60 * 60)
+
+  if (signErr || !signedData) {
+    return NextResponse.json({ error: 'url_error' }, { status: 500 })
+  }
+
+  return NextResponse.json({ url: signedData.signedUrl, path })
 }
