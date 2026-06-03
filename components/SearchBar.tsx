@@ -6,6 +6,7 @@ import { Search, Plus, Check, Loader2 } from 'lucide-react'
 import { useCompareCart } from '@/lib/compareCart'
 import { useI18n } from '@/lib/i18n'
 import { imgUrl } from '@/lib/utils'
+import { gtagEvent } from '@/lib/gtag'
 
 interface SearchResult {
   id: string
@@ -63,6 +64,7 @@ export default function SearchBar({ initialQuery = '' }: { initialQuery?: string
   }
 
   const handleResultClick = (result: SearchResult) => {
+    gtagEvent('search', { search_term: query, result_id: result.id })
     setFocused(false)
     setQuery('')
     router.push(`/product/${result.id}`)

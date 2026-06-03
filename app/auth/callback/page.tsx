@@ -3,6 +3,7 @@
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { gtagEvent } from '@/lib/gtag'
 
 function AuthCallbackInner() {
   const router = useRouter()
@@ -34,9 +35,12 @@ function AuthCallbackInner() {
         .maybeSingle()
 
       if (!profileBase) {
+        gtagEvent('sign_up', { method: 'google' })
         router.replace('/setup-nickname')
         return
       }
+
+      gtagEvent('login', { method: 'google' })
 
       // country 컬럼 확인 (마이그레이션 여부 무관하게 안전하게 처리)
       const { data: profileFull } = await supabase

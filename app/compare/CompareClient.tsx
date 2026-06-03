@@ -14,6 +14,7 @@ import { CardPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
 import RadarChart, { type RadarProduct } from '@/components/RadarChart'
 import ReviewSection from '@/components/ReviewSection'
 import AdBanner from '@/components/AdBanner'
+import { gtagEvent } from '@/lib/gtag'
 
 const PRODUCT_COLORS = ['#FF6B2B', '#3B82F6', '#22C55E', '#A855F7']
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
@@ -942,6 +943,10 @@ export default function CompareClient() {
       if (compareData.error) {
         setError(t('compare.error_compare'))
       } else {
+        gtagEvent('compare', {
+          product_count: productIds.length,
+          winner: compareData.winner ?? '',
+        })
         setAiResult(compareData)
         if (cacheKey) aiCacheRef.current.set(cacheKey, compareData)
         if (compareData.points !== undefined && compareData.points !== null) {

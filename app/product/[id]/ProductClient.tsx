@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 const AD_HTML_INLINE = process.env.NEXT_PUBLIC_AD_BANNER_INLINE ?? ''
 import { extractFirstImage, stripHtml, timeAgo } from '@/components/PostFeed'
 import { imgUrl } from '@/lib/utils'
+import { gtagEvent } from '@/lib/gtag'
 
 interface Specs {
   cpu:             string | null
@@ -538,6 +539,7 @@ ${priceHTML}
                 href={selectedVariant?.amazon_url ?? product.amazon_url ?? ''}
                 target="_blank"
                 rel="noopener noreferrer sponsored"
+                onClick={() => gtagEvent('purchase', { product_id: product.id, product_name: product.name, currency: 'USD', value: product.price_usd ?? 0 })}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all hover:brightness-105 active:scale-95 select-none"
                 style={{ backgroundColor: '#FFFFFF', boxShadow: '0 2px 12px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(0,0,0,0.08)' }}
               >
