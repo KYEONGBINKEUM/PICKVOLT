@@ -16,6 +16,7 @@ export default function CookieBanner() {
 
   const accept = () => {
     localStorage.setItem('pv_cookie_consent', 'accepted')
+    window.dispatchEvent(new Event('pv_cookie_accepted'))
     setVisible(false)
   }
 
