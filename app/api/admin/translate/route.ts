@@ -13,7 +13,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   )
   const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return false
-  return ADMIN_EMAILS.length > 0 \&\& ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
+  return ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
 }
 
 export async function POST(req: NextRequest) {

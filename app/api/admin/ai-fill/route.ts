@@ -15,7 +15,7 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   )
   const { data: { user } } = await supabase.auth.getUser(token)
   if (!user) return false
-  return ADMIN_EMAILS.length > 0 \&\& ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
+  return ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
 }
 
 const CPU_PROMPT = (name: string) => `Search nanoreview.net for the CPU/SoC named "${name}" and extract its benchmark scores.
