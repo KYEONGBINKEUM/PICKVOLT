@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { I18nProvider } from '@/lib/i18n'
 import { CurrencyProvider } from '@/lib/currency'
@@ -92,6 +93,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         */}
       </head>
       <body className="bg-background text-white antialiased">
+        {/* Google Analytics 4 */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-L6DE0CLZX0"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-L6DE0CLZX0');
+        `}</Script>
         <I18nProvider>
           <CurrencyProvider>
             <CompareCartProvider>
