@@ -7,20 +7,16 @@ function makeService() {
   )
 }
 
-// Convert Wikimedia Commons file URL to HTTPS direct image URL
-function wikimediaImageUrl(raw: string | undefined): string | null {
-  if (!raw) return null
-  return raw.replace('http://', 'https://')
-}
-
-// ─── Wikidata SPARQL for cars (well-cataloged with images/specs) ─────────────
+// ─── Wikidata SPARQL for cars ────────────────────────────────────────────────
+// - Only models with known inception year >= 1995 (recent 30 years)
+// - No image fetch (Wikimedia Commons images are not cutout/transparent)
 const CAR_SPARQL = `
-SELECT DISTINCT ?item ?name ?brand ?image ?year ?fuelLabel WHERE {
+SELECT DISTINCT ?item ?name ?brand ?year ?fuelLabel WHERE {
   ?item wdt:P31 wd:Q3231690 .
   ?item rdfs:label ?name FILTER(LANG(?name) = "en") .
+  ?item wdt:P571 ?d . BIND(YEAR(?d) AS ?year)
+  FILTER(?year >= 1995)
   OPTIONAL { ?item wdt:P176 ?mfr . ?mfr rdfs:label ?brand FILTER(LANG(?brand) = "en") }
-  OPTIONAL { ?item wdt:P18 ?image }
-  OPTIONAL { ?item wdt:P571 ?d . BIND(YEAR(?d) AS ?year) }
   OPTIONAL { ?item wdt:P5765 ?fuel . ?fuel rdfs:label ?fuelLabel FILTER(LANG(?fuelLabel) = "en") }
   FILTER(BOUND(?name) && STRLEN(STR(?name)) > 2)
 } ORDER BY DESC(?year) LIMIT 1000`
@@ -28,7 +24,6 @@ SELECT DISTINCT ?item ?name ?brand ?image ?year ?fuelLabel WHERE {
 interface WikiCar {
   name: string
   brand: string
-  image_url: string | null
   year: number | null
   fuel: string | null
 }
@@ -48,7 +43,6 @@ async function fetchCarsFromWikidata(): Promise<WikiCar[]> {
       .map(b => ({
         name: b.name?.value ?? '',
         brand: b.brand?.value ?? '',
-        image_url: wikimediaImageUrl(b.image?.value),
         year: b.year?.value ? parseInt(b.year.value) : null,
         fuel: b.fuelLabel?.value ?? null,
       }))
@@ -412,7 +406,7 @@ export async function collectWikidataProducts(
   const results = []
 
   for (const category of categories) {
-    let candidates: { name: string; brand: string; image_url?: string | null; launch_year?: number | null; powertrain?: string | null }[] = [
+    let candidates: { name: string; brand: string; launch_year?: number | null; powertrain?: string | null }[] = [
       ...(SEED_PRODUCTS[category] ?? []),
     ]
 
@@ -426,7 +420,6 @@ export async function collectWikidataProducts(
           // Enrich existing seed entry with Wikidata image/year if available
           const idx = candidates.findIndex(c => c.name.toLowerCase() === w.name.toLowerCase())
           if (idx >= 0) {
-            if (!candidates[idx].image_url && w.image_url) candidates[idx].image_url = w.image_url
             if (!candidates[idx].launch_year && w.year) candidates[idx].launch_year = w.year
             if (!candidates[idx].powertrain && w.fuel) candidates[idx].powertrain = mapPowertrain(w.fuel)
           }
@@ -434,7 +427,6 @@ export async function collectWikidataProducts(
           candidates.push({
             name: w.name,
             brand: w.brand,
-            image_url: w.image_url,
             launch_year: w.year,
             powertrain: mapPowertrain(w.fuel),
           })
@@ -483,7 +475,6 @@ export async function collectWikidataProducts(
         name: p.name,
         brand: p.brand || null,
         category,
-        image_url: p.image_url ?? null,
         is_visible: false,
         scrape_status: 'pending',
       }))
