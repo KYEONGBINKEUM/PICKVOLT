@@ -1437,6 +1437,26 @@ export default function AdminPage() {
               <h1 className="text-2xl font-black">제품 관리</h1>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={async () => {
+                    if (!token) return
+                    if (!confirm(`"${productCatTab}" 카테고리의 비공개 제품을 전체 공개하시겠어요?`)) return
+                    const hidden = products.filter(p => !p.is_visible)
+                    await Promise.all(hidden.map(p =>
+                      fetch(`/api/admin/products/${p.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ is_visible: true }),
+                      })
+                    ))
+                    setProducts(prev => prev.map(p => ({ ...p, is_visible: true })))
+                  }}
+                  disabled={products.every(p => p.is_visible)}
+                  className="flex items-center gap-1.5 text-sm border border-border text-white/60 hover:text-white hover:border-white/30 disabled:opacity-30 px-3 py-2 rounded-lg transition-colors"
+                >
+                  <Eye size={13} />
+                  전체 공개
+                </button>
+                <button
                   onClick={collectWikidata}
                   disabled={wikidataCollecting}
                   className="flex items-center gap-1.5 text-sm border border-border text-white/60 hover:text-white hover:border-white/30 disabled:opacity-50 px-3 py-2 rounded-lg transition-colors"
