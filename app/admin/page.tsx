@@ -17,6 +17,17 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
 
 const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch', 'headphones', 'monitor', 'tv', 'car']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
+
+const CATEGORY_BRANDS: Record<string, string[]> = {
+  smartphone:  ['', 'Apple', 'Samsung', 'Google', 'Xiaomi', 'OPPO', 'Vivo', 'OnePlus', 'Motorola', 'Sony', 'Nokia', 'Realme', 'Huawei'],
+  tablet:      ['', 'Apple', 'Samsung', 'Lenovo', 'Microsoft', 'Amazon', 'Huawei', 'Xiaomi'],
+  laptop:      ['', 'Apple', 'Dell', 'HP', 'Lenovo', 'ASUS', 'Acer', 'Microsoft', 'LG', 'Razer', 'MSI', 'Samsung'],
+  smartwatch:  ['', 'Apple', 'Samsung', 'Google', 'Garmin', 'Fitbit', 'Xiaomi', 'Huawei', 'Polar'],
+  headphones:  ['', 'Sony', 'Apple', 'Bose', 'Samsung', 'Sennheiser', 'JBL', 'Jabra', 'Audio-Technica', 'Bang & Olufsen', 'AKG', 'Beats', 'Soundcore', 'Nothing', 'Marshall', 'Shure'],
+  monitor:     ['', 'LG', 'Samsung', 'ASUS', 'Dell', 'BenQ', 'Apple', 'AOC', 'ViewSonic', 'Gigabyte', 'MSI', 'Acer', 'HP'],
+  tv:          ['', 'LG', 'Samsung', 'Sony', 'Hisense', 'TCL', 'Panasonic', 'Philips', 'Sharp'],
+  car:         ['', 'Tesla', 'BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Hyundai', 'Kia', 'Ford', 'Volkswagen', 'Volvo', 'Porsche', 'BYD', 'Rivian', 'Lucid', 'Chevrolet', 'Honda', 'Nissan', 'Polestar', 'Xpeng', 'NIO'],
+}
 const PAGE_SIZE = 50
 
 type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events' | 'devices'
@@ -315,9 +326,10 @@ export default function AdminPage() {
     setProducts(data ?? [])
   }, [authed, search, category, brand, page])
 
-  // 탭이 바뀔 때 카테고리 필터 동기화
+  // 탭이 바뀔 때 카테고리 필터 + 브랜드 필터 초기화
   useEffect(() => {
     setCategory(productCatTab)
+    setBrand('')
     setPage(0)
   }, [productCatTab])
 
@@ -1490,7 +1502,7 @@ export default function AdminPage() {
               <div className="relative">
                 <select value={brand} onChange={(e) => { setBrand(e.target.value); setPage(0) }}
                   className="appearance-none bg-surface border border-border rounded-lg px-3 py-2 pr-8 text-sm text-white focus:outline-none focus:border-accent">
-                  {BRANDS.map((b) => <option key={b} value={b}>{b || '전체 브랜드'}</option>)}
+                  {(CATEGORY_BRANDS[productCatTab] ?? BRANDS).map((b) => <option key={b} value={b}>{b || '전체 브랜드'}</option>)}
                 </select>
                 <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
               </div>
@@ -1504,7 +1516,9 @@ export default function AdminPage() {
                     <th className="text-left px-4 py-3 text-white/40 font-medium">제품명</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8">이미지</th>
-                    <th className="px-4 py-3 text-white/40 font-medium w-8 hidden md:table-cell" title="CPU 연결 여부">CPU</th>
+                    {['smartphone','tablet','smartwatch','laptop'].includes(productCatTab) && (
+                      <th className="px-4 py-3 text-white/40 font-medium w-8 hidden md:table-cell" title="CPU 연결 여부">CPU</th>
+                    )}
                     <th className="px-4 py-3 text-white/40 font-medium w-8" title="공개 여부">공개</th>
                     <th className="w-20 px-4 py-3"></th>
                   </tr>
@@ -1526,11 +1540,13 @@ export default function AdminPage() {
                       <td className="px-4 py-2">
                         <ImageStatus url={p.image_url} />
                       </td>
-                      <td className="px-4 py-2 hidden md:table-cell">
-                        {p.specs_common?.cpu_id
-                          ? <CheckCircle size={14} className="text-emerald-400" />
-                          : <AlertCircle size={14} className="text-amber-400" />}
-                      </td>
+                      {['smartphone','tablet','smartwatch','laptop'].includes(productCatTab) && (
+                        <td className="px-4 py-2 hidden md:table-cell">
+                          {p.specs_common?.cpu_id
+                            ? <CheckCircle size={14} className="text-emerald-400" />
+                            : <AlertCircle size={14} className="text-amber-400" />}
+                        </td>
+                      )}
                       <td className="px-4 py-2">
                         <button
                           onClick={() => handleToggleVisible(p.id, p.is_visible)}
