@@ -1470,7 +1470,91 @@ export default function CompareClient() {
       ]
     }
 
-    // 기타 fallback (monitor 등)
+    if (category === 'car') {
+      const mkRow = (label: string, sub: string, key: string, unit = '', higherIsBetter = true) => ({
+        label, sublabel: sub, higherIsBetter, nameLabels: pNames,
+        values: products.map((p) => {
+          const v = p.raw[key]
+          return { primary: v != null ? `${v}${unit}` : '—', numericVal: v != null ? Number(v) : undefined }
+        }),
+      })
+      return [
+        mkRow('파워트레인', '종류', 'powertrain', '', false),
+        mkRow('최고출력', 'hp', 'horsepower', 'hp'),
+        mkRow('최대토크', 'Nm', 'torque_nm', 'Nm'),
+        { label: '0-100 km/h', sublabel: '초', higherIsBetter: false, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.acceleration_0_100 != null ? `${p.raw.acceleration_0_100}s` : '—', numericVal: p.raw.acceleration_0_100 ?? undefined })) },
+        mkRow('항속거리', 'km (EV)', 'range_km', 'km'),
+        mkRow('배터리', 'kWh', 'battery_kwh', 'kWh'),
+        mkRow('배기량', 'cc', 'engine_cc', 'cc'),
+        mkRow('연비', 'km/L', 'fuel_efficiency_km_l', 'km/L'),
+        mkRow('공차중량', 'kg', 'curb_weight_kg', 'kg', false),
+        mkRow('승차인원', '명', 'seating', '명'),
+        mkRow('트렁크', 'L', 'cargo_liters', 'L'),
+        { label: '차체형태', sublabel: '타입', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.body_type ?? '—' })) },
+        { label: '구동방식', sublabel: '드라이브트레인', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.drivetrain ?? '—' })) },
+        priceRow,
+      ]
+    }
+
+    if (category === 'headphones') {
+      return [
+        { label: '폼팩터', sublabel: '형태', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.form_factor ?? '—' })) },
+        { label: '드라이버', sublabel: 'mm', nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.driver_size_mm != null ? `${p.raw.driver_size_mm}mm` : '—', numericVal: p.raw.driver_size_mm ?? undefined })) },
+        { label: '주파수 응답', sublabel: 'Hz', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.frequency_response ?? '—' })) },
+        { label: '노이즈캔슬링', sublabel: 'ANC', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.noise_canceling === true ? '지원' : p.raw.noise_canceling === false ? '미지원' : '—' })) },
+        { label: '배터리', sublabel: '시간', higherIsBetter: true, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.battery_hours != null ? `${p.raw.battery_hours}h` : '—', numericVal: p.raw.battery_hours ?? undefined })) },
+        { label: '블루투스', sublabel: '버전', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.bluetooth_version ?? '—' })) },
+        { label: '코덱', sublabel: '지원', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.codec ?? '—' })) },
+        { label: '무게', sublabel: 'g', higherIsBetter: false, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.weight_g != null ? `${p.raw.weight_g}g` : '—', numericVal: p.raw.weight_g ?? undefined })) },
+        { label: '방수등급', sublabel: 'IP', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.ip_rating ?? '—' })) },
+        priceRow,
+      ]
+    }
+
+    if (category === 'monitor') {
+      return [
+        { label: '화면', sublabel: '인치', nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.display_inch != null ? `${p.raw.display_inch}"` : '—', numericVal: p.raw.display_inch ?? undefined })) },
+        { label: '해상도', sublabel: '', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.display_resolution ?? '—' })) },
+        { label: '패널', sublabel: '타입', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.panel_type ?? '—' })) },
+        { label: '주사율', sublabel: 'Hz', higherIsBetter: true, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.display_hz != null ? `${p.raw.display_hz}Hz` : '—', numericVal: p.raw.display_hz ?? undefined })) },
+        { label: '응답속도', sublabel: 'ms', higherIsBetter: false, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.response_time_ms != null ? `${p.raw.response_time_ms}ms` : '—', numericVal: p.raw.response_time_ms ?? undefined })) },
+        { label: '밝기', sublabel: 'nits', higherIsBetter: true, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.brightness_nits != null ? `${p.raw.brightness_nits}nits` : '—', numericVal: p.raw.brightness_nits ?? undefined })) },
+        { label: 'HDR', sublabel: '', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.hdr ?? '—' })) },
+        { label: '가변싱크', sublabel: '', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.adaptive_sync ?? '—' })) },
+        { label: '색영역', sublabel: '', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.display_color_gamut ?? '—' })) },
+        priceRow,
+      ]
+    }
+
+    if (category === 'tv') {
+      return [
+        { label: '화면', sublabel: '인치', nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.display_inch != null ? `${p.raw.display_inch}"` : '—', numericVal: p.raw.display_inch ?? undefined })) },
+        { label: '해상도', sublabel: '', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.display_resolution ?? '—' })) },
+        { label: '패널', sublabel: '타입', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.panel_type ?? '—' })) },
+        { label: '주사율', sublabel: 'Hz', higherIsBetter: true, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.display_hz != null ? `${p.raw.display_hz}Hz` : '—', numericVal: p.raw.display_hz ?? undefined })) },
+        { label: 'HDR', sublabel: '', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.hdr ?? '—' })) },
+        { label: '밝기', sublabel: 'nits', higherIsBetter: true, nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.brightness_nits != null ? `${p.raw.brightness_nits}nits` : '—', numericVal: p.raw.brightness_nits ?? undefined })) },
+        { label: '스마트 플랫폼', sublabel: 'OS', nameLabels: pNames, values: products.map((p) => ({ primary: p.raw.smart_platform ?? '—' })) },
+        { label: '음향 출력', sublabel: 'W', nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.audio_watts != null ? `${p.raw.audio_watts}W` : '—', numericVal: p.raw.audio_watts ?? undefined })) },
+        { label: 'HDMI', sublabel: '포트 수', nameLabels: pNames,
+          values: products.map((p) => ({ primary: p.raw.hdmi_ports != null ? `${p.raw.hdmi_ports}개` : '—', numericVal: p.raw.hdmi_ports ?? undefined })) },
+        priceRow,
+      ]
+    }
+
+    // 기타 fallback
     return [performanceRow, ramRow, storageRow, displayRow, osRow]
   }
 

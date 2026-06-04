@@ -22,10 +22,14 @@ export async function GET(
     .from('products')
     .select(`
       id, name, brand, category, price_usd, image_url, source_url,
-      specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version ),
+      specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version, launch_year ),
       specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
       specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
-      specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )
+      specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular ),
+      specs_headphones ( form_factor, driver_size_mm, frequency_response, noise_canceling, wireless, bluetooth_version, codec, battery_hours, weight_g, ip_rating, connectivity ),
+      specs_monitor ( display_inch, display_resolution, panel_type, display_hz, response_time_ms, brightness_nits, hdr, aspect_ratio, adaptive_sync, curved, weight_kg, display_color_gamut ),
+      specs_tv ( display_inch, display_resolution, panel_type, display_hz, hdr, brightness_nits, smart_platform, audio_watts, hdmi_ports, weight_kg ),
+      specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment, generation, production_end )
     `)
     .eq('id', id)
     .eq('is_visible', true)
@@ -39,13 +43,21 @@ export async function GET(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const p = product as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const common = p.specs_common as any
+  const common      = p.specs_common      as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const laptop = p.specs_laptop as any
+  const laptop      = p.specs_laptop      as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const smartphone = p.specs_smartphone as any
+  const smartphone  = p.specs_smartphone  as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tablet = p.specs_tablet as any
+  const tablet      = p.specs_tablet      as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const headphones  = p.specs_headphones  as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const monitor     = p.specs_monitor     as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tv          = p.specs_tv          as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const car         = p.specs_car         as any
 
   // ── 벤치마크 점수 조회 ──────────────────────────────────────────
   // relativeScore  : 비교 화면용 (0~1000, DB 트리거 자동 계산)
@@ -103,7 +115,7 @@ export async function GET(
   }
   if (gpu) gpuRelativeScore = gpu.relative_score ?? null
 
-  const specSrc = laptop ?? smartphone ?? tablet ?? {}
+  const specSrc = laptop ?? smartphone ?? tablet ?? monitor ?? tv ?? {}
 
   const displayParts = [
     specSrc.display_inch       ? `${specSrc.display_inch}"`     : null,
@@ -211,7 +223,16 @@ export async function GET(
       image_url: p.image_url,
       source_url: p.source_url,
       specs,
-      raw: { ...common, ...(laptop ?? {}), ...(smartphone ?? {}), ...(tablet ?? {}) },
+      raw: {
+        ...common,
+        ...(laptop ?? {}),
+        ...(smartphone ?? {}),
+        ...(tablet ?? {}),
+        ...(headphones ?? {}),
+        ...(monitor ?? {}),
+        ...(tv ?? {}),
+        ...(car ?? {}),
+      },
       variants,
     },
     { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' } }
