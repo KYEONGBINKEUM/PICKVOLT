@@ -1078,6 +1078,11 @@ export default function CategoryClient({ category, initialData }: { category: st
     { slug: 'smartphone', label: t('cat.smartphone') },
     { slug: 'laptop',     label: t('cat.laptop')     },
     { slug: 'tablet',     label: t('cat.tablet')     },
+    { slug: 'smartwatch', label: t('cat.watch')      },
+    { slug: 'headphones', label: t('cat.headphones') },
+    { slug: 'monitor',    label: t('cat.monitor')    },
+    { slug: 'tv',         label: t('cat.tv')         },
+    { slug: 'car',        label: t('cat.car')        },
   ]
 
   return (

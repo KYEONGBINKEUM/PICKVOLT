@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar'
 import CategoryClient from './CategoryClient'
 import { notFound } from 'next/navigation'
 
-const VALID_CATEGORIES = ['smartphone', 'laptop', 'tablet']
+const VALID_CATEGORIES = ['smartphone', 'laptop', 'tablet', 'smartwatch', 'headphones', 'monitor', 'tv', 'car']
 const BASE_URL = 'https://www.pickvolt.com'
 
 function getBaseUrl() {
@@ -14,6 +14,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   smartphone: 'Smartphones',
   laptop: 'Laptops',
   tablet: 'Tablets',
+  smartwatch: 'Smartwatches',
+  headphones: 'Headphones & Earbuds',
+  monitor: 'Monitors',
+  tv: 'Televisions',
+  car: 'Cars & EVs',
 }
 
 export function generateStaticParams() {
