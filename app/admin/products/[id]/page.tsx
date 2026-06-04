@@ -616,6 +616,7 @@ export default function ProductEditPage() {
   const [nameTranslations, setNameTranslations] = useState<Record<string, string>>({ en: '', ko: '', ja: '', es: '', pt: '', fr: '', de: '' })
   const [translating, setTranslating] = useState(false)
   const [amazonFilling, setAmazonFilling] = useState(false)
+  const [specsFilling, setSpecsFilling] = useState(false)
   const [sameProducts, setSameProducts] = useState<{ id: string; name: string; brand: string; image_url: string | null; is_visible: boolean }[]>([])
 
   useEffect(() => {
@@ -917,6 +918,32 @@ export default function ProductEditPage() {
       setMessage({ type: 'err', text: String(e) })
     } finally {
       setAmazonFilling(false)
+    }
+  }
+
+  const handleSpecsFill = async () => {
+    const name = (form.name as string)?.trim()
+    const cat = (form.category as string)?.trim()
+    if (!name || !cat) return
+    setSpecsFilling(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name, kind: 'product_specs', category: cat }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setMessage({ type: 'err', text: json.error ?? '스펙 채우기 실패' }); return }
+      if (json.specs) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setCategorySpecs((prev: any) => ({ ...prev, ...json.specs }))
+        setMessage({ type: 'ok', text: '스펙 자동 채우기 완료 — 저장 버튼으로 반영하세요' })
+      }
+    } catch (e) {
+      setMessage({ type: 'err', text: String(e) })
+    } finally {
+      setSpecsFilling(false)
     }
   }
 
@@ -1664,6 +1691,13 @@ export default function ProductEditPage() {
 
         {category === 'headphones' && (
           <SectionCard title="헤드폰 스펙 (specs_headphones)">
+            <div className="flex justify-end mb-4">
+              <button onClick={handleSpecsFill} disabled={specsFilling || !g(form, 'name')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40">
+                {specsFilling ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />}
+                {specsFilling ? 'AI 채우는 중...' : 'AI 스펙 자동채우기'}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="폼팩터">
                 <SelectInput value={g(categorySpecs, 'form_factor')} onChange={(v) => patchCat('form_factor', v)} options={['over-ear', 'on-ear', 'in-ear', 'tws']} />
@@ -1709,6 +1743,13 @@ export default function ProductEditPage() {
 
         {category === 'monitor' && (
           <SectionCard title="모니터 스펙 (specs_monitor)">
+            <div className="flex justify-end mb-4">
+              <button onClick={handleSpecsFill} disabled={specsFilling || !g(form, 'name')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40">
+                {specsFilling ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />}
+                {specsFilling ? 'AI 채우는 중...' : 'AI 스펙 자동채우기'}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="화면 크기 (인치)">
                 <NumberInput value={gn(categorySpecs, 'display_inch')} onChange={(v) => patchCat('display_inch', v)} step="any" />
@@ -1756,6 +1797,13 @@ export default function ProductEditPage() {
 
         {category === 'tv' && (
           <SectionCard title="TV 스펙 (specs_tv)">
+            <div className="flex justify-end mb-4">
+              <button onClick={handleSpecsFill} disabled={specsFilling || !g(form, 'name')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40">
+                {specsFilling ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />}
+                {specsFilling ? 'AI 채우는 중...' : 'AI 스펙 자동채우기'}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="화면 크기 (인치)">
                 <NumberInput value={gn(categorySpecs, 'display_inch')} onChange={(v) => patchCat('display_inch', v)} step="any" />
@@ -1802,6 +1850,13 @@ export default function ProductEditPage() {
 
         {category === 'car' && (
           <SectionCard title="자동차 스펙 (specs_car)">
+            <div className="flex justify-end mb-4">
+              <button onClick={handleSpecsFill} disabled={specsFilling || !g(form, 'name')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40">
+                {specsFilling ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />}
+                {specsFilling ? 'AI 채우는 중...' : 'AI 스펙 자동채우기'}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="차체 형태">
                 <SelectInput value={g(categorySpecs, 'body_type')} onChange={(v) => patchCat('body_type', v)} options={['sedan', 'suv', 'hatchback', 'coupe', 'wagon', 'pickup', 'van', 'convertible']} />

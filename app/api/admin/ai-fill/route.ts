@@ -88,6 +88,39 @@ function extractJson(text: string): Record<string, unknown> {
 
 const AMAZON_TAG = 'pickvolt-20'
 
+const SPECS_PROMPT: Record<string, (name: string) => string> = {
+  car: (name) => `Search the web for the car model "${name}" and find its technical specifications.
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"body_type":"suv","drivetrain":"AWD","powertrain":"BEV","engine_cc":null,"horsepower":670,"torque_nm":1020,"acceleration_0_100":3.5,"top_speed_kmh":250,"range_km":500,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":440,"length_mm":4694,"width_mm":1933,"height_mm":1448,"wheelbase_mm":2875,"curb_weight_kg":1950,"segment":"SUV-D"}
+body_type: sedan/suv/hatchback/coupe/wagon/pickup/van/convertible
+drivetrain: FWD/RWD/AWD/4WD
+powertrain: BEV/PHEV/HEV/MHEV/ICE
+Use null for any value not found.
+Now return the JSON for "${name}".`,
+
+  headphones: (name) => `Search the web for the headphones or earphones named "${name}" and find its technical specifications.
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"form_factor":"over-ear","driver_size_mm":40,"frequency_response":"20Hz-20kHz","impedance_ohm":32,"sensitivity_db":105,"noise_canceling":true,"wireless":true,"bluetooth_version":"5.3","codec":"AAC, LDAC","battery_hours":30,"weight_g":250,"has_microphone":true,"ip_rating":"IPX4","connectivity":"Bluetooth 5.3, 3.5mm"}
+form_factor: over-ear/on-ear/in-ear/tws
+Use null for any value not found.
+Now return the JSON for "${name}".`,
+
+  monitor: (name) => `Search the web for the monitor named "${name}" and find its technical specifications.
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"display_inch":27.0,"display_resolution":"2560x1440","panel_type":"IPS","display_hz":165,"response_time_ms":1,"brightness_nits":400,"hdr":"HDR400","aspect_ratio":"16:9","adaptive_sync":"G-Sync Compatible, FreeSync Premium","curved":false,"vesa_mount":true,"weight_kg":5.2,"display_color_gamut":"sRGB 99%"}
+panel_type: IPS/VA/TN/OLED/QD-OLED/Mini-LED/WOLED
+Use null for any value not found.
+Now return the JSON for "${name}".`,
+
+  tv: (name) => `Search the web for the TV named "${name}" and find its technical specifications.
+Return a single JSON object only. No markdown, no explanation, no code fences:
+{"display_inch":65.0,"display_resolution":"3840x2160","panel_type":"OLED","display_hz":120,"hdr":"HDR10+, Dolby Vision, HLG","brightness_nits":800,"smart_platform":"webOS","audio_watts":60,"hdmi_ports":4,"usb_ports":3,"weight_kg":21.5,"thickness_mm":48,"display_color_gamut":"DCI-P3 99%"}
+panel_type: OLED/QLED/WOLED/QD-OLED/Mini-LED/LED/MICRO-LED
+smart_platform: webOS/Tizen/Google TV/Android TV/Roku/Fire TV
+Use null for any value not found.
+Now return the JSON for "${name}".`,
+}
+
 const AMAZON_PROMPT = (name: string) => `Search Amazon.com for the product "${name}" and find its ASIN.
 
 The ASIN is a 10-character alphanumeric code found in the Amazon product URL like:
@@ -105,10 +138,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const { name, kind } = await req.json()
+  const { name, kind, category } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
-  if (kind !== 'cpu' && kind !== 'gpu' && kind !== 'amazon') {
-    return NextResponse.json({ error: 'kind must be cpu, gpu, or amazon' }, { status: 400 })
+  if (!['cpu', 'gpu', 'amazon', 'product_specs'].includes(kind)) {
+    return NextResponse.json({ error: 'invalid kind' }, { status: 400 })
   }
 
   if (!process.env.GEMINI_API_KEY) {
@@ -132,6 +165,20 @@ export async function POST(req: NextRequest) {
       if (!asin) return NextResponse.json({ amazon_url: null })
       const amazon_url = `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`
       return NextResponse.json({ amazon_url })
+    }
+
+    if (kind === 'product_specs') {
+      const promptFn = SPECS_PROMPT[category]
+      if (!promptFn) return NextResponse.json({ error: `No spec prompt for category: ${category}` }, { status: 400 })
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: promptFn(name),
+        config: { tools: [{ googleSearch: {} }] },
+      })
+      const text = response.text ?? ''
+      if (!text) throw new Error('Empty response from Gemini')
+      const specs = extractJson(text)
+      return NextResponse.json({ specs })
     }
 
     const prompt = kind === 'cpu' ? CPU_PROMPT(name) : GPU_PROMPT(name)
