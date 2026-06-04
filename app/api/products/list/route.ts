@@ -29,6 +29,16 @@ export async function GET(req: NextRequest) {
     const page     = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
     const limit    = Math.min(1000, Math.max(1, parseInt(searchParams.get('limit') ?? '24')))
 
+    // 카테고리별 필요한 스펙 테이블만 JOIN (불필요한 테이블 JOIN 시 에러 방지)
+    const newCatSpecs: Record<string, string> = {
+      headphones: 'specs_headphones ( form_factor, noise_canceling, wireless, battery_hours, driver_size_mm )',
+      monitor:    'specs_monitor ( display_inch, panel_type, display_hz, hdr, brightness_nits )',
+      tv:         'specs_tv ( display_inch, panel_type, display_hz, hdr, smart_platform )',
+      car:        'specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain )',
+      smartwatch: 'specs_smartwatch ( chip_name, water_resistance )',
+    }
+    const extraSpec = category && newCatSpecs[category] ? `,\n        ${newCatSpecs[category]}` : ''
+
     let query = supabase
       .from('products')
       .select(`
@@ -36,12 +46,7 @@ export async function GET(req: NextRequest) {
         specs_common ( ram_gb, cpu_id, gpu_id, cpu_name, gpu_name, os, launch_year ),
         specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, weight_g ),
         specs_laptop ( display_inch, display_resolution, display_hz, weight_kg, battery_wh, battery_hours ),
-        specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support ),
-        specs_smartwatch ( chip_name, water_resistance ),
-        specs_headphones ( form_factor, noise_canceling, wireless, battery_hours, driver_size_mm ),
-        specs_monitor ( display_inch, panel_type, display_hz, hdr, brightness_nits ),
-        specs_tv ( display_inch, panel_type, display_hz, hdr, smart_platform ),
-        specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain )
+        specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support )${extraSpec}
       `)
       .eq('is_visible', true)
 
