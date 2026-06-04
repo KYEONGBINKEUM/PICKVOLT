@@ -91,7 +91,9 @@ const AMAZON_TAG = 'pickvolt-20'
 const SPECS_PROMPT: Record<string, (name: string) => string> = {
   car: (name) => `Search the web for the car model "${name}" and find its technical specifications.
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"body_type":"suv","drivetrain":"AWD","powertrain":"BEV","engine_cc":null,"horsepower":670,"torque_nm":1020,"acceleration_0_100":3.5,"top_speed_kmh":250,"range_km":500,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":440,"length_mm":4694,"width_mm":1933,"height_mm":1448,"wheelbase_mm":2875,"curb_weight_kg":1950,"segment":"SUV-D"}
+{"generation":"E210","production_end":2023,"body_type":"suv","drivetrain":"AWD","powertrain":"BEV","engine_cc":null,"horsepower":670,"torque_nm":1020,"acceleration_0_100":3.5,"top_speed_kmh":250,"range_km":500,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":440,"length_mm":4694,"width_mm":1933,"height_mm":1448,"wheelbase_mm":2875,"curb_weight_kg":1950,"segment":"SUV-D"}
+generation: code name or generation label e.g. "E210", "F30", "Highland", "12th Gen" (null if unknown)
+production_end: year production ended, null if still in production
 body_type: sedan/suv/hatchback/coupe/wagon/pickup/van/convertible
 drivetrain: FWD/RWD/AWD/4WD
 powertrain: BEV/PHEV/HEV/MHEV/ICE

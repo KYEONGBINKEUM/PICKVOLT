@@ -1850,6 +1850,14 @@ export default function ProductEditPage() {
 
         {category === 'car' && (
           <SectionCard title="자동차 스펙 (specs_car)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <Field label="세대 / 코드명">
+                <TextInput value={g(categorySpecs, 'generation')} onChange={(v) => patchCat('generation', v)} placeholder="E210, F30, 12th Gen, Highland..." />
+              </Field>
+              <Field label="생산 종료 연도">
+                <NumberInput value={gn(categorySpecs, 'production_end')} onChange={(v) => patchCat('production_end', v)} />
+              </Field>
+            </div>
             <div className="flex justify-end mb-4">
               <button onClick={handleSpecsFill} disabled={specsFilling || !g(form, 'name')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40">

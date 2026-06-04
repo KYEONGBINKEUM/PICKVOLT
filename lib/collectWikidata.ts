@@ -22,13 +22,14 @@ const YEAR_RANGES = [
 
 function buildCarSparql(yearMin: number, yearMax: number): string {
   return `
-SELECT DISTINCT ?name ?brand ?year ?fuelLabel WHERE {
+SELECT DISTINCT ?name ?brand ?year ?endYear ?fuelLabel WHERE {
   { ?item wdt:P31 wd:Q3231690 } UNION { ?item wdt:P31 wd:Q2060700 }
   ?item rdfs:label ?name FILTER(LANG(?name) = "en") .
   ?item wdt:P571 ?d . BIND(YEAR(?d) AS ?year)
   FILTER(?year >= ${yearMin} && ?year <= ${yearMax})
   OPTIONAL { ?item wdt:P176 ?mfr . ?mfr rdfs:label ?brand FILTER(LANG(?brand) = "en") }
   OPTIONAL { ?item wdt:P5765 ?fuel . ?fuel rdfs:label ?fuelLabel FILTER(LANG(?fuelLabel) = "en") }
+  OPTIONAL { ?item wdt:P582 ?ed . BIND(YEAR(?ed) AS ?endYear) }
   FILTER(STRLEN(STR(?name)) > 2)
 } LIMIT 400`
 }
@@ -37,6 +38,7 @@ interface WikiCar {
   name: string
   brand: string
   year: number | null
+  endYear: number | null
   fuel: string | null
 }
 
@@ -54,6 +56,7 @@ async function sparqlFetch(query: string): Promise<WikiCar[]> {
       name: b.name?.value ?? '',
       brand: b.brand?.value ?? '',
       year: b.year?.value ? parseInt(b.year.value) : null,
+      endYear: b.endYear?.value ? parseInt(b.endYear.value) : null,
       fuel: b.fuelLabel?.value ?? null,
     })).filter(p => p.name.length > 0)
   } catch {
@@ -429,31 +432,45 @@ export async function collectWikidataProducts(
   const results = []
 
   for (const category of categories) {
-    let candidates: { name: string; brand: string; launch_year?: number | null; powertrain?: string | null }[] = [
+    let candidates: { name: string; brand: string; launch_year?: number | null; production_end?: number | null; powertrain?: string | null }[] = [
       ...(SEED_PRODUCTS[category] ?? []),
     ]
 
-    // Cars: enrich with Wikidata (images + year + fuel type + more models)
+    // Cars: enrich with Wikidata (year + generation + fuel type + more models)
     if (category === 'car') {
       const wikiCars = await fetchCarsFromWikidata()
       const seedNames = new Set(candidates.map(c => c.name.toLowerCase()))
       for (const w of wikiCars) {
         if (!w.name) continue
-        if (seedNames.has(w.name.toLowerCase())) {
-          // Enrich existing seed entry with Wikidata image/year if available
-          const idx = candidates.findIndex(c => c.name.toLowerCase() === w.name.toLowerCase())
+
+        // Build display name with year range for generation distinction
+        // e.g. "Toyota Corolla (2019-2023)" or "Toyota Corolla (2019-)"
+        let displayName = w.name
+        if (w.year) {
+          const suffix = w.endYear ? `(${w.year}–${w.endYear})` : `(${w.year}–)`
+          // Only append if not already present in name
+          if (!displayName.includes(String(w.year))) {
+            displayName = `${displayName} ${suffix}`
+          }
+        }
+
+        const key = displayName.toLowerCase()
+        if (seedNames.has(key)) {
+          const idx = candidates.findIndex(c => c.name.toLowerCase() === key)
           if (idx >= 0) {
             if (!candidates[idx].launch_year && w.year) candidates[idx].launch_year = w.year
+            if (!candidates[idx].production_end && w.endYear) candidates[idx].production_end = w.endYear
             if (!candidates[idx].powertrain && w.fuel) candidates[idx].powertrain = mapPowertrain(w.fuel)
           }
         } else {
           candidates.push({
-            name: w.name,
+            name: displayName,
             brand: w.brand,
             launch_year: w.year,
+            production_end: w.endYear,
             powertrain: mapPowertrain(w.fuel),
           })
-          seedNames.add(w.name.toLowerCase())
+          seedNames.add(key)
         }
       }
     }
@@ -516,8 +533,9 @@ export async function collectWikidataProducts(
               const src = batch.find(p => p.name === row.name)
               const powertrain = src?.powertrain ?? null
               const launch_year = src?.launch_year ?? null
-              if (!powertrain && !launch_year) return null
-              return { product_id: row.id, powertrain, launch_year }
+              const production_end = src?.production_end ?? null
+              if (!powertrain && !launch_year && !production_end) return null
+              return { product_id: row.id, powertrain, launch_year, production_end }
             })
             .filter(Boolean)
 
@@ -533,12 +551,13 @@ export async function collectWikidataProducts(
               await supabase.from('specs_common').upsert(commonBatch, { onConflict: 'product_id' })
             }
 
-            // Insert powertrain into specs_car
+            // Insert powertrain + production_end into specs_car
             const carBatch = specsBatch
-              .filter((s: { powertrain: string | null } | null) => s?.powertrain)
-              .map((s: { product_id: string; powertrain: string | null } | null) => ({
+              .filter((s: { powertrain: string | null; production_end: number | null } | null) => s?.powertrain || s?.production_end)
+              .map((s: { product_id: string; powertrain: string | null; production_end: number | null } | null) => ({
                 product_id: s!.product_id,
                 powertrain: s!.powertrain,
+                production_end: s!.production_end,
               }))
             if (carBatch.length > 0) {
               await supabase.from('specs_car').upsert(carBatch, { onConflict: 'product_id' })
