@@ -575,19 +575,98 @@ ${priceHTML}
             <p className="text-sm text-white/60 leading-relaxed mb-4">{summary}</p>
           ) : null })()}
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
-            <SpecRow label={t('product.spec_cpu')}     value={effectiveSpecs.cpu} />
-            {product.category === 'laptop' && (
-              <SpecRow label="GPU" value={effectiveSpecs.gpuName} />
-            )}
-            <SpecRow label={t('product.spec_ram')}     value={effectiveSpecs.ram} />
-            <SpecRow label={t('product.spec_storage')} value={effectiveSpecs.storage} />
-            <SpecRow label={t('product.spec_display')} value={effectiveSpecs.display} />
-            <SpecRow label={t('product.spec_battery')} value={effectiveSpecs.batteryCapacity} />
-            <SpecRow label={t('product.spec_camera')}  value={effectiveSpecs.camera} />
-            <SpecRow label={t('product.spec_os')}        value={effectiveSpecs.os} />
-            <SpecRow label={t('product.spec_wifi')}      value={effectiveSpecs.wifi} />
-            <SpecRow label={t('product.spec_bluetooth')} value={effectiveSpecs.bluetooth} />
-            <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
+            {/* ── 자동차 ── */}
+            {product.category === 'car' && (() => {
+              const r = product.raw as Record<string, unknown>
+              return <>
+                <SpecRow label="파워트레인"  value={r.powertrain as string} />
+                <SpecRow label="차체 형태"   value={r.body_type as string} />
+                <SpecRow label="구동 방식"   value={r.drivetrain as string} />
+                <SpecRow label="최고출력"    value={r.horsepower != null ? `${r.horsepower}hp` : null} />
+                <SpecRow label="최대토크"    value={r.torque_nm != null ? `${r.torque_nm}Nm` : null} />
+                <SpecRow label="0–100 km/h" value={r.acceleration_0_100 != null ? `${r.acceleration_0_100}s` : null} />
+                <SpecRow label="항속거리"    value={r.range_km != null ? `${r.range_km}km` : null} />
+                <SpecRow label="배터리"      value={r.battery_kwh != null ? `${r.battery_kwh}kWh` : null} />
+                <SpecRow label="배기량"      value={r.engine_cc != null ? `${r.engine_cc}cc` : null} />
+                <SpecRow label="연비"        value={r.fuel_efficiency_km_l != null ? `${r.fuel_efficiency_km_l}km/L` : null} />
+                <SpecRow label="승차인원"    value={r.seating != null ? `${r.seating}명` : null} />
+                <SpecRow label="트렁크"      value={r.cargo_liters != null ? `${r.cargo_liters}L` : null} />
+                <SpecRow label="공차중량"    value={r.curb_weight_kg != null ? `${r.curb_weight_kg}kg` : null} />
+                <SpecRow label="세그먼트"    value={r.segment as string} />
+                <SpecRow label="세대"        value={r.generation as string} />
+              </>
+            })()}
+
+            {/* ── 헤드폰 ── */}
+            {product.category === 'headphones' && (() => {
+              const r = product.raw as Record<string, unknown>
+              return <>
+                <SpecRow label="폼팩터"       value={r.form_factor as string} />
+                <SpecRow label="드라이버"     value={r.driver_size_mm != null ? `${r.driver_size_mm}mm` : null} />
+                <SpecRow label="주파수 응답"  value={r.frequency_response as string} />
+                <SpecRow label="노이즈캔슬링" value={r.noise_canceling === true ? '지원' : r.noise_canceling === false ? '미지원' : null} />
+                <SpecRow label="무선"         value={r.wireless === true ? '블루투스' : r.wireless === false ? '유선' : null} />
+                <SpecRow label="블루투스"     value={r.bluetooth_version as string} />
+                <SpecRow label="코덱"         value={r.codec as string} />
+                <SpecRow label="배터리"       value={r.battery_hours != null ? `${r.battery_hours}h` : null} />
+                <SpecRow label="무게"         value={r.weight_g != null ? `${r.weight_g}g` : null} />
+                <SpecRow label="방수등급"     value={r.ip_rating as string} />
+                <SpecRow label="연결"         value={r.connectivity as string} />
+              </>
+            })()}
+
+            {/* ── 모니터 ── */}
+            {product.category === 'monitor' && (() => {
+              const r = product.raw as Record<string, unknown>
+              return <>
+                <SpecRow label="화면 크기"  value={r.display_inch != null ? `${r.display_inch}"` : null} />
+                <SpecRow label="해상도"     value={r.display_resolution as string} />
+                <SpecRow label="패널"       value={r.panel_type as string} />
+                <SpecRow label="주사율"     value={r.display_hz != null ? `${r.display_hz}Hz` : null} />
+                <SpecRow label="응답속도"   value={r.response_time_ms != null ? `${r.response_time_ms}ms` : null} />
+                <SpecRow label="밝기"       value={r.brightness_nits != null ? `${r.brightness_nits}nits` : null} />
+                <SpecRow label="HDR"        value={r.hdr as string} />
+                <SpecRow label="화면비"     value={r.aspect_ratio as string} />
+                <SpecRow label="가변싱크"   value={r.adaptive_sync as string} />
+                <SpecRow label="색영역"     value={r.display_color_gamut as string} />
+                <SpecRow label="무게"       value={r.weight_kg != null ? `${r.weight_kg}kg` : null} />
+              </>
+            })()}
+
+            {/* ── TV ── */}
+            {product.category === 'tv' && (() => {
+              const r = product.raw as Record<string, unknown>
+              return <>
+                <SpecRow label="화면 크기"    value={r.display_inch != null ? `${r.display_inch}"` : null} />
+                <SpecRow label="해상도"       value={r.display_resolution as string} />
+                <SpecRow label="패널"         value={r.panel_type as string} />
+                <SpecRow label="주사율"       value={r.display_hz != null ? `${r.display_hz}Hz` : null} />
+                <SpecRow label="HDR"          value={r.hdr as string} />
+                <SpecRow label="밝기"         value={r.brightness_nits != null ? `${r.brightness_nits}nits` : null} />
+                <SpecRow label="스마트 플랫폼" value={r.smart_platform as string} />
+                <SpecRow label="음향 출력"    value={r.audio_watts != null ? `${r.audio_watts}W` : null} />
+                <SpecRow label="HDMI"         value={r.hdmi_ports != null ? `${r.hdmi_ports}개` : null} />
+                <SpecRow label="USB"          value={r.usb_ports != null ? `${r.usb_ports}개` : null} />
+                <SpecRow label="무게"         value={r.weight_kg != null ? `${r.weight_kg}kg` : null} />
+              </>
+            })()}
+
+            {/* ── 전자기기 (스마트폰/노트북/태블릿/스마트워치) ── */}
+            {!['car','headphones','monitor','tv'].includes(product.category) && <>
+              <SpecRow label={t('product.spec_cpu')}     value={effectiveSpecs.cpu} />
+              {product.category === 'laptop' && (
+                <SpecRow label="GPU" value={effectiveSpecs.gpuName} />
+              )}
+              <SpecRow label={t('product.spec_ram')}     value={effectiveSpecs.ram} />
+              <SpecRow label={t('product.spec_storage')} value={effectiveSpecs.storage} />
+              <SpecRow label={t('product.spec_display')} value={effectiveSpecs.display} />
+              <SpecRow label={t('product.spec_battery')} value={effectiveSpecs.batteryCapacity} />
+              <SpecRow label={t('product.spec_camera')}  value={effectiveSpecs.camera} />
+              <SpecRow label={t('product.spec_os')}        value={effectiveSpecs.os} />
+              <SpecRow label={t('product.spec_wifi')}      value={effectiveSpecs.wifi} />
+              <SpecRow label={t('product.spec_bluetooth')} value={effectiveSpecs.bluetooth} />
+              <SpecRow label={t('product.spec_weight')}    value={effectiveSpecs.weight} />
+            </>}
           </div>
           {/* 스펙표 하단 광고 — 내보내기(이미지/PDF) 시 제외 */}
           {AD_HTML_INLINE && (
