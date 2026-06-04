@@ -72,6 +72,32 @@ interface Product {
   weight_g: number | null
   weight_kg: number | null
   stylus_support: boolean | null
+  // headphones
+  form_factor: string | null
+  noise_canceling: boolean | null
+  headphone_battery_hours: number | null
+  driver_size_mm: number | null
+  // monitor
+  monitor_display_inch: number | null
+  panel_type: string | null
+  monitor_hz: number | null
+  monitor_hdr: string | null
+  // tv
+  tv_display_inch: number | null
+  tv_hz: number | null
+  tv_hdr: string | null
+  smart_platform: string | null
+  // car
+  powertrain: string | null
+  horsepower: number | null
+  torque_nm: number | null
+  acceleration_0_100: number | null
+  range_km: number | null
+  body_type: string | null
+  drivetrain: string | null
+  // smartwatch
+  chip_name: string | null
+  water_resistance: string | null
   launch_year: number | null
   variants: {
     id: string
@@ -231,20 +257,59 @@ function ProductCard({
 
   const gpuCell = { label: 'GPU', value: current.gpu_name ?? null }
 
-  // Mobile: laptop → CPU, RAM, GPU, Display / others → CPU, RAM, Display, Battery
-  const mobileCells = product.category === 'laptop'
-    ? [
-        { label: 'CPU', value: current.cpu_name ?? null },
-        { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
-        gpuCell,
-        displayCell,
-      ]
-    : [
-        { label: 'CPU', value: current.cpu_name ?? null },
-        { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
-        displayCell,
-        batteryCell,
-      ]
+  // Category-specific spec cells
+  let mobileCells: { label: string; value: string | null }[]
+  if (product.category === 'laptop') {
+    mobileCells = [
+      { label: 'CPU', value: current.cpu_name ?? null },
+      { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
+      gpuCell,
+      displayCell,
+    ]
+  } else if (product.category === 'car') {
+    mobileCells = [
+      { label: '파워트레인', value: product.powertrain ?? null },
+      { label: '출력', value: product.horsepower ? `${product.horsepower}hp` : null },
+      { label: '항속거리', value: product.range_km ? `${product.range_km}km` : null },
+      { label: '0-100', value: product.acceleration_0_100 ? `${product.acceleration_0_100}s` : null },
+    ]
+  } else if (product.category === 'headphones') {
+    mobileCells = [
+      { label: '폼팩터', value: product.form_factor ?? null },
+      { label: '배터리', value: product.headphone_battery_hours ? `${product.headphone_battery_hours}h` : null },
+      { label: '노이즈캔슬링', value: product.noise_canceling === true ? 'ANC' : product.noise_canceling === false ? '없음' : null },
+      { label: '드라이버', value: product.driver_size_mm ? `${product.driver_size_mm}mm` : null },
+    ]
+  } else if (product.category === 'monitor') {
+    mobileCells = [
+      { label: '화면', value: product.monitor_display_inch ? `${product.monitor_display_inch}"` : null },
+      { label: '패널', value: product.panel_type ?? null },
+      { label: '주사율', value: product.monitor_hz ? `${product.monitor_hz}Hz` : null },
+      { label: 'HDR', value: product.monitor_hdr ?? null },
+    ]
+  } else if (product.category === 'tv') {
+    mobileCells = [
+      { label: '화면', value: product.tv_display_inch ? `${product.tv_display_inch}"` : null },
+      { label: '패널', value: product.panel_type ?? null },
+      { label: '플랫폼', value: product.smart_platform ?? null },
+      { label: 'HDR', value: product.tv_hdr ?? null },
+    ]
+  } else if (product.category === 'smartwatch') {
+    mobileCells = [
+      { label: '칩', value: product.chip_name ?? null },
+      { label: '방수', value: product.water_resistance ?? null },
+      { label: 'GPS', value: null },
+      { label: '배터리', value: null },
+    ]
+  } else {
+    // smartphone, tablet, default
+    mobileCells = [
+      { label: 'CPU', value: current.cpu_name ?? null },
+      { label: t('spec.ram'), value: current.ram_gb ? `${current.ram_gb}GB` : null },
+      displayCell,
+      batteryCell,
+    ]
+  }
 
 
   const score = product.performance_score

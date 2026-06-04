@@ -36,7 +36,12 @@ export async function GET(req: NextRequest) {
         specs_common ( ram_gb, cpu_id, gpu_id, cpu_name, gpu_name, os, launch_year ),
         specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, weight_g ),
         specs_laptop ( display_inch, display_resolution, display_hz, weight_kg, battery_wh, battery_hours ),
-        specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support )
+        specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support ),
+        specs_smartwatch ( chip_name, water_resistance ),
+        specs_headphones ( form_factor, noise_canceling, wireless, battery_hours, driver_size_mm ),
+        specs_monitor ( display_inch, panel_type, display_hz, hdr, brightness_nits ),
+        specs_tv ( display_inch, panel_type, display_hz, hdr, smart_platform ),
+        specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain )
       `)
       .eq('is_visible', true)
 
@@ -112,6 +117,11 @@ export async function GET(req: NextRequest) {
       const laptop     = p.specs_laptop
       const tablet     = p.specs_tablet
       const specSrc    = smartphone ?? laptop ?? tablet ?? {}
+      const smartwatch = p.specs_smartwatch
+      const headphones = p.specs_headphones
+      const monitor    = p.specs_monitor
+      const tv         = p.specs_tv
+      const car        = p.specs_car
 
       const defVariant  = defaultVariantMap[p.id]
       const activeCpuId = defVariant?.cpu_id ?? common?.cpu_id ?? null
@@ -133,6 +143,33 @@ export async function GET(req: NextRequest) {
         battery_wh: laptop?.battery_wh ?? null, battery_hours: laptop?.battery_hours ?? null,
         weight_kg: laptop?.weight_kg ?? null,
         stylus_support: tablet?.stylus_support ?? null,
+        // headphones
+        form_factor: headphones?.form_factor ?? null,
+        noise_canceling: headphones?.noise_canceling ?? null,
+        headphone_battery_hours: headphones?.battery_hours ?? null,
+        driver_size_mm: headphones?.driver_size_mm ?? null,
+        // monitor
+        monitor_display_inch: monitor?.display_inch ?? null,
+        panel_type: monitor?.panel_type ?? tv?.panel_type ?? null,
+        monitor_hz: monitor?.display_hz ?? null,
+        monitor_hdr: monitor?.hdr ?? null,
+        monitor_brightness: monitor?.brightness_nits ?? null,
+        // tv
+        tv_display_inch: tv?.display_inch ?? null,
+        tv_hz: tv?.display_hz ?? null,
+        tv_hdr: tv?.hdr ?? null,
+        smart_platform: tv?.smart_platform ?? null,
+        // car
+        powertrain: car?.powertrain ?? null,
+        horsepower: car?.horsepower ?? null,
+        torque_nm: car?.torque_nm ?? null,
+        acceleration_0_100: car?.acceleration_0_100 ?? null,
+        range_km: car?.range_km ?? null,
+        body_type: car?.body_type ?? null,
+        drivetrain: car?.drivetrain ?? null,
+        // smartwatch
+        chip_name: smartwatch?.chip_name ?? null,
+        water_resistance: smartwatch?.water_resistance ?? null,
         variants: variantMap[p.id] ?? [],
         // raw scores for stats computation
         _cpuRel: cpuRelScore,
