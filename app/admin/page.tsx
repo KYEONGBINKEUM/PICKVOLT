@@ -1443,7 +1443,7 @@ export default function AdminPage() {
             </div>
             {wikidataResult && (
               <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400">
-                ✅ Wikidata 수집 완료: {wikidataResult.map((r: { category: string; inserted: number; skipped: number }) => `${r.category} +${r.inserted}`).join(', ')}
+                ✅ 수집 완료: {wikidataResult.map((r: { category: string; inserted: number; skipped: number; source: string }) => `${r.category} +${r.inserted}건 (${r.source})`).join(', ')}
               </div>
             )}
             {wikidataError && (
