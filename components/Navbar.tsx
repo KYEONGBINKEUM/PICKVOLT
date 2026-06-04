@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
-import { User, Menu, X, PenSquare, Home, Flame, Newspaper, Users, Plus, ChevronDown, Smartphone, Laptop, Tablet, Watch, Headphones, Monitor, Tv, Car } from 'lucide-react'
+import { User, Menu, X, PenSquare, Home, Flame, Newspaper, Users, Plus, ChevronDown } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
@@ -79,14 +79,14 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
   // 카테고리 드롭다운 목록
   const categoryLinks = [
-    { href: '/categories/smartphone', label: t('cat.smartphone'), icon: Smartphone },
-    { href: '/categories/laptop',     label: t('cat.laptop'),     icon: Laptop },
-    { href: '/categories/tablet',     label: t('cat.tablet'),     icon: Tablet },
-    { href: '/categories/smartwatch', label: t('cat.watch'),      icon: Watch },
-    { href: '/categories/headphones', label: t('cat.headphones'), icon: Headphones },
-    { href: '/categories/monitor',    label: t('cat.monitor'),    icon: Monitor },
-    { href: '/categories/tv',         label: t('cat.tv'),         icon: Tv },
-    { href: '/categories/car',        label: t('cat.car'),        icon: Car },
+    { href: '/categories/smartphone', label: t('cat.smartphone') },
+    { href: '/categories/laptop',     label: t('cat.laptop') },
+    { href: '/categories/tablet',     label: t('cat.tablet') },
+    { href: '/categories/smartwatch', label: t('cat.watch') },
+    { href: '/categories/headphones', label: t('cat.headphones') },
+    { href: '/categories/monitor',    label: t('cat.monitor') },
+    { href: '/categories/tv',         label: t('cat.tv') },
+    { href: '/categories/car',        label: t('cat.car') },
   ]
 
   const isActive = (href: string, exact?: boolean) =>
@@ -173,17 +173,16 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
                   {t('nav.compare')} <ChevronDown className={clsx('w-3 h-3 transition-transform', catOpen && 'rotate-180')} />
                 </button>
                 {catOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-52 bg-background border border-border rounded-xl shadow-xl overflow-hidden z-50">
-                    <div className="grid grid-cols-2 p-1.5 gap-0.5">
+                  <div className="absolute right-0 top-full mt-1.5 w-44 bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50">
+                    <div className="py-1">
                       {categoryLinks.map(l => (
                         <Link key={l.href} href={l.href}
                           onClick={() => setCatOpen(false)}
                           className={clsx(
-                            'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                            isActive(l.href) ? 'bg-accent/15 text-accent font-semibold' : 'text-white/60 hover:text-white hover:bg-white/5'
+                            'block px-4 py-2 text-sm transition-colors whitespace-nowrap',
+                            isActive(l.href) ? 'text-accent font-semibold' : 'text-white/55 hover:text-white hover:bg-white/5'
                           )}>
-                          <l.icon className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{l.label}</span>
+                          {l.label}
                         </Link>
                       ))}
                     </div>
@@ -352,9 +351,8 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
               <div className="grid grid-cols-2 gap-1">
                 {categoryLinks.map(l => (
                   <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
-                    className={clsx('flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors',
+                    className={clsx('px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors',
                       isActive(l.href) ? 'bg-white/8 text-white' : 'text-white/50 hover:text-white hover:bg-white/5')}>
-                    <l.icon className="w-4 h-4 shrink-0" />
                     {l.label}
                   </Link>
                 ))}
