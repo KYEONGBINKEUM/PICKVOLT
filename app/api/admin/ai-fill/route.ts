@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
       const promptFn = SPECS_PROMPT[category]
       if (!promptFn) return NextResponse.json({ error: `No spec prompt for category: ${category}` }, { status: 400 })
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.0-flash-lite',
         contents: promptFn(name),
         config: { tools: [{ googleSearch: {} }] },
       })
