@@ -89,16 +89,17 @@ function extractJson(text: string): Record<string, unknown> {
 const AMAZON_TAG = 'pickvolt-20'
 
 const SPECS_PROMPT: Record<string, (name: string) => string> = {
-  car: (name) => `Search the web for the car model "${name}" and find its technical specifications and pricing.
+  car: (name) => `Search the web for the car model "${name}" and find its full technical specifications, trim variants, and pricing.
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"price_usd":42990,"launch_year":2023,"generation":"Highland","production_end":null,"body_type":"sedan","drivetrain":"RWD","powertrain":"BEV","engine_cc":null,"horsepower":358,"torque_nm":493,"acceleration_0_100":4.2,"top_speed_kmh":225,"range_km":554,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":594,"length_mm":4720,"width_mm":1921,"height_mm":1441,"wheelbase_mm":2875,"curb_weight_kg":1844,"segment":"D-segment"}
-price_usd: base MSRP in USD (integer), null if not available
-launch_year: model year or year first introduced (integer)
-generation: code name or facelift label e.g. "Highland", "F30", "E210", "12th Gen" (null if unknown)
-production_end: year production ended (integer), null if still in production
+{"price_usd":38900,"launch_year":2023,"generation":"Highland","production_end":null,"body_type":"sedan","drivetrain":"RWD","powertrain":"BEV","engine_cc":null,"horsepower":358,"torque_nm":493,"acceleration_0_100":5.8,"top_speed_kmh":225,"range_km":491,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":594,"length_mm":4720,"width_mm":1921,"height_mm":1441,"wheelbase_mm":2875,"curb_weight_kg":1844,"segment":"D-segment","powertrain_variants":[{"name":"Standard RWD","powertrain":"BEV","horsepower":218,"torque_nm":350,"acceleration_0_100":9.4,"range_km":491,"battery_kwh":60,"price_usd":38900},{"name":"Long Range AWD","powertrain":"BEV","horsepower":308,"torque_nm":605,"acceleration_0_100":6.7,"range_km":503,"battery_kwh":75,"price_usd":43900},{"name":"Performance AWD","powertrain":"BEV","horsepower":428,"torque_nm":700,"acceleration_0_100":5.2,"range_km":501,"battery_kwh":75,"price_usd":47900}]}
+price_usd: base trim MSRP in USD, null if unavailable
+launch_year: model year first introduced
+generation: facelift/generation code e.g. "Highland", "F30", "E210" (null if unknown)
+production_end: year ended, null if still in production
 body_type: sedan/suv/hatchback/coupe/wagon/pickup/van/convertible
-drivetrain: FWD/RWD/AWD/4WD
+drivetrain: base trim drivetrain FWD/RWD/AWD/4WD
 powertrain: BEV/PHEV/HEV/MHEV/ICE
+powertrain_variants: array of ALL available powertrain trims with individual specs. Include every trim if multiple exist. Empty array [] if only one variant.
 Use null for any value not found.
 Now return the JSON for "${name}".`,
 

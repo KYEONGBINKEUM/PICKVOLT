@@ -1925,6 +1925,85 @@ export default function ProductEditPage() {
                 <TextInput value={g(categorySpecs, 'segment')} onChange={(v) => patchCat('segment', v)} placeholder="C-segment, SUV-C..." />
               </Field>
             </div>
+
+            {/* 파워트레인 트림 variants */}
+            <div className="mt-6 pt-5 border-t border-border/40">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">파워트레인 트림</p>
+                  <p className="text-xs text-white/30 mt-0.5">트림별 출력·토크·가속·항속거리가 다를 경우 등록</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSpecsFill}
+                  disabled={specsFilling || !g(form, 'name')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 border border-accent/30 text-xs text-accent font-semibold hover:bg-accent/20 transition-colors disabled:opacity-40"
+                >
+                  {specsFilling ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />}
+                  {specsFilling ? 'AI 채우는 중...' : 'AI 트림 자동채우기'}
+                </button>
+              </div>
+
+              {/* 트림 테이블 */}
+              {(() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const variants: any[] = Array.isArray(categorySpecs.powertrain_variants) ? categorySpecs.powertrain_variants : []
+                const setVariants = (v: unknown[]) => patchCat('powertrain_variants', v)
+                return (
+                  <div className="space-y-2">
+                    {variants.length > 0 && (
+                      <div className="overflow-x-auto rounded-xl border border-border">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-white/5 border-b border-border">
+                              {['트림명','파워','출력(hp)','토크(Nm)','0-100(s)','항속(km)','배터리(kWh)','가격(USD)',''].map(h => (
+                                <th key={h} className="px-3 py-2 text-left text-white/40 font-medium whitespace-nowrap">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {variants.map((v, i) => (
+                              <tr key={i} className="border-b border-border/50 hover:bg-white/[0.02]">
+                                {(['name','powertrain','horsepower','torque_nm','acceleration_0_100','range_km','battery_kwh','price_usd'] as const).map(field => (
+                                  <td key={field} className="px-2 py-1.5">
+                                    <input
+                                      type={field === 'name' || field === 'powertrain' ? 'text' : 'number'}
+                                      value={v[field] ?? ''}
+                                      onChange={e => {
+                                        const val = field === 'name' || field === 'powertrain'
+                                          ? e.target.value
+                                          : e.target.value ? Number(e.target.value) : null
+                                        const next = variants.map((r, ri) => ri === i ? { ...r, [field]: val } : r)
+                                        setVariants(next)
+                                      }}
+                                      className="w-full bg-background border border-border rounded px-2 py-1 text-white focus:outline-none focus:border-accent min-w-[60px]"
+                                      placeholder={field === 'name' ? 'RWD 표준' : field === 'powertrain' ? 'BEV' : ''}
+                                    />
+                                  </td>
+                                ))}
+                                <td className="px-2 py-1.5">
+                                  <button type="button" onClick={() => setVariants(variants.filter((_, ri) => ri !== i))}
+                                    className="text-white/20 hover:text-red-400 transition-colors">
+                                    <X size={13} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setVariants([...variants, { name: '', powertrain: 'BEV', horsepower: null, torque_nm: null, acceleration_0_100: null, range_km: null, battery_kwh: null, price_usd: null }])}
+                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 border border-dashed border-border hover:border-white/20 rounded-lg px-3 py-2 transition-colors w-full justify-center"
+                    >
+                      <Plus size={12} /> 트림 추가
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
           </SectionCard>
         )}
 
