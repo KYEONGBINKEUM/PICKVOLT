@@ -64,7 +64,7 @@ export async function PATCH(
   }
 
   // Spec tables upsert
-  const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch'] as const
+  const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch', 'specs_headphones', 'specs_monitor', 'specs_tv', 'specs_car'] as const
   for (const tableName of specTables) {
     const specData = body[tableName] as Record<string, unknown> | undefined
     if (specData && typeof specData === 'object' && Object.keys(specData).length > 0) {
@@ -199,7 +199,7 @@ export async function POST(
   const newId = newProduct.id
 
   // 스펙 테이블 복사
-  const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch'] as const
+  const specTables = ['specs_common', 'specs_laptop', 'specs_smartphone', 'specs_tablet', 'specs_smartwatch', 'specs_headphones', 'specs_monitor', 'specs_tv', 'specs_car'] as const
   for (const tableName of specTables) {
     const { data: specs } = await supabase
       .from(tableName)
