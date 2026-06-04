@@ -10,6 +10,8 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 const CATEGORIES = ['laptop', 'smartphone', 'tablet', 'smartwatch', 'headphones', 'monitor', 'tv', 'car']
+// Categories that use CPU/GPU/RAM/OS/Wi-Fi in specs_common
+const ELECTRONICS_CATS = ['smartphone', 'tablet', 'smartwatch']
 const SCRAPE_STATUSES = ['ok', 'pending', 'failed', 'partial']
 const STORAGE_TYPES = ['SSD', 'HDD', 'eMMC', 'UFS']
 const DISPLAY_TYPES = ['IPS', 'OLED', 'AMOLED', 'LTPO OLED', 'VA', 'TN', 'Mini-LED', 'Liquid Retina']
@@ -1210,7 +1212,7 @@ export default function ProductEditPage() {
             )}
 
             {/* CPU 검색 & 연결 */}
-            {category !== 'laptop' && <div className="md:col-span-2">
+            {ELECTRONICS_CATS.includes(category) && <div className="md:col-span-2">
               <label className="block text-xs text-white/40 mb-1.5">CPU 연결 (벤치마크 점수용)</label>
 
               {/* 현재 연결된 CPU */}
@@ -1301,7 +1303,7 @@ export default function ProductEditPage() {
             </div>}
 
             {/* GPU 검색 & 연결 */}
-            {category !== 'laptop' && <div className="md:col-span-2">
+            {ELECTRONICS_CATS.includes(category) && <div className="md:col-span-2">
               <label className="block text-xs text-white/40 mb-1.5">GPU 연결 (DB 직접 연결)</label>
 
               {/* 현재 연결된 GPU */}
@@ -1391,7 +1393,8 @@ export default function ProductEditPage() {
               )}
             </div>}
 
-            {category !== 'laptop' && <>
+            {/* CPU / GPU 이름 (electronics only) */}
+            {ELECTRONICS_CATS.includes(category) && <>
               <Field label="CPU 이름">
                 <TextInput value={g(commonSpecs, 'cpu_name')} onChange={(v) => patchCommon('cpu_name', v)} placeholder="Apple M4 Pro" />
               </Field>
@@ -1399,36 +1402,52 @@ export default function ProductEditPage() {
                 <TextInput value={g(commonSpecs, 'gpu_name')} onChange={(v) => patchCommon('gpu_name', v)} placeholder="Apple M4 Pro GPU" />
               </Field>
             </>}
-            {category !== 'laptop' && <>
+
+            {/* RAM / Storage (electronics + headphones 제외 non-laptop) */}
+            {ELECTRONICS_CATS.includes(category) && <>
               <Field label="RAM 용량 (쉼표로 여러 옵션 가능)">
                 <TextInput value={g(commonSpecs, 'ram_gb')} onChange={(v) => patchCommon('ram_gb', v)} placeholder="8, 16, 32" />
               </Field>
-            </>}
-            {category !== 'laptop' && <>
               <Field label="스토리지 용량 (쉼표로 여러 옵션 가능)">
                 <TextInput value={g(commonSpecs, 'storage_gb')} onChange={(v) => patchCommon('storage_gb', v)} placeholder="256, 512, 1024" />
               </Field>
             </>}
-            <Field label="OS">
-              <TextInput value={g(commonSpecs, 'os')} onChange={(v) => patchCommon('os', v)} placeholder="macOS 15, Android 15..." />
-            </Field>
-            <Field label="Wi-Fi 규격">
-              <TextInput value={g(commonSpecs, 'wifi_standard')} onChange={(v) => patchCommon('wifi_standard', v)} placeholder="Wi-Fi 6E" />
-            </Field>
-            <Field label="블루투스">
-              <TextInput value={g(commonSpecs, 'bluetooth_version')} onChange={(v) => patchCommon('bluetooth_version', v)} placeholder="5.3" />
-            </Field>
+
+            {/* OS (electronics only) */}
+            {ELECTRONICS_CATS.includes(category) && (
+              <Field label="OS">
+                <TextInput value={g(commonSpecs, 'os')} onChange={(v) => patchCommon('os', v)} placeholder="iOS 18, Android 15..." />
+              </Field>
+            )}
+
+            {/* Wi-Fi (electronics only) */}
+            {ELECTRONICS_CATS.includes(category) && (
+              <Field label="Wi-Fi 규격">
+                <TextInput value={g(commonSpecs, 'wifi_standard')} onChange={(v) => patchCommon('wifi_standard', v)} placeholder="Wi-Fi 6E" />
+              </Field>
+            )}
+
+            {/* Bluetooth (electronics + headphones) */}
+            {(ELECTRONICS_CATS.includes(category) || category === 'headphones') && (
+              <Field label="블루투스">
+                <TextInput value={g(commonSpecs, 'bluetooth_version')} onChange={(v) => patchCommon('bluetooth_version', v)} placeholder="5.3" />
+              </Field>
+            )}
+
+            {/* 출시연도 · 가격 · 색상 — 모든 카테고리 공통 */}
             <Field label="출시연도">
               <NumberInput value={gn(commonSpecs, 'launch_year')} onChange={(v) => patchCommon('launch_year', v)} />
             </Field>
             <Field label="출시가격 (USD)">
               <NumberInput value={gn(commonSpecs, 'launch_price_usd')} onChange={(v) => patchCommon('launch_price_usd', v)} />
             </Field>
-            <div className="md:col-span-2">
-              <Field label="색상 옵션 (쉼표 구분)">
-                <TextInput value={g(commonSpecs, 'colors')} onChange={(v) => patchCommon('colors', v)} placeholder="Space Black, Silver, Starlight" />
-              </Field>
-            </div>
+            {category !== 'car' && (
+              <div className="md:col-span-2">
+                <Field label="색상 옵션 (쉼표 구분)">
+                  <TextInput value={g(commonSpecs, 'colors')} onChange={(v) => patchCommon('colors', v)} placeholder="Space Black, Silver, Starlight" />
+                </Field>
+              </div>
+            )}
           </div>
         </SectionCard>
 
