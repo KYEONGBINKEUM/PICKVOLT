@@ -89,34 +89,39 @@ function extractJson(text: string): Record<string, unknown> {
 const AMAZON_TAG = 'pickvolt-20'
 
 const SPECS_PROMPT: Record<string, (name: string) => string> = {
-  car: (name) => `Search the web for the car model "${name}" and find its technical specifications.
+  car: (name) => `Search the web for the car model "${name}" and find its technical specifications and pricing.
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"generation":"E210","production_end":2023,"body_type":"suv","drivetrain":"AWD","powertrain":"BEV","engine_cc":null,"horsepower":670,"torque_nm":1020,"acceleration_0_100":3.5,"top_speed_kmh":250,"range_km":500,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":440,"length_mm":4694,"width_mm":1933,"height_mm":1448,"wheelbase_mm":2875,"curb_weight_kg":1950,"segment":"SUV-D"}
-generation: code name or generation label e.g. "E210", "F30", "Highland", "12th Gen" (null if unknown)
-production_end: year production ended, null if still in production
+{"price_usd":42990,"launch_year":2023,"generation":"Highland","production_end":null,"body_type":"sedan","drivetrain":"RWD","powertrain":"BEV","engine_cc":null,"horsepower":358,"torque_nm":493,"acceleration_0_100":4.2,"top_speed_kmh":225,"range_km":554,"battery_kwh":75.0,"fuel_efficiency_km_l":null,"seating":5,"cargo_liters":594,"length_mm":4720,"width_mm":1921,"height_mm":1441,"wheelbase_mm":2875,"curb_weight_kg":1844,"segment":"D-segment"}
+price_usd: base MSRP in USD (integer), null if not available
+launch_year: model year or year first introduced (integer)
+generation: code name or facelift label e.g. "Highland", "F30", "E210", "12th Gen" (null if unknown)
+production_end: year production ended (integer), null if still in production
 body_type: sedan/suv/hatchback/coupe/wagon/pickup/van/convertible
 drivetrain: FWD/RWD/AWD/4WD
 powertrain: BEV/PHEV/HEV/MHEV/ICE
 Use null for any value not found.
 Now return the JSON for "${name}".`,
 
-  headphones: (name) => `Search the web for the headphones or earphones named "${name}" and find its technical specifications.
+  headphones: (name) => `Search the web for the headphones or earphones named "${name}" and find its technical specifications and pricing.
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"form_factor":"over-ear","driver_size_mm":40,"frequency_response":"20Hz-20kHz","impedance_ohm":32,"sensitivity_db":105,"noise_canceling":true,"wireless":true,"bluetooth_version":"5.3","codec":"AAC, LDAC","battery_hours":30,"weight_g":250,"has_microphone":true,"ip_rating":"IPX4","connectivity":"Bluetooth 5.3, 3.5mm"}
+{"price_usd":349,"form_factor":"over-ear","driver_size_mm":40,"frequency_response":"20Hz-20kHz","impedance_ohm":32,"sensitivity_db":105,"noise_canceling":true,"wireless":true,"bluetooth_version":"5.3","codec":"AAC, LDAC","battery_hours":30,"weight_g":250,"has_microphone":true,"ip_rating":"IPX4","connectivity":"Bluetooth 5.3, 3.5mm"}
+price_usd: retail price in USD (integer), null if unknown
 form_factor: over-ear/on-ear/in-ear/tws
 Use null for any value not found.
 Now return the JSON for "${name}".`,
 
-  monitor: (name) => `Search the web for the monitor named "${name}" and find its technical specifications.
+  monitor: (name) => `Search the web for the monitor named "${name}" and find its technical specifications and pricing.
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"display_inch":27.0,"display_resolution":"2560x1440","panel_type":"IPS","display_hz":165,"response_time_ms":1,"brightness_nits":400,"hdr":"HDR400","aspect_ratio":"16:9","adaptive_sync":"G-Sync Compatible, FreeSync Premium","curved":false,"vesa_mount":true,"weight_kg":5.2,"display_color_gamut":"sRGB 99%"}
+{"price_usd":599,"display_inch":27.0,"display_resolution":"2560x1440","panel_type":"IPS","display_hz":165,"response_time_ms":1,"brightness_nits":400,"hdr":"HDR400","aspect_ratio":"16:9","adaptive_sync":"G-Sync Compatible, FreeSync Premium","curved":false,"vesa_mount":true,"weight_kg":5.2,"display_color_gamut":"sRGB 99%"}
+price_usd: retail price in USD (integer), null if unknown
 panel_type: IPS/VA/TN/OLED/QD-OLED/Mini-LED/WOLED
 Use null for any value not found.
 Now return the JSON for "${name}".`,
 
-  tv: (name) => `Search the web for the TV named "${name}" and find its technical specifications.
+  tv: (name) => `Search the web for the TV named "${name}" and find its technical specifications and pricing.
 Return a single JSON object only. No markdown, no explanation, no code fences:
-{"display_inch":65.0,"display_resolution":"3840x2160","panel_type":"OLED","display_hz":120,"hdr":"HDR10+, Dolby Vision, HLG","brightness_nits":800,"smart_platform":"webOS","audio_watts":60,"hdmi_ports":4,"usb_ports":3,"weight_kg":21.5,"thickness_mm":48,"display_color_gamut":"DCI-P3 99%"}
+{"price_usd":1799,"display_inch":65.0,"display_resolution":"3840x2160","panel_type":"OLED","display_hz":120,"hdr":"HDR10+, Dolby Vision, HLG","brightness_nits":800,"smart_platform":"webOS","audio_watts":60,"hdmi_ports":4,"usb_ports":3,"weight_kg":21.5,"thickness_mm":48,"display_color_gamut":"DCI-P3 99%"}
+price_usd: retail price in USD (integer), null if unknown
 panel_type: OLED/QLED/WOLED/QD-OLED/Mini-LED/LED/MICRO-LED
 smart_platform: webOS/Tizen/Google TV/Android TV/Roku/Fire TV
 Use null for any value not found.

@@ -936,8 +936,12 @@ export default function ProductEditPage() {
       const json = await res.json()
       if (!res.ok) { setMessage({ type: 'err', text: json.error ?? '스펙 채우기 실패' }); return }
       if (json.specs) {
+        // price_usd → 기본 정보에, 나머지 → 카테고리 스펙에
+        const { price_usd, launch_year, ...catSpecs } = json.specs as Record<string, unknown>
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setCategorySpecs((prev: any) => ({ ...prev, ...json.specs }))
+        setCategorySpecs((prev: any) => ({ ...prev, ...catSpecs }))
+        if (price_usd != null) patchForm('price_usd', price_usd)
+        if (launch_year != null) patchCommon('launch_year', launch_year)
         setMessage({ type: 'ok', text: '스펙 자동 채우기 완료 — 저장 버튼으로 반영하세요' })
       }
     } catch (e) {
@@ -1461,12 +1465,9 @@ export default function ProductEditPage() {
               </Field>
             )}
 
-            {/* 출시연도 · 가격 · 색상 — 모든 카테고리 공통 */}
+            {/* 출시연도 — 모든 카테고리 공통 (가격은 기본 정보 섹션의 price_usd로 통일) */}
             <Field label="출시연도">
               <NumberInput value={gn(commonSpecs, 'launch_year')} onChange={(v) => patchCommon('launch_year', v)} />
-            </Field>
-            <Field label="출시가격 (USD)">
-              <NumberInput value={gn(commonSpecs, 'launch_price_usd')} onChange={(v) => patchCommon('launch_price_usd', v)} />
             </Field>
             {category !== 'car' && (
               <div className="md:col-span-2">
