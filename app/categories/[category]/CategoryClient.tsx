@@ -751,29 +751,33 @@ function FilterSidebar({
         </FilterSection>
       )}
 
-      {/* RAM */}
-      <RangeFilter
-        title={t('cat.filter_min_ram')}
-        absMin={0} absMax={dataRanges.ramMax}
-        valueMin={filters.ramMin} valueMax={filters.ramMax}
-        step={2}
-        format={(v) => `${v}GB`}
-        onChange={(min, max) => onChange({ ...filters, ramMin: min, ramMax: max })}
-      />
+      {/* RAM — electronics only */}
+      {['smartphone', 'tablet', 'smartwatch', 'laptop'].includes(category) && (
+        <RangeFilter
+          title={t('cat.filter_min_ram')}
+          absMin={0} absMax={dataRanges.ramMax}
+          valueMin={filters.ramMin} valueMax={filters.ramMax}
+          step={2}
+          format={(v) => `${v}GB`}
+          onChange={(min, max) => onChange({ ...filters, ramMin: min, ramMax: max })}
+        />
+      )}
 
-      {/* Display size */}
-      <RangeFilter
-        title={t('cat.filter_display')}
-        absMin={0} absMax={dataRanges.displayMax}
-        valueMin={filters.displayMin} valueMax={filters.displayMax}
-        step={0.1}
-        format={(v) => `${v.toFixed(1)}"`}
-        onChange={(min, max) => onChange({ ...filters, displayMin: min, displayMax: max })}
-        defaultOpen={false}
-      />
+      {/* Display size — screen-based categories only */}
+      {['smartphone', 'tablet', 'laptop', 'monitor', 'tv'].includes(category) && (
+        <RangeFilter
+          title={t('cat.filter_display')}
+          absMin={0} absMax={dataRanges.displayMax}
+          valueMin={filters.displayMin} valueMax={filters.displayMax}
+          step={0.1}
+          format={(v) => `${v.toFixed(1)}"`}
+          onChange={(min, max) => onChange({ ...filters, displayMin: min, displayMax: max })}
+          defaultOpen={false}
+        />
+      )}
 
-      {/* OS */}
-      {availableOsList.length > 0 && (
+      {/* OS — electronics only */}
+      {['smartphone', 'tablet', 'laptop', 'smartwatch'].includes(category) && availableOsList.length > 0 && (
         <FilterSection title={t('cat.filter_os')} defaultOpen={false}>
           <div className="space-y-0.5">
             <OptionRow
