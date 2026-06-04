@@ -1,3 +1,9 @@
+-- STEP 1: products.category CHECK 제약 확장 (headphones, tv, car 추가)
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_category_check;
+ALTER TABLE products ADD CONSTRAINT products_category_check
+  CHECK (category IN ('laptop', 'smartphone', 'tablet', 'smartwatch', 'monitor', 'headphones', 'tv', 'car'));
+
+-- STEP 2: 새 스펙 테이블
 -- specs_headphones
 CREATE TABLE IF NOT EXISTS specs_headphones (
   product_id uuid PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE,
