@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase'
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch']
+const CATEGORIES = ['', 'laptop', 'smartphone', 'tablet', 'smartwatch', 'headphones', 'monitor', 'tv', 'car']
 const BRANDS = ['', 'Samsung', 'Apple', 'HP', 'ASUS', 'Dell', 'Lenovo', 'LG', 'Sony']
 const PAGE_SIZE = 50
 
@@ -106,7 +106,7 @@ export default function AdminPage() {
   }[]>([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
-  const [productCatTab, setProductCatTab] = useState<'smartphone' | 'tablet' | 'laptop'>('smartphone')
+  const [productCatTab, setProductCatTab] = useState<'smartphone' | 'tablet' | 'laptop' | 'headphones' | 'monitor' | 'tv' | 'car'>('smartphone')
   const [brand, setBrand] = useState('')
   const [page, setPage] = useState(0)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -256,6 +256,12 @@ export default function AdminPage() {
   const [collectResult, setCollectResult] = useState<{ inserted: number; skipped: number } | null>(null)
   const [collectError, setCollectError] = useState<string | null>(null)
 
+  // Wikidata
+  const [wikidataCollecting, setWikidataCollecting] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [wikidataResult, setWikidataResult] = useState<any[] | null>(null)
+  const [wikidataError, setWikidataError] = useState<string | null>(null)
+
   // Errors
   const [usersError, setUsersError] = useState<string | null>(null)
   const [compError, setCompError] = useState<string | null>(null)
@@ -277,11 +283,11 @@ export default function AdminPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const tabParam = params.get('tab') as Tab | null
-    const catParam = params.get('category') as 'smartphone' | 'tablet' | 'laptop' | null
+    const catParam = params.get('category') as 'smartphone' | 'tablet' | 'laptop' | 'headphones' | 'monitor' | 'tv' | 'car' | null
     if (tabParam && ['dashboard', 'products', 'users', 'comparisons', 'cpus', 'gpus', 'reports', 'inquiries', 'edit_requests', 'add_requests'].includes(tabParam)) {
       setTab(tabParam)
     }
-    if (catParam && ['smartphone', 'tablet', 'laptop'].includes(catParam)) {
+    if (catParam && ['smartphone', 'tablet', 'laptop', 'headphones', 'monitor', 'tv', 'car'].includes(catParam)) {
       setProductCatTab(catParam)
     }
   }, [])
@@ -959,6 +965,27 @@ export default function AdminPage() {
     fetchEvents()
   }, [token, fetchEvents])
 
+  const collectWikidata = useCallback(async () => {
+    if (!token) return
+    setWikidataCollecting(true)
+    setWikidataResult(null)
+    setWikidataError(null)
+    try {
+      const res = await fetch('/api/admin/collect-wikidata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ categories: [productCatTab] }),
+      })
+      const d = await res.json()
+      if (!res.ok) { setWikidataError(d.error ?? 'Failed'); return }
+      setWikidataResult(d.results)
+    } catch (e: unknown) {
+      setWikidataError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setWikidataCollecting(false)
+    }
+  }, [token, productCatTab])
+
   const collectNow = useCallback(async () => {
     if (!token) return
     setCollectingEvents(true)
@@ -1396,14 +1423,34 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-black">제품 관리</h1>
-              <Link
-                href={`/admin/products/new?category=${productCatTab}`}
-                className="flex items-center gap-1.5 text-sm bg-accent hover:bg-accent/90 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
-              >
-                <Plus size={14} />
-                새 제품 추가
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={collectWikidata}
+                  disabled={wikidataCollecting}
+                  className="flex items-center gap-1.5 text-sm border border-border text-white/60 hover:text-white hover:border-white/30 disabled:opacity-50 px-3 py-2 rounded-lg transition-colors"
+                >
+                  <RefreshCw size={13} className={wikidataCollecting ? 'animate-spin' : ''} />
+                  {wikidataCollecting ? 'Wikidata 수집 중...' : 'Wikidata 자동수집'}
+                </button>
+                <Link
+                  href={`/admin/products/new?category=${productCatTab}`}
+                  className="flex items-center gap-1.5 text-sm bg-accent hover:bg-accent/90 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+                >
+                  <Plus size={14} />
+                  새 제품 추가
+                </Link>
+              </div>
             </div>
+            {wikidataResult && (
+              <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400">
+                ✅ Wikidata 수집 완료: {wikidataResult.map((r: { category: string; inserted: number; skipped: number }) => `${r.category} +${r.inserted}`).join(', ')}
+              </div>
+            )}
+            {wikidataError && (
+              <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+                ❌ {wikidataError}
+              </div>
+            )}
 
             {/* 카테고리 탭 */}
             <div className="flex gap-1 mb-5 border-b border-border">
@@ -1411,6 +1458,10 @@ export default function AdminPage() {
                 { key: 'smartphone', label: '스마트폰' },
                 { key: 'tablet',     label: '태블릿'   },
                 { key: 'laptop',     label: '랩탑'     },
+                { key: 'headphones', label: '헤드폰'   },
+                { key: 'monitor',    label: '모니터'   },
+                { key: 'tv',         label: 'TV'       },
+                { key: 'car',        label: '자동차'   },
               ] as const).map((t) => (
                 <button
                   key={t.key}

@@ -592,6 +592,7 @@ function WritePageInner() {
             body: finalBody,
             rating: null,
             category: null,
+            product_ids: products.map(p => p.id),
           }),
         })
         const json = await res.json()

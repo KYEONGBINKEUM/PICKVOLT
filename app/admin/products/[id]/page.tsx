@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
   .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
-const CATEGORIES = ['laptop', 'smartphone', 'tablet', 'smartwatch']
+const CATEGORIES = ['laptop', 'smartphone', 'tablet', 'smartwatch', 'headphones', 'monitor', 'tv', 'car']
 const SCRAPE_STATUSES = ['ok', 'pending', 'failed', 'partial']
 const STORAGE_TYPES = ['SSD', 'HDD', 'eMMC', 'UFS']
 const DISPLAY_TYPES = ['IPS', 'OLED', 'AMOLED', 'LTPO OLED', 'VA', 'TN', 'Mini-LED', 'Liquid Retina']
@@ -18,6 +18,11 @@ const BRANDS = [
   'Apple', 'Samsung', 'Xiaomi', 'OPPO', 'Vivo', 'Huawei', 'Motorola', 'OnePlus', 'Google', 'Realme', 'Sony', 'Nokia',
   // 노트북
   'Dell', 'HP', 'Lenovo', 'ASUS', 'Acer', 'Microsoft', 'LG', 'Razer', 'MSI', 'Toshiba',
+  // 헤드폰/모니터/TV
+  'Bose', 'Sony', 'Sennheiser', 'Audio-Technica', 'JBL', 'AKG', 'Jabra', 'Bang & Olufsen',
+  'LG', 'Samsung', 'ASUS', 'BenQ', 'Dell', 'AOC', 'ViewSonic',
+  // 자동차
+  'Tesla', 'BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Hyundai', 'Kia', 'Ford', 'Volkswagen', 'Volvo', 'Porsche', 'BYD',
 ]
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
@@ -654,7 +659,11 @@ export default function ProductEditPage() {
         specs_laptop(*),
         specs_smartphone(*),
         specs_tablet(*),
-        specs_smartwatch(*)
+        specs_smartwatch(*),
+        specs_headphones(*),
+        specs_monitor(*),
+        specs_tv(*),
+        specs_car(*)
       `)
       .eq('id', id)
       .single()
@@ -1630,6 +1639,208 @@ export default function ProductEditPage() {
                   <Toggle value={gb(categorySpecs, 'cellular')} onChange={(v) => patchCat('cellular', v)} label="셀룰러" />
                 </div>
               </div>
+            </div>
+          </SectionCard>
+        )}
+
+        {category === 'headphones' && (
+          <SectionCard title="헤드폰 스펙 (specs_headphones)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="폼팩터">
+                <SelectInput value={g(categorySpecs, 'form_factor')} onChange={(v) => patchCat('form_factor', v)} options={['over-ear', 'on-ear', 'in-ear', 'tws']} />
+              </Field>
+              <Field label="드라이버 크기 (mm)">
+                <NumberInput value={gn(categorySpecs, 'driver_size_mm')} onChange={(v) => patchCat('driver_size_mm', v)} step="any" />
+              </Field>
+              <Field label="주파수 응답">
+                <TextInput value={g(categorySpecs, 'frequency_response')} onChange={(v) => patchCat('frequency_response', v)} placeholder="20Hz-20kHz" />
+              </Field>
+              <Field label="임피던스 (Ω)">
+                <NumberInput value={gn(categorySpecs, 'impedance_ohm')} onChange={(v) => patchCat('impedance_ohm', v)} step="any" />
+              </Field>
+              <Field label="감도 (dB)">
+                <NumberInput value={gn(categorySpecs, 'sensitivity_db')} onChange={(v) => patchCat('sensitivity_db', v)} step="any" />
+              </Field>
+              <Field label="배터리 사용시간 (h)">
+                <NumberInput value={gn(categorySpecs, 'battery_hours')} onChange={(v) => patchCat('battery_hours', v)} step="any" />
+              </Field>
+              <Field label="무게 (g)">
+                <NumberInput value={gn(categorySpecs, 'weight_g')} onChange={(v) => patchCat('weight_g', v)} step="any" />
+              </Field>
+              <Field label="블루투스 버전">
+                <TextInput value={g(categorySpecs, 'bluetooth_version')} onChange={(v) => patchCat('bluetooth_version', v)} placeholder="5.3" />
+              </Field>
+              <Field label="코덱">
+                <TextInput value={g(categorySpecs, 'codec')} onChange={(v) => patchCat('codec', v)} placeholder="AAC, LDAC, aptX" />
+              </Field>
+              <Field label="IP 등급">
+                <TextInput value={g(categorySpecs, 'ip_rating')} onChange={(v) => patchCat('ip_rating', v)} placeholder="IPX4" />
+              </Field>
+              <div className="md:col-span-2">
+                <label className="block text-xs text-white/40 mb-2">옵션</label>
+                <div className="flex flex-wrap gap-2">
+                  <Toggle value={gb(categorySpecs, 'noise_canceling')} onChange={(v) => patchCat('noise_canceling', v)} label="노이즈 캔슬링" />
+                  <Toggle value={gb(categorySpecs, 'wireless')} onChange={(v) => patchCat('wireless', v)} label="무선" />
+                  <Toggle value={gb(categorySpecs, 'has_microphone')} onChange={(v) => patchCat('has_microphone', v)} label="마이크" />
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
+
+        {category === 'monitor' && (
+          <SectionCard title="모니터 스펙 (specs_monitor)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="화면 크기 (인치)">
+                <NumberInput value={gn(categorySpecs, 'display_inch')} onChange={(v) => patchCat('display_inch', v)} step="any" />
+              </Field>
+              <Field label="해상도">
+                <TextInput value={g(categorySpecs, 'display_resolution')} onChange={(v) => patchCat('display_resolution', v)} placeholder="2560x1440" />
+              </Field>
+              <Field label="패널 타입">
+                <SelectInput value={g(categorySpecs, 'panel_type')} onChange={(v) => patchCat('panel_type', v)} options={['IPS', 'VA', 'TN', 'OLED', 'QD-OLED', 'Mini-LED', 'WOLED']} />
+              </Field>
+              <Field label="주사율 (Hz)">
+                <NumberInput value={gn(categorySpecs, 'display_hz')} onChange={(v) => patchCat('display_hz', v)} />
+              </Field>
+              <Field label="응답속도 (ms)">
+                <NumberInput value={gn(categorySpecs, 'response_time_ms')} onChange={(v) => patchCat('response_time_ms', v)} step="any" />
+              </Field>
+              <Field label="밝기 (nits)">
+                <NumberInput value={gn(categorySpecs, 'brightness_nits')} onChange={(v) => patchCat('brightness_nits', v)} />
+              </Field>
+              <Field label="HDR">
+                <TextInput value={g(categorySpecs, 'hdr')} onChange={(v) => patchCat('hdr', v)} placeholder="HDR400, HDR1000, Dolby Vision" />
+              </Field>
+              <Field label="화면비">
+                <TextInput value={g(categorySpecs, 'aspect_ratio')} onChange={(v) => patchCat('aspect_ratio', v)} placeholder="16:9, 21:9, 32:9" />
+              </Field>
+              <Field label="가변싱크">
+                <TextInput value={g(categorySpecs, 'adaptive_sync')} onChange={(v) => patchCat('adaptive_sync', v)} placeholder="G-Sync, FreeSync Premium" />
+              </Field>
+              <Field label="색영역">
+                <TextInput value={g(categorySpecs, 'display_color_gamut')} onChange={(v) => patchCat('display_color_gamut', v)} placeholder="sRGB 99%, DCI-P3 98%" />
+              </Field>
+              <Field label="무게 (kg)">
+                <NumberInput value={gn(categorySpecs, 'weight_kg')} onChange={(v) => patchCat('weight_kg', v)} step="any" />
+              </Field>
+              <div className="md:col-span-2">
+                <label className="block text-xs text-white/40 mb-2">옵션</label>
+                <div className="flex flex-wrap gap-2">
+                  <Toggle value={gb(categorySpecs, 'curved')} onChange={(v) => patchCat('curved', v)} label="커브드" />
+                  <Toggle value={gb(categorySpecs, 'vesa_mount')} onChange={(v) => patchCat('vesa_mount', v)} label="VESA 마운트" />
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
+
+        {category === 'tv' && (
+          <SectionCard title="TV 스펙 (specs_tv)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="화면 크기 (인치)">
+                <NumberInput value={gn(categorySpecs, 'display_inch')} onChange={(v) => patchCat('display_inch', v)} step="any" />
+              </Field>
+              <Field label="해상도">
+                <SelectInput value={g(categorySpecs, 'display_resolution')} onChange={(v) => patchCat('display_resolution', v)} options={['3840x2160', '7680x4320', '1920x1080', '1280x720']} />
+              </Field>
+              <Field label="패널 타입">
+                <SelectInput value={g(categorySpecs, 'panel_type')} onChange={(v) => patchCat('panel_type', v)} options={['OLED', 'QLED', 'WOLED', 'QD-OLED', 'Mini-LED', 'LED', 'MICRO-LED']} />
+              </Field>
+              <Field label="주사율 (Hz)">
+                <NumberInput value={gn(categorySpecs, 'display_hz')} onChange={(v) => patchCat('display_hz', v)} />
+              </Field>
+              <Field label="HDR">
+                <TextInput value={g(categorySpecs, 'hdr')} onChange={(v) => patchCat('hdr', v)} placeholder="HDR10+, Dolby Vision, HLG" />
+              </Field>
+              <Field label="밝기 (nits)">
+                <NumberInput value={gn(categorySpecs, 'brightness_nits')} onChange={(v) => patchCat('brightness_nits', v)} />
+              </Field>
+              <Field label="스마트 플랫폼">
+                <SelectInput value={g(categorySpecs, 'smart_platform')} onChange={(v) => patchCat('smart_platform', v)} options={['webOS', 'Tizen', 'Google TV', 'Android TV', 'Roku', 'Fire TV']} />
+              </Field>
+              <Field label="음향 출력 (W)">
+                <NumberInput value={gn(categorySpecs, 'audio_watts')} onChange={(v) => patchCat('audio_watts', v)} />
+              </Field>
+              <Field label="HDMI 포트 수">
+                <NumberInput value={gn(categorySpecs, 'hdmi_ports')} onChange={(v) => patchCat('hdmi_ports', v)} />
+              </Field>
+              <Field label="USB 포트 수">
+                <NumberInput value={gn(categorySpecs, 'usb_ports')} onChange={(v) => patchCat('usb_ports', v)} />
+              </Field>
+              <Field label="무게 (kg)">
+                <NumberInput value={gn(categorySpecs, 'weight_kg')} onChange={(v) => patchCat('weight_kg', v)} step="any" />
+              </Field>
+              <Field label="두께 (mm)">
+                <NumberInput value={gn(categorySpecs, 'thickness_mm')} onChange={(v) => patchCat('thickness_mm', v)} step="any" />
+              </Field>
+              <Field label="색영역">
+                <TextInput value={g(categorySpecs, 'display_color_gamut')} onChange={(v) => patchCat('display_color_gamut', v)} placeholder="DCI-P3 99%" />
+              </Field>
+            </div>
+          </SectionCard>
+        )}
+
+        {category === 'car' && (
+          <SectionCard title="자동차 스펙 (specs_car)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="차체 형태">
+                <SelectInput value={g(categorySpecs, 'body_type')} onChange={(v) => patchCat('body_type', v)} options={['sedan', 'suv', 'hatchback', 'coupe', 'wagon', 'pickup', 'van', 'convertible']} />
+              </Field>
+              <Field label="구동 방식">
+                <SelectInput value={g(categorySpecs, 'drivetrain')} onChange={(v) => patchCat('drivetrain', v)} options={['FWD', 'RWD', 'AWD', '4WD']} />
+              </Field>
+              <Field label="파워트레인">
+                <SelectInput value={g(categorySpecs, 'powertrain')} onChange={(v) => patchCat('powertrain', v)} options={['BEV', 'PHEV', 'HEV', 'MHEV', 'ICE']} />
+              </Field>
+              <Field label="배기량 (cc)">
+                <NumberInput value={gn(categorySpecs, 'engine_cc')} onChange={(v) => patchCat('engine_cc', v)} />
+              </Field>
+              <Field label="최고출력 (hp)">
+                <NumberInput value={gn(categorySpecs, 'horsepower')} onChange={(v) => patchCat('horsepower', v)} />
+              </Field>
+              <Field label="최대토크 (Nm)">
+                <NumberInput value={gn(categorySpecs, 'torque_nm')} onChange={(v) => patchCat('torque_nm', v)} />
+              </Field>
+              <Field label="0-100 km/h (초)">
+                <NumberInput value={gn(categorySpecs, 'acceleration_0_100')} onChange={(v) => patchCat('acceleration_0_100', v)} step="0.1" />
+              </Field>
+              <Field label="최고속도 (km/h)">
+                <NumberInput value={gn(categorySpecs, 'top_speed_kmh')} onChange={(v) => patchCat('top_speed_kmh', v)} />
+              </Field>
+              <Field label="전기 주행거리 (km)">
+                <NumberInput value={gn(categorySpecs, 'range_km')} onChange={(v) => patchCat('range_km', v)} />
+              </Field>
+              <Field label="배터리 용량 (kWh)">
+                <NumberInput value={gn(categorySpecs, 'battery_kwh')} onChange={(v) => patchCat('battery_kwh', v)} step="any" />
+              </Field>
+              <Field label="연비 (km/L)">
+                <NumberInput value={gn(categorySpecs, 'fuel_efficiency_km_l')} onChange={(v) => patchCat('fuel_efficiency_km_l', v)} step="any" />
+              </Field>
+              <Field label="승차 인원">
+                <NumberInput value={gn(categorySpecs, 'seating')} onChange={(v) => patchCat('seating', v)} />
+              </Field>
+              <Field label="트렁크 용량 (L)">
+                <NumberInput value={gn(categorySpecs, 'cargo_liters')} onChange={(v) => patchCat('cargo_liters', v)} />
+              </Field>
+              <Field label="공차중량 (kg)">
+                <NumberInput value={gn(categorySpecs, 'curb_weight_kg')} onChange={(v) => patchCat('curb_weight_kg', v)} />
+              </Field>
+              <Field label="전장 (mm)">
+                <NumberInput value={gn(categorySpecs, 'length_mm')} onChange={(v) => patchCat('length_mm', v)} />
+              </Field>
+              <Field label="전폭 (mm)">
+                <NumberInput value={gn(categorySpecs, 'width_mm')} onChange={(v) => patchCat('width_mm', v)} />
+              </Field>
+              <Field label="전고 (mm)">
+                <NumberInput value={gn(categorySpecs, 'height_mm')} onChange={(v) => patchCat('height_mm', v)} />
+              </Field>
+              <Field label="휠베이스 (mm)">
+                <NumberInput value={gn(categorySpecs, 'wheelbase_mm')} onChange={(v) => patchCat('wheelbase_mm', v)} />
+              </Field>
+              <Field label="세그먼트">
+                <TextInput value={g(categorySpecs, 'segment')} onChange={(v) => patchCat('segment', v)} placeholder="C-segment, SUV-C..." />
+              </Field>
             </div>
           </SectionCard>
         )}

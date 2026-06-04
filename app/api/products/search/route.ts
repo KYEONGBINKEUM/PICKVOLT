@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     const q        = searchParams.get('q')        ?? ''
     const category = searchParams.get('category') ?? ''
     const brand    = searchParams.get('brand')    ?? ''
+    const limit    = Math.min(parseInt(searchParams.get('limit') ?? '12', 10), 50)
 
     let query = supabase
       .from('products')
@@ -32,9 +33,10 @@ export async function GET(req: NextRequest) {
         specs_tablet     ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support )
       `)
       .eq('is_visible', true)
-      .limit(12)
+      .limit(limit)
 
-    if (q)        query = query.ilike('name', `%${q}%`)
+    // name + brand 동시 검색 (OR 조건)
+    if (q)        query = query.or(`name.ilike.%${q}%,brand.ilike.%${q}%`)
     if (category) query = query.eq('category', category)
     if (brand)    query = query.eq('brand', brand)
 

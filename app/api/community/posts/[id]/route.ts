@@ -98,6 +98,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 제품 태그 업데이트 (product_ids가 전달된 경우)
+  if ('product_ids' in body) {
+    const productIds: string[] = Array.isArray(body.product_ids) ? body.product_ids : []
+    await supabase.from('community_post_products').delete().eq('post_id', id)
+    if (productIds.length > 0) {
+      await supabase.from('community_post_products').insert(
+        productIds.map((pid: string) => ({ post_id: id, product_id: pid }))
+      )
+    }
+  }
+
   return NextResponse.json(data)
 }
 

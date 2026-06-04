@@ -15,6 +15,10 @@ import {
   Smartphone,
   Laptop,
   Tablet,
+  Headphones,
+  Monitor,
+  Tv,
+  Car,
   Search,
   X,
   Heart,
@@ -93,12 +97,20 @@ const CATEGORY_ICON: Record<string, typeof Smartphone> = {
   smartphone: Smartphone,
   laptop:     Laptop,
   tablet:     Tablet,
+  headphones: Headphones,
+  monitor:    Monitor,
+  tv:         Tv,
+  car:        Car,
 }
 
 const CATEGORY_SUBLABEL: Record<string, string> = {
   smartphone: 'Smartphones',
   laptop:     'Laptops',
   tablet:     'Tablets',
+  headphones: 'Headphones & Earbuds',
+  monitor:    'Monitors',
+  tv:         'Televisions',
+  car:        'Cars & EVs',
 }
 
 // ─── Filters interface ────────────────────────────────────────────────────────
