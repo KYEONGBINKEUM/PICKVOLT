@@ -617,6 +617,7 @@ export default function ProductEditPage() {
   const [translating, setTranslating] = useState(false)
   const [amazonFilling, setAmazonFilling] = useState(false)
   const [specsFilling, setSpecsFilling] = useState(false)
+  const [imageFilling, setImageFilling] = useState(false)
   const [sameProducts, setSameProducts] = useState<{ id: string; name: string; brand: string; image_url: string | null; is_visible: boolean }[]>([])
 
   useEffect(() => {
@@ -921,6 +922,33 @@ export default function ProductEditPage() {
     }
   }
 
+  const handleImageFill = async () => {
+    const name = (form.name as string)?.trim()
+    const cat = (form.category as string)?.trim()
+    if (!name) return
+    setImageFilling(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/ai-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name, kind: 'image', category: cat }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setMessage({ type: 'err', text: json.error ?? '이미지 검색 실패' }); return }
+      if (json.image_url) {
+        patchForm('image_url', json.image_url)
+        setMessage({ type: 'ok', text: '이미지 URL 찾음 — 미리보기 확인 후 저장하세요' })
+      } else {
+        setMessage({ type: 'err', text: '적합한 이미지를 찾지 못했습니다. URL을 직접 입력해주세요.' })
+      }
+    } catch (e) {
+      setMessage({ type: 'err', text: String(e) })
+    } finally {
+      setImageFilling(false)
+    }
+  }
+
   const handleSpecsFill = async () => {
     const name = (form.name as string)?.trim()
     const cat = (form.category as string)?.trim()
@@ -1151,14 +1179,21 @@ export default function ProductEditPage() {
               <Field label="이미지 URL">
                 <TextInput value={g(form, 'image_url')} onChange={(v) => patchForm('image_url', v)} placeholder="https://..." />
               </Field>
-              <div>
-                <label className="block text-xs text-white/40 mb-1.5">또는 파일 업로드</label>
+              <div className="flex items-center gap-2 flex-wrap">
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }} />
                 <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
                   className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-border rounded-lg text-sm text-white/60 hover:text-white disabled:opacity-40 transition-colors">
                   {uploading ? <RefreshCw size={13} className="animate-spin" /> : <Upload size={13} />}
                   {uploading ? '업로드 중...' : '이미지 선택'}
+                </button>
+                <button
+                  onClick={handleImageFill}
+                  disabled={imageFilling || !g(form, 'name')}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-accent/10 border border-accent/30 rounded-lg text-sm text-accent font-semibold hover:bg-accent/20 disabled:opacity-40 transition-colors"
+                >
+                  {imageFilling ? <RefreshCw size={13} className="animate-spin" /> : <Zap size={13} />}
+                  {imageFilling ? 'AI 검색 중...' : 'AI 이미지 검색'}
                 </button>
               </div>
             </div>

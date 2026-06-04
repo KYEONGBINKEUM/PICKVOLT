@@ -88,6 +88,22 @@ function extractJson(text: string): Record<string, unknown> {
 
 const AMAZON_TAG = 'pickvolt-20'
 
+const IMAGE_PROMPT = (name: string, category: string) => `Search the web for a clean product image of "${name}" (category: ${category}).
+
+Find a direct image file URL (ending in .jpg, .jpeg, .png, or .webp).
+Prefer in this order:
+1. Official manufacturer press/media page
+2. Wikipedia Commons (upload.wikimedia.org/...)
+3. Reputable review site (caranddriver.com, motortrend.com, rtings.com, notebookcheck.net)
+
+The image should show the product clearly on a clean background (white, grey, or studio).
+Do NOT use social media, auction sites, or random blogs.
+
+Return a single JSON object only. No markdown, no explanation:
+{"image_url":"https://upload.wikimedia.org/wikipedia/commons/..."}
+
+Now return for "${name}". Return {"image_url":null} if no suitable direct image URL found.`
+
 const SPECS_PROMPT: Record<string, (name: string) => string> = {
   car: (name) => `Search the web for the car model "${name}" and find its full technical specifications, trim variants, and pricing.
 Return a single JSON object only. No markdown, no explanation, no code fences:
@@ -148,7 +164,7 @@ export async function POST(req: NextRequest) {
 
   const { name, kind, category } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
-  if (!['cpu', 'gpu', 'amazon', 'product_specs'].includes(kind)) {
+  if (!['cpu', 'gpu', 'amazon', 'product_specs', 'image'].includes(kind)) {
     return NextResponse.json({ error: 'invalid kind' }, { status: 400 })
   }
 
@@ -173,6 +189,18 @@ export async function POST(req: NextRequest) {
       if (!asin) return NextResponse.json({ amazon_url: null })
       const amazon_url = `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`
       return NextResponse.json({ amazon_url })
+    }
+
+    if (kind === 'image') {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite',
+        contents: IMAGE_PROMPT(name, category ?? ''),
+        config: { tools: [{ googleSearch: {} }] },
+      })
+      const text = response.text ?? ''
+      if (!text) throw new Error('Empty response from Gemini')
+      const result = extractJson(text)
+      return NextResponse.json({ image_url: result.image_url ?? null })
     }
 
     if (kind === 'product_specs') {
