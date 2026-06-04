@@ -8,18 +8,30 @@ function makeService() {
 }
 
 // ─── Wikidata SPARQL for cars ────────────────────────────────────────────────
-// - Only models with known inception year >= 1995 (recent 30 years)
-// - No image fetch (Wikimedia Commons images are not cutout/transparent)
-const CAR_SPARQL = `
-SELECT DISTINCT ?item ?name ?brand ?year ?fuelLabel WHERE {
-  ?item wdt:P31 wd:Q3231690 .
+// Paginate by year range to bypass LIMIT per query.
+// Q3231690 = automobile model, Q2060700 = automobile series (e.g. Corolla, Civic)
+// No images — Wikimedia photos are not cutout/transparent.
+
+const YEAR_RANGES = [
+  [2020, 2025],
+  [2015, 2019],
+  [2010, 2014],
+  [2005, 2009],
+  [1995, 2004],
+]
+
+function buildCarSparql(yearMin: number, yearMax: number): string {
+  return `
+SELECT DISTINCT ?name ?brand ?year ?fuelLabel WHERE {
+  { ?item wdt:P31 wd:Q3231690 } UNION { ?item wdt:P31 wd:Q2060700 }
   ?item rdfs:label ?name FILTER(LANG(?name) = "en") .
   ?item wdt:P571 ?d . BIND(YEAR(?d) AS ?year)
-  FILTER(?year >= 1995)
+  FILTER(?year >= ${yearMin} && ?year <= ${yearMax})
   OPTIONAL { ?item wdt:P176 ?mfr . ?mfr rdfs:label ?brand FILTER(LANG(?brand) = "en") }
   OPTIONAL { ?item wdt:P5765 ?fuel . ?fuel rdfs:label ?fuelLabel FILTER(LANG(?fuelLabel) = "en") }
-  FILTER(BOUND(?name) && STRLEN(STR(?name)) > 2)
-} ORDER BY DESC(?year) LIMIT 1000`
+  FILTER(STRLEN(STR(?name)) > 2)
+} LIMIT 400`
+}
 
 interface WikiCar {
   name: string
@@ -28,34 +40,45 @@ interface WikiCar {
   fuel: string | null
 }
 
-async function fetchCarsFromWikidata(): Promise<WikiCar[]> {
+async function sparqlFetch(query: string): Promise<WikiCar[]> {
   try {
-    const url = `https://query.wikidata.org/sparql?query=${encodeURIComponent(CAR_SPARQL)}&format=json`
+    const url = `https://query.wikidata.org/sparql?query=${encodeURIComponent(query)}&format=json`
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Pickvolt/1.0 (https://pickvolt.com; contact@pickvolt.com)' },
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(25000),
     })
     if (!res.ok) return []
     const json = await res.json()
     const bindings: Record<string, { value: string }>[] = json.results?.bindings ?? []
-    const seen = new Set<string>()
-    return bindings
-      .map(b => ({
-        name: b.name?.value ?? '',
-        brand: b.brand?.value ?? '',
-        year: b.year?.value ? parseInt(b.year.value) : null,
-        fuel: b.fuelLabel?.value ?? null,
-      }))
-      .filter(p => {
-        if (!p.name) return false
-        const key = `${p.brand}::${p.name}`.toLowerCase()
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
+    return bindings.map(b => ({
+      name: b.name?.value ?? '',
+      brand: b.brand?.value ?? '',
+      year: b.year?.value ? parseInt(b.year.value) : null,
+      fuel: b.fuelLabel?.value ?? null,
+    })).filter(p => p.name.length > 0)
   } catch {
     return []
   }
+}
+
+async function fetchCarsFromWikidata(): Promise<WikiCar[]> {
+  const all: WikiCar[] = []
+  const seen = new Set<string>()
+
+  for (const [yearMin, yearMax] of YEAR_RANGES) {
+    const results = await sparqlFetch(buildCarSparql(yearMin, yearMax))
+    for (const car of results) {
+      const key = `${car.brand}::${car.name}`.toLowerCase()
+      if (!seen.has(key)) {
+        seen.add(key)
+        all.push(car)
+      }
+    }
+    // 짧은 딜레이로 Wikidata rate limit 회피
+    await new Promise(r => setTimeout(r, 500))
+  }
+
+  return all
 }
 
 // Map Wikidata fuel label → our powertrain enum
