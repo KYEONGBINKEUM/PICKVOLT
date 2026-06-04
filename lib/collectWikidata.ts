@@ -443,18 +443,8 @@ export async function collectWikidataProducts(
       for (const w of wikiCars) {
         if (!w.name) continue
 
-        // Build display name with year range for generation distinction
-        // e.g. "Toyota Corolla (2019-2023)" or "Toyota Corolla (2019-)"
-        let displayName = w.name
-        if (w.year) {
-          const suffix = w.endYear ? `(${w.year}–${w.endYear})` : `(${w.year}–)`
-          // Only append if not already present in name
-          if (!displayName.includes(String(w.year))) {
-            displayName = `${displayName} ${suffix}`
-          }
-        }
-
-        const key = displayName.toLowerCase()
+        // Use name as-is — year stored in launch_year/production_end fields only
+        const key = w.name.toLowerCase()
         if (seedNames.has(key)) {
           const idx = candidates.findIndex(c => c.name.toLowerCase() === key)
           if (idx >= 0) {
@@ -464,7 +454,7 @@ export async function collectWikidataProducts(
           }
         } else {
           candidates.push({
-            name: displayName,
+            name: w.name,
             brand: w.brand,
             launch_year: w.year,
             production_end: w.endYear,
