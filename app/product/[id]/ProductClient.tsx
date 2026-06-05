@@ -55,7 +55,7 @@ interface Product {
   specs:      Specs
   variants?:  ProductVariant[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  raw:        Record<string, any>
+  raw?:       Record<string, any>
 }
 
 interface CommunityPost {
@@ -510,7 +510,7 @@ ${priceHTML}
             {product.name}
           </h1>
           {/* 자동차 연식 범위 */}
-          {product.category === 'car' && product.raw.launch_year && (
+          {product.category === 'car' && product.raw?.launch_year && (
             <p className="text-sm text-white/40 mb-3">
               {product.raw.launch_year as number}–{product.raw.production_end ? String(product.raw.production_end) : '현재'}
               {product.raw.generation ? ` · ${product.raw.generation}` : ''}
@@ -586,7 +586,7 @@ ${priceHTML}
           <div className="bg-surface border border-border rounded-2xl px-6 py-2">
             {/* ── 자동차 ── */}
             {product.category === 'car' && (() => {
-              const r = product.raw as Record<string, unknown>
+              const r = (product.raw ?? {}) as Record<string, unknown>
               return <>
                 <SpecRow label="파워트레인"  value={r.powertrain as string} />
                 <SpecRow label="차체 형태"   value={r.body_type as string} />
@@ -608,7 +608,7 @@ ${priceHTML}
 
             {/* ── 헤드폰 ── */}
             {product.category === 'headphones' && (() => {
-              const r = product.raw as Record<string, unknown>
+              const r = (product.raw ?? {}) as Record<string, unknown>
               return <>
                 <SpecRow label="폼팩터"       value={r.form_factor as string} />
                 <SpecRow label="드라이버"     value={r.driver_size_mm != null ? `${r.driver_size_mm}mm` : null} />
@@ -626,7 +626,7 @@ ${priceHTML}
 
             {/* ── 모니터 ── */}
             {product.category === 'monitor' && (() => {
-              const r = product.raw as Record<string, unknown>
+              const r = (product.raw ?? {}) as Record<string, unknown>
               return <>
                 <SpecRow label="화면 크기"  value={r.display_inch != null ? `${r.display_inch}"` : null} />
                 <SpecRow label="해상도"     value={r.display_resolution as string} />
@@ -644,7 +644,7 @@ ${priceHTML}
 
             {/* ── TV ── */}
             {product.category === 'tv' && (() => {
-              const r = product.raw as Record<string, unknown>
+              const r = (product.raw ?? {}) as Record<string, unknown>
               return <>
                 <SpecRow label="화면 크기"    value={r.display_inch != null ? `${r.display_inch}"` : null} />
                 <SpecRow label="해상도"       value={r.display_resolution as string} />
