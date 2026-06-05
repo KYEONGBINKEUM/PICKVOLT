@@ -99,6 +99,7 @@ interface Product {
   chip_name: string | null
   water_resistance: string | null
   launch_year: number | null
+  production_end: number | null
   variants: {
     id: string
     variant_name: string
@@ -436,6 +437,12 @@ function ProductCard({
             <h3 className="text-[15px] md:text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors pr-16">
               {product.name}
             </h3>
+            {/* 자동차 연식 배지 */}
+            {product.category === 'car' && product.launch_year && (
+              <p className="text-[11px] text-white/35 mt-0.5">
+                {product.launch_year}–{product.production_end ?? '현재'}
+              </p>
+            )}
             {current.price_usd && (
               <p className="text-[13px] md:text-sm font-black text-accent mt-1">
                 ${Number(current.price_usd).toLocaleString()}

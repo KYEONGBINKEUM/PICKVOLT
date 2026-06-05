@@ -1891,7 +1891,18 @@ export default function ProductEditPage() {
                 <TextInput value={g(categorySpecs, 'generation')} onChange={(v) => patchCat('generation', v)} placeholder="E210, F30, 12th Gen, Highland..." />
               </Field>
               <Field label="생산 종료 연도">
-                <NumberInput value={gn(categorySpecs, 'production_end')} onChange={(v) => patchCat('production_end', v)} />
+                <div className="flex items-center gap-2">
+                  <NumberInput value={gn(categorySpecs, 'production_end')} onChange={(v) => patchCat('production_end', v)} />
+                  {!gn(categorySpecs, 'production_end') && (
+                    <button
+                      type="button"
+                      onClick={() => patchCat('production_end', new Date().getFullYear())}
+                      className="shrink-0 px-3 py-2 text-xs border border-border text-white/40 hover:text-white hover:border-white/30 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      단종 처리
+                    </button>
+                  )}
+                </div>
               </Field>
             </div>
             <div className="flex justify-end mb-4">

@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       headphones: 'specs_headphones ( form_factor, noise_canceling, wireless, battery_hours, driver_size_mm )',
       monitor:    'specs_monitor ( display_inch, panel_type, display_hz, hdr, brightness_nits )',
       tv:         'specs_tv ( display_inch, panel_type, display_hz, hdr, smart_platform )',
-      car:        'specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain )',
+      car:        'specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain, generation, production_end )',
       smartwatch: 'specs_smartwatch ( chip_name, water_resistance )',
     }
     const extraSpec = category && newCatSpecs[category] ? `,\n        ${newCatSpecs[category]}` : ''
@@ -172,6 +172,7 @@ export async function GET(req: NextRequest) {
         range_km: car?.range_km ?? null,
         body_type: car?.body_type ?? null,
         drivetrain: car?.drivetrain ?? null,
+        production_end: car?.production_end ?? null,
         // smartwatch
         chip_name: smartwatch?.chip_name ?? null,
         water_resistance: smartwatch?.water_resistance ?? null,
