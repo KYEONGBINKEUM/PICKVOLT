@@ -436,13 +436,12 @@ function ProductCard({
             {/* Always pad right to avoid overlap with the 2 icon buttons (7×2 + gap = ~62px) */}
             <h3 className="text-[15px] md:text-base font-bold text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors pr-16">
               {product.name}
+              {product.category === 'car' && product.launch_year && (
+                <span className="text-[12px] font-normal text-white/35 ml-1">
+                  ({product.launch_year}–{product.production_end ?? '현재'})
+                </span>
+              )}
             </h3>
-            {/* 자동차 연식 배지 */}
-            {product.category === 'car' && product.launch_year && (
-              <p className="text-[11px] text-white/35 mt-0.5">
-                {product.launch_year}–{product.production_end ?? '현재'}
-              </p>
-            )}
             {current.price_usd && (
               <p className="text-[13px] md:text-sm font-black text-accent mt-1">
                 ${Number(current.price_usd).toLocaleString()}

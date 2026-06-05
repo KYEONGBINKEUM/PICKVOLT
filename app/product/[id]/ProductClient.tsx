@@ -506,16 +506,14 @@ ${priceHTML}
           </div>
 
           {/* Name */}
-          <h1 className="text-2xl font-black text-white leading-tight mb-1">
+          <h1 className="text-2xl font-black text-white leading-tight mb-4">
             {product.name}
+            {product.category === 'car' && product.raw?.launch_year && (
+              <span className="text-base font-normal text-white/40 ml-1.5">
+                ({product.raw.launch_year as number}–{product.raw.production_end ? String(product.raw.production_end) : '현재'}{product.raw.generation ? ` · ${product.raw.generation}` : ''})
+              </span>
+            )}
           </h1>
-          {/* 자동차 연식 범위 */}
-          {product.category === 'car' && product.raw?.launch_year && (
-            <p className="text-sm text-white/40 mb-3">
-              {product.raw.launch_year as number}–{product.raw.production_end ? String(product.raw.production_end) : '현재'}
-              {product.raw.generation ? ` · ${product.raw.generation}` : ''}
-            </p>
-          )}
 
           {/* Price */}
           {effectivePrice && (
