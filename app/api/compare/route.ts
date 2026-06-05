@@ -78,9 +78,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'login_required', guestUsed: true }, { status: 401 })
       }
       // 첫 방문 → AI 실행 후 쿠키 세팅해 반환 (히스토리/포인트 차감 없음)
-      const productList = products
-        .map((p: { name: string; specs: Record<string, unknown> }) => `- ${p.name}: ${JSON.stringify(p.specs)}`)
-        .join('\n')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const productList = products.map((p: any) => {
+        const cat = p.category?.toLowerCase(); const raw = p.raw ?? {}
+        if (cat === 'car') return `- ${p.name}: powertrain=${raw.powertrain}, ${raw.horsepower}hp, 0-100=${raw.acceleration_0_100}s, range=${raw.range_km}km, $${p.price_usd}`
+        if (cat === 'headphones') return `- ${p.name}: ${raw.form_factor}, ANC=${raw.noise_canceling}, ${raw.battery_hours}h, ${raw.codec}, $${p.price_usd}`
+        if (cat === 'monitor') return `- ${p.name}: ${raw.display_inch}", ${raw.panel_type}, ${raw.display_hz}Hz, $${p.price_usd}`
+        if (cat === 'tv') return `- ${p.name}: ${raw.display_inch}", ${raw.panel_type}, ${raw.smart_platform}, $${p.price_usd}`
+        return `- ${p.name}: ${JSON.stringify(p.specs)}`
+      }).join('\n')
       const prefText = preferences
         ? `User priorities: budget sensitivity ${preferences.budget}/5, photography ${preferences.photography}/5, performance ${preferences.performance}/5, battery life ${preferences.battery}/5.`
         : ''
@@ -159,11 +165,46 @@ export async function POST(req: NextRequest) {
     }
 
     // AI 호출
-    const productList = products
-      .map((p: { name: string; specs: Record<string, unknown> }) =>
-        `- ${p.name}: ${JSON.stringify(p.specs)}`
-      )
-      .join('\n')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const productList = products.map((p: any) => {
+      const cat = p.category?.toLowerCase()
+      const raw = p.raw ?? {}
+      let specSummary: Record<string, unknown>
+      if (cat === 'car') {
+        specSummary = {
+          powertrain: raw.powertrain, body_type: raw.body_type, drivetrain: raw.drivetrain,
+          horsepower: raw.horsepower ? `${raw.horsepower}hp` : null,
+          torque: raw.torque_nm ? `${raw.torque_nm}Nm` : null,
+          '0-100km/h': raw.acceleration_0_100 ? `${raw.acceleration_0_100}s` : null,
+          range: raw.range_km ? `${raw.range_km}km` : null,
+          battery: raw.battery_kwh ? `${raw.battery_kwh}kWh` : null,
+          price: p.price_usd ? `$${p.price_usd}` : null,
+        }
+      } else if (cat === 'headphones') {
+        specSummary = {
+          form_factor: raw.form_factor, noise_canceling: raw.noise_canceling,
+          battery_hours: raw.battery_hours ? `${raw.battery_hours}h` : null,
+          codec: raw.codec, driver: raw.driver_size_mm ? `${raw.driver_size_mm}mm` : null,
+          price: p.price_usd ? `$${p.price_usd}` : null,
+        }
+      } else if (cat === 'monitor') {
+        specSummary = {
+          display: raw.display_inch ? `${raw.display_inch}"` : null,
+          panel: raw.panel_type, hz: raw.display_hz, hdr: raw.hdr,
+          response: raw.response_time_ms ? `${raw.response_time_ms}ms` : null,
+          price: p.price_usd ? `$${p.price_usd}` : null,
+        }
+      } else if (cat === 'tv') {
+        specSummary = {
+          display: raw.display_inch ? `${raw.display_inch}"` : null,
+          panel: raw.panel_type, hz: raw.display_hz, hdr: raw.hdr,
+          platform: raw.smart_platform, price: p.price_usd ? `$${p.price_usd}` : null,
+        }
+      } else {
+        specSummary = p.specs
+      }
+      return `- ${p.name}: ${JSON.stringify(specSummary)}`
+    }).join('\n')
 
     const prefText = preferences
       ? `User priorities: budget sensitivity ${preferences.budget}/5, photography ${preferences.photography}/5, performance ${preferences.performance}/5, battery life ${preferences.battery}/5.`

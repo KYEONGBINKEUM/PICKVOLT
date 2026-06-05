@@ -1136,6 +1136,25 @@ export default function CompareClient() {
   // 제품별 종합 점수 계산 — 크로스 카테고리면 GB6 공통 공식, 같은 카테고리면 고유 공식
   const rawScores = categoryStats
     ? effectiveProducts.map((p) => {
+        // 자동차: 출력 40% + 항속거리 40% + 가속 20%
+        if (isSameCategory && category === 'car') {
+          const allHp    = effectiveProducts.map(q => (q.raw.horsepower as number) ?? 0)
+          const allRange = effectiveProducts.map(q => (q.raw.range_km as number) ?? 0)
+          const maxHp    = Math.max(...allHp, 1)
+          const maxRange = Math.max(...allRange, 1)
+          const hp       = p.raw.horsepower ? Math.round((p.raw.horsepower as number) / maxHp * 100) : 0
+          const range    = p.raw.range_km   ? Math.round((p.raw.range_km as number)   / maxRange * 100) : 0
+          const accel    = p.raw.acceleration_0_100
+            ? Math.max(0, Math.round(100 - ((p.raw.acceleration_0_100 as number) / 15 * 100)))
+            : 0
+          const overall  = Math.round(hp * 0.40 + range * 0.40 + accel * 0.20)
+          return { overall, details: [
+            { label: '출력',   score: hp,    weight: 40 },
+            { label: '항속거리', score: range, weight: 40 },
+            { label: '가속',   score: accel, weight: 20 },
+          ] }
+        }
+
         return computeRelativeScores({
           category:           isSameCategory ? p.category.toLowerCase() : 'cross',
           relativeScore:      p.specs.performanceScore,
