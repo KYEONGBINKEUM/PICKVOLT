@@ -1136,23 +1136,100 @@ export default function CompareClient() {
   // 제품별 종합 점수 계산 — 크로스 카테고리면 GB6 공통 공식, 같은 카테고리면 고유 공식
   const rawScores = categoryStats
     ? effectiveProducts.map((p) => {
-        // 자동차: 출력 40% + 항속거리 40% + 가속 20%
-        if (isSameCategory && category === 'car') {
-          const allHp    = effectiveProducts.map(q => (q.raw.horsepower as number) ?? 0)
-          const allRange = effectiveProducts.map(q => (q.raw.range_km as number) ?? 0)
-          const maxHp    = Math.max(...allHp, 1)
-          const maxRange = Math.max(...allRange, 1)
-          const hp       = p.raw.horsepower ? Math.round((p.raw.horsepower as number) / maxHp * 100) : 0
-          const range    = p.raw.range_km   ? Math.round((p.raw.range_km as number)   / maxRange * 100) : 0
-          const accel    = p.raw.acceleration_0_100
-            ? Math.max(0, Math.round(100 - ((p.raw.acceleration_0_100 as number) / 15 * 100)))
-            : 0
-          const overall  = Math.round(hp * 0.40 + range * 0.40 + accel * 0.20)
-          return { overall, details: [
-            { label: '출력',   score: hp,    weight: 40 },
-            { label: '항속거리', score: range, weight: 40 },
-            { label: '가속',   score: accel, weight: 20 },
-          ] }
+        if (isSameCategory) {
+          const relHigh = (val: number | null, arr: (number | null)[]) => {
+            const nums = arr.filter((v): v is number => v != null && v > 0)
+            const max = Math.max(...nums, 1)
+            return val ? Math.round(Math.min(100, val / max * 100)) : 0
+          }
+          const relLow = (val: number | null, arr: (number | null)[]) => {
+            // 낮을수록 좋은 지표 (가속, 응답속도 등)
+            const nums = arr.filter((v): v is number => v != null && v > 0)
+            const min = Math.min(...nums, 1)
+            return val ? Math.round(Math.min(100, min / val * 100)) : 0
+          }
+
+          // ── 자동차: 출력25 + 효율25 + 실용성20 + 가속15 + 가격대비15 ──
+          if (category === 'car') {
+            const hpArr     = effectiveProducts.map(q => (q.raw.horsepower    as number) ?? null)
+            const rangeArr  = effectiveProducts.map(q => (q.raw.range_km      as number) ?? null)
+            const accelArr  = effectiveProducts.map(q => (q.raw.acceleration_0_100 as number) ?? null)
+            const cargoArr  = effectiveProducts.map(q => (q.raw.cargo_liters  as number) ?? null)
+            const seatArr   = effectiveProducts.map(q => (q.raw.seating       as number) ?? null)
+            const priceArr  = effectiveProducts.map(q => (q.price_usd         as number) ?? null)
+            const hp        = relHigh(p.raw.horsepower as number ?? null, hpArr)
+            const range     = relHigh(p.raw.range_km as number ?? null, rangeArr)
+            const accel     = relLow(p.raw.acceleration_0_100 as number ?? null, accelArr)
+            const pracSeat  = relHigh(p.raw.seating as number ?? null, seatArr)
+            const pracCargo = relHigh(p.raw.cargo_liters as number ?? null, cargoArr)
+            const prac      = Math.round((pracSeat + pracCargo) / 2)
+            const value     = relLow(p.price_usd as number ?? null, priceArr)
+            const overall   = Math.round(hp * 0.25 + range * 0.25 + prac * 0.20 + accel * 0.15 + value * 0.15)
+            return { overall, details: [
+              { label: '출력',     score: hp,    weight: 25 },
+              { label: '효율/항속', score: range, weight: 25 },
+              { label: '실용성',   score: prac,  weight: 20 },
+              { label: '가속',     score: accel, weight: 15 },
+              { label: '가격대비', score: value, weight: 15 },
+            ] }
+          }
+
+          // ── 헤드폰: 배터리35 + ANC/무선30 + 드라이버20 + 무게15 ──
+          if (category === 'headphones') {
+            const batArr = effectiveProducts.map(q => (q.raw.battery_hours as number) ?? null)
+            const drvArr = effectiveProducts.map(q => (q.raw.driver_size_mm as number) ?? null)
+            const wgtArr = effectiveProducts.map(q => (q.raw.weight_g as number) ?? null)
+            const bat    = relHigh(p.raw.battery_hours as number ?? null, batArr)
+            const drv    = relHigh(p.raw.driver_size_mm as number ?? null, drvArr)
+            const wgt    = relLow(p.raw.weight_g as number ?? null, wgtArr)
+            const anc    = p.raw.noise_canceling ? 100 : 0
+            const wire   = p.raw.wireless !== false ? 100 : 30
+            const feat   = Math.round((anc + wire) / 2)
+            const overall = Math.round(bat * 0.35 + feat * 0.30 + drv * 0.20 + wgt * 0.15)
+            return { overall, details: [
+              { label: '배터리',     score: bat,  weight: 35 },
+              { label: '기능(ANC)',  score: feat, weight: 30 },
+              { label: '드라이버',   score: drv,  weight: 20 },
+              { label: '착용감',     score: wgt,  weight: 15 },
+            ] }
+          }
+
+          // ── 모니터: 주사율35 + 패널25 + 해상도25 + 응답속도15 ──
+          if (category === 'monitor') {
+            const panelScore: Record<string, number> = { 'OLED':90,'QD-OLED':95,'WOLED':88,'Mini-LED':75,'IPS':70,'VA':62,'TN':40 }
+            const hzArr  = effectiveProducts.map(q => (q.raw.display_hz   as number) ?? null)
+            const rtArr  = effectiveProducts.map(q => (q.raw.response_time_ms as number) ?? null)
+            const resArr = effectiveProducts.map(q => (q.raw.display_inch as number) ?? null)
+            const hz     = relHigh(p.raw.display_hz as number ?? null, hzArr)
+            const panel  = panelScore[String(p.raw.panel_type ?? '')] ?? 55
+            const rt     = relLow(p.raw.response_time_ms as number ?? null, rtArr)
+            const res    = relHigh(p.raw.display_inch as number ?? null, resArr)
+            const overall = Math.round(hz * 0.35 + panel * 0.25 + res * 0.25 + rt * 0.15)
+            return { overall, details: [
+              { label: '주사율', score: hz,    weight: 35 },
+              { label: '패널',   score: panel, weight: 25 },
+              { label: '화면',   score: res,   weight: 25 },
+              { label: '응답속도', score: rt,  weight: 15 },
+            ] }
+          }
+
+          // ── TV: 패널35 + 주사율25 + 밝기25 + HDR15 ──
+          if (category === 'tv') {
+            const panelScore: Record<string, number> = { 'OLED':90,'QD-OLED':95,'WOLED':88,'MICRO-LED':100,'QLED':72,'Mini-LED':75,'LED':55 }
+            const hzArr  = effectiveProducts.map(q => (q.raw.display_hz as number) ?? null)
+            const nitArr = effectiveProducts.map(q => (q.raw.brightness_nits as number) ?? null)
+            const hz     = relHigh(p.raw.display_hz as number ?? null, hzArr)
+            const panel  = panelScore[String(p.raw.panel_type ?? '')] ?? 55
+            const nits   = relHigh(p.raw.brightness_nits as number ?? null, nitArr)
+            const hdr    = p.raw.hdr ? (String(p.raw.hdr).toLowerCase().includes('dolby') ? 100 : 70) : 0
+            const overall = Math.round(panel * 0.35 + hz * 0.25 + nits * 0.25 + hdr * 0.15)
+            return { overall, details: [
+              { label: '패널',  score: panel, weight: 35 },
+              { label: '주사율', score: hz,   weight: 25 },
+              { label: '밝기',  score: nits,  weight: 25 },
+              { label: 'HDR',   score: hdr,   weight: 15 },
+            ] }
+          }
         }
 
         return computeRelativeScores({
