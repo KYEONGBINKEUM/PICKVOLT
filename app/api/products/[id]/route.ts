@@ -18,19 +18,37 @@ export async function GET(
 
   const { id } = await params
 
+  // 1단계: 카테고리 먼저 조회
+  const { data: meta } = await supabase
+    .from('products')
+    .select('id, category')
+    .eq('id', id)
+    .eq('is_visible', true)
+    .single()
+
+  if (!meta) return NextResponse.json({ error: 'product not found' }, { status: 404 })
+
+  // 2단계: 카테고리별 필요한 스펙 테이블만 JOIN
+  const catSpecMap: Record<string, string> = {
+    laptop:     'specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours )',
+    smartphone: 'specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp )',
+    tablet:     'specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )',
+    headphones: 'specs_headphones ( form_factor, driver_size_mm, frequency_response, noise_canceling, wireless, bluetooth_version, codec, battery_hours, weight_g, ip_rating, connectivity )',
+    monitor:    'specs_monitor ( display_inch, display_resolution, panel_type, display_hz, response_time_ms, brightness_nits, hdr, aspect_ratio, adaptive_sync, curved, weight_kg, display_color_gamut )',
+    tv:         'specs_tv ( display_inch, display_resolution, panel_type, display_hz, hdr, brightness_nits, smart_platform, audio_watts, hdmi_ports, weight_kg )',
+    car:        'specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment, generation, production_end )',
+    smartwatch: 'specs_smartwatch ( chip_name, weight_g, water_resistance, compatible_os, has_gps, cellular, health_sensors )',
+  }
+  const catSpec = catSpecMap[meta.category] ?? ''
+  const selectQuery = [
+    'id, name, brand, category, price_usd, image_url, source_url',
+    'specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version, launch_year )',
+    catSpec,
+  ].filter(Boolean).join(',\n      ')
+
   const { data: product, error } = await supabase
     .from('products')
-    .select(`
-      id, name, brand, category, price_usd, image_url, source_url,
-      specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version, launch_year ),
-      specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
-      specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
-      specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular ),
-      specs_headphones ( form_factor, driver_size_mm, frequency_response, noise_canceling, wireless, bluetooth_version, codec, battery_hours, weight_g, ip_rating, connectivity ),
-      specs_monitor ( display_inch, display_resolution, panel_type, display_hz, response_time_ms, brightness_nits, hdr, aspect_ratio, adaptive_sync, curved, weight_kg, display_color_gamut ),
-      specs_tv ( display_inch, display_resolution, panel_type, display_hz, hdr, brightness_nits, smart_platform, audio_watts, hdmi_ports, weight_kg ),
-      specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment, generation, production_end )
-    `)
+    .select(selectQuery)
     .eq('id', id)
     .eq('is_visible', true)
     .single()
