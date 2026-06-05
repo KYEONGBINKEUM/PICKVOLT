@@ -46,12 +46,21 @@ export async function GET(
     catSpec,
   ].filter(Boolean).join(',\n      ')
 
-  const { data: product, error } = await supabase
+  let { data: product, error } = await supabase
     .from('products')
     .select(selectQuery)
     .eq('id', id)
     .eq('is_visible', true)
     .single()
+
+  // 카테고리 스펙 테이블에 없는 컬럼이 있으면 → 기본 정보만으로 재시도
+  if (error && catSpec) {
+    console.warn('[product/id] spec join failed, retrying without cat spec:', error.message)
+    const baseQuery = 'id, name, brand, category, price_usd, image_url, source_url, specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version, launch_year )'
+    const retry = await supabase.from('products').select(baseQuery).eq('id', id).eq('is_visible', true).single()
+    product = retry.data
+    error = retry.error
+  }
 
   if (error || !product) {
     console.error('[product/id] supabase error:', error)
