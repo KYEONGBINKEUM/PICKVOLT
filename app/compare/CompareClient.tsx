@@ -1149,28 +1149,25 @@ export default function CompareClient() {
             return val ? Math.round(Math.min(100, min / val * 100)) : 0
           }
 
-          // ── 자동차: 출력25 + 효율25 + 실용성20 + 가속15 + 가격대비15 ──
+          // ── 자동차: 출력30 + 효율/항속30 + 실용성25 + 가속15 ──
           if (category === 'car') {
-            const hpArr     = effectiveProducts.map(q => (q.raw.horsepower    as number) ?? null)
-            const rangeArr  = effectiveProducts.map(q => (q.raw.range_km      as number) ?? null)
-            const accelArr  = effectiveProducts.map(q => (q.raw.acceleration_0_100 as number) ?? null)
-            const cargoArr  = effectiveProducts.map(q => (q.raw.cargo_liters  as number) ?? null)
-            const seatArr   = effectiveProducts.map(q => (q.raw.seating       as number) ?? null)
-            const priceArr  = effectiveProducts.map(q => (q.price_usd         as number) ?? null)
-            const hp        = relHigh(p.raw.horsepower as number ?? null, hpArr)
-            const range     = relHigh(p.raw.range_km as number ?? null, rangeArr)
-            const accel     = relLow(p.raw.acceleration_0_100 as number ?? null, accelArr)
+            const hpArr    = effectiveProducts.map(q => (q.raw.horsepower as number) ?? null)
+            const rangeArr = effectiveProducts.map(q => (q.raw.range_km as number) ?? null)
+            const accelArr = effectiveProducts.map(q => (q.raw.acceleration_0_100 as number) ?? null)
+            const cargoArr = effectiveProducts.map(q => (q.raw.cargo_liters as number) ?? null)
+            const seatArr  = effectiveProducts.map(q => (q.raw.seating as number) ?? null)
+            const hp       = relHigh(p.raw.horsepower as number ?? null, hpArr)
+            const range    = relHigh(p.raw.range_km as number ?? null, rangeArr)
+            const accel    = relLow(p.raw.acceleration_0_100 as number ?? null, accelArr)
             const pracSeat  = relHigh(p.raw.seating as number ?? null, seatArr)
             const pracCargo = relHigh(p.raw.cargo_liters as number ?? null, cargoArr)
-            const prac      = Math.round((pracSeat + pracCargo) / 2)
-            const value     = relLow(p.price_usd as number ?? null, priceArr)
-            const overall   = Math.round(hp * 0.25 + range * 0.25 + prac * 0.20 + accel * 0.15 + value * 0.15)
+            const prac     = Math.round((pracSeat + pracCargo) / 2)
+            const overall  = Math.round(hp * 0.30 + range * 0.30 + prac * 0.25 + accel * 0.15)
             return { overall, details: [
-              { label: '출력',     score: hp,    weight: 25 },
-              { label: '효율/항속', score: range, weight: 25 },
-              { label: '실용성',   score: prac,  weight: 20 },
+              { label: '출력',     score: hp,    weight: 30 },
+              { label: '효율/항속', score: range, weight: 30 },
+              { label: '실용성',   score: prac,  weight: 25 },
               { label: '가속',     score: accel, weight: 15 },
-              { label: '가격대비', score: value, weight: 15 },
             ] }
           }
 
