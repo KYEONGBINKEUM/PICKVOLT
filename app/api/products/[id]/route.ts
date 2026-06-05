@@ -28,6 +28,9 @@ export async function GET(
 
   if (!meta) return NextResponse.json({ error: 'product not found' }, { status: 404 })
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const metaTyped = meta as any
+
   // 2단계: 카테고리별 필요한 스펙 테이블만 JOIN
   const catSpecMap: Record<string, string> = {
     laptop:     'specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours )',
@@ -39,7 +42,7 @@ export async function GET(
     car:        'specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment, generation, production_end )',
     smartwatch: 'specs_smartwatch ( chip_name, weight_g, water_resistance, compatible_os, has_gps, cellular, health_sensors )',
   }
-  const catSpec = catSpecMap[meta.category] ?? ''
+  const catSpec = catSpecMap[metaTyped.category] ?? ''
   const selectQuery = [
     'id, name, brand, category, price_usd, image_url, source_url',
     'specs_common ( cpu_name, cpu_id, gpu_name, gpu_id, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version, launch_year )',
