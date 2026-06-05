@@ -39,7 +39,7 @@ export async function GET(
     headphones: 'specs_headphones ( form_factor, driver_size_mm, frequency_response, noise_canceling, wireless, bluetooth_version, codec, battery_hours, weight_g, ip_rating, connectivity )',
     monitor:    'specs_monitor ( display_inch, display_resolution, panel_type, display_hz, response_time_ms, brightness_nits, hdr, aspect_ratio, adaptive_sync, curved, weight_kg, display_color_gamut )',
     tv:         'specs_tv ( display_inch, display_resolution, panel_type, display_hz, hdr, brightness_nits, smart_platform, audio_watts, hdmi_ports, weight_kg )',
-    car:        'specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment, generation, production_end )',
+    car:        'specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment )',
     smartwatch: 'specs_smartwatch ( chip_name, weight_g, water_resistance, compatible_os, has_gps, cellular, health_sensors )',
   }
   const catSpec = catSpecMap[metaTyped.category] ?? ''
