@@ -134,6 +134,28 @@ function applyVariant(product: Product, variantId: string | undefined): Product 
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyCarTrim(product: Product, trimIdx: number | undefined): Product {
+  if (trimIdx == null) return product
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const trims: any[] = Array.isArray(product.raw?.powertrain_variants) ? product.raw!.powertrain_variants : []
+  const trim = trims[trimIdx]
+  if (!trim) return product
+  return {
+    ...product,
+    price_usd: trim.price_usd ?? product.price_usd,
+    raw: {
+      ...product.raw,
+      ...(trim.powertrain           != null && { powertrain: trim.powertrain }),
+      ...(trim.horsepower           != null && { horsepower: trim.horsepower }),
+      ...(trim.torque_nm            != null && { torque_nm: trim.torque_nm }),
+      ...(trim.acceleration_0_100   != null && { acceleration_0_100: trim.acceleration_0_100 }),
+      ...(trim.range_km             != null && { range_km: trim.range_km }),
+      ...(trim.battery_kwh          != null && { battery_kwh: trim.battery_kwh }),
+    },
+  }
+}
+
 interface AiResult {
   winner: string
   summary: string
@@ -782,6 +804,7 @@ export default function CompareClient() {
 
   const [products, setProducts] = useState<Product[]>([])
   const [selectedVariantIds, setSelectedVariantIds] = useState<Record<number, string>>({})
+  const [selectedCarTrims, setSelectedCarTrims] = useState<Record<number, number>>({})
   const [aiResult, setAiResult] = useState<AiResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
@@ -883,10 +906,49 @@ export default function CompareClient() {
     if (cached) { setAiResult(cached); return }
     if (Object.keys(selectedVariantIds).length === 0) return
     if (!sessionRef.current || loadingAIRef.current) return
-    const effective = products.map((p, i) => applyVariant(p, selectedVariantIds[i]))
+    const effective = products.map((p, i) => applyCarTrim(applyVariant(p, selectedVariantIds[i]), selectedCarTrims[i]))
     callAI(effective, ids, key)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVariantIds])
+
+  // ── 트림 선택기 (자동차 powertrain_variants / 전자기기 variants 공용) ──────
+  const TrimSelector = ({ p, pi, color, size }: { p: Product; pi: number; color: string; size: 'xs' | 'sm' }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const carTrims: any[] = Array.isArray(p.raw?.powertrain_variants) ? p.raw!.powertrain_variants : []
+    const cls = `w-full rounded-lg px-3 py-2.5 ${size === 'sm' ? 'text-[11px]' : 'text-xs'} font-semibold border bg-surface-2 outline-none cursor-pointer`
+    if (carTrims.length > 0) {
+      return (
+        <select value={selectedCarTrims[pi] ?? ''}
+          onChange={(e) => {
+            const val = e.target.value
+            if (val === '') setSelectedCarTrims((prev) => { const n = { ...prev }; delete n[pi]; return n })
+            else setSelectedCarTrims((prev) => ({ ...prev, [pi]: parseInt(val) }))
+          }}
+          className={cls} style={{ borderColor: `${color}60`, color }}
+        >
+          <option value="">기본 트림</option>
+          {carTrims.map((trim, ti) => <option key={ti} value={ti}>{trim.name}</option>)}
+        </select>
+      )
+    }
+    const hasVariants = (p.variants?.length ?? 0) > 0
+    const baseLabel = [p.specs.cpu, p.specs.gpuName].filter(Boolean).join(' + ') || p.name
+    if (hasVariants) {
+      return (
+        <select value={selectedVariantIds[pi] ?? ''}
+          onChange={(e) => {
+            if (e.target.value === '') setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })
+            else setSelectedVariantIds((prev) => ({ ...prev, [pi]: e.target.value }))
+          }}
+          className={cls} style={{ borderColor: `${color}60`, color }}
+        >
+          <option value="">{baseLabel}</option>
+          {p.variants!.map((v) => <option key={v.id} value={v.id}>{v.variant_name}</option>)}
+        </select>
+      )
+    }
+    return <span className="text-xs text-white/20">—</span>
+  }
 
   // ── AI 비교 호출 (스펙 로드 완료 후 단독 실행 가능) ─────────────────────
   const callAI = useCallback(async (loadedProducts: Product[], productIds: string[], cacheKey?: string) => {
@@ -1052,7 +1114,7 @@ export default function CompareClient() {
   const handleManualAI = useCallback(() => {
     if (!session || products.length < 2 || loadingAI) return
     const ids = products.map((p) => p.id)
-    const effective = products.map((p, i) => applyVariant(p, selectedVariantIds[i]))
+    const effective = products.map((p, i) => applyCarTrim(applyVariant(p, selectedVariantIds[i]), selectedCarTrims[i]))
     const key = makeVariantKey(ids, selectedVariantIds)
     callAI(effective, ids, key)
   }, [session, products, loadingAI, selectedVariantIds, callAI])
@@ -1102,7 +1164,7 @@ export default function CompareClient() {
   }, [products])
 
   // variant 선택을 적용한 유효 제품 목록
-  const effectiveProducts = products.map((p, i) => applyVariant(p, selectedVariantIds[i]))
+  const effectiveProducts = products.map((p, i) => applyCarTrim(applyVariant(p, selectedVariantIds[i]), selectedCarTrims[i]))
 
   type SpecRowData = { label: string; sublabel: string; values: { primary: string | number; secondary?: string; bar?: number; numericVal?: number }[]; barMax?: number; higherIsBetter?: boolean; nameLabels?: string[]; showNameOnDesktop?: boolean }
 
@@ -1977,27 +2039,7 @@ export default function CompareClient() {
                             </div>
                             <p className="text-[12px] text-white/50 truncate flex-1">{p.name}</p>
                           </div>
-                          {hasVariants ? (
-                            <select
-                              value={selectedVariantIds[pi] ?? ''}
-                              onChange={(e) => {
-                                if (e.target.value === '') {
-                                  setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })
-                                } else {
-                                  setSelectedVariantIds((prev) => ({ ...prev, [pi]: e.target.value }))
-                                }
-                              }}
-                              className="w-full rounded-lg px-3 py-2.5 text-[11px] font-semibold border bg-surface-2 outline-none cursor-pointer"
-                              style={{ borderColor: `${color}60`, color }}
-                            >
-                              <option value="">{baseLabel}</option>
-                              {p.variants!.map((v) => (
-                                <option key={v.id} value={v.id}>{v.variant_name}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-xs text-white/20">—</span>
-                          )}
+                          {TrimSelector({ p, pi, color, size: 'sm' })}
                         </div>
                       )
                     })}
@@ -2009,31 +2051,9 @@ export default function CompareClient() {
                     </div>
                     {products.map((p, pi) => {
                       const color = PRODUCT_COLORS[pi % PRODUCT_COLORS.length]
-                      const hasVariants = (p.variants?.length ?? 0) > 0
-                      const baseLabel = [p.specs.cpu, p.specs.gpuName].filter(Boolean).join(' + ') || p.name
                       return (
                         <div key={pi} className="p-4 border-l border-border">
-                          {hasVariants ? (
-                            <select
-                              value={selectedVariantIds[pi] ?? ''}
-                              onChange={(e) => {
-                                if (e.target.value === '') {
-                                  setSelectedVariantIds((prev) => { const n = { ...prev }; delete n[pi]; return n })
-                                } else {
-                                  setSelectedVariantIds((prev) => ({ ...prev, [pi]: e.target.value }))
-                                }
-                              }}
-                              className="w-full rounded-lg px-3 py-2.5 text-xs font-semibold border bg-surface-2 outline-none cursor-pointer"
-                              style={{ borderColor: `${color}60`, color }}
-                            >
-                              <option value="">{baseLabel}</option>
-                              {p.variants!.map((v) => (
-                                <option key={v.id} value={v.id}>{v.variant_name}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span className="text-xs text-white/20">—</span>
-                          )}
+                          {TrimSelector({ p, pi, color, size: 'xs' })}
                         </div>
                       )
                     })}
