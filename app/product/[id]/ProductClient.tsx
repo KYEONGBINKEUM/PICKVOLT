@@ -54,6 +54,8 @@ interface Product {
   ai_summary_i18n: Record<string, string> | null
   specs:      Specs
   variants?:  ProductVariant[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw:        Record<string, any>
 }
 
 interface CommunityPost {
