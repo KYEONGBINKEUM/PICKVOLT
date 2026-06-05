@@ -1896,7 +1896,16 @@ export default function ProductEditPage() {
                   {!gn(categorySpecs, 'production_end') && (
                     <button
                       type="button"
-                      onClick={() => patchCat('production_end', new Date().getFullYear())}
+                      onClick={() => {
+                        const input = window.prompt('단종 연도를 입력하세요', String(new Date().getFullYear()))
+                        if (!input) return
+                        const year = parseInt(input)
+                        if (!isNaN(year) && year > 1990 && year <= new Date().getFullYear() + 1) {
+                          patchCat('production_end', year)
+                        } else {
+                          alert('올바른 연도를 입력하세요')
+                        }
+                      }}
                       className="shrink-0 px-3 py-2 text-xs border border-border text-white/40 hover:text-white hover:border-white/30 rounded-lg transition-colors whitespace-nowrap"
                     >
                       단종 처리
