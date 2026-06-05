@@ -56,15 +56,17 @@ export async function GET(req: NextRequest) {
     if (maxPrice) query = query.lte('price_usd', parseFloat(maxPrice))
     if (q)        query = query.ilike('name', `%${q}%`)
 
-    const { data, error } = await query
+    const { data: rawData, error } = await query
 
     if (error) return NextResponse.json({ error: error.message, results: [] }, { status: 500 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const commonCpuIds = (data ?? []).map((p: any) => p.specs_common?.cpu_id).filter(Boolean)
+    const data = (rawData ?? []) as any[]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const commonGpuIds = (data ?? []).map((p: any) => p.specs_common?.gpu_id).filter(Boolean)
-    const allIds = (data ?? []).map((p: { id: string }) => p.id)
+    const commonCpuIds = data.map((p: any) => p.specs_common?.cpu_id).filter(Boolean)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const commonGpuIds = data.map((p: any) => p.specs_common?.gpu_id).filter(Boolean)
+    const allIds = data.map((p: { id: string }) => p.id)
 
     // Step 1: fetch variants first to collect variant cpu/gpu ids
     const variantResult = allIds.length > 0
