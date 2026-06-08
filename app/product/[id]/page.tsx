@@ -15,31 +15,60 @@ function makeSupabase() {
   )
 }
 
+// 카테고리별 스펙 테이블 선택
+const CAT_SPEC: Record<string, string> = {
+  laptop:     'specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours )',
+  smartphone: 'specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp )',
+  tablet:     'specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )',
+  headphones: 'specs_headphones ( form_factor, driver_size_mm, frequency_response, noise_canceling, wireless, bluetooth_version, codec, battery_hours, weight_g, ip_rating, connectivity )',
+  monitor:    'specs_monitor ( display_inch, display_resolution, panel_type, display_hz, response_time_ms, brightness_nits, hdr, aspect_ratio, adaptive_sync, curved, weight_kg, display_color_gamut )',
+  tv:         'specs_tv ( display_inch, display_resolution, panel_type, display_hz, hdr, brightness_nits, smart_platform, audio_watts, hdmi_ports, weight_kg )',
+  car:        'specs_car ( body_type, drivetrain, powertrain, engine_cc, horsepower, torque_nm, acceleration_0_100, top_speed_kmh, range_km, battery_kwh, fuel_efficiency_km_l, seating, cargo_liters, curb_weight_kg, segment )',
+  smartwatch: 'specs_smartwatch ( chip_name, weight_g, water_resistance, compatible_os, has_gps, cellular )',
+}
+
 async function getProduct(id: string) {
   const supabase = makeSupabase()
+
+  // 1단계: 카테고리 먼저 파악
+  const { data: meta } = await supabase.from('products').select('id, category').eq('id', id).single()
+  if (!meta) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const catSpec = CAT_SPEC[(meta as any).category] ?? ''
+  const selectStr = [
+    'id, name, brand, category, price_usd, image_url, ai_summary_i18n',
+    'specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version, launch_year )',
+    catSpec,
+  ].filter(Boolean).join(', ')
+
   const { data: product, error } = await supabase
     .from('products')
-    .select(`
-      id, name, brand, category, price_usd, image_url, ai_summary_i18n,
-      specs_common ( cpu_name, cpu_id, gpu_name, ram_gb, storage_gb, storage_type, os, amazon_url, wifi_standard, bluetooth_version ),
-      specs_laptop ( display_inch, display_resolution, display_hz, display_type, weight_kg, battery_wh, battery_hours ),
-      specs_smartphone ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp ),
-      specs_tablet ( display_inch, display_resolution, display_hz, display_type, weight_g, battery_mah, camera_main_mp, camera_front_mp, stylus_support, cellular )
-    `)
+    .select(selectStr)
     .eq('id', id)
     .single()
 
   if (error || !product) return null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const common     = product.specs_common     as any
+  const p          = product as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const laptop     = product.specs_laptop     as any
+  const common     = p.specs_common     as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const smartphone = product.specs_smartphone as any
+  const laptop     = p.specs_laptop     as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tablet     = product.specs_tablet     as any
-  const specSrc    = laptop ?? smartphone ?? tablet ?? {}
+  const smartphone = p.specs_smartphone as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tablet     = p.specs_tablet     as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const car        = p.specs_car        as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const headphones = p.specs_headphones as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const monitor    = p.specs_monitor    as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tv         = p.specs_tv         as any
+  const specSrc    = laptop ?? smartphone ?? tablet ?? monitor ?? tv ?? {}
 
   // storage_gb, ram_gb는 text 타입 ("256" / "64, 256, 512" / "1024")
   function formatStorageVal(v: string): string {
@@ -80,7 +109,7 @@ async function getProduct(id: string) {
   const { data: rawVariants } = await supabase
     .from('product_variants')
     .select('id, variant_name, cpu_name, gpu_name, ram_gb, storage_gb, price_usd, amazon_url')
-    .eq('product_id', product.id)
+    .eq('product_id', p.id)
     .order('sort_order')
     .order('created_at')
 
@@ -97,17 +126,27 @@ async function getProduct(id: string) {
   }))
 
   return {
-    id:         product.id,
-    name:       product.name,
-    brand:      product.brand,
-    category:   product.category,
-    price_usd:  product.price_usd,
-    image_url:  product.image_url,
+    id:         p.id,
+    name:       p.name,
+    brand:      p.brand,
+    category:   p.category,
+    price_usd:  p.price_usd,
+    image_url:  p.image_url,
     amazon_url: common?.amazon_url ?? null,
-    ai_summary_i18n: (product as Record<string, unknown>).ai_summary_i18n as Record<string, string> | null ?? null,
+    ai_summary_i18n: p.ai_summary_i18n as Record<string, string> | null ?? null,
     reviewCount,
     reviewAvg,
     variants,
+    raw: {
+      ...( common      ?? {} ),
+      ...( laptop      ?? {} ),
+      ...( smartphone  ?? {} ),
+      ...( tablet      ?? {} ),
+      ...( headphones  ?? {} ),
+      ...( monitor     ?? {} ),
+      ...( tv          ?? {} ),
+      ...( car         ?? {} ),
+    },
     specs: {
       cpu:             common?.cpu_name ?? null,
       gpuName:         common?.gpu_name ?? null,
