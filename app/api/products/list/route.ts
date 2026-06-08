@@ -175,6 +175,10 @@ export async function GET(req: NextRequest) {
         body_type: car?.body_type ?? null,
         drivetrain: car?.drivetrain ?? null,
         production_end: car?.production_end ?? null,
+        // headphones (wireless 추가)
+        wireless: headphones?.wireless ?? null,
+        // monitor (응답속도 추가)
+        response_time_ms: monitor?.response_time_ms ?? null,
         // smartwatch
         chip_name: smartwatch?.chip_name ?? null,
         water_resistance: smartwatch?.water_resistance ?? null,
@@ -206,6 +210,25 @@ export async function GET(req: NextRequest) {
     const weightGs   = rawProducts.map((p) => p.weight_g).filter((n): n is number => n != null)
     const weightKgs  = rawProducts.map((p) => p.weight_kg).filter((n): n is number => n != null)
     const storages   = rawProducts.map((p) => firstNum(p.variants[0]?.storage_gb ?? null)).filter((n): n is number => n != null)
+    // ── 신규 카테고리 stats ──────────────────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const horsepowers   = rawProducts.map((p: any) => p.horsepower).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rangeKms      = rawProducts.map((p: any) => p.range_km).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const accels        = rawProducts.map((p: any) => p.acceleration_0_100).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hpBatHours    = rawProducts.map((p: any) => p.headphone_battery_hours).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const driverMms     = rawProducts.map((p: any) => p.driver_size_mm).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const monitorHzs    = rawProducts.map((p: any) => p.monitor_hz).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const monitorInchs  = rawProducts.map((p: any) => p.monitor_display_inch).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tvHzs         = rawProducts.map((p: any) => p.tv_hz).filter((n: unknown): n is number => typeof n === 'number')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tvInchs       = rawProducts.map((p: any) => p.tv_display_inch).filter((n: unknown): n is number => typeof n === 'number')
 
     const stats: CategoryStats = {
       relativeScore: statsOf(cpuRels),
@@ -220,12 +243,24 @@ export async function GET(req: NextRequest) {
       weightG:       statsOf(weightGs),
       weightKg:      statsOf(weightKgs),
       gpuRelativeMax: maxOf(gpuRels),
+      // 신규 카테고리
+      horsepower:            statsOf(horsepowers),
+      range_km:              statsOf(rangeKms),
+      accel_0_100:           statsOf(accels),
+      headphoneBatteryHours: statsOf(hpBatHours),
+      driverSizeMm:          statsOf(driverMms),
+      monitorHz:             statsOf(monitorHzs),
+      monitorInch:           statsOf(monitorInchs),
+      tvHz:                  statsOf(tvHzs),
+      tvInch:                statsOf(tvInchs),
     }
 
     // detect primary category for scoring formula
     const primaryCategory = category || (rawProducts[0]?.category?.toLowerCase() ?? '')
 
     const products = rawProducts.map((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pp = p as any
       const scored = computeRelativeScores(
         {
           category:         primaryCategory,
@@ -235,8 +270,26 @@ export async function GET(req: NextRequest) {
           battery_wh:       p.battery_wh,
           battery_mah:      p.battery_mah,
           display_resolution: p.display_resolution,
-          display_inch:     p.display_inch,
-          refresh_hz:       p.display_hz,
+          // 카테고리별 올바른 display_inch, refresh_hz 매핑
+          display_inch:     primaryCategory === 'monitor' ? pp.monitor_display_inch
+                          : primaryCategory === 'tv'      ? pp.tv_display_inch
+                          : p.display_inch,
+          refresh_hz:       primaryCategory === 'monitor' ? pp.monitor_hz
+                          : primaryCategory === 'tv'      ? pp.tv_hz
+                          : p.display_hz,
+          // car
+          horsepower:         pp.horsepower,
+          range_km:           pp.range_km,
+          acceleration_0_100: pp.acceleration_0_100,
+          // headphones
+          headphone_battery_hours: pp.headphone_battery_hours,
+          noise_canceling:    pp.noise_canceling,
+          wireless:           pp.wireless,
+          driver_size_mm:     pp.driver_size_mm,
+          // monitor / tv
+          panel_type:         pp.panel_type,
+          response_time_ms:   pp.response_time_ms,
+          hdr:                primaryCategory === 'monitor' ? pp.monitor_hdr : pp.tv_hdr,
         },
         stats,
       )

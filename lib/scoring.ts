@@ -241,6 +241,19 @@ export interface CategoryStats {
   cpuBenchMaxes?: CpuBenchmarkMaxes
   /** 해당 카테고리 내 GPU relative_score 최대값 */
   gpuRelativeMax?: number
+  // ── car ────────────────────────────────────────────────
+  horsepower?:           { min: number; max: number }
+  range_km?:             { min: number; max: number }
+  accel_0_100?:          { min: number; max: number }
+  // ── headphones ─────────────────────────────────────────
+  headphoneBatteryHours?: { min: number; max: number }
+  driverSizeMm?:          { min: number; max: number }
+  // ── monitor ────────────────────────────────────────────
+  monitorHz?:            { min: number; max: number }
+  monitorInch?:          { min: number; max: number }
+  // ── tv ─────────────────────────────────────────────────
+  tvHz?:                 { min: number; max: number }
+  tvInch?:               { min: number; max: number }
 }
 
 /** 높을수록 좋은 스펙: value / max × 100 (0을 바닥으로 고정) */
@@ -249,6 +262,29 @@ function relHigh(value: number | null, range: { min: number; max: number }): num
   const { max } = range
   if (max <= 0) return 0
   return Math.min(100, Math.max(0, Math.round(value / max * 100)))
+}
+
+/** 패널 타입 점수 (OLED > QLED/MiniLED > IPS > VA > TN) */
+function scorePanelType(panel: string | null | undefined): number {
+  if (!panel) return 0
+  const p = panel.toUpperCase()
+  if (p.includes('OLED'))                              return 100
+  if (p.includes('QLED') || p.includes('MINI'))       return 85
+  if (p.includes('IPS') || p.includes('NANO'))        return 70
+  if (p.includes('VA'))                                return 60
+  if (p.includes('TN'))                                return 45
+  return 50
+}
+
+/** HDR 등급 점수 */
+function scoreHDR(hdr: string | null | undefined): number {
+  if (!hdr) return 0
+  const h = hdr.toUpperCase()
+  if (h.includes('DOLBY'))                return 100
+  if (h.includes('HDR10+'))               return 80
+  if (h.includes('HDR10') || h.includes('HDR 10')) return 60
+  if (h.includes('HLG') || h.includes('HDR')) return 40
+  return 20
 }
 
 /** 낮을수록 좋은 스펙 (무게): (max - value) / (max - min) * 100 */
@@ -450,6 +486,95 @@ export function computeRelativeScores(
     }
   }
 
+  // ── 자동차 ─────────────────────────────────────────────────────────────────
+  if (category === 'car') {
+    const hp    = input.horsepower         != null && stats.horsepower?.max
+      ? relHigh(input.horsepower, stats.horsepower) : 0
+    const range = input.range_km           != null && stats.range_km?.max
+      ? relHigh(input.range_km, stats.range_km) : 0
+    const accel = input.acceleration_0_100 != null && stats.accel_0_100?.max
+      ? relLow(input.acceleration_0_100, stats.accel_0_100) : 0
+    // 실용성 = 출력 + 항속 평균 (별도 데이터 없을 때 대체)
+    const practical = Math.round((hp + range) / 2)
+
+    const overall = Math.round(hp * 0.30 + range * 0.30 + practical * 0.25 + accel * 0.15)
+    return {
+      overall,
+      details: [
+        { label: '출력',   score: hp,        weight: 30 },
+        { label: '항속',   score: range,     weight: 30 },
+        { label: '실용성', score: practical, weight: 25 },
+        { label: '가속',   score: accel,     weight: 15 },
+      ],
+    }
+  }
+
+  // ── 헤드폰 ─────────────────────────────────────────────────────────────────
+  if (category === 'headphones') {
+    const bat  = input.headphone_battery_hours != null && stats.headphoneBatteryHours?.max
+      ? relHigh(input.headphone_battery_hours, stats.headphoneBatteryHours) : 0
+    const anc  = input.noise_canceling === true ? 100 : input.noise_canceling === false ? 0 : 40
+    const wire = input.wireless        === true ?  80 : input.wireless        === false ? 20 : 40
+    const connectivity = Math.round(anc * 0.5 + wire * 0.5)
+    const driver = input.driver_size_mm != null && stats.driverSizeMm?.max
+      ? relHigh(input.driver_size_mm, stats.driverSizeMm) : 0
+
+    const overall = Math.round(bat * 0.35 + connectivity * 0.30 + driver * 0.20 + 50 * 0.15)
+    return {
+      overall,
+      details: [
+        { label: '배터리',   score: bat,          weight: 35 },
+        { label: 'ANC/무선', score: connectivity, weight: 30 },
+        { label: '드라이버', score: driver,       weight: 20 },
+        { label: '착용감',   score: 50,           weight: 15 },
+      ],
+    }
+  }
+
+  // ── 모니터 ─────────────────────────────────────────────────────────────────
+  if (category === 'monitor') {
+    const hz    = input.refresh_hz  != null && stats.monitorHz?.max
+      ? relHigh(input.refresh_hz,  stats.monitorHz) : 0
+    const inch  = input.display_inch != null && stats.monitorInch?.max
+      ? relHigh(input.display_inch, stats.monitorInch) : 0
+    const panel = scorePanelType(input.panel_type)
+    const resp  = input.response_time_ms != null
+      ? (input.response_time_ms <= 1 ? 100 : input.response_time_ms <= 2 ? 85
+       : input.response_time_ms <= 4 ? 65  : input.response_time_ms <= 8 ? 45 : 20) : 0
+
+    const overall = Math.round(hz * 0.35 + panel * 0.25 + inch * 0.25 + resp * 0.15)
+    return {
+      overall,
+      details: [
+        { label: '주사율',   score: hz,    weight: 35 },
+        { label: '패널',     score: panel, weight: 25 },
+        { label: '화면크기', score: inch,  weight: 25 },
+        { label: '응답속도', score: resp,  weight: 15 },
+      ],
+    }
+  }
+
+  // ── TV ─────────────────────────────────────────────────────────────────────
+  if (category === 'tv') {
+    const panel = scorePanelType(input.panel_type)
+    const hz    = input.refresh_hz  != null && stats.tvHz?.max
+      ? relHigh(input.refresh_hz,  stats.tvHz) : 0
+    const inch  = input.display_inch != null && stats.tvInch?.max
+      ? relHigh(input.display_inch, stats.tvInch) : 0
+    const hdrScore = scoreHDR(input.hdr)
+
+    const overall = Math.round(panel * 0.35 + hz * 0.25 + inch * 0.25 + hdrScore * 0.15)
+    return {
+      overall,
+      details: [
+        { label: '패널',   score: panel,    weight: 35 },
+        { label: '주사율', score: hz,       weight: 25 },
+        { label: '화면',   score: inch,     weight: 25 },
+        { label: 'HDR',    score: hdrScore, weight: 15 },
+      ],
+    }
+  }
+
   // Generic fallback
   const overall = Math.round(perf * 0.70 + ram * 0.30)
   return {
@@ -518,6 +643,20 @@ export interface ScoringInput {
   display_inch?: number | null
   display_resolution?: string | null
   refresh_hz?: number | null
+  // Car
+  horsepower?: number | null
+  range_km?: number | null
+  acceleration_0_100?: number | null
+  // Headphones
+  headphone_battery_hours?: number | null
+  noise_canceling?: boolean | null
+  wireless?: boolean | null
+  driver_size_mm?: number | null
+  // Monitor / TV
+  panel_type?: string | null
+  hdr?: string | null
+  response_time_ms?: number | null
+  brightness_nits?: number | null
 }
 
 export interface ScoreBreakdown {
