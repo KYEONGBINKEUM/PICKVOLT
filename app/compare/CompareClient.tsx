@@ -960,6 +960,9 @@ export default function CompareClient() {
       const comparePayload = JSON.stringify({
         products: loadedProducts.map((p) => ({
           name: p.name,
+          category: p.category,
+          price_usd: p.price_usd,
+          raw: p.raw ?? {},
           specs: {
             cpu: p.specs.cpu,
             ram: p.specs.ram,
