@@ -95,6 +95,8 @@ interface Product {
   range_km: number | null
   body_type: string | null
   drivetrain: string | null
+  powertrain_variants: { name: string; powertrain?: string | null; horsepower?: number | null; range_km?: number | null; acceleration_0_100?: number | null; torque_nm?: number | null }[] | null
+  trim_scores: number[]
   // smartwatch
   chip_name: string | null
   water_resistance: string | null
@@ -231,6 +233,31 @@ function ProductCard({
   const goPrev = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); switchVariant('prev') }
   const goNext = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); switchVariant('next') }
 
+  // ── 자동차 트림 ────────────────────────────────────────────────────────────
+  const [trimIdx, setTrimIdx] = useState(0)
+  const allTrims = product.category === 'car'
+    ? [
+        // index 0 = 기본 스펙
+        { name: product.powertrain ?? '기본', powertrain: product.powertrain, horsepower: product.horsepower, range_km: product.range_km, acceleration_0_100: product.acceleration_0_100 },
+        ...(product.powertrain_variants ?? []),
+      ]
+    : []
+  const hasTrimVariants = allTrims.length > 1
+  const currentTrim = allTrims[trimIdx] ?? allTrims[0]
+  // 트림별 점수: trim_scores[0]=기본, [1+]=각트림
+  const currentScore = product.category === 'car' && product.trim_scores?.length > 0
+    ? (product.trim_scores[trimIdx] ?? product.performance_score)
+    : product.performance_score
+
+  const prevTrim = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    setTrimIdx(i => Math.max(0, i - 1))
+  }
+  const nextTrim = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    setTrimIdx(i => Math.min(allTrims.length - 1, i + 1))
+  }
+
   // 2-column grid rows (카테고리별 분기)
   const batteryCell = {
     label: t('cat.spec_battery'),
@@ -268,11 +295,16 @@ function ProductCard({
       displayCell,
     ]
   } else if (product.category === 'car') {
+    // 트림별로 동적으로 표시
+    const hp    = currentTrim?.horsepower         ?? product.horsepower
+    const range = currentTrim?.range_km           ?? product.range_km
+    const accel = currentTrim?.acceleration_0_100 ?? product.acceleration_0_100
+    const pt    = currentTrim?.powertrain         ?? product.powertrain
     mobileCells = [
-      { label: '파워트레인', value: product.powertrain ?? null },
-      { label: '출력', value: product.horsepower ? `${product.horsepower}hp` : null },
-      { label: '항속거리', value: product.range_km ? `${product.range_km}km` : null },
-      { label: '0-100', value: product.acceleration_0_100 ? `${product.acceleration_0_100}s` : null },
+      { label: '파워트레인', value: pt ?? null },
+      { label: '출력',       value: hp    ? `${hp}hp`        : null },
+      { label: '항속거리',   value: range ? `${range}km`     : null },
+      { label: '0-100',      value: accel ? `${accel}s`      : null },
     ]
   } else if (product.category === 'headphones') {
     mobileCells = [
@@ -313,7 +345,7 @@ function ProductCard({
   }
 
 
-  const score = product.performance_score
+  const score = currentScore
   const scorePercent = Math.min(100, Math.round((score / maxScore) * 100))
 
   return (
@@ -461,11 +493,37 @@ function ProductCard({
             ))}
           </div>
 
+          {/* 자동차 트림 네비게이터 */}
+          {hasTrimVariants && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={prevTrim}
+                disabled={trimIdx === 0}
+                className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-white/30 hover:text-white/70 disabled:opacity-20 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex-1 min-w-0 text-center">
+                <span className="text-[10px] text-white/40 font-medium truncate block">
+                  {currentTrim?.name ?? '기본'}
+                  <span className="text-white/20 ml-1">({trimIdx + 1}/{allTrims.length})</span>
+                </span>
+              </div>
+              <button
+                onClick={nextTrim}
+                disabled={trimIdx === allTrims.length - 1}
+                className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-white/30 hover:text-white/70 disabled:opacity-20 transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Performance bar */}
           {score > 0 && (
             <div className="h-0.5 bg-surface-2 rounded-full overflow-hidden">
               <div
-                className="h-full bg-accent rounded-full"
+                className="h-full bg-accent rounded-full transition-all duration-300"
                 style={{ width: `${scorePercent}%` }}
               />
             </div>

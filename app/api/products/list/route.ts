@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       headphones: 'specs_headphones ( form_factor, noise_canceling, wireless, battery_hours, driver_size_mm )',
       monitor:    'specs_monitor ( display_inch, panel_type, display_hz, hdr, brightness_nits )',
       tv:         'specs_tv ( display_inch, panel_type, display_hz, hdr, smart_platform )',
-      car:        'specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain, generation, production_end )',
+      car:        'specs_car ( powertrain, horsepower, torque_nm, acceleration_0_100, range_km, body_type, drivetrain, generation, production_end, powertrain_variants )',
       smartwatch: 'specs_smartwatch ( chip_name, water_resistance )',
     }
     const extraSpec = category && newCatSpecs[category] ? `,\n        ${newCatSpecs[category]}` : ''
@@ -175,6 +175,8 @@ export async function GET(req: NextRequest) {
         body_type: car?.body_type ?? null,
         drivetrain: car?.drivetrain ?? null,
         production_end: car?.production_end ?? null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        powertrain_variants: (car?.powertrain_variants ?? null) as any[] | null,
         // headphones (wireless 추가)
         wireless: headphones?.wireless ?? null,
         // monitor (응답속도 추가)
@@ -293,9 +295,26 @@ export async function GET(req: NextRequest) {
         },
         stats,
       )
+      // 자동차: 트림별 점수 사전 계산
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const trimVariants = (primaryCategory === 'car' ? (pp.powertrain_variants ?? []) : []) as any[]
+      const trimScores: number[] = trimVariants.map((trim) =>
+        computeRelativeScores({
+          category: 'car',
+          horsepower:         trim.horsepower         ?? pp.horsepower,
+          range_km:           trim.range_km           ?? pp.range_km,
+          acceleration_0_100: trim.acceleration_0_100 ?? pp.acceleration_0_100,
+        }, stats).overall
+      )
+
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _cpuRel, _gpuRel, ...rest } = p
-      return { ...rest, performance_score: scored.overall }
+      return {
+        ...rest,
+        performance_score: scored.overall,
+        // trim_scores[0] = 기본 스펙 점수, [1+] = 각 트림 점수
+        trim_scores: trimScores.length > 0 ? [scored.overall, ...trimScores] : [],
+      }
     })
 
     // RAM filter (client-side, needs parsed value)
