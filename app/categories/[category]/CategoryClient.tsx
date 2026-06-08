@@ -299,7 +299,12 @@ function ProductCard({
     const hp    = currentTrim?.horsepower         ?? product.horsepower
     const range = currentTrim?.range_km           ?? product.range_km
     const accel = currentTrim?.acceleration_0_100 ?? product.acceleration_0_100
-    const pt    = currentTrim?.powertrain         ?? product.powertrain
+    // 트림 전환 시: 트림명 표시 (파워트레인 타입이 같아도 구분 가능하도록)
+    // - index 0: 기본 파워트레인 타입 (예: "BEV")
+    // - index 1+: 트림명 우선, 없으면 파워트레인 타입
+    const pt = (hasTrimVariants && trimIdx > 0)
+      ? (currentTrim?.name ?? currentTrim?.powertrain ?? product.powertrain)
+      : product.powertrain
     mobileCells = [
       { label: '파워트레인', value: pt ?? null },
       { label: '출력',       value: hp    ? `${hp}hp`        : null },
