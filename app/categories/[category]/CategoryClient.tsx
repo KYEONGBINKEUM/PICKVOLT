@@ -351,26 +351,32 @@ function ProductCard({
   return (
     <Link href={`/product/${product.id}`} className="group block h-full relative">
       {/* Stack effect */}
-      {hasVariants && (
+      {(hasVariants || hasTrimVariants) && (
         <>
           <div className="absolute inset-x-4 bottom-[-6px] h-full rounded-2xl bg-surface border border-white/[0.04]" />
           <div className="absolute inset-x-2 bottom-[-3px] h-full rounded-2xl bg-surface border border-white/[0.07]" />
         </>
       )}
 
-      {/* Variant arrows — on card edges */}
+      {/* Variant arrows (전자제품) — on card edges */}
       {hasVariants && (
         <>
-          <button
-            onClick={goPrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white transition-all shadow-lg"
-          >
+          <button onClick={goPrev} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white transition-all shadow-lg">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <button
-            onClick={goNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white transition-all shadow-lg"
-          >
+          <button onClick={goNext} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white transition-all shadow-lg">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
+
+      {/* Trim arrows (자동차) — on card edges */}
+      {hasTrimVariants && (
+        <>
+          <button onClick={prevTrim} disabled={trimIdx === 0} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white disabled:opacity-30 transition-all shadow-lg">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button onClick={nextTrim} disabled={trimIdx === allTrims.length - 1} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/80 hover:bg-black/95 hover:border-white/50 hover:text-white disabled:opacity-30 transition-all shadow-lg">
             <ChevronRight className="w-4 h-4" />
           </button>
         </>
@@ -380,7 +386,7 @@ function ProductCard({
         className={`relative z-10 bg-surface border rounded-2xl overflow-hidden flex flex-row h-full transition-all duration-[160ms] hover:shadow-lg
           ${isOwned
             ? 'border-accent/50 hover:border-accent/70 shadow-[0_0_0_1px_rgba(255,77,0,0.25)] hover:shadow-[0_0_0_1px_rgba(255,77,0,0.45)]'
-            : hasVariants ? 'border-white/10 hover:border-white/20 hover:shadow-black/20' : 'border-border hover:border-white/15 hover:shadow-black/20'
+            : (hasVariants || hasTrimVariants) ? 'border-white/10 hover:border-white/20 hover:shadow-black/20' : 'border-border hover:border-white/15 hover:shadow-black/20'
           }
           ${animating
             ? animDir === 'left'
@@ -492,32 +498,6 @@ function ProductCard({
               </div>
             ))}
           </div>
-
-          {/* 자동차 트림 네비게이터 */}
-          {hasTrimVariants && (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={prevTrim}
-                disabled={trimIdx === 0}
-                className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-white/30 hover:text-white/70 disabled:opacity-20 transition-colors"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex-1 min-w-0 text-center">
-                <span className="text-[10px] text-white/40 font-medium truncate block">
-                  {currentTrim?.name ?? '기본'}
-                  <span className="text-white/20 ml-1">({trimIdx + 1}/{allTrims.length})</span>
-                </span>
-              </div>
-              <button
-                onClick={nextTrim}
-                disabled={trimIdx === allTrims.length - 1}
-                className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-white/30 hover:text-white/70 disabled:opacity-20 transition-colors"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
 
           {/* Performance bar */}
           {score > 0 && (
