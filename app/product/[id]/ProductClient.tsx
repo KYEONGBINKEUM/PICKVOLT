@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, ChevronLeft, ChevronRight, Loader2, Heart, Pencil, Flag, X } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Share2, Download, Code2, Copy, FileDown, ChevronDown, Loader2, Heart, Pencil, Flag, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useCompareCart } from '@/lib/compareCart'
 import ReviewSection from '@/components/ReviewSection'
@@ -607,44 +607,21 @@ ${priceHTML}
                 ? (currentTrim?.name ?? currentTrim?.powertrain ?? r.powertrain)
                 : r.powertrain
               return <>
-                {/* 트림 셀렉터 */}
+                {/* 트림 셀렉터 — variant selector와 동일한 <select> 스타일 */}
                 {hasTrimVariants && (
-                  <div className="flex items-center gap-2 py-3.5 border-b border-border">
-                    <span className="text-xs text-white/30 uppercase tracking-widest w-28 flex-shrink-0">트림</span>
-                    <div className="flex items-center gap-2 flex-1">
-                      <button
-                        onClick={() => setTrimIdx(i => Math.max(0, i - 1))}
-                        disabled={trimIdx === 0}
-                        className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/30 disabled:opacity-20 transition-all"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      <div className="flex gap-1.5 flex-wrap">
-                        {allTrims.map((trim, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setTrimIdx(i)}
-                            className={`text-xs px-3 py-1 rounded-full border transition-all ${
-                              trimIdx === i
-                                ? 'border-accent/60 bg-accent/10 text-accent font-semibold'
-                                : 'border-white/10 text-white/40 hover:text-white/70 hover:border-white/25'
-                            }`}
-                          >
-                            {trim.name}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setTrimIdx(i => Math.min(allTrims.length - 1, i + 1))}
-                        disabled={trimIdx === allTrims.length - 1}
-                        className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/30 disabled:opacity-20 transition-all"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {currentTrim?.price_usd && trimIdx > 0 && (
-                      <span className="text-sm font-bold text-accent flex-shrink-0">${Number(currentTrim.price_usd).toLocaleString()}</span>
-                    )}
+                  <div className="mb-4 pt-3.5">
+                    <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">트림 선택</p>
+                    <select
+                      value={trimIdx}
+                      onChange={(e) => setTrimIdx(Number(e.target.value))}
+                      className="w-full rounded-lg px-3 py-2.5 text-xs font-semibold border border-accent/50 bg-surface-2 text-accent outline-none cursor-pointer"
+                    >
+                      {allTrims.map((trim, i) => (
+                        <option key={i} value={i}>
+                          {trim.name}{trim.price_usd && i > 0 ? ` — $${Number(trim.price_usd).toLocaleString()}` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
                 <SpecRow label="파워트레인"  value={pt as string} />
