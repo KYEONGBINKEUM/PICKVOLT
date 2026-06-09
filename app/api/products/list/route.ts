@@ -130,11 +130,15 @@ export async function GET(req: NextRequest) {
       const tv         = p.specs_tv
       const car        = p.specs_car
 
+      // base 스펙은 공통 CPU/GPU만 사용 (default variant 무시)
+      // → performance_score = 기본 스펙 점수 / variant_scores = 옵션별 독립 점수
       const defVariant  = defaultVariantMap[p.id]
-      const activeCpuId = defVariant?.cpu_id ?? common?.cpu_id ?? null
-      const activeGpuId = defVariant?.gpu_id ?? common?.gpu_id ?? null
+      const activeCpuId = common?.cpu_id ?? null
+      const activeGpuId = common?.gpu_id ?? null
       const cpuRelScore = activeCpuId ? (cpuMap[activeCpuId] ?? 0) : 0
       const gpuRelScore = activeGpuId ? (gpuMap[activeGpuId] ?? 0) : 0
+      // defVariant는 sort용 best_score 계산에만 활용
+      void defVariant
 
       const ppi = computePPI(specSrc.display_resolution, specSrc.display_inch)
 
@@ -310,8 +314,9 @@ export async function GET(req: NextRequest) {
       // 제품 옵션(variant)별 점수 사전 계산 — 클라이언트에서 옵션 전환 시 점수 반영에 사용
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const variantScores: number[] = (variantMap[p.id] ?? []).map((variant: any) => {
-        const vCpuRel = variant.cpu_id ? (cpuMap[variant.cpu_id] ?? 0) : p._cpuRel
-        const vGpuRel = variant.gpu_id ? (gpuMap[variant.gpu_id] ?? 0) : p._gpuRel
+        // variant cpu_id 없으면 common cpu_id로 fallback (defVariant 아님)
+        const vCpuRel = variant.cpu_id ? (cpuMap[variant.cpu_id] ?? 0) : cpuRelScore
+        const vGpuRel = variant.gpu_id ? (gpuMap[variant.gpu_id] ?? 0) : gpuRelScore
         return computeRelativeScores({
           category:            primaryCategory,
           relativeScore:       vCpuRel || null,
@@ -339,14 +344,22 @@ export async function GET(req: NextRequest) {
         }, stats).overall
       })
 
+      // 정렬용 best_score: base 또는 옵션 중 가장 높은 점수
+      const bestScore = variantScores.length > 0
+        ? Math.max(scored.overall, ...variantScores)
+        : scored.overall
+
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _cpuRel, _gpuRel, ...rest } = p
       return {
         ...rest,
-        performance_score: scored.overall,
+        // performance_score = 정렬/maxScore 기준 (best score)
+        performance_score: bestScore,
+        // base_score = 기본 스펙 점수 (옵션 전환 시 index 0 표시용)
+        base_score: scored.overall,
         // trim_scores[0] = 기본 스펙 점수, [1+] = 각 트림 점수
         trim_scores: trimScores.length > 0 ? [scored.overall, ...trimScores] : [],
-        // variant_scores[i] = variants[i]의 점수 (base는 performance_score)
+        // variant_scores[i] = variants[i]의 점수
         variant_scores: variantScores,
       }
     })

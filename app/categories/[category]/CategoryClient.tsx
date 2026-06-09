@@ -98,6 +98,7 @@ interface Product {
   powertrain_variants: { name: string; powertrain?: string | null; horsepower?: number | null; range_km?: number | null; acceleration_0_100?: number | null; torque_nm?: number | null }[] | null
   trim_scores: number[]
   variant_scores: number[]
+  base_score?: number
   // smartwatch
   chip_name: string | null
   water_resistance: string | null
@@ -214,10 +215,14 @@ function ProductCard({
     { id: undefined, variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null, is_default: false },
     ...product.variants,
   ]
-  // 옵션별 점수 배열: [base, ...per-variant]
-  const allVariantScores = [product.performance_score, ...(product.variant_scores ?? [])]
-  // 기본값: 가장 높은 점수의 옵션 인덱스
-  const bestVariantIdx = allVariantScores.reduce((best, s, i) => s > allVariantScores[best] ? i : best, 0)
+  // 옵션별 점수 배열: index 0 = base_score(기본 스펙), index 1+ = 각 옵션 점수
+  // base_score는 공통 CPU 기준이므로 옵션과 독립적으로 비교 가능
+  const allVariantScores = [
+    product.base_score ?? product.performance_score,
+    ...(product.variant_scores ?? []),
+  ]
+  // 기본값: 가장 높은 점수의 옵션 인덱스 (동점 시 더 높은 인덱스 = 실제 옵션 우선)
+  const bestVariantIdx = allVariantScores.reduce((best, s, i) => s >= allVariantScores[best] ? i : best, 0)
   const [variantIdx, setVariantIdx] = useState(bestVariantIdx)
   const [animating, setAnimating] = useState(false)
   const [animDir, setAnimDir] = useState<'left' | 'right'>('left')
