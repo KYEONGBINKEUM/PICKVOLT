@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -67,6 +67,7 @@ interface Product {
   display_hz: number | null
   ppi: number | null
   battery_mah: number | null
+  camera_main_mp: number | null
   battery_wh: number | null
   battery_hours: number | null
   weight_g: number | null
@@ -176,6 +177,87 @@ const DEFAULT_FILTERS: Filters = {
   batteryMax: 10000,
 }
 
+// ─── Weight Types ─────────────────────────────────────────────────────────────
+
+interface Weights {
+  performance: number
+  camera: number
+  battery: number
+  display: number
+  portability: number
+}
+
+const DEFAULT_WEIGHTS: Weights = { performance: 5, camera: 5, battery: 5, display: 5, portability: 5 }
+
+// ─── Weight Panel ─────────────────────────────────────────────────────────────
+
+function WeightPanel({ weights, onChange }: { weights: Weights; onChange: (w: Weights) => void }) {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(true)
+  const isDefault = Object.entries(weights).every(([k, v]) => v === DEFAULT_WEIGHTS[k as keyof Weights])
+
+  const AXES: { key: keyof Weights; label: string; icon: string }[] = [
+    { key: 'performance', label: t('weight.performance'), icon: '⚡' },
+    { key: 'camera',      label: t('weight.camera'),      icon: '📷' },
+    { key: 'battery',     label: t('weight.battery'),     icon: '🔋' },
+    { key: 'display',     label: t('weight.display'),     icon: '🖥️' },
+    { key: 'portability', label: t('weight.portability'), icon: '✋' },
+  ]
+
+  return (
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden mb-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-3"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-white/50 uppercase tracking-widest">{t('weight.panel_title')}</span>
+          {!isDefault && (
+            <span className="text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full font-bold">
+              {t('weight.active')}
+            </span>
+          )}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-2 space-y-2.5 border-t border-border">
+          {AXES.map(({ key, label, icon }) => (
+            <div key={key} className="flex items-center gap-3">
+              <span className="text-xs text-white/40 w-20 flex-shrink-0 truncate">
+                {icon} {label}
+              </span>
+              <input
+                type="range"
+                min={0} max={10} step={1}
+                value={weights[key]}
+                onChange={(e) => onChange({ ...weights, [key]: Number(e.target.value) })}
+                className="flex-1 h-1 cursor-pointer"
+                style={{ accentColor: 'rgb(255,77,0)' }}
+              />
+              <span
+                className="text-xs font-black tabular-nums w-4 text-right"
+                style={{ color: weights[key] === 0 ? 'rgba(255,255,255,0.2)' : weights[key] >= 8 ? 'rgb(255,77,0)' : 'rgba(255,255,255,0.6)' }}
+              >
+                {weights[key]}
+              </span>
+            </div>
+          ))}
+          {!isDefault && (
+            <button
+              onClick={() => onChange({ ...DEFAULT_WEIGHTS })}
+              className="text-[11px] text-white/25 hover:text-white/50 transition-colors mt-1"
+            >
+              {t('weight.reset')}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Product Card (horizontal layout) ────────────────────────────────────────
 
 function ProductCard({
@@ -185,6 +267,7 @@ function ProductCard({
   isAdmin,
   maxScore,
   isOwned,
+  weightedScore,
 }: {
   product: Product
   wishlisted: boolean
@@ -192,6 +275,7 @@ function ProductCard({
   isAdmin: boolean
   maxScore: number
   isOwned?: boolean
+  weightedScore?: number
 }) {
   const { t } = useI18n()
   const { cart, add, remove } = useCompareCart()
@@ -363,7 +447,7 @@ function ProductCard({
   }
 
 
-  const score = currentScore
+  const score = weightedScore ?? currentScore
   const scorePercent = Math.min(100, Math.round((score / maxScore) * 100))
 
   return (
@@ -978,6 +1062,10 @@ export default function CategoryClient({ category, initialData }: { category: st
     router.push(`/compare?ids=${ids}${hasVariants ? `&variants=${variants}` : ''}`)
   }
 
+  const showWeightPanel = ['smartphone', 'tablet'].includes(category)
+  const [weights, setWeights] = useState<Weights>({ ...DEFAULT_WEIGHTS })
+  const isWeightActive = showWeightPanel && Object.entries(weights).some(([k, v]) => v !== DEFAULT_WEIGHTS[k as keyof Weights])
+
   const [allProducts,     setAllProducts]     = useState<Product[]>(initialData?.products ?? [])
   const [availableBrands, setAvailableBrands] = useState<string[]>(initialData?.brands ?? [])
   const [availableOsList, setAvailableOsList] = useState<string[]>([])
@@ -1173,9 +1261,60 @@ export default function CategoryClient({ category, initialData }: { category: st
     return () => observer.disconnect()
   }, [loading, isLoadingMore, hasMoreServer, serverPage, fetchProductsPage])
 
-  const filtered  = applyClientFilters(allProducts, filters)
+  // ── 가중치 정규화 통계 (allProducts 기준, 슬라이더 변경에도 안정적) ──────────
+  const normStats = useMemo(() => {
+    const ps = allProducts.filter((p) => p.performance_score > 0)
+    if (!ps.length) return null
+    const safeRange = (arr: number[]) => {
+      const filtered = arr.filter((n) => n > 0)
+      if (!filtered.length) return { min: 0, max: 1 }
+      const mn = Math.min(...filtered); const mx = Math.max(...filtered)
+      return { min: mn, max: mx === mn ? mn + 1 : mx }
+    }
+    return {
+      perf:    safeRange(ps.map((p) => p.performance_score)),
+      camera:  safeRange(ps.map((p) => p.camera_main_mp ?? 0)),
+      bat:     safeRange(ps.map((p) => p.battery_mah ?? 0)),
+      disp:    safeRange(ps.map((p) => (p.display_inch ?? 0) * (p.display_hz ?? 60))),
+      weight:  safeRange(ps.map((p) => p.weight_g ?? 0)),
+    }
+  }, [allProducts])
+
+  const normVal = (v: number | null | undefined, range: { min: number; max: number }, invert = false) => {
+    if (!v || v <= 0) return 0.5
+    const n = Math.max(0, Math.min(1, (v - range.min) / (range.max - range.min)))
+    return invert ? 1 - n : n
+  }
+
+  const getWeightedScore = useCallback((product: Product): number => {
+    if (!normStats) return product.performance_score
+    const totalW = weights.performance + weights.camera + weights.battery + weights.display + weights.portability
+    if (totalW === 0) return 0
+    const dispVal = (product.display_inch ?? 0) * (product.display_hz ?? 60)
+    const score =
+      weights.performance * normVal(product.performance_score, normStats.perf) +
+      weights.camera      * normVal(product.camera_main_mp,    normStats.camera) +
+      weights.battery     * normVal(product.battery_mah,       normStats.bat) +
+      weights.display     * normVal(dispVal,                   normStats.disp) +
+      weights.portability * normVal(product.weight_g,          normStats.weight, true)
+    return (score / totalW) * 100
+  }, [weights, normStats])
+
+  const filtered = applyClientFilters(allProducts, filters)
+
+  // 가중치 활성 시 클라이언트 재정렬
+  const products = useMemo(() => {
+    if (!isWeightActive) return filtered
+    return [...filtered].sort((a, b) => getWeightedScore(b) - getWeightedScore(a))
+  }, [filtered, isWeightActive, getWeightedScore])
+
+  // 가중치 활성 시 점수바 기준도 재계산
+  const effectiveMaxScore = useMemo(() => {
+    if (!isWeightActive || !products.length) return categoryMaxScore
+    return Math.max(1, ...products.map((p) => getWeightedScore(p)))
+  }, [isWeightActive, products, getWeightedScore, categoryMaxScore])
+
   const total     = filtered.length
-  const products  = filtered
 
   const hasFilters =
     filters.brands.length > 0 || !!filters.q || !!filters.os ||
@@ -1287,6 +1426,10 @@ export default function CategoryClient({ category, initialData }: { category: st
 
         {/* Product list */}
         <div className="flex-1 min-w-0">
+          {/* 가중치 패널 — 스마트폰/태블릿만 */}
+          {showWeightPanel && (
+            <WeightPanel weights={weights} onChange={setWeights} />
+          )}
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -1331,8 +1474,9 @@ export default function CategoryClient({ category, initialData }: { category: st
                       wishlisted={wishlistedIds.has(product.id)}
                       onWishlistToggle={toggleWishlist}
                       isAdmin={isAdmin}
-                      maxScore={categoryMaxScore}
+                      maxScore={effectiveMaxScore}
                       isOwned={myDeviceIds.has(product.id)}
+                      weightedScore={isWeightActive ? getWeightedScore(product) : undefined}
                     />
                     {/* 인라인 배너: 10번째 뒤 첫 노출, 이후 20~40개 랜덤 간격 */}
                     {AD_HTML_INLINE && adIndices.has(idx) && idx < products.length - 1 && (

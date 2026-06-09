@@ -44,9 +44,9 @@ export async function GET(req: NextRequest) {
       .select(`
         id, name, brand, category, price_usd, image_url,
         specs_common ( ram_gb, cpu_id, gpu_id, cpu_name, gpu_name, os, launch_year ),
-        specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, weight_g ),
+        specs_smartphone ( display_inch, display_resolution, display_hz, battery_mah, weight_g, camera_main_mp ),
         specs_laptop ( display_inch, display_resolution, display_hz, weight_kg, battery_wh, battery_hours ),
-        specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support )${extraSpec}
+        specs_tablet ( display_inch, display_resolution, display_hz, battery_mah, weight_g, stylus_support, camera_main_mp )${extraSpec}
       `)
       .eq('is_visible', true)
 
@@ -152,6 +152,7 @@ export async function GET(req: NextRequest) {
         display_inch: specSrc.display_inch ?? null, display_hz: specSrc.display_hz ?? null,
         display_resolution: specSrc.display_resolution ?? null, ppi,
         battery_mah: (smartphone ?? tablet)?.battery_mah ?? null,
+        camera_main_mp: (smartphone ?? tablet)?.camera_main_mp ?? null,
         weight_g: (smartphone ?? tablet)?.weight_g ?? null,
         battery_wh: laptop?.battery_wh ?? null, battery_hours: laptop?.battery_hours ?? null,
         weight_kg: laptop?.weight_kg ?? null,
