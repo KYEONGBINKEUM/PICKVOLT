@@ -574,12 +574,12 @@ ${priceHTML}
         <div className="flex-1 min-w-0">
           {/* Variant selector */}
           {product.variants && product.variants.length > 0 && (
-            <div className="mb-4">
-              <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">{t('compare.select_model')}</p>
+            <div className="flex items-center gap-4 py-3 mb-3 border-b border-border">
+              <span className="text-xs text-white/30 uppercase tracking-widest w-28 flex-shrink-0">{t('compare.select_model')}</span>
               <select
                 value={selectedVariantId ?? ''}
                 onChange={(e) => setSelectedVariantId(e.target.value || null)}
-                className="w-full rounded-lg px-3 py-2.5 text-xs font-semibold border border-accent/50 bg-surface-2 text-accent outline-none cursor-pointer"
+                className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold border border-accent/50 bg-surface-2 text-white outline-none cursor-pointer"
               >
                 <option value="">
                   {[product.specs.cpu, product.specs.gpuName].filter(Boolean).join(' + ') || product.name}
@@ -607,14 +607,14 @@ ${priceHTML}
                 ? (currentTrim?.name ?? currentTrim?.powertrain ?? r.powertrain)
                 : r.powertrain
               return <>
-                {/* 트림 셀렉터 — variant selector와 동일한 <select> 스타일 */}
+                {/* 트림 셀렉터 — SpecRow와 동일한 flex 레이아웃 */}
                 {hasTrimVariants && (
-                  <div className="mb-4 pt-3.5">
-                    <p className="text-[10px] text-white/30 uppercase tracking-widest mb-2">트림 선택</p>
+                  <div className="flex items-center gap-4 py-3.5 border-b border-border">
+                    <span className="text-xs text-white/30 uppercase tracking-widest w-28 flex-shrink-0">트림 선택</span>
                     <select
                       value={trimIdx}
                       onChange={(e) => setTrimIdx(Number(e.target.value))}
-                      className="w-full rounded-lg px-3 py-2.5 text-xs font-semibold border border-accent/50 bg-surface-2 text-accent outline-none cursor-pointer"
+                      className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold border border-accent/50 bg-surface-2 text-white outline-none cursor-pointer"
                     >
                       {allTrims.map((trim, i) => (
                         <option key={i} value={i}>
