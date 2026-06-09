@@ -110,7 +110,9 @@ export async function GET(req: NextRequest) {
       if (!variantMap[row.product_id]) variantMap[row.product_id] = []
       variantMap[row.product_id].push({
         id: row.id, variant_name: row.variant_name, price_usd: row.price_usd,
-        ram_gb: row.ram_gb, storage_gb: row.storage_gb, cpu_name: row.cpu_name, gpu_name: row.gpu_name,
+        ram_gb: row.ram_gb, storage_gb: row.storage_gb,
+        cpu_name: row.cpu_name, cpu_id: row.cpu_id,   // ← 점수 계산에 필수
+        gpu_name: row.gpu_name, gpu_id: row.gpu_id,   // ← 점수 계산에 필수
         is_default: row.is_default ?? false,
       })
       if (row.is_default) defaultVariantMap[row.product_id] = row
