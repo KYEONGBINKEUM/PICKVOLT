@@ -122,6 +122,8 @@ export default function AdminPage() {
   const [page, setPage] = useState(0)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [duplicating, setDuplicating] = useState<string | null>(null)
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   // Users
   const [users, setUsers] = useState<{ id: string; email: string; created_at: string; last_sign_in_at: string | null; comparisons: number; provider: string; posts: number; comments: number; nickname: string | null; avatar_url: string | null; points: number; is_official?: boolean; suspended_until?: string | null; is_banned?: boolean }[]>([])
@@ -331,6 +333,7 @@ export default function AdminPage() {
     setCategory(productCatTab)
     setBrand('')
     setPage(0)
+    setSelectedProductIds(new Set())
   }, [productCatTab])
 
   const fetchUsers = useCallback(async (tok: string, pg: number, q = '') => {
@@ -1180,6 +1183,21 @@ export default function AdminPage() {
     setDeleting(null)
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedProductIds.size === 0) return
+    if (!confirm(`선택한 ${selectedProductIds.size}개 제품을 모두 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return
+    setBulkDeleting(true)
+    await Promise.all(Array.from(selectedProductIds).map((id) =>
+      fetch(`/api/admin/products/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ))
+    setProducts((p) => p.filter((x) => !selectedProductIds.has(x.id)))
+    setSelectedProductIds(new Set())
+    setBulkDeleting(false)
+  }
+
   const handleDuplicateProduct = async (id: string, name: string) => {
     if (!confirm(`"${name}" 제품을 복사하시겠습니까? 복사본은 비공개로 생성됩니다.`)) return
     setDuplicating(id)
@@ -1434,7 +1452,29 @@ export default function AdminPage() {
         {tab === 'products' && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-black">제품 관리</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-black">제품 관리</h1>
+                {selectedProductIds.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-white/40">{selectedProductIds.size}개 선택됨</span>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="flex items-center gap-1.5 text-sm bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 disabled:opacity-40 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      {bulkDeleting
+                        ? <><RefreshCw size={13} className="animate-spin" /> 삭제 중...</>
+                        : <><Trash2 size={13} /> 선택 삭제</>}
+                    </button>
+                    <button
+                      onClick={() => setSelectedProductIds(new Set())}
+                      className="text-xs text-white/30 hover:text-white/60 transition-colors px-2 py-1.5"
+                    >
+                      선택 해제
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={async () => {
@@ -1532,7 +1572,20 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-white/40 font-medium w-10"></th>
+                    {/* 전체 선택 체크박스 */}
+                    <th className="px-3 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={products.length > 0 && products.every(p => selectedProductIds.has(p.id))}
+                        ref={(el) => { if (el) el.indeterminate = selectedProductIds.size > 0 && !products.every(p => selectedProductIds.has(p.id)) }}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedProductIds(new Set(products.map(p => p.id)))
+                          else setSelectedProductIds(new Set())
+                        }}
+                        className="w-4 h-4 accent-[rgb(255,77,0)] cursor-pointer"
+                      />
+                    </th>
+                    <th className="text-left px-3 py-3 text-white/40 font-medium w-10"></th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium">제품명</th>
                     <th className="text-left px-4 py-3 text-white/40 font-medium hidden md:table-cell">브랜드</th>
                     <th className="px-4 py-3 text-white/40 font-medium w-8">이미지</th>
@@ -1545,8 +1598,29 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {products.map((p, i) => (
-                    <tr key={p.id} className={`border-b border-border/50 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                      <td className="px-4 py-2">
+                    <tr
+                      key={p.id}
+                      className={`border-b border-border/50 hover:bg-white/5 transition-colors ${
+                        selectedProductIds.has(p.id) ? 'bg-accent/5' : i % 2 === 0 ? '' : 'bg-white/[0.02]'
+                      }`}
+                    >
+                      {/* 개별 체크박스 */}
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.has(p.id)}
+                          onChange={(e) => {
+                            setSelectedProductIds((prev) => {
+                              const next = new Set(prev)
+                              if (e.target.checked) next.add(p.id)
+                              else next.delete(p.id)
+                              return next
+                            })
+                          }}
+                          className="w-4 h-4 accent-[rgb(255,77,0)] cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
                         {p.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={p.image_url} alt="" className="w-8 h-8 object-contain rounded"
