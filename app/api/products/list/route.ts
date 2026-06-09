@@ -315,8 +315,8 @@ export async function GET(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const variantScores: number[] = (variantMap[p.id] ?? []).map((variant: any) => {
         // variant cpu_id 없으면 common cpu_id로 fallback (defVariant 아님)
-        const vCpuRel = variant.cpu_id ? (cpuMap[variant.cpu_id] ?? 0) : cpuRelScore
-        const vGpuRel = variant.gpu_id ? (gpuMap[variant.gpu_id] ?? 0) : gpuRelScore
+        const vCpuRel = variant.cpu_id ? (cpuMap[variant.cpu_id] ?? 0) : p._cpuRel
+        const vGpuRel = variant.gpu_id ? (gpuMap[variant.gpu_id] ?? 0) : p._gpuRel
         return computeRelativeScores({
           category:            primaryCategory,
           relativeScore:       vCpuRel || null,
