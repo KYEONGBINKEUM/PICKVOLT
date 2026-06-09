@@ -97,6 +97,7 @@ interface Product {
   drivetrain: string | null
   powertrain_variants: { name: string; powertrain?: string | null; horsepower?: number | null; range_km?: number | null; acceleration_0_100?: number | null; torque_nm?: number | null }[] | null
   trim_scores: number[]
+  variant_scores: number[]
   // smartwatch
   chip_name: string | null
   water_resistance: string | null
@@ -213,8 +214,11 @@ function ProductCard({
     { id: undefined, variant_name: null, price_usd: product.price_usd, cpu_name: product.cpu_name, gpu_name: product.gpu_name, ram_gb: product.ram_gb ? String(product.ram_gb) : null, storage_gb: null, is_default: false },
     ...product.variants,
   ]
-  const defaultIdx = product.variants.findIndex((v) => v.is_default)
-  const [variantIdx, setVariantIdx] = useState(defaultIdx >= 0 ? defaultIdx + 1 : 0)
+  // 옵션별 점수 배열: [base, ...per-variant]
+  const allVariantScores = [product.performance_score, ...(product.variant_scores ?? [])]
+  // 기본값: 가장 높은 점수의 옵션 인덱스
+  const bestVariantIdx = allVariantScores.reduce((best, s, i) => s > allVariantScores[best] ? i : best, 0)
+  const [variantIdx, setVariantIdx] = useState(bestVariantIdx)
   const [animating, setAnimating] = useState(false)
   const [animDir, setAnimDir] = useState<'left' | 'right'>('left')
   const current = allVariants[variantIdx]
@@ -234,7 +238,6 @@ function ProductCard({
   const goNext = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); switchVariant('next') }
 
   // ── 자동차 트림 ────────────────────────────────────────────────────────────
-  const [trimIdx, setTrimIdx] = useState(0)
   const allTrims = product.category === 'car'
     ? [
         // index 0 = 기본 스펙
@@ -243,11 +246,16 @@ function ProductCard({
       ]
     : []
   const hasTrimVariants = allTrims.length > 1
+  // 기본값: 가장 높은 점수의 트림 인덱스
+  const bestTrimIdx = (product.trim_scores?.length > 1)
+    ? product.trim_scores.reduce((best: number, s: number, i: number) => s > product.trim_scores[best] ? i : best, 0)
+    : 0
+  const [trimIdx, setTrimIdx] = useState(bestTrimIdx)
   const currentTrim = allTrims[trimIdx] ?? allTrims[0]
-  // 트림별 점수: trim_scores[0]=기본, [1+]=각트림
+  // 점수: 자동차는 trim_scores, 나머지는 allVariantScores
   const currentScore = product.category === 'car' && product.trim_scores?.length > 0
     ? (product.trim_scores[trimIdx] ?? product.performance_score)
-    : product.performance_score
+    : (allVariantScores[variantIdx] ?? product.performance_score)
 
   const prevTrim = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()

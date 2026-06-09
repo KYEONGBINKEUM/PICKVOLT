@@ -307,6 +307,38 @@ export async function GET(req: NextRequest) {
         }, stats).overall
       )
 
+      // 제품 옵션(variant)별 점수 사전 계산 — 클라이언트에서 옵션 전환 시 점수 반영에 사용
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const variantScores: number[] = (variantMap[p.id] ?? []).map((variant: any) => {
+        const vCpuRel = variant.cpu_id ? (cpuMap[variant.cpu_id] ?? 0) : p._cpuRel
+        const vGpuRel = variant.gpu_id ? (gpuMap[variant.gpu_id] ?? 0) : p._gpuRel
+        return computeRelativeScores({
+          category:            primaryCategory,
+          relativeScore:       vCpuRel || null,
+          gpuRelativeScore:    vGpuRel || null,
+          ram_gb:              variant.ram_gb ?? p.ram_gb,
+          battery_wh:          p.battery_wh,
+          battery_mah:         p.battery_mah,
+          display_resolution:  p.display_resolution,
+          display_inch:        primaryCategory === 'monitor' ? pp.monitor_display_inch
+                             : primaryCategory === 'tv'      ? pp.tv_display_inch
+                             : p.display_inch,
+          refresh_hz:          primaryCategory === 'monitor' ? pp.monitor_hz
+                             : primaryCategory === 'tv'      ? pp.tv_hz
+                             : p.display_hz,
+          horsepower:              pp.horsepower,
+          range_km:                pp.range_km,
+          acceleration_0_100:      pp.acceleration_0_100,
+          headphone_battery_hours: pp.headphone_battery_hours,
+          noise_canceling:         pp.noise_canceling,
+          wireless:                pp.wireless,
+          driver_size_mm:          pp.driver_size_mm,
+          panel_type:              pp.panel_type,
+          response_time_ms:        pp.response_time_ms,
+          hdr:                     primaryCategory === 'monitor' ? pp.monitor_hdr : pp.tv_hdr,
+        }, stats).overall
+      })
+
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _cpuRel, _gpuRel, ...rest } = p
       return {
@@ -314,6 +346,8 @@ export async function GET(req: NextRequest) {
         performance_score: scored.overall,
         // trim_scores[0] = 기본 스펙 점수, [1+] = 각 트림 점수
         trim_scores: trimScores.length > 0 ? [scored.overall, ...trimScores] : [],
+        // variant_scores[i] = variants[i]의 점수 (base는 performance_score)
+        variant_scores: variantScores,
       }
     })
 
