@@ -80,9 +80,7 @@ const websiteSchema = {
       email: 'pickvolt.official@gmail.com',
       description: 'AI-powered tech product comparison — unbiased verdicts for smartphones, laptops, and tablets.',
       sameAs: [
-        'https://www.instagram.com/pickvolt',
-        'https://twitter.com/pickvolt',
-        'https://www.youtube.com/@pickvolt',
+        'https://pickvolt.blogspot.com',
       ],
     },
   ],
