@@ -136,7 +136,7 @@ export default function HomeCommunityFeed() {
     let cancelled = false
     async function load() {
       try {
-        const res = await fetch('/api/community/posts?sort=hot&limit=50')
+        const res = await fetch('/api/community/posts?sort=latest&limit=50')
         if (!res.ok) return
         const data = await res.json()
         if (cancelled) return
