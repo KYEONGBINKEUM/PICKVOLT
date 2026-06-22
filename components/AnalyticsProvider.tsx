@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Analytics } from '@vercel/analytics/next'
 import Script from 'next/script'
 
-const GA_ID = 'G-L6DE0CLZX0'
+const GA_ID = 'G-EGGNL3HDL8'
 const CLARITY_ID = 'x194m0w9o7'
 const NAVER_WCS_ID = '1ac987a2aba83f0'
 
