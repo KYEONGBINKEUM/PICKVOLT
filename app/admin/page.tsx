@@ -30,7 +30,7 @@ const CATEGORY_BRANDS: Record<string, string[]> = {
 }
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events' | 'devices'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events' | 'devices' | 'category_settings'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -916,6 +916,42 @@ export default function AdminPage() {
   const [devicesLoading, setDevicesLoading] = useState(false)
   const [deviceSearch, setDeviceSearch] = useState('')
 
+  // Category settings
+  const [categorySettings, setCategorySettings] = useState<{ category: string; is_visible: boolean }[]>([])
+  const [categorySettingsLoading, setCategorySettingsLoading] = useState(false)
+  const [categorySettingsSaving, setCategorySettingsSaving] = useState<string | null>(null)
+
+  const CATEGORY_LABELS_ADMIN: Record<string, string> = {
+    smartphone: '스마트폰',
+    laptop: '노트북',
+    tablet: '태블릿',
+    smartwatch: '스마트워치',
+    headphones: '헤드폰/이어폰',
+    monitor: '모니터',
+    tv: 'TV',
+    car: '자동차/EV',
+  }
+
+  const fetchCategorySettings = useCallback(async () => {
+    if (!token) return
+    setCategorySettingsLoading(true)
+    const res = await fetch('/api/admin/category-settings', { headers: { Authorization: `Bearer ${token}` } })
+    const d = await res.json()
+    setCategorySettings(d.settings ?? [])
+    setCategorySettingsLoading(false)
+  }, [token])
+
+  const toggleCategoryVisibility = async (category: string, currentValue: boolean) => {
+    setCategorySettingsSaving(category)
+    await fetch('/api/admin/category-settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ category, is_visible: !currentValue }),
+    })
+    setCategorySettings(prev => prev.map(s => s.category === category ? { ...s, is_visible: !currentValue } : s))
+    setCategorySettingsSaving(null)
+  }
+
   const fetchDevices = useCallback(async () => {
     if (!token) return
     setDevicesLoading(true)
@@ -1085,6 +1121,7 @@ export default function AdminPage() {
     if (tab === 'newsletter') fetchNewsletter(token)
     if (tab === 'events') fetchEvents()
     if (tab === 'devices') fetchDevices()
+    if (tab === 'category_settings') fetchCategorySettings()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
@@ -1273,6 +1310,12 @@ export default function AdminPage() {
         { key: 'newsletter', label: '뉴스레터',    icon: <Mail size={14} /> },
         { key: 'twitter',    label: 'Twitter',    icon: <Twitter size={14} /> },
         { key: 'events',     label: '이벤트 캘린더', icon: <CalendarDays size={14} /> },
+      ],
+    },
+    {
+      label: '사이트 설정',
+      items: [
+        { key: 'category_settings', label: '카테고리 노출', icon: <Eye size={14} /> },
       ],
     },
   ]
@@ -3987,6 +4030,65 @@ export default function AdminPage() {
             </div>
           )
         })()}
+
+        {/* ── CATEGORY SETTINGS ── */}
+        {tab === 'category_settings' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-black">카테고리 노출 설정</h1>
+                <p className="text-sm text-white/40 mt-1">네비게이션에 표시할 카테고리를 선택합니다. 제품이 없는 카테고리는 미노출로 설정하세요.</p>
+              </div>
+              <button onClick={fetchCategorySettings} disabled={categorySettingsLoading}
+                className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors disabled:opacity-40">
+                <RefreshCw size={13} className={categorySettingsLoading ? 'animate-spin' : ''} />
+                새로고침
+              </button>
+            </div>
+
+            {categorySettingsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="bg-surface border border-border rounded-2xl h-16 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 max-w-lg">
+                {categorySettings.map((s) => (
+                  <div key={s.category} className="bg-surface border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{CATEGORY_LABELS_ADMIN[s.category] ?? s.category}</p>
+                      <p className="text-xs text-white/30 mt-0.5">/categories/{s.category}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleCategoryVisibility(s.category, s.is_visible)}
+                      disabled={categorySettingsSaving === s.category}
+                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        s.is_visible
+                          ? 'bg-accent/15 border-accent/40 text-accent hover:bg-accent/25'
+                          : 'bg-white/5 border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                      } disabled:opacity-50`}
+                    >
+                      {categorySettingsSaving === s.category
+                        ? <RefreshCw size={12} className="animate-spin" />
+                        : s.is_visible ? <Eye size={12} /> : <EyeOff size={12} />
+                      }
+                      {s.is_visible ? '노출 중' : '미노출'}
+                    </button>
+                  </div>
+                ))}
+
+                {categorySettings.length === 0 && (
+                  <div className="text-center py-12 text-white/30 text-sm">
+                    <p>카테고리 설정을 불러오지 못했습니다.</p>
+                    <p className="text-xs mt-2">Supabase에서 <code className="text-accent">category_settings</code> 테이블을 먼저 생성해주세요.</p>
+                    <p className="text-xs text-white/20 mt-1">supabase/category_settings.sql 참고</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
         </main>

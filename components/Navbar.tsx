@@ -29,6 +29,19 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [catOpen, setCatOpen] = useState(false)
   const [myClans, setMyClans] = useState<{ id: string; slug: string; name: string; avatar_url?: string | null }[]>([])
+  const [visibleCategories, setVisibleCategories] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    fetch('/api/category-settings')
+      .then((r) => r.json())
+      .then((d) => {
+        const visible = new Set<string>(
+          (d.settings ?? []).filter((s: { category: string; is_visible: boolean }) => s.is_visible).map((s: { category: string }) => s.category)
+        )
+        setVisibleCategories(visible)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let settled = false
@@ -77,17 +90,20 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
     { href: '/community/news',    label: t('community.news'),    icon: Newspaper },
   ]
 
-  // 카테고리 드롭다운 목록
-  const categoryLinks = [
-    { href: '/categories/smartphone', label: t('cat.smartphone') },
-    { href: '/categories/laptop',     label: t('cat.laptop') },
-    { href: '/categories/tablet',     label: t('cat.tablet') },
-    { href: '/categories/smartwatch', label: t('cat.watch') },
-    { href: '/categories/headphones', label: t('cat.headphones') },
-    { href: '/categories/monitor',    label: t('cat.monitor') },
-    { href: '/categories/tv',         label: t('cat.tv') },
-    { href: '/categories/car',        label: t('cat.car') },
+  // 카테고리 드롭다운 목록 (visibleCategories null = 로딩 전 → 전체 표시)
+  const allCategoryLinks = [
+    { href: '/categories/smartphone', label: t('cat.smartphone'), slug: 'smartphone' },
+    { href: '/categories/laptop',     label: t('cat.laptop'),     slug: 'laptop'     },
+    { href: '/categories/tablet',     label: t('cat.tablet'),     slug: 'tablet'     },
+    { href: '/categories/smartwatch', label: t('cat.watch'),      slug: 'smartwatch' },
+    { href: '/categories/headphones', label: t('cat.headphones'), slug: 'headphones' },
+    { href: '/categories/monitor',    label: t('cat.monitor'),    slug: 'monitor'    },
+    { href: '/categories/tv',         label: t('cat.tv'),         slug: 'tv'         },
+    { href: '/categories/car',        label: t('cat.car'),        slug: 'car'        },
   ]
+  const categoryLinks = visibleCategories === null
+    ? allCategoryLinks
+    : allCategoryLinks.filter((l) => visibleCategories.has(l.slug))
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
