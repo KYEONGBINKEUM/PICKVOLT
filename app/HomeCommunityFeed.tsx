@@ -72,8 +72,7 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
         <img
           src={image}
           alt={post.title}
-          className="w-full object-contain bg-surface-2 p-3"
-          style={{ aspectRatio: '4/3' }}
+          className="w-full h-auto object-contain bg-surface-2 p-3"
           loading="lazy"
         />
       )}
@@ -127,7 +126,7 @@ function SkeletonCard({ hasImage }: { hasImage: boolean }) {
       className="bg-surface border border-border/30 rounded-2xl overflow-hidden animate-pulse"
       style={{ breakInside: 'avoid', marginBottom: '10px' }}
     >
-      {hasImage && <div className="w-full bg-white/5" style={{ aspectRatio: '4/3' }} />}
+      {hasImage && <div className="w-full bg-white/5" style={{ height: '120px' }} />}
       <div className="p-3">
         <div className="h-2.5 w-12 bg-white/10 rounded mb-2.5" />
         <div className="h-3 bg-white/10 rounded mb-1.5 w-full" />
