@@ -38,10 +38,17 @@ function timeAgo(dateStr: string, t: (k: string) => string): string {
 }
 
 function getImage(post: MiniPost): string | null {
+  // 1순위: 연결된 제품 이미지
   const products = post.community_post_products
-  if (!products || products.length === 0) return null
-  for (const pp of products) {
-    if (pp.products?.image_url) return imgUrl(pp.products.image_url, 400)
+  if (products && products.length > 0) {
+    for (const pp of products) {
+      if (pp.products?.image_url) return imgUrl(pp.products.image_url, 400)
+    }
+  }
+  // 2순위: body HTML 내 첫 번째 <img> src
+  if (post.body) {
+    const match = post.body.match(/<img[^>]+src=["']([^"']+)["']/i)
+    if (match?.[1]) return match[1]
   }
   return null
 }
@@ -94,8 +101,8 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
           {post.title}
         </h3>
 
-        {snippet && !image && (
-          <p className="text-[11px] text-white/35 leading-relaxed line-clamp-3 mb-1">
+        {snippet && (
+          <p className="text-[11px] text-white/35 leading-relaxed line-clamp-2 mb-1">
             {snippet}
           </p>
         )}
