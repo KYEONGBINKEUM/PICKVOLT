@@ -81,6 +81,7 @@ const websiteSchema = {
       description: 'AI-powered tech product comparison — unbiased verdicts for smartphones, laptops, and tablets.',
       sameAs: [
         'https://pickvolt.blogspot.com',
+        'https://x.com/pickvolt',
       ],
     },
   ],
