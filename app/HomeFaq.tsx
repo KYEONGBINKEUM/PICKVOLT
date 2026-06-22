@@ -9,9 +9,9 @@ export default function HomeFaq() {
 
   return (
     <section className="w-full px-4 sm:px-6 pb-24">
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto" style={{ maxWidth: '70rem' }}>
         <h2 className="text-sm font-black text-white/40 uppercase tracking-widest mb-6">
-          {t('faq.heading')}
+          FAQ
         </h2>
         <div className="space-y-2">
           {FAQ_KEYS.map((n) => (
