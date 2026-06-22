@@ -186,7 +186,6 @@ function ProductCard({
   isAdmin,
   maxScore,
   isOwned,
-  weightedScore,
 }: {
   product: Product
   wishlisted: boolean
