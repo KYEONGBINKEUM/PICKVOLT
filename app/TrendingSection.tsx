@@ -55,9 +55,6 @@ export default function TrendingSection({ items }: { items: TrendingCard[] }) {
       <div className="flex items-center justify-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-accent" />
         <h3 className="text-lg font-black text-white">{t('compare.trending')}</h3>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
-          {t('compare.trending_sub')}
-        </span>
       </div>
       <div
         className="overflow-hidden w-full"
