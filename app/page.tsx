@@ -16,9 +16,10 @@ export default async function HomePage({
   const trending = await getPopularComparisons()
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
+    <main className="bg-background flex flex-col">
       <Navbar />
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-12 gap-10">
+      {/* 히어로: 뷰포트 전체 높이, 커뮤니티 피드는 스크롤 후 노출 */}
+      <div className="min-h-[calc(100svh-64px)] flex flex-col items-center justify-center px-6 pt-16 pb-12 gap-10">
         <div className="w-full max-w-3xl flex flex-col items-center gap-10 animate-slide-up">
           <HomeHeading />
           <SearchBar initialQuery={q ?? ''} />
