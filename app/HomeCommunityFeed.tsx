@@ -3,13 +3,6 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useI18n } from '@/lib/i18n'
-import { imgUrl } from '@/lib/utils'
-
-type LinkedProduct = {
-  product_id: string
-  products: { id: string; name: string; image_url: string | null } | null
-}
-
 type MiniPost = {
   id: string
   type: string
@@ -21,7 +14,6 @@ type MiniPost = {
   user_display_name: string | null
   is_bot: boolean
   source_name: string | null
-  community_post_products: LinkedProduct[] | null
 }
 
 function stripHtml(html: string | null): string {
@@ -38,19 +30,9 @@ function timeAgo(dateStr: string, t: (k: string) => string): string {
 }
 
 function getImage(post: MiniPost): string | null {
-  // 1순위: 연결된 제품 이미지
-  const products = post.community_post_products
-  if (products && products.length > 0) {
-    for (const pp of products) {
-      if (pp.products?.image_url) return imgUrl(pp.products.image_url, 400)
-    }
-  }
-  // 2순위: body HTML 내 첫 번째 <img> src
-  if (post.body) {
-    const match = post.body.match(/<img[^>]+src=["']([^"']+)["']/i)
-    if (match?.[1]) return match[1]
-  }
-  return null
+  if (!post.body) return null
+  const match = post.body.match(/<img[^>]+src=["']([^"']+)["']/i)
+  return match?.[1] ?? null
 }
 
 const TYPE_LABEL: Record<string, string> = {
