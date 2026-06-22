@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useI18n } from '@/lib/i18n'
+import { imgUrl } from '@/lib/utils'
 
 type LinkedProduct = {
   product_id: string
@@ -41,7 +41,7 @@ function getImage(post: MiniPost): string | null {
   const products = post.community_post_products
   if (!products || products.length === 0) return null
   for (const pp of products) {
-    if (pp.products?.image_url) return pp.products.image_url
+    if (pp.products?.image_url) return imgUrl(pp.products.image_url, 400)
   }
   return null
 }
@@ -68,16 +68,14 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
       style={{ breakInside: 'avoid', marginBottom: '10px', display: 'block' }}
     >
       {image && (
-        <div className="relative w-full bg-surface-2" style={{ aspectRatio: '4/3' }}>
-          <Image
-            src={image}
-            alt={post.title}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain p-3"
-            unoptimized
-          />
-        </div>
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={image}
+          alt={post.title}
+          className="w-full object-contain bg-surface-2 p-3"
+          style={{ aspectRatio: '4/3' }}
+          loading="lazy"
+        />
       )}
 
       <div className="p-3">
@@ -93,12 +91,12 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
           )}
         </div>
 
-        <h3 className="text-[13px] font-semibold text-white/85 leading-snug line-clamp-2 mb-1.5 group-hover:text-white transition-colors">
+        <h3 className="text-[13px] font-semibold text-white/85 leading-snug line-clamp-2 mb-1 group-hover:text-white transition-colors">
           {post.title}
         </h3>
 
         {snippet && !image && (
-          <p className="text-[11px] text-white/35 leading-relaxed line-clamp-3 mb-2">
+          <p className="text-[11px] text-white/35 leading-relaxed line-clamp-3 mb-1">
             {snippet}
           </p>
         )}
@@ -172,33 +170,31 @@ export default function HomeCommunityFeed() {
 
   return (
     <section className="w-full px-4 sm:px-6 pb-24 pt-16">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-sm font-black text-white/60 uppercase tracking-widest">
-            {t('community.feed_heading')}
-          </h2>
-          <Link
-            href="/community"
-            className="text-xs text-white/25 hover:text-white/50 transition-colors"
-          >
-            {t('community.more')} →
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-[10px]">
-            {SKELETON_PATTERN.map((hasImage, i) => (
-              <SkeletonCard key={i} hasImage={hasImage} />
-            ))}
-          </div>
-        ) : (
-          <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-[10px]">
-            {posts.map((post) => (
-              <MasonryCard key={post.id} post={post} t={t} />
-            ))}
-          </div>
-        )}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-sm font-black text-white/60 uppercase tracking-widest">
+          {t('community.feed_heading')}
+        </h2>
+        <Link
+          href="/community"
+          className="text-xs text-white/25 hover:text-white/50 transition-colors"
+        >
+          {t('community.more')} →
+        </Link>
       </div>
+
+      {loading ? (
+        <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-[10px]">
+          {SKELETON_PATTERN.map((hasImage, i) => (
+            <SkeletonCard key={i} hasImage={hasImage} />
+          ))}
+        </div>
+      ) : (
+        <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-[10px]">
+          {posts.map((post) => (
+            <MasonryCard key={post.id} post={post} t={t} />
+          ))}
+        </div>
+      )}
     </section>
   )
 }
