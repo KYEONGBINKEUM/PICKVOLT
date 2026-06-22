@@ -617,8 +617,36 @@ export default function PostDetailPage({ params }: { params: { id: string } }) {
 
   const showTranslateBtn = post ? needsTranslation(post.title + ' ' + post.body.replace(/<[^>]+>/g, '')) : false
 
+  const postSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': post.type === 'review' ? 'Review' : 'Article',
+        '@id': `https://www.pickvolt.com/community/posts/${post.id}`,
+        headline: post.title,
+        datePublished: post.created_at,
+        dateModified: post.updated_at,
+        author: { '@type': 'Person', name: post.user_display_name },
+        publisher: { '@id': 'https://www.pickvolt.com/#organization' },
+        interactionStatistic: [
+          { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: post.upvotes },
+          { '@type': 'InteractionCounter', interactionType: 'https://schema.org/CommentAction', userInteractionCount: post.comment_count },
+        ],
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.pickvolt.com' },
+          { '@type': 'ListItem', position: 2, name: 'Community', item: 'https://www.pickvolt.com/community' },
+          { '@type': 'ListItem', position: 3, name: post.title, item: `https://www.pickvolt.com/community/posts/${post.id}` },
+        ],
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(postSchema) }} />
       <Navbar />
       <main className="max-w-[900px] mx-auto px-4 pt-[88px] pb-20">
 

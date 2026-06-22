@@ -21,6 +21,19 @@ export const metadata: Metadata = {
   description: 'Compare any tech product and get an AI-powered verdict instantly.',
   keywords: ['product comparison', 'tech specs', 'ai recommendations', 'vs'],
   metadataBase: new URL('https://www.pickvolt.com'),
+  alternates: {
+    canonical: 'https://www.pickvolt.com',
+    languages: {
+      'x-default': 'https://www.pickvolt.com',
+      'en':        'https://www.pickvolt.com',
+      'ko':        'https://www.pickvolt.com',
+      'ja':        'https://www.pickvolt.com',
+      'es':        'https://www.pickvolt.com',
+      'pt':        'https://www.pickvolt.com',
+      'fr':        'https://www.pickvolt.com',
+      'de':        'https://www.pickvolt.com',
+    },
+  },
   icons: {
     icon: '/icon.png',
     apple: '/apple-icon.png',
@@ -66,7 +79,11 @@ const websiteSchema = {
       url: 'https://www.pickvolt.com',
       email: 'pickvolt.official@gmail.com',
       description: 'AI-powered tech product comparison — unbiased verdicts for smartphones, laptops, and tablets.',
-      sameAs: [],
+      sameAs: [
+        'https://www.instagram.com/pickvolt',
+        'https://twitter.com/pickvolt',
+        'https://www.youtube.com/@pickvolt',
+      ],
     },
   ],
 }

@@ -12,6 +12,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { ids } = await searchParams
   const idList = (ids ?? '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4)
+  const sortedIds = [...idList].sort()
 
   let productNames: string[] = []
   if (idList.length > 0) {
@@ -41,13 +42,18 @@ export async function generateMetadata({
   productNames.forEach((name) => ogParams.append('p', name))
   const ogImageUrl = `${BASE_URL}/api/og?${ogParams.toString()}`
 
+  const canonicalUrl = sortedIds.length > 0
+    ? `${BASE_URL}/compare?ids=${sortedIds.join(',')}`
+    : `${BASE_URL}/compare`
+
   return {
     title,
     description,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       title,
       description,
-      url:      `${BASE_URL}/compare${ids ? `?ids=${ids}` : ''}`,
+      url:      canonicalUrl,
       siteName: 'Pickvolt',
       images:   [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
       type:     'website',

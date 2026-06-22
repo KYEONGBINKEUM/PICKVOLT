@@ -1,5 +1,36 @@
+import type { Metadata } from 'next'
 import CommunityClient from './CommunityClient'
 import type { FeedPost } from '@/components/PostFeed'
+
+export const metadata: Metadata = {
+  title: 'Community — Pickvolt',
+  description: 'Join the Pickvolt community. Read tech reviews, compare products, ask questions, and share your experience with other users.',
+  alternates: { canonical: 'https://www.pickvolt.com/community' },
+  openGraph: {
+    title: 'Pickvolt Community',
+    description: 'Read tech reviews, compare products, and share your experience.',
+    url: 'https://www.pickvolt.com/community',
+    siteName: 'Pickvolt',
+    type: 'website',
+  },
+}
+
+const communitySchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  '@id': 'https://www.pickvolt.com/community',
+  name: 'Pickvolt Community',
+  description: 'Tech reviews, product comparisons, Q&A, and discussions by the Pickvolt community.',
+  url: 'https://www.pickvolt.com/community',
+  isPartOf: { '@id': 'https://www.pickvolt.com/#website' },
+  breadcrumb: {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.pickvolt.com' },
+      { '@type': 'ListItem', position: 2, name: 'Community', item: 'https://www.pickvolt.com/community' },
+    ],
+  },
+}
 
 function getBaseUrl() {
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
@@ -22,5 +53,10 @@ async function getInitialPosts(): Promise<{ posts: FeedPost[]; total: number }> 
 
 export default async function CommunityPage() {
   const { posts, total } = await getInitialPosts()
-  return <CommunityClient initialPosts={posts.length > 0 ? posts : undefined} initialTotal={total} />
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(communitySchema) }} />
+      <CommunityClient initialPosts={posts.length > 0 ? posts : undefined} initialTotal={total} />
+    </>
+  )
 }

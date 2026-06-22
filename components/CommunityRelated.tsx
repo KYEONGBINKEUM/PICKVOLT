@@ -59,7 +59,7 @@ export default function CommunityRelated({ productId }: { productId: string }) {
               {thumbUrl && (
                 <div className="flex-shrink-0 mt-0.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={thumbUrl} alt="" className="w-14 h-14 object-contain rounded-lg bg-surface-2 p-0.5" />
+                  <img src={thumbUrl} alt={post.title} className="w-14 h-14 object-contain rounded-lg bg-surface-2 p-0.5" />
                 </div>
               )}
 
