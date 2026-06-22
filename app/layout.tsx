@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { cookies } from 'next/headers'
 import './globals.css'
-import { I18nProvider } from '@/lib/i18n'
+import { I18nProvider, type Locale } from '@/lib/i18n'
 import { CurrencyProvider } from '@/lib/currency'
 import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
@@ -70,9 +71,15 @@ const websiteSchema = {
   ],
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const SUPPORTED_LOCALES = new Set(['en', 'es', 'pt', 'fr', 'de', 'ja', 'ko'])
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
+  const savedLocale = cookieStore.get('pv_locale')?.value
+  const initialLocale: Locale = (savedLocale && SUPPORTED_LOCALES.has(savedLocale) ? savedLocale : 'en') as Locale
+
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang={initialLocale} className={inter.variable} suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="-EfsApMwG2izRsMpHjN52Zr89_RnZzu_msPg3w1fsfw" />
         <link
@@ -92,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         */}
       </head>
       <body className="bg-background text-white antialiased">
-        <I18nProvider>
+        <I18nProvider initialLocale={initialLocale}>
           <CurrencyProvider>
             <CompareCartProvider>
               {children}

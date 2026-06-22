@@ -2,6 +2,7 @@ import Navbar from '@/components/Navbar'
 import SearchBar from '@/components/SearchBar'
 import HomeHeading from './HomeHeading'
 import TrendingSection from './TrendingSection'
+import HomeCommunityFeed from './HomeCommunityFeed'
 import { getPopularComparisons } from '@/lib/getPopularComparisons'
 
 export const revalidate = 0
@@ -28,6 +29,7 @@ export default async function HomePage({
           </div>
         )}
       </div>
+      <HomeCommunityFeed />
     </main>
   )
 }

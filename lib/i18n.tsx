@@ -149,6 +149,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': 'Reviews',
     'community.all': 'All',
     'community.popular': 'Popular',
+    'community.feed_heading': 'Popular Community Posts',
     'community.compare': 'Compare',
     'community.free': 'Free Board',
     'community.qa': 'Q&A',
@@ -963,6 +964,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': 'Reseñas',
     'community.all': 'Todo',
     'community.popular': 'Popular',
+    'community.feed_heading': 'Publicaciones populares',
     'community.compare': 'Comparar',
     'community.free': 'Tablón libre',
     'community.qa': 'Preguntas y respuestas',
@@ -1713,6 +1715,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': 'Avaliações',
     'community.all': 'Tudo',
     'community.popular': 'Popular',
+    'community.feed_heading': 'Publicações populares',
     'community.compare': 'Comparar',
     'community.free': 'Quadro livre',
     'community.qa': 'Perguntas e respostas',
@@ -2478,6 +2481,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': 'Avis',
     'community.all': 'Tout',
     'community.popular': 'Populaire',
+    'community.feed_heading': 'Publications populaires',
     'community.compare': 'Comparer',
     'community.free': 'Tableau libre',
     'community.qa': 'Questions & réponses',
@@ -3243,6 +3247,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': 'Bewertungen',
     'community.all': 'Alle',
     'community.popular': 'Beliebt',
+    'community.feed_heading': 'Beliebte Beiträge',
     'community.compare': 'Vergleichen',
     'community.free': 'Freies Board',
     'community.qa': 'Fragen & Antworten',
@@ -4008,6 +4013,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': 'レビュー',
     'community.all': 'すべて',
     'community.popular': '人気',
+    'community.feed_heading': '人気のコミュニティ投稿',
     'community.compare': '比較',
     'community.free': '自由掲示板',
     'community.qa': 'Q&A',
@@ -4773,6 +4779,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'community.reviews': '리뷰',
     'community.all': '전체',
     'community.popular': '인기',
+    'community.feed_heading': '인기 커뮤니티 글',
     'community.compare': '비교투표',
     'community.free': '자유게시판',
     'community.qa': 'Q&A',
@@ -5479,16 +5486,21 @@ function detectLocale(): Locale {
   return 'en'
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('en')
+export function I18nProvider({ children, initialLocale }: { children: ReactNode; initialLocale?: Locale }) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? 'en')
 
   useEffect(() => {
-    setLocaleState(detectLocale())
+    // 쿠키가 없는 신규 방문자 or 쿠키와 브라우저 언어가 다를 때 보정
+    const detected = detectLocale()
+    if (detected !== locale) setLocaleState(detected)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const setLocale = (l: Locale) => {
     setLocaleState(l)
     localStorage.setItem('pv_locale', l)
+    // 서버 SSR에서도 읽을 수 있도록 쿠키에도 저장
+    document.cookie = `pv_locale=${l}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
   }
 
   const t = (key: string): string =>
