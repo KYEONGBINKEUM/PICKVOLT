@@ -6,7 +6,7 @@ import HomeCommunityFeed from './HomeCommunityFeed'
 import HomeFaq from './HomeFaq'
 import { getPopularComparisons } from '@/lib/getPopularComparisons'
 
-export const revalidate = 60
+export const revalidate = 30
 
 const homeFaqSchema = {
   '@context': 'https://schema.org',
