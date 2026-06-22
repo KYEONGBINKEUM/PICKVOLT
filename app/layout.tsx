@@ -18,7 +18,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Pickvolt — AI-Powered Product Comparisons',
-  description: 'Compare any tech product and get an AI-powered verdict instantly.',
+  description: 'Compare any tech product with AI — smartphones, laptops, tablets, headphones, and more. Get unbiased specs analysis and an instant verdict on the best pick.',
   keywords: ['product comparison', 'tech specs', 'ai recommendations', 'vs'],
   metadataBase: new URL('https://www.pickvolt.com'),
   alternates: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Pickvolt',
-    description: 'Compare any tech product and get an AI-powered verdict instantly.',
+    description: 'Compare any tech product with AI — smartphones, laptops, tablets, headphones, and more. Get unbiased specs analysis and an instant verdict on the best pick.',
     type: 'website',
     url: 'https://www.pickvolt.com',
     siteName: 'Pickvolt',
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Pickvolt',
-    description: 'Compare any tech product and get an AI-powered verdict instantly.',
+    description: 'Compare any tech product with AI — smartphones, laptops, tablets, headphones, and more. Get unbiased specs analysis and an instant verdict on the best pick.',
     images: ['/opengraph-image.png'],
   },
 }

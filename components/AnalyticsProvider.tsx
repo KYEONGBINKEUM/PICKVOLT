@@ -6,6 +6,7 @@ import Script from 'next/script'
 
 const GA_ID = 'G-L6DE0CLZX0'
 const CLARITY_ID = 'x194m0w9o7'
+const NAVER_WCS = process.env.NEXT_PUBLIC_NAVER_WCS
 
 export default function AnalyticsProvider() {
   const [consented, setConsented] = useState(false)
@@ -64,6 +65,20 @@ export default function AnalyticsProvider() {
               y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
             })(window, document, "clarity", "script", "${CLARITY_ID}");
           `}</Script>
+          {NAVER_WCS && (
+            <Script id="naver-wcs" strategy="afterInteractive">{`
+              (function(){
+                var s=document.createElement('script');
+                s.src='//wcs.naver.net/wcslog.js';
+                s.onload=function(){
+                  if(!window.wcs_add)window.wcs_add={};
+                  window.wcs_add['wa']='${NAVER_WCS}';
+                  if(window.wcs){window.wcs.inflow();window.wcs_do&&window.wcs_do();}
+                };
+                document.head.appendChild(s);
+              })();
+            `}</Script>
+          )}
         </>
       )}
     </>
