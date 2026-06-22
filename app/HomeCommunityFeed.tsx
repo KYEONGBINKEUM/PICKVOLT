@@ -52,7 +52,7 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
 
   return (
     <Link
-      href={`/community/post/${post.id}`}
+      href={`/community/posts/${post.id}`}
       className="block bg-surface border border-border/40 rounded-2xl overflow-hidden hover:border-white/20 hover:bg-white/[0.03] transition-colors duration-150 group"
       style={{ breakInside: 'avoid', marginBottom: '10px', display: 'block' }}
     >
