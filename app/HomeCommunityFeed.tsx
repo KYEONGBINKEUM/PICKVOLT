@@ -176,18 +176,6 @@ export default function HomeCommunityFeed() {
 
   return (
     <section className="w-full px-4 sm:px-6 pb-24 pt-16">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-sm font-black text-white/60 uppercase tracking-widest">
-          {t('community.feed_heading')}
-        </h2>
-        <Link
-          href="/community"
-          className="text-xs text-white/25 hover:text-white/50 transition-colors"
-        >
-          {t('community.more')} →
-        </Link>
-      </div>
-
       {loading ? (
         <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-[10px]">
           {SKELETON_PATTERN.map((hasImage, i) => (
