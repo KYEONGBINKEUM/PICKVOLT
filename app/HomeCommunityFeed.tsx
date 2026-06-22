@@ -61,7 +61,7 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
         <img
           src={image}
           alt={post.title}
-          className="w-full h-auto object-contain bg-surface-2 p-3"
+          className="w-full h-auto object-contain bg-surface-2 p-3 rounded-xl"
           loading="lazy"
         />
       )}
