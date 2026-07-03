@@ -1,3 +1,5 @@
+// 미사용 컴포넌트 — 메인 페이지에서 FAQ 섹션 제거로 비활성화됨. 어디서도 import되지 않음.
+/*
 'use client'
 
 import { useI18n } from '@/lib/i18n'
@@ -39,3 +41,4 @@ export default function HomeFaq() {
     </section>
   )
 }
+*/

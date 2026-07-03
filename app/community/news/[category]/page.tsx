@@ -6,8 +6,10 @@ import type { FeedPost } from '@/components/PostFeed'
 const BASE_URL = 'https://www.pickvolt.com'
 
 function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_ENV === 'production') return 'https://www.pickvolt.com'
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  return 'http://localhost:3000'
 }
 
 const CATEGORY_LABELS_KO: Record<string, string> = {

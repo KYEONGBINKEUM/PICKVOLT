@@ -3,21 +3,9 @@ import BlogCategoryNav from '@/components/BlogCategoryNav'
 import BlogPopularWidget from '@/components/BlogPopularWidget'
 import BlogRecentWidget from '@/components/BlogRecentWidget'
 import HomeFeed from './HomeFeed'
-import HomeFaq from './HomeFaq'
 import type { FeedPost } from '@/components/PostFeed'
 
 export const revalidate = 30
-
-const homeFaqSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    { '@type': 'Question', name: 'What is Pickvolt?', acceptedAnswer: { '@type': 'Answer', text: 'Pickvolt is an IT news and information site covering AI, mobile, hardware, software, and more.' } },
-    { '@type': 'Question', name: 'How often is new content published?', acceptedAnswer: { '@type': 'Answer', text: 'New articles are published regularly across each category as they become available.' } },
-    { '@type': 'Question', name: 'Is Pickvolt free to use?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. All articles are completely free to read.' } },
-    { '@type': 'Question', name: 'Can I comment on articles?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Sign in to leave a comment on any article.' } },
-  ],
-}
 
 const homeWebsiteSpeakableSchema = {
   '@context': 'https://schema.org',
@@ -27,13 +15,15 @@ const homeWebsiteSpeakableSchema = {
   name: 'Pickvolt — IT News & Insights',
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['h1', 'details p'],
+    cssSelector: ['h1'],
   },
 }
 
 function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_ENV === 'production') return 'https://www.pickvolt.com'
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  return 'http://localhost:3000'
 }
 
 async function getHomePosts(): Promise<FeedPost[]> {
@@ -55,7 +45,6 @@ export default async function HomePage() {
 
   return (
     <main className="bg-background flex flex-col min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeFaqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeWebsiteSpeakableSchema) }} />
       <Navbar />
       <div className="max-w-inner mx-auto w-full px-4 sm:px-6 pt-24 pb-8">
@@ -76,7 +65,6 @@ export default async function HomePage() {
           </aside>
         </div>
       </div>
-      <HomeFaq />
     </main>
   )
 }
