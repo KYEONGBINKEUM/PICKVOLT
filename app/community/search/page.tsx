@@ -2,30 +2,19 @@
 
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { ChevronRight, Loader2, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { CardPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
 
-interface ClanResult {
-  id: string
-  slug: string
-  name: string
-  avatar_url: string | null
-  member_count: number
-}
-
 function SearchResults({ q }: { q: string }) {
   const { t } = useI18n()
 
-  const [clans, setClans] = useState<ClanResult[]>([])
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const tokenRef = useRef<string | null>(null)
-  const carouselRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -38,19 +27,13 @@ function SearchResults({ q }: { q: string }) {
   useEffect(() => {
     if (!q.trim()) return
     setLoading(true)
-    setClans([])
     setPosts([])
 
-    // Parallel: search API (clans) + posts API (by keyword)
-    Promise.all([
-      fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : null),
-      fetch(`/api/community/posts?q=${encodeURIComponent(q)}&limit=20`, {
-        headers: tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {},
-      }).then(r => r.ok ? r.json() : null),
-    ]).then(([searchData, postsData]) => {
-      setClans(searchData?.clans ?? [])
-      setPosts(postsData?.posts ?? [])
-    }).finally(() => setLoading(false))
+    fetch(`/api/community/posts?q=${encodeURIComponent(q)}&limit=20`, {
+      headers: tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {},
+    }).then(r => r.ok ? r.json() : null)
+      .then(postsData => setPosts(postsData?.posts ?? []))
+      .finally(() => setLoading(false))
   }, [q])
 
   const handleVote = async (postId: string) => {
@@ -75,50 +58,6 @@ function SearchResults({ q }: { q: string }) {
 
   return (
     <div>
-      {/* 클랜 캐러셀 */}
-      {(clans.length > 0 || loading) && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-white/40 uppercase tracking-widest">{t('clan.title')}</span>
-            {clans.length > 0 && (
-              <Link href={`/clan?q=${encodeURIComponent(q)}`}
-                className="flex items-center gap-1 text-xs text-accent/70 hover:text-accent transition-colors">
-                {t('community.more')} <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            )}
-          </div>
-          {loading ? (
-            <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-28 h-28 rounded-2xl bg-surface animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div ref={carouselRef}
-              className="flex gap-3 overflow-x-auto pb-1"
-              style={{ scrollbarWidth: 'none' }}>
-              {clans.map(c => (
-                <Link key={c.id} href={`/clan/${c.slug}`}
-                  className="flex-shrink-0 flex flex-col items-center gap-2 w-24 group">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-surface border border-border group-hover:border-white/20 transition-colors flex items-center justify-center flex-shrink-0">
-                    {c.avatar_url
-                      ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" />
-                      : <span className="text-lg font-black text-white/30">{c.name[0]?.toUpperCase()}</span>
-                    }
-                  </div>
-                  <span className="text-xs text-white/60 group-hover:text-white transition-colors text-center line-clamp-2 leading-tight">
-                    {c.name}
-                  </span>
-                  {c.member_count > 0 && (
-                    <span className="text-[10px] text-white/25">{c.member_count.toLocaleString()} {t('clan.members_count')}</span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* 게시물 결과 */}
       <div>
         {loading ? (
@@ -132,7 +71,7 @@ function SearchResults({ q }: { q: string }) {
         ) : (
           <div className="space-y-px">
             {posts.map(post => (
-              <CardPost key={post.id} post={post} token={token} onVote={handleVote} t={t} />
+              <CardPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType={false} hideVotes />
             ))}
           </div>
         )}

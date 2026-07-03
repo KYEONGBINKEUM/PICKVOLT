@@ -11,22 +11,16 @@ export async function GET(req: NextRequest) {
 
   const supabase = makeService()
 
-  const [{ data: posts }, { data: clans }] = await Promise.all([
-    supabase
-      .from('community_posts')
-      .select('id, type, title, user_display_name, created_at')
-      .ilike('title', `%${q}%`)
-      .eq('is_hidden', false)
-      .order('created_at', { ascending: false })
-      .limit(5),
-    supabase
-      .from('clans')
-      .select('id, slug, name, avatar_url, member_count')
-      .or(`name.ilike.%${q}%,slug.ilike.%${q}%`)
-      .limit(5),
-  ])
+  const { data: posts } = await supabase
+    .from('community_posts')
+    .select('id, type, title, user_display_name, created_at')
+    .ilike('title', `%${q}%`)
+    .eq('is_hidden', false)
+    .or('is_bot.eq.false,is_bot.is.null')
+    .order('created_at', { ascending: false })
+    .limit(5)
 
-  const res = NextResponse.json({ posts: posts ?? [], clans: clans ?? [] })
+  const res = NextResponse.json({ posts: posts ?? [] })
   res.headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30')
   return res
 }

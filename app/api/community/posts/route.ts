@@ -68,6 +68,7 @@ export async function GET(req: NextRequest) {
       community_compare_options ( id, label, image_url, vote_count, sort_order, product_id )
     `)
     .eq('is_hidden', false)
+    .or('is_bot.eq.false,is_bot.is.null') // RSS 크롤링 글은 공개 피드에서 숨김
 
   if (type) query = query.eq('type', type)
   if (category) query = query.eq('category', category)
@@ -109,6 +110,7 @@ export async function GET(req: NextRequest) {
     .from('community_posts')
     .select('id', { count: 'exact', head: true })
     .eq('is_hidden', false)
+    .or('is_bot.eq.false,is_bot.is.null')
   if (type) countQuery = countQuery.eq('type', type)
   if (category) countQuery = countQuery.eq('category', category)
   if (clan_id) countQuery = countQuery.eq('clan_id', clan_id)
@@ -133,6 +135,7 @@ export async function GET(req: NextRequest) {
         community_compare_options ( id, label, image_url, vote_count, sort_order, product_id )
       `)
       .eq('is_hidden', false)
+      .or('is_bot.eq.false,is_bot.is.null')
     const filters = [
       type ? (q: typeof fallbackQuery) => q.eq('type', type) : null,
       category ? (q: typeof fallbackQuery) => q.eq('category', category) : null,

@@ -50,6 +50,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select('id, updated_at, created_at')
       .eq('type', 'news')
       .eq('is_hidden', false)
+      .or('is_bot.eq.false,is_bot.is.null')
       .order('created_at', { ascending: false })
       .limit(500) // 최신 500개만
 

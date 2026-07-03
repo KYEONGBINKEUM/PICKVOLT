@@ -8,7 +8,6 @@ import { useI18n } from '@/lib/i18n'
 
 interface SearchResult {
   posts: { id: string; type: string; title: string }[]
-  clans: { id: string; slug: string; name: string; avatar_url: string | null }[]
 }
 
 export default function CommunitySearchBar() {
@@ -52,7 +51,7 @@ export default function CommunitySearchBar() {
 
   const clear = () => { setQ(''); setRes(null); setOpen(false) }
 
-  const hasResults = res && (res.clans.length > 0 || res.posts.length > 0)
+  const hasResults = res && res.posts.length > 0
 
   return (
     <div ref={wrapRef} className="relative w-full max-w-sm">
@@ -85,22 +84,6 @@ export default function CommunitySearchBar() {
 
           {res && !searching && !hasResults && (
             <div className="px-4 py-3 text-xs text-white/30">{t('search.no_results')}</div>
-          )}
-
-          {res && res.clans.length > 0 && (
-            <>
-              <p className="px-4 pt-3 pb-1 text-[10px] font-bold text-white/25 uppercase tracking-widest">{t('clan.title')}</p>
-              {res.clans.map(c => (
-                <Link key={c.id} href={`/clan/${c.slug}`} onClick={clear}
-                  className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/5 transition-colors">
-                  {c.avatar_url
-                    ? <img src={c.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-                    : <span className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center text-[8px] font-bold text-accent/70 flex-shrink-0">{c.name[0]?.toUpperCase()}</span>
-                  }
-                  <span className="text-xs text-white/80 truncate">{c.name}</span>
-                </Link>
-              ))}
-            </>
           )}
 
           {res && res.posts.length > 0 && (
