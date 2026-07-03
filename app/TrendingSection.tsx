@@ -1,3 +1,5 @@
+// 미사용 컴포넌트 — 홈페이지 신문형(WSJ 스타일) 레이아웃 개편으로 비활성화됨. 어디서도 import되지 않음.
+/*
 'use client'
 
 import Link from 'next/link'
@@ -91,3 +93,4 @@ export default function TrendingSection({ items }: { items: TrendingCard[] }) {
     </div>
   )
 }
+*/

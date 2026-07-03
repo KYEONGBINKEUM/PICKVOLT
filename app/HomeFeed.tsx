@@ -1,7 +1,8 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n'
-import { CardPost, type FeedPost } from '@/components/PostFeed'
+import { CompactPost, type FeedPost } from '@/components/PostFeed'
+import HomeFeatured from './HomeFeatured'
 
 interface Props {
   posts: FeedPost[]
@@ -15,25 +16,17 @@ export default function HomeFeed({ posts }: Props) {
   }
 
   const pinned = posts.filter((p) => p.is_pinned).slice(0, 3)
-  const rest = pinned.length > 0
-    ? posts.filter((p) => !pinned.some((h) => h.id === p.id))
-    : posts
+  const featured = pinned.length > 0 ? pinned : posts.slice(0, 3)
+  const rest = posts.filter((p) => !featured.some((f) => f.id === p.id))
 
   return (
     <div>
-      {pinned.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-xs font-black text-accent uppercase tracking-widest mb-2">
-            {t('home.headlines')}
-          </h2>
-          {pinned.map((post) => (
-            <CardPost key={post.id} post={post} token={null} t={t} showType={false} hideVotes />
-          ))}
-        </div>
-      )}
-      <div>
+      <HomeFeatured posts={featured} />
+      <div className="pt-1 sm:columns-2 lg:columns-3 gap-8 [column-rule:1px_solid_#2a2a2a]">
         {rest.map((post) => (
-          <CardPost key={post.id} post={post} token={null} t={t} showType={false} hideVotes />
+          <div key={post.id} className="break-inside-avoid">
+            <CompactPost post={post} token={null} t={t} showType={false} hideVotes />
+          </div>
         ))}
       </div>
     </div>

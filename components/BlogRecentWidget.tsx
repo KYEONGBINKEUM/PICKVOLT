@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { CompactPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
+import WidgetTitle from '@/components/WidgetTitle'
 
 export default function BlogRecentWidget() {
   const { t } = useI18n()
@@ -16,8 +17,8 @@ export default function BlogRecentWidget() {
   }, [])
 
   return (
-    <div className="bg-surface border border-border rounded-2xl p-4">
-      <h3 className="text-sm font-black text-white mb-2">{t('community.news')}</h3>
+    <div>
+      <WidgetTitle>{t('community.news')}</WidgetTitle>
       {posts === null ? (
         Array.from({ length: 5 }).map((_, i) => <PostSkeleton key={i} compact />)
       ) : posts.length === 0 ? (

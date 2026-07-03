@@ -35,7 +35,7 @@ export default function BlogCategoryNav() {
       <Link
         href="/community/news"
         className={clsx(
-          'flex-shrink-0 px-3 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors',
+          'flex-shrink-0 px-3 py-2.5 text-sm font-semibold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors',
           pathname === '/community/news' ? 'text-white border-accent' : 'text-white/40 border-transparent hover:text-white/70'
         )}>
         {t('community.all')}
@@ -46,7 +46,7 @@ export default function BlogCategoryNav() {
         return (
           <Link key={c.slug} href={href}
             className={clsx(
-              'flex-shrink-0 px-3 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors',
+              'flex-shrink-0 px-3 py-2.5 text-sm font-semibold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors',
               active ? 'text-white border-accent' : 'text-white/40 border-transparent hover:text-white/70'
             )}>
             {t(c.labelKey)}

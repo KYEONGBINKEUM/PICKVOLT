@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Noto_Serif_KR } from 'next/font/google'
 import { cookies } from 'next/headers'
 import './globals.css'
 import { I18nProvider, type Locale } from '@/lib/i18n'
@@ -13,6 +13,12 @@ import AnalyticsProvider from '@/components/AnalyticsProvider'
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-geist-sans',
+})
+
+const notoSerifKr = Noto_Serif_KR({
+  subsets: ['latin'],
+  weight: ['400', '700', '900'],
+  variable: '--font-serif',
 })
 
 export const metadata: Metadata = {
@@ -94,7 +100,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const initialLocale: Locale = (savedLocale && SUPPORTED_LOCALES.has(savedLocale) ? savedLocale : 'en') as Locale
 
   return (
-    <html lang={initialLocale} className={inter.variable} suppressHydrationWarning>
+    <html lang={initialLocale} className={`${inter.variable} ${notoSerifKr.variable}`} suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="-EfsApMwG2izRsMpHjN52Zr89_RnZzu_msPg3w1fsfw" />
         <link

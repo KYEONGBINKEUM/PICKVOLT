@@ -18,6 +18,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-geist-sans)', 'Inter', 'Pretendard Variable', 'Pretendard', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
       maxWidth: {
         inner: '1440px',

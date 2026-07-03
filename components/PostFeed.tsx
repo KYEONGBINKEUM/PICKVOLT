@@ -421,13 +421,14 @@ export function CardPost({ post, token, onVote, t, showType = true, hideVotes = 
   )
 }
 
-export function CompactPost({ post, token, onVote, t, showType = true, hideVotes = false }: {
+export function CompactPost({ post, token, onVote, t, showType = true, hideVotes = false, hideThumb = false }: {
   post: FeedPost
   token: string | null
   onVote?: (id: string) => void
   t: (k: string) => string
   showType?: boolean
   hideVotes?: boolean
+  hideThumb?: boolean
 }) {
   const { locale } = useI18n()
   const [translating, setTranslating] = useState(false)
@@ -509,7 +510,7 @@ export function CompactPost({ post, token, onVote, t, showType = true, hideVotes
         </div>
       )}
 
-      {!isLocked && compactThumb && (
+      {!isLocked && !hideThumb && compactThumb && (
         isExternal ? (
           <a href={post.source_url!} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 self-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}

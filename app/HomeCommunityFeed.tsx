@@ -1,3 +1,5 @@
+// 미사용 컴포넌트 — 홈페이지 신문형(WSJ 스타일) 레이아웃 개편으로 비활성화됨. 어디서도 import되지 않음.
+/*
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -57,7 +59,7 @@ function MasonryCard({ post, t }: { post: MiniPost; t: (k: string) => string }) 
       style={{ breakInside: 'avoid', marginBottom: '10px', display: 'block' }}
     >
       {image && (
-        /* eslint-disable-next-line @next/next/no-img-element */
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={image}
           alt={post.title}
@@ -174,3 +176,4 @@ export default function HomeCommunityFeed() {
     </section>
   )
 }
+*/
