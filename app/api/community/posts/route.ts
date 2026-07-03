@@ -97,6 +97,8 @@ export async function GET(req: NextRequest) {
     query = query.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
   } else if (sort === 'top') {
     query = query.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
+  } else if (sort === 'views') {
+    query = query.order('view_count', { ascending: false }).order('created_at', { ascending: false })
   } else {
     query = query.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
   }
@@ -144,6 +146,7 @@ export async function GET(req: NextRequest) {
     for (const f of filters) if (f) fq = f(fq)
     if (sort === 'hot') fq = fq.order('upvotes', { ascending: false }).order('created_at', { ascending: false })
     else if (sort === 'top') fq = fq.order('comment_count', { ascending: false }).order('created_at', { ascending: false })
+    else if (sort === 'views') fq = fq.order('view_count', { ascending: false }).order('created_at', { ascending: false })
     else fq = fq.order('is_pinned', { ascending: false }).order('created_at', { ascending: false })
     fq = fq.range((page - 1) * limit, (page - 1) * limit + limit - 1)
     const { data: fbData, error: fbErr } = await fq

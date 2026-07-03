@@ -6,7 +6,6 @@ import { I18nProvider, type Locale } from '@/lib/i18n'
 import { CurrencyProvider } from '@/lib/currency'
 import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
-import CompareTray from '@/components/CompareTray'
 import Footer from '@/components/Footer'
 import NewsletterSignup from '@/components/NewsletterSignup'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
@@ -17,9 +16,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Pickvolt — AI-Powered Product Comparisons',
-  description: 'Compare any tech product with AI — smartphones, laptops, tablets, headphones, and more. Get unbiased specs analysis and an instant verdict on the best pick.',
-  keywords: ['product comparison', 'tech specs', 'ai recommendations', 'vs'],
+  title: 'Pickvolt — IT News & Insights',
+  description: 'Pickvolt covers the latest IT news across AI, mobile, hardware, software, and more — curated and updated daily.',
+  keywords: ['IT news', 'tech news', 'AI news', 'mobile news', 'technology'],
   metadataBase: new URL('https://www.pickvolt.com'),
   alternates: {
     canonical: 'https://www.pickvolt.com',
@@ -39,8 +38,8 @@ export const metadata: Metadata = {
     apple: '/apple-icon.png',
   },
   openGraph: {
-    title: 'Pickvolt',
-    description: 'Compare any tech product with AI — smartphones, laptops, tablets, headphones, and more. Get unbiased specs analysis and an instant verdict on the best pick.',
+    title: 'Pickvolt — IT News & Insights',
+    description: 'Pickvolt covers the latest IT news across AI, mobile, hardware, software, and more — curated and updated daily.',
     type: 'website',
     url: 'https://www.pickvolt.com',
     siteName: 'Pickvolt',
@@ -48,8 +47,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pickvolt',
-    description: 'Compare any tech product with AI — smartphones, laptops, tablets, headphones, and more. Get unbiased specs analysis and an instant verdict on the best pick.',
+    title: 'Pickvolt — IT News & Insights',
+    description: 'Pickvolt covers the latest IT news across AI, mobile, hardware, software, and more — curated and updated daily.',
     images: ['/opengraph-image.png'],
   },
 }
@@ -62,12 +61,12 @@ const websiteSchema = {
       '@id': 'https://www.pickvolt.com/#website',
       name: 'Pickvolt',
       url: 'https://www.pickvolt.com',
-      description: 'AI-powered tech product comparison platform for smartphones, laptops, and tablets.',
+      description: 'IT news and insights covering AI, mobile, hardware, software, and more.',
       potentialAction: {
         '@type': 'SearchAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: 'https://www.pickvolt.com/compare?q={search_term_string}',
+          urlTemplate: 'https://www.pickvolt.com/community/search?q={search_term_string}',
         },
         'query-input': 'required name=search_term_string',
       },
@@ -78,7 +77,7 @@ const websiteSchema = {
       name: 'Pickvolt',
       url: 'https://www.pickvolt.com',
       email: 'pickvolt.official@gmail.com',
-      description: 'AI-powered tech product comparison — unbiased verdicts for smartphones, laptops, and tablets.',
+      description: 'Pickvolt is an IT news outlet covering AI, mobile, hardware, software, and more.',
       sameAs: [
         'https://pickvolt.blogspot.com',
         'https://x.com/pickvolt',
@@ -122,7 +121,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <NewsletterSignup />
               <Footer />
               <CookieBanner />
-              <CompareTray />
               <AnalyticsProvider />
             </CompareCartProvider>
           </CurrencyProvider>

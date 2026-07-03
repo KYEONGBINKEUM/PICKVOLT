@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { BLOG_CATEGORY_SLUGS } from '@/lib/blogCategories'
 
 export const revalidate = 3600
 
@@ -15,78 +16,51 @@ function makeSupabase() {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/`,                      priority: 1.0, changeFrequency: 'daily'   as const, lastModified: now },
-    { url: `${BASE_URL}/compare`,               priority: 0.9, changeFrequency: 'daily'   as const, lastModified: now },
-    { url: `${BASE_URL}/community`,             priority: 0.8, changeFrequency: 'daily'   as const, lastModified: now },
-    { url: `${BASE_URL}/categories/smartphone`, priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
-    { url: `${BASE_URL}/categories/laptop`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
-    { url: `${BASE_URL}/categories/tablet`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
-    { url: `${BASE_URL}/faq`,                   priority: 0.7, changeFrequency: 'monthly' as const, lastModified: now },
-    { url: `${BASE_URL}/about`,                 priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
-    { url: `${BASE_URL}/contact`,               priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
-    { url: `${BASE_URL}/privacy`,               priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
-    { url: `${BASE_URL}/terms`,                 priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
-    { url: `${BASE_URL}/cookies`,               priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
+    { url: `${BASE_URL}/`,                priority: 1.0, changeFrequency: 'daily'   as const, lastModified: now },
+    { url: `${BASE_URL}/community/news`,  priority: 0.9, changeFrequency: 'daily'   as const, lastModified: now },
+    { url: `${BASE_URL}/faq`,             priority: 0.7, changeFrequency: 'monthly' as const, lastModified: now },
+    { url: `${BASE_URL}/about`,           priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
+    { url: `${BASE_URL}/contact`,         priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
+    { url: `${BASE_URL}/privacy`,         priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
+    { url: `${BASE_URL}/terms`,           priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
+    { url: `${BASE_URL}/cookies`,         priority: 0.4, changeFrequency: 'yearly'  as const, lastModified: now },
   ]
 
   try {
     const supabase = makeSupabase()
 
-    // --- 1. All product pages ---
-    const { data: products } = await supabase
-      .from('products')
-      .select('id, category, updated_at')
+    // --- 1. 공개된 블로그 카테고리 페이지 ---
+    const { data: catSettings } = await supabase
+      .from('blog_category_settings')
+      .select('category, is_visible')
       .eq('is_visible', true)
-
-    const productRoutes: MetadataRoute.Sitemap = (products ?? []).map((p) => ({
-      url:             `${BASE_URL}/product/${p.id}`,
-      lastModified:    p.updated_at ? new Date(p.updated_at) : new Date(),
-      changeFrequency: 'weekly' as const,
+    const visibleCategories = (catSettings ?? [])
+      .map((r) => r.category)
+      .filter((c) => BLOG_CATEGORY_SLUGS.includes(c))
+    const categoryRoutes: MetadataRoute.Sitemap = visibleCategories.map((category) => ({
+      url:             `${BASE_URL}/community/news/${category}`,
+      lastModified:    now,
+      changeFrequency: 'daily' as const,
       priority:        0.7,
     }))
 
-    // --- 2. Popular compare pairs (top 8 per category × all pairs) ---
-    const categories = ['smartphone', 'laptop', 'tablet']
-    const compareRoutes: MetadataRoute.Sitemap = []
-
-    for (const cat of categories) {
-      const { data: top } = await supabase
-        .from('products')
-        .select('id')
-        .eq('is_visible', true)
-        .eq('category', cat)
-        .order('created_at', { ascending: false })
-        .limit(8)
-
-      const ids = (top ?? []).map((p) => p.id)
-      for (let i = 0; i < ids.length; i++) {
-        for (let j = i + 1; j < ids.length; j++) {
-          compareRoutes.push({
-            url:             `${BASE_URL}/compare?ids=${ids[i]},${ids[j]}`,
-            lastModified:    new Date(),
-            changeFrequency: 'weekly' as const,
-            priority:        0.65,
-          })
-        }
-      }
-    }
-
-    // --- 3. Community posts (공개글만) ---
+    // --- 2. 공개된 뉴스 글 (type=news, 비공개/초안 제외) ---
     const { data: posts } = await supabase
       .from('community_posts')
       .select('id, updated_at, created_at')
+      .eq('type', 'news')
       .eq('is_hidden', false)
       .order('created_at', { ascending: false })
       .limit(500) // 최신 500개만
 
     const postRoutes: MetadataRoute.Sitemap = (posts ?? []).map((p) => ({
-      url:             `${BASE_URL}/community/post/${p.id}`,
+      url:             `${BASE_URL}/community/posts/${p.id}`,
       lastModified:    p.updated_at ? new Date(p.updated_at) : new Date(p.created_at),
       changeFrequency: 'weekly' as const,
-      priority:        0.5,
+      priority:        0.6,
     }))
 
-    return [...staticRoutes, ...productRoutes, ...compareRoutes, ...postRoutes]
+    return [...staticRoutes, ...categoryRoutes, ...postRoutes]
   } catch {
     return staticRoutes
   }

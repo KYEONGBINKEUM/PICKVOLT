@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { LayoutList, LayoutGrid, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import BlogCategoryNav from '@/components/BlogCategoryNav'
 import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import { CardPost, CompactPost, PostSkeleton, type FeedPost } from '@/components/PostFeed'
@@ -13,9 +14,11 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map
 interface Props {
   initialPosts?: FeedPost[]
   initialTotal?: number
+  category?: string
+  heading?: string
 }
 
-export default function NewsClient({ initialPosts, initialTotal }: Props) {
+export default function NewsClient({ initialPosts, initialTotal, category, heading }: Props) {
   const { t } = useI18n()
   const [posts, setPosts]             = useState<FeedPost[]>(initialPosts ?? [])
   const [loading, setLoading]         = useState(!initialPosts)
@@ -44,7 +47,9 @@ export default function NewsClient({ initialPosts, initialTotal }: Props) {
   useEffect(() => {
     if (initialPosts) return
     setLoading(true)
-    fetch(`/api/community/posts?type=news&sort=latest&page=1&limit=${LIMIT}`)
+    const initParams = new URLSearchParams({ type: 'news', sort: 'latest', page: '1', limit: String(LIMIT) })
+    if (category) initParams.set('category', category)
+    fetch(`/api/community/posts?${initParams}`)
       .then(r => r.json())
       .then(d => {
         const fetched = d.posts ?? []
@@ -61,6 +66,7 @@ export default function NewsClient({ initialPosts, initialTotal }: Props) {
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
     const params = new URLSearchParams({ type: 'news', sort: 'latest', page: String(page), limit: String(LIMIT) })
+    if (category) params.set('category', category)
     const headers: Record<string, string> = {}
     if (tokenRef.current) headers['Authorization'] = `Bearer ${tokenRef.current}`
     fetch(`/api/community/posts?${params}`, { headers })
@@ -72,7 +78,7 @@ export default function NewsClient({ initialPosts, initialTotal }: Props) {
         setPage(p => p + 1)
       })
       .finally(() => setLoadingMore(false))
-  }, [page, loadingMore, hasMore])
+  }, [page, loadingMore, hasMore, category])
 
   useEffect(() => {
     if (!sentinelRef.current) return
@@ -98,8 +104,9 @@ export default function NewsClient({ initialPosts, initialTotal }: Props) {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-[960px] mx-auto px-4 pt-[88px] pb-20">
+        <BlogCategoryNav />
         <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-lg font-black text-white">{t('community.news')}</h1>
+          <h1 className="text-lg font-black text-white">{heading ?? t('community.news')}</h1>
           {total > 0 && <span className="text-xs text-white/30">{total.toLocaleString()}</span>}
           <div className="ml-auto flex items-center gap-2">
             {isAdmin && (
@@ -125,8 +132,8 @@ export default function NewsClient({ initialPosts, initialTotal }: Props) {
             ? <div className="py-24 text-center"><p className="text-sm text-white/20">{t('board.empty')}</p></div>
             : posts.map(post => (
               compact
-                ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType={false} />
-                : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType={false} />
+                ? <CompactPost key={post.id} post={post} token={token} onVote={handleVote} t={t} showType={false} hideVotes />
+                : <CardPost    key={post.id} post={post} token={token} onVote={handleVote} t={t} showType={false} hideVotes />
             ))
           }
         </div>

@@ -16,6 +16,7 @@ export interface FeedPost {
   comment_count: number
   view_count: number
   rating?: number | null
+  is_pinned?: boolean
   created_at: string
   user_id?: string | null
   user_display_name: string
@@ -193,12 +194,13 @@ function ReportButton({ postId, token, t }: { postId: string; token: string | nu
   )
 }
 
-export function CardPost({ post, token, onVote, t, showType = true }: {
+export function CardPost({ post, token, onVote, t, showType = true, hideVotes = false }: {
   post: FeedPost
   token: string | null
   onVote?: (id: string) => void
   t: (k: string) => string
   showType?: boolean
+  hideVotes?: boolean
 }) {
   const { locale } = useI18n()
   const [translating, setTranslating] = useState(false)
@@ -273,17 +275,19 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
   return (
     <div className="flex group border-b border-border/40 py-3 px-2 hover:bg-white/[0.02] transition-colors">
       {/* upvote */}
-      <div className="flex flex-col items-center pt-0.5 px-2 w-10 flex-shrink-0">
-        <button
-          onClick={e => { e.preventDefault(); if (token && onVote) onVote(post.id) }}
-          className={`p-0.5 transition-colors ${post.my_vote ? 'text-accent' : 'text-white/20 hover:text-accent'}`}
-        >
-          <ChevronUp className="w-5 h-5" />
-        </button>
-        <span className={`text-[11px] font-bold tabular-nums ${post.my_vote ? 'text-accent' : 'text-white/25'}`}>
-          {post.upvotes}
-        </span>
-      </div>
+      {!hideVotes && (
+        <div className="flex flex-col items-center pt-0.5 px-2 w-10 flex-shrink-0">
+          <button
+            onClick={e => { e.preventDefault(); if (token && onVote) onVote(post.id) }}
+            className={`p-0.5 transition-colors ${post.my_vote ? 'text-accent' : 'text-white/20 hover:text-accent'}`}
+          >
+            <ChevronUp className="w-5 h-5" />
+          </button>
+          <span className={`text-[11px] font-bold tabular-nums ${post.my_vote ? 'text-accent' : 'text-white/25'}`}>
+            {post.upvotes}
+          </span>
+        </div>
+      )}
 
       {/* content */}
       <div className="flex-1 min-w-0">
@@ -417,12 +421,13 @@ export function CardPost({ post, token, onVote, t, showType = true }: {
   )
 }
 
-export function CompactPost({ post, token, onVote, t, showType = true }: {
+export function CompactPost({ post, token, onVote, t, showType = true, hideVotes = false }: {
   post: FeedPost
   token: string | null
   onVote?: (id: string) => void
   t: (k: string) => string
   showType?: boolean
+  hideVotes?: boolean
 }) {
   const { locale } = useI18n()
   const [translating, setTranslating] = useState(false)
@@ -490,17 +495,19 @@ export function CompactPost({ post, token, onVote, t, showType = true }: {
 
   return (
     <div className="flex group py-2 px-2 hover:bg-white/[0.02] transition-colors gap-2 border-b border-border/30">
-      <div className="flex items-center gap-0.5 flex-shrink-0 w-12 pt-0.5">
-        <button
-          onClick={e => { e.preventDefault(); if (token && onVote) onVote(post.id) }}
-          className={`p-0.5 transition-colors ${post.my_vote ? 'text-accent' : 'text-white/20 hover:text-accent'}`}
-        >
-          <ChevronUp className="w-3.5 h-3.5" />
-        </button>
-        <span className={`text-[11px] font-bold tabular-nums ${post.my_vote ? 'text-accent' : 'text-white/25'}`}>
-          {post.upvotes}
-        </span>
-      </div>
+      {!hideVotes && (
+        <div className="flex items-center gap-0.5 flex-shrink-0 w-12 pt-0.5">
+          <button
+            onClick={e => { e.preventDefault(); if (token && onVote) onVote(post.id) }}
+            className={`p-0.5 transition-colors ${post.my_vote ? 'text-accent' : 'text-white/20 hover:text-accent'}`}
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <span className={`text-[11px] font-bold tabular-nums ${post.my_vote ? 'text-accent' : 'text-white/25'}`}>
+            {post.upvotes}
+          </span>
+        </div>
+      )}
 
       {!isLocked && compactThumb && (
         isExternal ? (

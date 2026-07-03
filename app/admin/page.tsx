@@ -8,7 +8,7 @@ import {
   ChevronDown, Trash2, RefreshCw, Users, BarChart2,
   Package, LayoutDashboard, Clock, ImageOff, Plus, Cpu, Monitor, Zap,
   Eye, EyeOff, Copy, Flag, Mail, Pencil, PlusCircle, BadgeCheck,
-  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter, CalendarDays, Smartphone, Download,
+  MessageSquare, Pin, PinOff, Settings2, Coins, Twitter, CalendarDays, Smartphone, Download, Bot,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -30,7 +30,7 @@ const CATEGORY_BRANDS: Record<string, string[]> = {
 }
 const PAGE_SIZE = 50
 
-type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events' | 'devices' | 'category_settings'
+type Tab = 'dashboard' | 'products' | 'users' | 'comparisons' | 'cpus' | 'gpus' | 'reports' | 'inquiries' | 'edit_requests' | 'add_requests' | 'verify_requests' | 'community' | 'newsletter' | 'twitter' | 'events' | 'devices' | 'category_settings' | 'blog_category_settings' | 'draft_posts'
 
 const CPU_BRANDS = ['Apple', 'Qualcomm', 'MediaTek', 'Samsung', 'Intel', 'AMD', 'NVIDIA', 'HiSilicon']
 const GPU_BRANDS = ['Apple', 'Qualcomm (Adreno)', 'NVIDIA', 'AMD', 'Intel', 'ARM (Mali)', 'Imagination (PowerVR)', 'MediaTek']
@@ -932,6 +932,32 @@ export default function AdminPage() {
     car: '자동차/EV',
   }
 
+  // Blog category settings
+  const [blogCategorySettings, setBlogCategorySettings] = useState<{ category: string; is_visible: boolean }[]>([])
+  const [blogCategorySettingsLoading, setBlogCategorySettingsLoading] = useState(false)
+  const [blogCategorySettingsSaving, setBlogCategorySettingsSaving] = useState<string | null>(null)
+
+  const BLOG_CATEGORY_LABELS_ADMIN: Record<string, string> = {
+    ai: 'AI',
+    mobile: '모바일',
+    pc_laptop: 'PC&노트북',
+    hardware: '하드웨어',
+    software: '소프트웨어',
+    platform: '인터넷&플랫폼',
+    security: '보안',
+    cloud: '클라우드',
+    semiconductor: '반도체',
+    game: '게임',
+    mobility: '모빌리티',
+  }
+
+  // Draft posts (AI 초안 검수 대기)
+  const [draftPosts, setDraftPosts] = useState<{
+    id: string; title: string; category: string | null; user_display_name: string; is_ai_generated: boolean; created_at: string
+  }[]>([])
+  const [draftPostsLoading, setDraftPostsLoading] = useState(false)
+  const [publishingId, setPublishingId] = useState<string | null>(null)
+
   const fetchCategorySettings = useCallback(async () => {
     if (!token) return
     setCategorySettingsLoading(true)
@@ -950,6 +976,46 @@ export default function AdminPage() {
     })
     setCategorySettings(prev => prev.map(s => s.category === category ? { ...s, is_visible: !currentValue } : s))
     setCategorySettingsSaving(null)
+  }
+
+  const fetchBlogCategorySettings = useCallback(async () => {
+    if (!token) return
+    setBlogCategorySettingsLoading(true)
+    const res = await fetch('/api/admin/blog-category-settings', { headers: { Authorization: `Bearer ${token}` } })
+    const d = await res.json()
+    setBlogCategorySettings(d.settings ?? [])
+    setBlogCategorySettingsLoading(false)
+  }, [token])
+
+  const toggleBlogCategoryVisibility = async (category: string, currentValue: boolean) => {
+    setBlogCategorySettingsSaving(category)
+    await fetch('/api/admin/blog-category-settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ category, is_visible: !currentValue }),
+    })
+    setBlogCategorySettings(prev => prev.map(s => s.category === category ? { ...s, is_visible: !currentValue } : s))
+    setBlogCategorySettingsSaving(null)
+  }
+
+  const fetchDraftPosts = useCallback(async () => {
+    if (!token) return
+    setDraftPostsLoading(true)
+    const res = await fetch('/api/admin/draft-posts', { headers: { Authorization: `Bearer ${token}` } })
+    const d = await res.json()
+    setDraftPosts(d.posts ?? [])
+    setDraftPostsLoading(false)
+  }, [token])
+
+  const publishDraft = async (id: string) => {
+    setPublishingId(id)
+    await fetch(`/api/community/posts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ is_hidden: false }),
+    })
+    setDraftPosts(prev => prev.filter(p => p.id !== id))
+    setPublishingId(null)
   }
 
   const fetchDevices = useCallback(async () => {
@@ -1122,6 +1188,8 @@ export default function AdminPage() {
     if (tab === 'events') fetchEvents()
     if (tab === 'devices') fetchDevices()
     if (tab === 'category_settings') fetchCategorySettings()
+    if (tab === 'blog_category_settings') fetchBlogCategorySettings()
+    if (tab === 'draft_posts') fetchDraftPosts()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, token, tab])
 
@@ -1292,8 +1360,9 @@ export default function AdminPage() {
     {
       label: '커뮤니티',
       items: [
-        { key: 'community', label: '커뮤니티 관리', icon: <MessageSquare size={14} /> },
-        { key: 'reports',   label: '신고 관리',     icon: <Flag size={14} /> },
+        { key: 'community',    label: '커뮤니티 관리', icon: <MessageSquare size={14} /> },
+        { key: 'draft_posts',  label: '초안 검수',     icon: <Bot size={14} /> },
+        { key: 'reports',      label: '신고 관리',     icon: <Flag size={14} /> },
       ],
     },
     {
@@ -1316,6 +1385,7 @@ export default function AdminPage() {
       label: '사이트 설정',
       items: [
         { key: 'category_settings', label: '카테고리 노출', icon: <Eye size={14} /> },
+        { key: 'blog_category_settings', label: '블로그 카테고리 노출', icon: <Eye size={14} /> },
       ],
     },
   ]
@@ -4085,6 +4155,120 @@ export default function AdminPage() {
                     <p className="text-xs text-white/20 mt-1">supabase/category_settings.sql 참고</p>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── BLOG CATEGORY SETTINGS ── */}
+        {tab === 'blog_category_settings' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-black">블로그 카테고리 노출 설정</h1>
+                <p className="text-sm text-white/40 mt-1">메뉴/글목록에 표시할 IT 카테고리를 선택합니다. 글이 채워지기 전까지는 미노출로 두세요.</p>
+              </div>
+              <button onClick={fetchBlogCategorySettings} disabled={blogCategorySettingsLoading}
+                className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors disabled:opacity-40">
+                <RefreshCw size={13} className={blogCategorySettingsLoading ? 'animate-spin' : ''} />
+                새로고침
+              </button>
+            </div>
+
+            {blogCategorySettingsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 11 }).map((_, i) => (
+                  <div key={i} className="bg-surface border border-border rounded-2xl h-16 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 max-w-lg">
+                {blogCategorySettings.map((s) => (
+                  <div key={s.category} className="bg-surface border border-border rounded-2xl px-5 py-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{BLOG_CATEGORY_LABELS_ADMIN[s.category] ?? s.category}</p>
+                      <p className="text-xs text-white/30 mt-0.5">/community/news/{s.category}</p>
+                    </div>
+                    <button
+                      onClick={() => toggleBlogCategoryVisibility(s.category, s.is_visible)}
+                      disabled={blogCategorySettingsSaving === s.category}
+                      className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        s.is_visible
+                          ? 'bg-accent/15 border-accent/40 text-accent hover:bg-accent/25'
+                          : 'bg-white/5 border-border text-white/30 hover:border-white/20 hover:text-white/60'
+                      } disabled:opacity-50`}
+                    >
+                      {blogCategorySettingsSaving === s.category
+                        ? <RefreshCw size={12} className="animate-spin" />
+                        : s.is_visible ? <Eye size={12} /> : <EyeOff size={12} />
+                      }
+                      {s.is_visible ? '노출 중' : '미노출'}
+                    </button>
+                  </div>
+                ))}
+
+                {blogCategorySettings.length === 0 && (
+                  <div className="text-center py-12 text-white/30 text-sm">
+                    <p>블로그 카테고리 설정을 불러오지 못했습니다.</p>
+                    <p className="text-xs mt-2">Supabase에서 <code className="text-accent">blog_category_settings</code> 테이블을 먼저 생성해주세요.</p>
+                    <p className="text-xs text-white/20 mt-1">supabase/blog_category_settings.sql 참고</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── DRAFT POSTS (AI 초안 검수) ── */}
+        {tab === 'draft_posts' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-black">초안 검수</h1>
+                <p className="text-sm text-white/40 mt-1">AI가 생성한 초안 글입니다. 내용을 확인하고 발행하면 공개 피드에 노출됩니다.</p>
+              </div>
+              <button onClick={fetchDraftPosts} disabled={draftPostsLoading}
+                className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors disabled:opacity-40">
+                <RefreshCw size={13} className={draftPostsLoading ? 'animate-spin' : ''} />
+                새로고침
+              </button>
+            </div>
+
+            {draftPostsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-surface border border-border rounded-2xl h-16 animate-pulse" />
+                ))}
+              </div>
+            ) : draftPosts.length === 0 ? (
+              <div className="text-center py-12 text-white/30 text-sm">검수 대기 중인 초안이 없습니다.</div>
+            ) : (
+              <div className="space-y-3 max-w-2xl">
+                {draftPosts.map((p) => (
+                  <div key={p.id} className="bg-surface border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{p.title}</p>
+                      <p className="text-xs text-white/30 mt-0.5">
+                        {BLOG_CATEGORY_LABELS_ADMIN[p.category ?? ''] ?? p.category ?? '미분류'} · {p.user_display_name}
+                        {p.is_ai_generated && ' · AI 생성'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Link href={`/community/write?edit=${p.id}`}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold border border-border text-white/50 hover:text-white hover:border-white/20 transition-colors">
+                        수정
+                      </Link>
+                      <button
+                        onClick={() => publishDraft(p.id)}
+                        disabled={publishingId === p.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-accent/15 border border-accent/40 text-accent hover:bg-accent/25 disabled:opacity-50 transition-all"
+                      >
+                        {publishingId === p.id ? <RefreshCw size={12} className="animate-spin" /> : <Eye size={12} />}
+                        발행
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

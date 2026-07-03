@@ -89,12 +89,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const supabase = makeServiceClient()
   const { data: existing } = await supabase.from('community_posts').select('user_id').eq('id', id).single()
-  if (!existing || existing.user_id !== user.id) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 })
+
+  const isAdmin = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes((user.email ?? '').toLowerCase())
+  if (existing.user_id !== user.id && !isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   const body = await req.json()
   const allowed = ['title', 'body', 'rating', 'category']
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const k of allowed) if (k in body) updates[k] = body[k]
+  // 초안 발행(is_hidden 해제)은 관리자만 가능 — 작성자 본인 발행으로 검수를 건너뛰지 못하게 함
+  if ('is_hidden' in body) {
+    if (!isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    updates.is_hidden = !!body.is_hidden
+  }
 
   const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

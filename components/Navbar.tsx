@@ -4,17 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
-import { User, Menu, X, PenSquare, Home, Flame, Newspaper, Users, Plus, ChevronDown } from 'lucide-react'
+import { User, Menu, X, PenSquare, Home, Newspaper, LogOut } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { LocalePopup } from '@/components/LocaleSwitcher'
 import SearchBar from '@/components/SearchBar'
 import CommunitySearchBar from '@/components/CommunitySearchBar'
-import NotificationBell from '@/components/NotificationBell'
-
-// CommunitySidebar와 공유하는 클랜 캐시
-let clansCache: { data: { id: string; slug: string; name: string; avatar_url?: string | null }[]; ts: number } | null = null
-const CLANS_TTL = 30000
 
 interface NavbarProps {
   showSearch?: boolean
@@ -27,21 +22,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
   const [loggedIn, setLoggedIn] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [catOpen, setCatOpen] = useState(false)
-  const [myClans, setMyClans] = useState<{ id: string; slug: string; name: string; avatar_url?: string | null }[]>([])
-  const [visibleCategories, setVisibleCategories] = useState<Set<string> | null>(null)
-
-  useEffect(() => {
-    fetch('/api/category-settings')
-      .then((r) => r.json())
-      .then((d) => {
-        const visible = new Set<string>(
-          (d.settings ?? []).filter((s: { category: string; is_visible: boolean }) => s.is_visible).map((s: { category: string }) => s.category)
-        )
-        setVisibleCategories(visible)
-      })
-      .catch(() => {})
-  }, [])
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   useEffect(() => {
     let settled = false
@@ -49,22 +30,6 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
       settled = true
       setLoggedIn(!!data.session)
       setAuthReady(true)
-      // 클랜 fetch (로그인 시)
-      const token = data.session?.access_token
-      if (token) {
-        if (clansCache && Date.now() - clansCache.ts < CLANS_TTL) {
-          setMyClans(clansCache.data)
-        } else {
-          fetch('/api/clans?my=1', { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
-            .then(d => {
-              const list = d.clans ?? []
-              clansCache = { data: list, ts: Date.now() }
-              setMyClans(list)
-            })
-            .catch(() => {})
-        }
-      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       if (!settled) return
@@ -79,42 +44,28 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const isCommunity = pathname.startsWith('/community') || pathname.startsWith('/clan') || communityContext === true
-  // const isEvents = pathname.startsWith('/events')
-  const isEvents = false
+  const isCommunity = pathname.startsWith('/community') || communityContext === true
 
-  // 커뮤니티 섹션 링크 (PC 사이드바와 동일)
+  // 커뮤니티 섹션 링크 (모바일 드로어용)
   const communityLinks = [
-    { href: '/community',         label: t('community.all'),     icon: Home,      exact: true },
-    { href: '/community/popular', label: t('community.popular'), icon: Flame },
-    { href: '/community/news',    label: t('community.news'),    icon: Newspaper },
+    { href: '/community/news', label: t('community.news'), icon: Newspaper, exact: true },
   ]
-
-  // 카테고리 드롭다운 목록 (visibleCategories null = 로딩 전 → 전체 표시)
-  const allCategoryLinks = [
-    { href: '/categories/smartphone', label: t('cat.smartphone'), slug: 'smartphone' },
-    { href: '/categories/laptop',     label: t('cat.laptop'),     slug: 'laptop'     },
-    { href: '/categories/tablet',     label: t('cat.tablet'),     slug: 'tablet'     },
-    { href: '/categories/smartwatch', label: t('cat.watch'),      slug: 'smartwatch' },
-    { href: '/categories/headphones', label: t('cat.headphones'), slug: 'headphones' },
-    { href: '/categories/monitor',    label: t('cat.monitor'),    slug: 'monitor'    },
-    { href: '/categories/tv',         label: t('cat.tv'),         slug: 'tv'         },
-    { href: '/categories/car',        label: t('cat.car'),        slug: 'car'        },
-  ]
-  const categoryLinks = visibleCategories === null
-    ? allCategoryLinks
-    : allCategoryLinks.filter((l) => visibleCategories.has(l.slug))
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
+
+  const handleLogout = async () => {
+    setUserMenuOpen(false)
+    await supabase.auth.signOut()
+  }
 
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border/50 bg-background/80 backdrop-blur-md">
 
-        {/* ── 좌측: 로고 + 메인 탭 ── */}
+        {/* ── 좌측: 로고 + 태그라인 ── */}
         <div className="flex items-center gap-1">
-          <Link href={isCommunity ? "/community" : "/"} className="flex items-center gap-2 mr-4 flex-shrink-0">
+          <Link href={isCommunity ? "/community/news" : "/"} className="flex items-center gap-2 mr-3 flex-shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse-dot" />
             <svg viewBox="0 0 1334.13 282.17" className="h-3.5 w-auto" fill="white" xmlns="http://www.w3.org/2000/svg" aria-label="pickvolt">
               <path d="M187.05,57.78c-7.39-13.39-18.12-23.89-32.18-31.49c-14.06-7.6-31.12-11.39-51.19-11.37L0.78,15.03l0.28,263.88l54.02-0.06l-0.09-86.25l47.64-0.05c20.31-0.02,37.57-3.79,51.79-11.3c14.22-7.51,25.07-17.91,32.55-31.2c7.48-13.29,11.22-28.67,11.2-46.15C198.15,86.55,194.44,71.18,187.05,57.78z M137.18,127.35c-3.48,6.73-8.78,12.02-15.92,15.87c-7.14,3.85-16.26,5.77-27.36,5.78l-38.96,0.04l-0.09-89.44l38.79-0.04c11.1-0.01,20.25,1.84,27.46,5.55c7.2,3.71,12.55,8.9,16.04,15.57c3.49,6.67,5.24,14.43,5.25,23.28C142.39,112.82,140.65,120.62,137.18,127.35z"/>
@@ -127,30 +78,9 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
               <path d="M1326.03,235.74c-1.89,0.48-4.66,0.98-8.32,1.51c-3.66,0.54-6.49,0.8-8.5,0.81c-6.5,0.01-11.13-1.49-13.91-4.5c-2.78-3.01-4.17-7.64-4.18-13.9l-0.1-99.53l37.01-0.04l-0.04-40.56l-37.02,0.04l-0.05-47.11l-53.13,0.06l0.05,47.11l-27.27,0.03l0.04,40.56l27.27-0.03l0.11,104.14c0.02,18.07,5.29,31.93,15.81,41.6c10.52,9.67,25.69,14.5,45.53,14.47c5.31-0.01,10.89-0.37,16.74-1.08c5.84-0.71,11.71-1.96,17.62-3.74L1326.03,235.74z"/>
             </svg>
           </Link>
-
-          <div className="hidden md:flex items-center">
-            <Link href="/"
-              className={clsx(
-                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                !isCommunity && !isEvents ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
-              )}>
-              {t('nav.compare')}
-            </Link>
-            <Link href="/community"
-              className={clsx(
-                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                isCommunity ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
-              )}>
-              {t('nav.community')}
-            </Link>
-            {/* <Link href="/events"
-              className={clsx(
-                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                isEvents ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
-              )}>
-              {t('nav.events')}
-            </Link> */}
-          </div>
+          <span className="hidden sm:inline text-[11px] font-semibold text-white/30 border-l border-border/60 pl-3">
+            {t('site.tagline')}
+          </span>
         </div>
 
         {/* ── 중앙: 검색 ── */}
@@ -165,65 +95,34 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
           </div>
         )}
 
-        {/* ── 우측: 섹션별 링크 + 글쓰기/유저 ── */}
+        {/* ── 우측: 글쓰기/유저 ── */}
         <div className="hidden md:flex items-center gap-1">
-          {isCommunity ? (
-            <>
-              <Link href="/community/write"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-lg transition-colors">
-                <PenSquare className="w-3.5 h-3.5" /> {t('community.write')}
-              </Link>
-            </>
-          ) : (
-            <>
-              {/* 카테고리 드롭다운 */}
-              <div className="relative">
-                <button
-                  onClick={() => setCatOpen(v => !v)}
-                  onBlur={() => setTimeout(() => setCatOpen(false), 150)}
-                  className={clsx(
-                    'flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                    categoryLinks.some(l => isActive(l.href)) ? 'text-white' : 'text-white/35 hover:text-white/70'
-                  )}
-                >
-                  {t('nav.compare')} <ChevronDown className={clsx('w-3 h-3 transition-transform', catOpen && 'rotate-180')} />
-                </button>
-                {catOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-44 bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50">
-                    <div className="py-1">
-                      {categoryLinks.map(l => (
-                        <Link key={l.href} href={l.href}
-                          onClick={() => setCatOpen(false)}
-                          className={clsx(
-                            'block px-4 py-2 text-sm transition-colors whitespace-nowrap',
-                            isActive(l.href) ? 'text-accent font-semibold' : 'text-white/55 hover:text-white hover:bg-white/5'
-                          )}>
-                          {l.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <Link href="/history"
-                className={clsx(
-                  'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
-                  isActive('/history') ? 'text-white' : 'text-white/35 hover:text-white/70'
-                )}>
-                {t('nav.history')}
-              </Link>
-            </>
-          )}
+          <Link href="/community/write"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent/90 text-white text-sm font-bold rounded-lg transition-colors">
+            <PenSquare className="w-3.5 h-3.5" /> {t('community.write')}
+          </Link>
 
           <div className="w-px h-4 bg-border mx-2" />
 
-          {authReady && loggedIn && <NotificationBell />}
-
           {authReady && (
             loggedIn ? (
-              <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} className="text-white/40 hover:text-white transition-colors p-1.5">
-                <User className="w-4 h-4" />
-              </Link>
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(v => !v)}
+                  onBlur={() => setTimeout(() => setUserMenuOpen(false), 150)}
+                  className="text-white/40 hover:text-white transition-colors p-1.5">
+                  <User className="w-4 h-4" />
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-32 bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden z-50">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                      <LogOut className="w-3.5 h-3.5" /> {t('auth.signout')}
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link href="/login" className="text-xs font-semibold bg-surface-2 border border-border text-white/70 hover:text-white hover:border-white/20 px-4 py-1.5 rounded-full transition-all">
                 {t('auth.signin')}
@@ -236,11 +135,12 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
         {/* ── 모바일 우측 ── */}
         <div className="flex md:hidden items-center gap-1">
           <LocalePopup />
-          {authReady && loggedIn && <NotificationBell />}
           {authReady && loggedIn && (
-            <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} className="flex items-center justify-center w-9 h-9 rounded-full text-white/50 hover:text-white transition-colors">
-              <User className="w-5 h-5" />
-            </Link>
+            <button
+              onClick={handleLogout}
+              className="flex items-center justify-center w-9 h-9 rounded-full text-white/50 hover:text-white transition-colors">
+              <LogOut className="w-4 h-4" />
+            </button>
           )}
           <button onClick={() => setMobileOpen(!mobileOpen)}
             className="flex items-center justify-center w-9 h-9 rounded-full text-white/60 hover:text-white hover:bg-white/5 transition-colors"
@@ -262,7 +162,7 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
         mobileOpen ? 'translate-y-0 pointer-events-auto' : '-translate-y-full pointer-events-none'
       )}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
-          <Link href={isCommunity ? "/community" : "/"} className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
+          <Link href={isCommunity ? "/community/news" : "/"} className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
             <span className="w-2.5 h-2.5 rounded-full bg-accent" />
             <svg viewBox="0 0 1334.13 282.17" className="h-3.5 w-auto" fill="white" xmlns="http://www.w3.org/2000/svg" aria-label="pickvolt">
               <path d="M187.05,57.78c-7.39-13.39-18.12-23.89-32.18-31.49c-14.06-7.6-31.12-11.39-51.19-11.37L0.78,15.03l0.28,263.88l54.02-0.06l-0.09-86.25l47.64-0.05c20.31-0.02,37.57-3.79,51.79-11.3c14.22-7.51,25.07-17.91,32.55-31.2c7.48-13.29,11.22-28.67,11.2-46.15C198.15,86.55,194.44,71.18,187.05,57.78z M137.18,127.35c-3.48,6.73-8.78,12.02-15.92,15.87c-7.14,3.85-16.26,5.77-27.36,5.78l-38.96,0.04l-0.09-89.44l38.79-0.04c11.1-0.01,20.25,1.84,27.46,5.55c7.2,3.71,12.55,8.9,16.04,15.57c3.49,6.67,5.24,14.43,5.25,23.28C142.39,112.82,140.65,120.62,137.18,127.35z"/>
@@ -283,112 +183,40 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
         <div className="px-4 py-3 space-y-1">
           <Link href="/" onClick={() => setMobileOpen(false)}
-            className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
-              !isCommunity && !isEvents ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
-            {t('nav.compare')}
+            className={clsx('flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
+              !isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
+            <Home className="w-4 h-4 flex-shrink-0" /> {t('nav.home')}
           </Link>
-          <Link href="/community" onClick={() => setMobileOpen(false)}
-            className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
-              isCommunity ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
-            {t('nav.community')}
-          </Link>
-          {/* <Link href="/events" onClick={() => setMobileOpen(false)}
-            className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
-              isEvents ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
-            {t('nav.events')}
-          </Link> */}
 
-          <div className="pt-2 pb-1 px-3">
-            <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest">
-              {isCommunity ? t('nav.community') : t('nav.compare')}
-            </p>
-          </div>
-
-          {isCommunity ? (
-            <>
-              {communityLinks.map(l => {
-                const Icon = l.icon
-                return (
-                  <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
-                    className={clsx('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                      isActive(l.href, l.exact)
-                        ? 'bg-white/10 text-white font-semibold'
-                        : 'text-white/50 hover:text-white hover:bg-white/5')}>
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    {l.label}
-                  </Link>
-                )
-              })}
-
-              {/* 클랜 섹션 */}
-              <div className="mt-3 pt-3 border-t border-border/30">
-                <div className="flex items-center justify-between px-3 mb-1">
-                  <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{t('clan.my_clans')}</span>
-                  <Link href="/clan/create" onClick={() => setMobileOpen(false)}
-                    className="text-white/30 hover:text-accent transition-colors" title={t('clan.create')}>
-                    <Plus className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-                {myClans.map(c => {
-                  const active = pathname === `/clan/${c.slug}` || pathname.startsWith(`/clan/${c.slug}/`)
-                  return (
-                    <Link key={c.id} href={`/clan/${c.slug}`} onClick={() => setMobileOpen(false)}
-                      className={clsx(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full',
-                        active ? 'bg-white/10 text-white font-semibold' : 'text-white/50 hover:text-white hover:bg-white/5'
-                      )}>
-                      {c.avatar_url
-                        ? <img src={c.avatar_url} alt={c.name} className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
-                        : <span className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center text-[8px] font-bold text-accent/70 flex-shrink-0">{c.name[0]?.toUpperCase()}</span>
-                      }
-                      <span className="truncate">{c.name}</span>
-                    </Link>
-                  )
-                })}
-                <Link href="/clan" onClick={() => setMobileOpen(false)}
-                  className={clsx(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full',
-                    pathname === '/clan' ? 'bg-white/10 text-white font-semibold' : 'text-white/30 hover:text-white hover:bg-white/5'
-                  )}>
-                  <Users className="w-4 h-4 flex-shrink-0" />
-                  {t('clan.discover')}
-                </Link>
-              </div>
-
-              <div className="pt-2">
-                <Link href="/community/write" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-accent hover:bg-accent/10 transition-colors">
-                  <PenSquare className="w-4 h-4" /> {t('community.write')}
-                </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-1">
-                {categoryLinks.map(l => (
-                  <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
-                    className={clsx('px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors',
-                      isActive(l.href) ? 'bg-white/8 text-white' : 'text-white/50 hover:text-white hover:bg-white/5')}>
-                    {l.label}
-                  </Link>
-                ))}
-              </div>
-              <Link href="/history" onClick={() => setMobileOpen(false)}
-                className={clsx('flex items-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mt-1',
-                  isActive('/history') ? 'bg-white/8 text-white' : 'text-white/50 hover:text-white hover:bg-white/5')}>
-                {t('nav.history')}
+          {communityLinks.map(l => {
+            const Icon = l.icon
+            return (
+              <Link key={l.href} href={l.href} onClick={() => setMobileOpen(false)}
+                className={clsx('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                  isActive(l.href, l.exact)
+                    ? 'bg-white/10 text-white font-semibold'
+                    : 'text-white/50 hover:text-white hover:bg-white/5')}>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {l.label}
               </Link>
-            </>
-          )}
+            )
+          })}
+
+          <div className="pt-2">
+            <Link href="/community/write" onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-accent hover:bg-accent/10 transition-colors">
+              <PenSquare className="w-4 h-4" /> {t('community.write')}
+            </Link>
+          </div>
         </div>
 
         {authReady && (
           <div className="px-4 pb-6 pt-2 border-t border-border/50">
             {loggedIn ? (
-              <Link href={isCommunity ? "/mypage?from=community" : "/mypage"} onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                <User className="w-4 h-4" /> {t('mypage.title')}
-              </Link>
+              <button onClick={handleLogout}
+                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors w-full">
+                <LogOut className="w-4 h-4" /> {t('auth.signout')}
+              </button>
             ) : (
               <Link href="/login" onClick={() => setMobileOpen(false)}
                 className="flex items-center justify-center w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent/90 transition-colors">

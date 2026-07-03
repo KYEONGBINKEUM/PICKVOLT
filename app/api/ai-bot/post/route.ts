@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const user = await getUser(req)
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { topic, clan_id, context, lang } = await req.json()
+  const { topic, clan_id, context, lang, category } = await req.json()
   if (!topic?.trim()) {
     return NextResponse.json({ error: 'topic required' }, { status: 400 })
   }
@@ -89,7 +89,9 @@ export async function POST(req: NextRequest) {
     user_avatar_url: null,
     title,
     body,
-    type: 'forum',
+    type: 'news',
+    category: category ?? null,
+    is_hidden: true, // 초안 상태 — 관리자 검수 후 발행(is_hidden: false)
     clan_id: clan_id ?? null,
     is_ai_generated: true,
     ai_character: null,

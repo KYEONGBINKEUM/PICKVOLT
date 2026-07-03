@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Bot, ChevronDown, Loader2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
 import { useRouter } from 'next/navigation'
+import { BLOG_CATEGORIES } from '@/lib/blogCategories'
 
 const LANG_OPTIONS = [
   { code: 'ko', label: '한국어' },
@@ -20,21 +21,24 @@ interface Props {
   clanId?: string | null
   userPoints: number
   botPostCost: number
+  category?: string
   onSuccess?: (postId: string) => void
 }
 
-export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost, onSuccess }: Props) {
+export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost, category, onSuccess }: Props) {
   const { t, locale } = useI18n()
   const router = useRouter()
   const [open, setOpen]       = useState(false)
   const [topic, setTopic]     = useState('')
   const [context, setContext] = useState('')
   const [lang, setLang]       = useState<string>(locale)
+  const [postCategory, setPostCategory] = useState(category ?? BLOG_CATEGORIES[0].slug)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [result, setResult]   = useState<{ postId: string; title: string; pointsLeft: number } | null>(null)
 
   useEffect(() => { setLang(locale) }, [locale])
+  useEffect(() => { if (category) setPostCategory(category) }, [category])
 
   const canAfford = userPoints >= botPostCost
 
@@ -45,7 +49,7 @@ export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost,
     const res = await fetch('/api/ai-bot/post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ topic: topic.trim(), clan_id: clanId ?? null, context: context.trim() || null, lang }),
+      body: JSON.stringify({ topic: topic.trim(), clan_id: clanId ?? null, context: context.trim() || null, lang, category: postCategory }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -117,6 +121,23 @@ export default function AiBotPostPanel({ token, clanId, userPoints, botPostCost,
                   placeholder={t('ai_bot.topic_placeholder')}
                   className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent"
                 />
+              </div>
+
+              {/* 카테고리 선택 */}
+              <div>
+                <p className="text-xs text-white/40 mb-1.5 font-medium">{t('write.category')}</p>
+                <div className="relative">
+                  <select
+                    value={postCategory}
+                    onChange={e => setPostCategory(e.target.value)}
+                    className="w-full appearance-none bg-background border border-border rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-accent pr-8"
+                  >
+                    {BLOG_CATEGORIES.map(c => (
+                      <option key={c.slug} value={c.slug}>{t(c.labelKey)}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+                </div>
               </div>
 
               {/* 언어 선택 */}
