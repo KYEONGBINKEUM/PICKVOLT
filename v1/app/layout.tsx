@@ -111,6 +111,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
+        {/* AdSense script — temporarily disabled while awaiting approval
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8058893243087997"
+          crossOrigin="anonymous"
+        />
+        */}
       </head>
       <body className="bg-background text-white antialiased">
         <I18nProvider initialLocale={initialLocale}>

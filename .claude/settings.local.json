@@ -52,7 +52,28 @@
       "Bash(git stash *)",
       "Bash(git pull *)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
-      "Bash(node_modules/.bin/next build *)"
+      "Bash(node_modules/.bin/next build *)",
+      "Bash(sed -i '' 's/'\\\\''compare.guest_used_title'\\\\'': \"You'\\\\''ve used your free trial\"/'\\\\''compare.guest_used_title'\\\\'': '\\\\''AI comparison is available after sign in'\\\\''/' /Users/keumkyeongbin/코딩/PICKVOLT/lib/i18n.tsx)",
+      "Bash(sed -i '' 's/'\\\\''compare.guest_used_desc'\\\\'': '\\\\''Sign up to continue using AI comparisons for free.'\\\\''/'\\\\''compare.guest_used_desc'\\\\'': '\\\\''Sign in to access AI-powered product comparisons.'\\\\''/' /Users/keumkyeongbin/코딩/PICKVOLT/lib/i18n.tsx)",
+      "Bash(sed -i '' 's/'\\\\''compare.guest_used_title'\\\\'': '\\\\''Ya usaste tu prueba gratuita'\\\\''/'\\\\''compare.guest_used_title'\\\\'': '\\\\''La comparación IA requiere iniciar sesión'\\\\''/' /Users/keumkyeongbin/코딩/PICKVOLT/lib/i18n.tsx)",
+      "Bash(sed -i '' 's/'\\\\''compare.guest_used_desc'\\\\'': '\\\\''Regístrate para seguir usando las comparaciones IA gratis.'\\\\''/'\\\\''compare.guest_used_desc'\\\\'': '\\\\''Inicia sesión para acceder a las comparaciones con IA.'\\\\''/' /Users/keumkyeongbin/코딩/PICKVOLT/lib/i18n.tsx)",
+      "Bash(sed -i '' 's/'\\\\''compare.guest_used_title'\\\\'': '\\\\''Você já usou sua avaliação gratuita'\\\\''/'\\\\''compare.guest_used_title'\\\\'': '\\\\''A comparação IA requer login'\\\\''/' /Users/keumkyeongbin/코딩/PICKVOLT/lib/i18n.tsx)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npx --no-install next build)",
+      "Bash(xargs ls)",
+      "Bash(awk '{print $1}')",
+      "Bash(awk -F\"from\\('\" '{print $2}')",
+      "Bash(awk -F\"'\\)\" '{print $1}')",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(python3 -c ' *)",
+      "Bash(ls /brain/wiki/design/daily/ 2>/dev/null || echo \"Directory not found\")",
+      "Bash(ls \"/Users/keumkyeongbin/Obsidian Vault/Brain/wiki/design/\" 2>/dev/null || echo \"not found\")",
+      "Bash(ls /Users/keumkyeongbin/ | head -20)",
+      "Bash(mkdir -p /Users/keumkyeongbin/00.test && echo \"created\")",
+      "Bash(open /Users/keumkyeongbin/00.test/index.html)",
+      "Bash(vercel whoami *)",
+      "Bash(/Users/keumkyeongbin/.hermes/node/bin/vercel --yes)",
+      "Bash(xargs -I{} echo {})"
     ]
   }
 }

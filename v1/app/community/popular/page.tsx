@@ -1,0 +1,28 @@
+import PopularClient from './PopularClient'
+import type { FeedPost } from '@/components/PostFeed'
+
+function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_ENV === 'production') return 'https://www.pickvolt.com'
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return 'http://localhost:3000'
+}
+
+async function getInitialPosts(): Promise<{ posts: FeedPost[]; total: number }> {
+  try {
+    const res = await fetch(
+      `${getBaseUrl()}/api/community/posts?sort=hot&page=1&limit=25`,
+      { next: { revalidate: 60 } }
+    )
+    if (!res.ok) return { posts: [], total: 0 }
+    const data = await res.json()
+    return { posts: data.posts ?? [], total: data.total ?? 0 }
+  } catch {
+    return { posts: [], total: 0 }
+  }
+}
+
+export default async function PopularPage() {
+  const { posts, total } = await getInitialPosts()
+  return <PopularClient initialPosts={posts.length > 0 ? posts : undefined} initialTotal={total} />
+}
