@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import ArticleHeader from '@/components/articles/ArticleHeader'
-import AdSlot from '@/components/articles/AdSlot'
 import ArticleBody from './ArticleBody'
 import ArticleSidebar from './ArticleSidebar'
 import RelatedArticles from './RelatedArticles'
@@ -113,47 +113,88 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
     inLanguage: 'ko-KR',
   }
 
+  const catLabel = CATEGORY_LABELS[article.category] ?? article.category
+
   return (
-    <main className="bg-background min-h-screen flex flex-col">
+    <main style={{ background: '#0E0E0E', minHeight: '100vh' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ArticleHeader />
 
-      <div className="max-w-inner mx-auto w-full px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10">
-        <article>
+      {/* Article layout: 1fr 240px grid */}
+      <div className="pv-article-layout" style={{ maxWidth: 1260, margin: '0 auto', padding: '18px 20px 0', display: 'grid', gridTemplateColumns: '1fr 240px', gap: 28, alignItems: 'start' }}>
+
+        {/* Main content */}
+        <main style={{ minWidth: 0 }}>
+          {/* Hero image */}
           {article.thumbnail_url && (
-            <div className="w-full aspect-video rounded-card overflow-hidden mb-5 bg-surface">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={article.thumbnail_url} alt={article.title} className="w-full h-full object-cover" />
+            <div style={{ marginBottom: 22 }}>
+              <img src={article.thumbnail_url} alt={article.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block', background: '#1A1A1A' }} />
             </div>
           )}
 
-          <CategoryBadge category={article.category} />
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-3">{article.title}</h1>
-          <ArticleMetaLine
-            publishedAt={formatDate(article.published_at)}
-            updatedAt={formatDate(article.updated_at)}
-            authorName={article.author_name}
-            readMinutes={article.read_minutes}
-          />
-          {article.summary && <p className="text-base text-white/70 leading-relaxed mb-6">{article.summary}</p>}
+          {/* Breadcrumb */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#777777', marginBottom: 10 }}>
+            <Link href="/" style={{ color: '#777777' }} className="pv-art-bc-link">홈</Link>
+            <span style={{ color: '#777777' }}>›</span>
+            <Link href={`/articles/category/${article.category}`} style={{ color: '#777777' }} className="pv-art-bc-link">{catLabel}</Link>
+            <span style={{ color: '#777777' }}>›</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{article.title}</span>
+          </nav>
 
-          <div className="mb-6">
-            <AdSlot variant="banner" />
+          {/* Article header */}
+          <header>
+            <CategoryBadge category={article.category} />
+            <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.3, letterSpacing: '-0.025em', marginBottom: 12 }}>{article.title}</h1>
+            <ArticleMetaLine
+              publishedAt={formatDate(article.published_at)}
+              updatedAt={formatDate(article.updated_at)}
+              authorName={article.author_name}
+              readMinutes={article.read_minutes}
+            />
+            {article.summary && (
+              <p style={{ fontSize: 18, color: '#EDEDED', lineHeight: 1.8, opacity: 0.85, padding: '18px 0 20px', borderBottom: '1px solid #2A2A2A', marginBottom: 26 }}>
+                {article.summary}
+              </p>
+            )}
+          </header>
+
+          {/* Top ad banner — uncomment when AdSense is approved
+          <div style={{ height: 80, width: '100%', background: '#1A1A1A', border: '1px dashed #2A2A2A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '12px 0', gap: 2 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#BBBBBB' }}>광고 슬롯</span>
+            <span style={{ fontSize: 11, color: '#CCCCCC' }}>PC 728×90 / 모바일 320×100</span>
           </div>
+          */}
 
+          {/* Article body */}
           <ArticleBody slug={article.slug} html={article.content_html} />
 
-          <div className="my-6">
-            <AdSlot variant="banner" />
+          {/* Bottom ad banner — uncomment when AdSense is approved
+          <div style={{ height: 80, width: '100%', background: '#1A1A1A', border: '1px dashed #2A2A2A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '12px 0', gap: 2 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#BBBBBB' }}>광고 슬롯</span>
+            <span style={{ fontSize: 11, color: '#CCCCCC' }}>PC 728×90 / 모바일 320×100</span>
           </div>
+          */}
 
           <TagList tags={article.tags} />
-
           <RelatedArticles items={related ?? []} />
-        </article>
+        </main>
 
+        {/* Sidebar */}
         <ArticleSidebar contentHtml={article.content_html} />
       </div>
+
+      <style>{`
+        .pv-art-bc-link:hover { color: #FF4D00; }
+        @media (max-width: 1024px) {
+          .pv-article-layout { grid-template-columns: 1fr !important; padding: 16px 16px 0 !important; }
+        }
+        @media (max-width: 768px) {
+          .pv-article-layout h1 { font-size: 24px !important; }
+        }
+        @media (max-width: 520px) {
+          .pv-article-layout h1 { font-size: 21px !important; }
+        }
+      `}</style>
     </main>
   )
 }
