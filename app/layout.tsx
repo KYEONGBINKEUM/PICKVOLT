@@ -7,7 +7,6 @@ import { CurrencyProvider } from '@/lib/currency'
 import { CompareCartProvider } from '@/lib/compareCart'
 import CookieBanner from '@/components/CookieBanner'
 import Footer from '@/components/Footer'
-import NewsletterSignup from '@/components/NewsletterSignup'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 
 const inter = Inter({
@@ -117,7 +116,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <CurrencyProvider>
             <CompareCartProvider>
               {children}
-              <NewsletterSignup />
               <Footer />
               <CookieBanner />
               <AnalyticsProvider />
