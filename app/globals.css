@@ -53,3 +53,17 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ── Article Hub Nav ────────────────────────────────── */
+.pv-nav-group:hover .pv-nav-link { color: #fff; }
+.pv-nav-group:hover .pv-nav-arrow { transform: rotate(180deg); }
+.pv-nav-group:hover .pv-dropdown { display: flex; }
+.pv-dropdown a:hover { color: #fff; background: rgba(255,255,255,0.06); }
+
+@media (max-width: 768px) {
+  .pv-site-nav { display: none !important; }
+  .pv-btn-ham  { display: flex !important; }
+}
+@media (min-width: 769px) {
+  .pv-btn-ham  { display: none !important; }
+}
