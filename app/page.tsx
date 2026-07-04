@@ -56,6 +56,7 @@ function InfeedAd() {
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: '#BBBBBB', marginBottom: 4 }}>광고</p>
           <p style={{ fontSize: 15, fontWeight: 600, color: '#EDEDED', marginBottom: 3 }}>인피드 광고 슬롯 — 카드와 동일한 시각 언어로 표시</p>
           <p style={{ fontSize: 14, color: '#777777' }}>브랜드 또는 제품명 설명 문구가 여기에 들어갑니다.</p>
+          <p style={{ fontSize: 12, color: '#16A34A', marginTop: 2 }}>ad.example.com</p>
         </div>
       </div>
     </div>

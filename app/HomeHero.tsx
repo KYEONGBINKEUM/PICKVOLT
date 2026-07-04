@@ -23,7 +23,7 @@ export default function HomeHero({ hero, recent }: { hero: HomeArticle; recent: 
   const { t } = useI18n()
 
   return (
-    <section style={{ maxWidth: 1260, margin: '0 auto', padding: '16px 20px', display: 'grid', gridTemplateColumns: '5fr 3fr', gap: 20, borderBottom: '1px solid #2A2A2A' }}>
+    <section className="pv-hero-section" style={{ maxWidth: 1260, margin: '0 auto', padding: '16px 20px', display: 'grid', gridTemplateColumns: '5fr 3fr', gap: 20, borderBottom: '1px solid #2A2A2A' }}>
       {/* Hero lead card */}
       <Link href={`/articles/${hero.slug}`} style={{ cursor: 'pointer', textDecoration: 'none', color: 'inherit', display: 'block' }} className="pv-hero-card">
         <div style={{ aspectRatio: '16/9', background: '#1A1A1A', marginBottom: 12, overflow: 'hidden', position: 'relative' }}>
@@ -43,7 +43,7 @@ export default function HomeHero({ hero, recent }: { hero: HomeArticle; recent: 
       </Link>
 
       {/* Recent stack */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <div className="pv-recent-stack" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
         {recent.slice(0, 5).map((item) => (
           <Link
             key={item.id}
@@ -74,8 +74,9 @@ export default function HomeHero({ hero, recent }: { hero: HomeArticle; recent: 
         .pv-hero-card:hover .pv-hero-title { color: #FF4D00; }
         .pv-recent-item:hover .pv-recent-title { color: #FF4D00; }
         @media (max-width: 768px) {
-          section[data-hero] { grid-template-columns: 1fr !important; padding: 14px 16px !important; }
-          .pv-recent-stack-hidden { display: none !important; }
+          .pv-hero-section { grid-template-columns: 1fr !important; padding: 14px 16px !important; }
+          .pv-recent-stack { display: none !important; }
+          .pv-hero-title { font-size: 22px !important; }
         }
       `}</style>
     </section>

@@ -27,7 +27,7 @@ export default function HomeCategorySection({ category, items }: { category: str
       </div>
 
       {/* 4-column article grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <div className="pv-cat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
         {items.map((item) => (
           <Link
             key={item.id}

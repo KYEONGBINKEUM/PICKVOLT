@@ -111,7 +111,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
       </head>
-      <body className="bg-background text-white antialiased">
+      <body className="antialiased" style={{ background: '#0E0E0E', color: '#EDEDED' }}>
         <I18nProvider initialLocale={initialLocale}>
           <CurrencyProvider>
             <CompareCartProvider>
