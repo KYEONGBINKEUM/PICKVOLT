@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { ARTICLE_CATEGORIES } from '@/lib/articleCategories'
 
 export const revalidate = 3600
 
@@ -21,6 +22,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/categories/smartphone`, priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
     { url: `${BASE_URL}/categories/laptop`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
     { url: `${BASE_URL}/categories/tablet`,     priority: 0.8, changeFrequency: 'weekly'  as const, lastModified: now },
+    ...ARTICLE_CATEGORIES.map((cat) => ({
+      url: `${BASE_URL}/articles/category/${cat}`, priority: 0.8, changeFrequency: 'weekly' as const, lastModified: now,
+    })),
     { url: `${BASE_URL}/faq`,                   priority: 0.7, changeFrequency: 'monthly' as const, lastModified: now },
     { url: `${BASE_URL}/about`,                 priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
     { url: `${BASE_URL}/contact`,               priority: 0.6, changeFrequency: 'monthly' as const, lastModified: now },
@@ -86,7 +90,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:        0.5,
     }))
 
-    return [...staticRoutes, ...productRoutes, ...compareRoutes, ...postRoutes]
+    // --- 4. Published articles ---
+    const { data: articles } = await supabase
+      .from('articles')
+      .select('slug, updated_at')
+      .eq('status', 'public')
+      .order('published_at', { ascending: false })
+      .limit(1000)
+
+    const articleRoutes: MetadataRoute.Sitemap = (articles ?? []).map((a) => ({
+      url:             `${BASE_URL}/articles/${a.slug}`,
+      lastModified:    a.updated_at ? new Date(a.updated_at) : new Date(),
+      changeFrequency: 'weekly' as const,
+      priority:        0.7,
+    }))
+
+    return [...staticRoutes, ...productRoutes, ...compareRoutes, ...postRoutes, ...articleRoutes]
   } catch {
     return staticRoutes
   }

@@ -234,7 +234,7 @@ export default function HistoryPage() {
                 {filtered.length === 0 && (
                   <div className="text-center py-24">
                     <p className="text-white/30 text-sm">{t('history.empty')}</p>
-                    <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
+                    <Link href="/compare" className="inline-block mt-4 text-accent text-sm hover:underline">
                       {t('history.start')}
                     </Link>
                   </div>
@@ -284,7 +284,7 @@ export default function HistoryPage() {
                 {localHistory.length === 0 && (
                   <div className="text-center py-24">
                     <p className="text-white/30 text-sm">{t('history.empty')}</p>
-                    <Link href="/" className="inline-block mt-4 text-accent text-sm hover:underline">
+                    <Link href="/compare" className="inline-block mt-4 text-accent text-sm hover:underline">
                       {t('history.start')}
                     </Link>
                   </div>

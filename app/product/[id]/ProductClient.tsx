@@ -395,7 +395,7 @@ ${priceHTML}
       {/* Back + export/share row */}
       <div className="flex items-center justify-between mb-8">
         <Link
-          href="/"
+          href="/compare"
           className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/60 text-sm transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

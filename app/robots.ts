@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/admin/', '/mypage/'],
+        disallow: ['/api/', '/admin/', '/mypage/', '/articles/write'],
       },
     ],
     sitemap: 'https://www.pickvolt.com/sitemap.xml',

@@ -130,6 +130,10 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
           <div className="hidden md:flex items-center">
             <Link href="/"
+              className="px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors text-white/35 hover:text-white/70">
+              {t('nav.hub')}
+            </Link>
+            <Link href="/compare"
               className={clsx(
                 'px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors',
                 !isCommunity && !isEvents ? 'text-white bg-white/8' : 'text-white/35 hover:text-white/70'
@@ -283,6 +287,10 @@ export default function Navbar({ showSearch, communityContext }: NavbarProps) {
 
         <div className="px-4 py-3 space-y-1">
           <Link href="/" onClick={() => setMobileOpen(false)}
+            className="flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors text-white/60 hover:text-white hover:bg-white/5">
+            {t('nav.hub')}
+          </Link>
+          <Link href="/compare" onClick={() => setMobileOpen(false)}
             className={clsx('flex items-center px-3 py-3 rounded-xl text-sm font-semibold transition-colors',
               !isCommunity && !isEvents ? 'bg-accent/10 text-accent' : 'text-white/60 hover:text-white hover:bg-white/5')}>
             {t('nav.compare')}

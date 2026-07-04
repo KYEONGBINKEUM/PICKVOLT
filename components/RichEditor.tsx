@@ -21,6 +21,7 @@ interface Props {
   maxEmbed?: number
   initialHtml?: string
   minHeight?: string
+  bucket?: string
 }
 
 const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
@@ -28,7 +29,7 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
     editorRef, onChange, token, placeholder,
     uploadSizeError, uploadFailText, urlPrompt,
     onOpenProductPanel, embedCount = 0, maxEmbed = 4,
-    initialHtml, minHeight = '280px',
+    initialHtml, minHeight = '280px', bucket = 'community-images',
   },
   ref
 ) {
@@ -177,13 +178,17 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
     const file = e.target.files?.[0]
     if (!file || !token) return
     if (file.size > 10 * 1024 * 1024) { alert(uploadSizeError); return }
+    const EXT_MAP: Record<string, string> = {
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
+    }
+    const ext = EXT_MAP[file.type]
+    if (!ext) { alert(uploadFailText); return }
     setUploading(true)
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg'
       const path = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('community-images').upload(path, file, { upsert: false })
+      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false })
       if (error) { alert(uploadFailText + error.message); return }
-      const { data } = supabase.storage.from('community-images').getPublicUrl(path)
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
       doInsertHtml(`<img src="${data.publicUrl}" style="max-width:100%;border-radius:10px;margin:6px 0;display:block;border:1px solid rgba(255,255,255,0.08)" /><br />`)
     } finally {
       setUploading(false)
