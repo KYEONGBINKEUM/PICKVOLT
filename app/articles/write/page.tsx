@@ -165,6 +165,7 @@ function WriteInner() {
             {authed ? t('articleWrite.forbidden') : t('write.login_required')}
           </h1>
           {!authed && <p className="text-sm text-white/40">{t('articleWrite.login_desc')}</p>}
+          {!authed && <Link href="/login" className="text-sm text-accent hover:underline mt-2">{t('auth.signin')}</Link>}
           <Link href="/" className="text-sm text-accent hover:underline mt-2">{t('articleWrite.back_home')}</Link>
         </div>
       </div>
