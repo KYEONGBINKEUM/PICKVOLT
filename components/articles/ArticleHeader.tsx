@@ -72,8 +72,8 @@ export default function ArticleHeader() {
 
   return (
     <>
-      {/* ── Sticky site header ── */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 200, background: '#000', borderBottom: '1px solid rgba(255,77,0,0.25)', overflow: 'visible' }}>
+      {/* ── Fixed site header ── */}
+      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, width: '100%', zIndex: 200, background: '#000', borderBottom: '1px solid rgba(255,77,0,0.25)', overflow: 'visible' }}>
         {/* Scroll progress bar */}
         <div style={{ position: 'absolute', bottom: -1, left: 0, height: 1, width: `${progress}%`, background: '#FF4D00', transition: 'width 0.05s linear', pointerEvents: 'none' }} />
 
@@ -166,6 +166,9 @@ export default function ArticleHeader() {
           </nav>
         )}
       </header>
+
+      {/* 헤더가 fixed로 빠지며 사라진 공간만큼 콘텐츠를 밀어냄 */}
+      <div style={{ height: 68 }} />
 
       {/* ── Header ad bar — uncomment when AdSense is approved ──
       <div style={{ background: '#1A1A1A', borderBottom: '1px solid #2A2A2A', padding: '6px 20px', display: 'flex', justifyContent: 'center' }}>
