@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useI18n } from '@/lib/i18n'
 import RichEditor, { RichEditorHandle } from '@/components/RichEditor'
 import { ARTICLE_CATEGORIES, CATEGORY_I18N_KEY } from '@/lib/articleCategories'
+import ArticleHeader from '@/components/articles/ArticleHeader'
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 const CATEGORIES = ARTICLE_CATEGORIES
@@ -159,21 +160,26 @@ function WriteInner() {
 
   if (!authed || !isAdmin) {
     return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6">
-        <div className="text-center max-w-sm flex flex-col items-center gap-3">
-          <h1 className="text-lg font-bold text-white">
-            {authed ? t('articleWrite.forbidden') : t('write.login_required')}
-          </h1>
-          {!authed && <p className="text-sm text-white/40">{t('articleWrite.login_desc')}</p>}
-          {!authed && <Link href="/login" className="text-sm text-accent hover:underline mt-2">{t('auth.signin')}</Link>}
-          <Link href="/" className="text-sm text-accent hover:underline mt-2">{t('articleWrite.back_home')}</Link>
+      <>
+        <ArticleHeader />
+        <div className="min-h-[50vh] flex items-center justify-center px-6">
+          <div className="text-center max-w-sm flex flex-col items-center gap-3">
+            <h1 className="text-lg font-bold text-white">
+              {authed ? t('articleWrite.forbidden') : t('write.login_required')}
+            </h1>
+            {!authed && <p className="text-sm text-white/40">{t('articleWrite.login_desc')}</p>}
+            {!authed && <Link href="/login" className="text-sm text-accent hover:underline mt-2">{t('auth.signin')}</Link>}
+            <Link href="/" className="text-sm text-accent hover:underline mt-2">{t('articleWrite.back_home')}</Link>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="max-w-inner mx-auto px-4 sm:px-6 py-6">
+    <>
+      <ArticleHeader />
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '24px 20px 56px' }}>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-white/40">
           <Link href="/" className="text-accent font-semibold">Pickvolt</Link>
@@ -294,7 +300,8 @@ function WriteInner() {
           {toast}
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 
