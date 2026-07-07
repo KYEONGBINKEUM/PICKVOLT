@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n'
 import { CATEGORY_I18N_KEY } from '@/lib/articleCategories'
+import { supabase } from '@/lib/supabase'
+
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
 
 export interface ArticleListItem {
   id: string
@@ -139,6 +142,14 @@ export default function ListClient({
   const [total, setTotal] = useState(initialTotal)
   const [loading, setLoading] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const email = (session?.user?.email ?? '').toLowerCase()
+      setIsAdmin(ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(email))
+    })
+  }, [])
 
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: 'latest', label: t('articles.sort_latest') },
@@ -249,6 +260,26 @@ export default function ListClient({
         <ListPagination page={page} totalPages={totalPages} onPage={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }} />
       </div>
 
+      {isAdmin && (
+        <Link
+          href="/articles/write"
+          style={{
+            position: 'fixed', bottom: 28, right: 24, zIndex: 300,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            fontSize: 13, fontWeight: 600, color: '#fff',
+            background: '#FF4D00', border: 'none', padding: '10px 18px',
+            textDecoration: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            whiteSpace: 'nowrap',
+          }}
+          className="pv-fab-write"
+        >
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="10" y1="3" x2="10" y2="17" /><line x1="3" y1="10" x2="17" y2="10" />
+          </svg>
+          {t('articleWrite.heading')}
+        </Link>
+      )}
+
       <style>{`
         .pv-art-card:hover .pv-art-title { color: #FF4D00; }
         .pv-bc-home:hover { color: #FF4D00; }
@@ -256,6 +287,7 @@ export default function ListClient({
         .pv-sort-opt:last-child { border-bottom: none; }
         .pv-sort-opt:hover { color: #EDEDED; background: #1A1A1A; }
         .pv-pg-btn:hover { border-color: #FF4D00 !important; color: #FF4D00 !important; }
+        .pv-fab-write:hover { background: #cc3d00 !important; }
         @media (max-width: 1024px) { .pv-list-grid { grid-template-columns: repeat(3, 1fr) !important; } }
         @media (max-width: 768px) { .pv-list-grid { grid-template-columns: repeat(2, 1fr) !important; } }
         @media (max-width: 520px) { .pv-list-grid { grid-template-columns: 1fr !important; } }
