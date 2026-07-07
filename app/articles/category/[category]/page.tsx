@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import ArticleHeader from '@/components/articles/ArticleHeader'
 import ListClient from './ListClient'
@@ -10,19 +11,21 @@ const CATEGORY_LABELS: Record<string, string> = {
   tech: '테크', it: 'IT', ai: 'AI', mobile: '모바일', review: '리뷰', security: '보안', startup: '스타트업',
 }
 
-function getBaseUrl() {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+function makeSupabase() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 }
 
 async function getInitialArticles(category: string): Promise<{ items: ArticleListItem[]; total: number }> {
   try {
-    const res = await fetch(`${getBaseUrl()}/api/articles?category=${category}&sort=latest&page=1&limit=12`, {
-      next: { revalidate: 30 },
-    })
-    if (!res.ok) return { items: [], total: 0 }
-    const data = await res.json()
-    return { items: data.items ?? [], total: data.total ?? 0 }
+    const supabase = makeSupabase()
+    const cols = 'id, slug, title, summary, category, thumbnail_url, published_at'
+    const [{ data, error }, { count }] = await Promise.all([
+      supabase.from('articles').select(cols).eq('status', 'public').eq('category', category)
+        .order('published_at', { ascending: false }).range(0, 11),
+      supabase.from('articles').select('id', { count: 'exact', head: true }).eq('status', 'public').eq('category', category),
+    ])
+    if (error) return { items: [], total: 0 }
+    return { items: (data ?? []) as ArticleListItem[], total: count ?? 0 }
   } catch {
     return { items: [], total: 0 }
   }
