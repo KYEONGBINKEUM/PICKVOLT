@@ -3,6 +3,7 @@ node_modules
 .next
 .env.local
 scripts/.env
+__pycache__/
 *.log
 scraper.py
 product_scraper.py

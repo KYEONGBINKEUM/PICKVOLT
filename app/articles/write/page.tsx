@@ -187,6 +187,12 @@ function WriteInner() {
           {t('articleWrite.heading')}
         </p>
         <div className="flex items-center gap-2">
+          <Link
+            href="/articles/drafts"
+            className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-border text-white/70 hover:text-white hover:border-white/20 transition-colors"
+          >
+            {t('articleWrite.drafts_nav')}
+          </Link>
           <button
             onClick={handleDraftSave}
             disabled={saving}
