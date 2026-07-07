@@ -44,6 +44,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   return NextResponse.json(data)
 }
 
+// DELETE /api/articles/[slug] — 관리자 전용 삭제
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const isAdmin = await verifyAdmin(req)
+  if (!isAdmin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const supabase = makeServiceClient()
+  const { error } = await supabase.from('articles').delete().eq('slug', slug)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // PATCH /api/articles/[slug] — 관리자 전용 수정(임시저장 포함)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
