@@ -95,7 +95,7 @@ install_if_missing()
 PICKVOLT_API_URL = os.getenv("PICKVOLT_API_URL", "https://pickvolt.com").rstrip("/")
 ARTICLES_IMPORT_SECRET = os.getenv("ARTICLES_IMPORT_SECRET", "").strip()
 PICKVOLT_AUTHOR_ID = os.getenv("PICKVOLT_AUTHOR_ID", "").strip()
-PICKVOLT_AUTHOR_NAME = os.getenv("PICKVOLT_AUTHOR_NAME", "Pickvolt 테크팀").strip()
+PICKVOLT_AUTHOR_NAME = os.getenv("PICKVOLT_AUTHOR_NAME", "Pickvolt").strip()
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "").strip()
 CHATGPT_CLI_COMMAND = os.getenv("CHATGPT_CLI_COMMAND", "").strip()
@@ -365,6 +365,8 @@ def build_generation_prompt(topic: dict, web_context: str) -> str:
 - "현재 확인된 최신 정보", "제공된 검색 결과 기준", "먼저 말씀드리면" 같은 메타 표현 금지
 - 같은 제목, 같은 소제목, 같은 문장을 반복하지 말 것
 - 첫 문단에서 핵심 사실부터 바로 제시할 것
+- "참고 자료", "관련 자료", "출처", "References" 같은 이름의 섹션이나 목록을 절대 만들지 말 것
+- 검색 결과의 URL, 출처 표기, 기사 링크를 본문에 그대로 옮기지 말 것 — 정보만 자연스럽게 녹여서 서술할 것
 
 반드시 JSON만 반환:
 {{

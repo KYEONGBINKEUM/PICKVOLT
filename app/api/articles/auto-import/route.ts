@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     .from('articles')
     .insert({
       author_id: authorId,
-      author_name: body.author_name?.trim() || 'Pickvolt 테크팀',
+      author_name: body.author_name?.trim() || 'Pickvolt',
       slug: makeSlug(title),
       title,
       summary: (body.summary ?? '').trim(),

@@ -7,6 +7,7 @@ import ArticleBody from './ArticleBody'
 import ArticleSidebar from './ArticleSidebar'
 import RelatedArticles from './RelatedArticles'
 import { CategoryBadge, ArticleMetaLine, TagList } from './ArticleMeta'
+import EditArticleButton from './EditArticleButton'
 
 export const revalidate = 60
 
@@ -121,17 +122,10 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
       <ArticleHeader />
 
       {/* Article layout: 1fr 240px grid */}
-      <div className="pv-article-layout" style={{ maxWidth: 1260, margin: '0 auto', padding: '18px 20px 0', display: 'grid', gridTemplateColumns: '1fr 240px', gap: 28, alignItems: 'start' }}>
+      <div className="pv-article-layout" style={{ maxWidth: 1260, margin: '0 auto', padding: '18px 20px 0', display: 'grid', gridTemplateColumns: '1fr 240px', gap: 28 }}>
 
         {/* Main content */}
         <main style={{ minWidth: 0 }}>
-          {/* Hero image */}
-          {article.thumbnail_url && (
-            <div style={{ marginBottom: 22 }}>
-              <img src={article.thumbnail_url} alt={article.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', display: 'block', background: '#1A1A1A' }} />
-            </div>
-          )}
-
           {/* Breadcrumb */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#777777', marginBottom: 10 }}>
             <Link href="/" style={{ color: '#777777' }} className="pv-art-bc-link">홈</Link>
@@ -143,6 +137,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
 
           {/* Article header */}
           <header>
+            <EditArticleButton slug={article.slug} />
             <CategoryBadge category={article.category} />
             <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.3, letterSpacing: '-0.025em', marginBottom: 12 }}>{article.title}</h1>
             <ArticleMetaLine

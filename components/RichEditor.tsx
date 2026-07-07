@@ -289,7 +289,7 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
         onInput={() => onChange(editorRef.current?.innerHTML ?? '')}
         onPaste={handlePaste}
         data-placeholder={placeholder}
-        className="px-4 py-3 text-sm text-white/85 leading-relaxed outline-none bg-surface empty:before:content-[attr(data-placeholder)] empty:before:text-white/20"
+        className="px-4 py-3 text-sm text-white/85 leading-relaxed outline-none bg-surface empty:before:content-[attr(data-placeholder)] empty:before:text-white/20 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-white [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-white [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-white [&_h5]:text-sm [&_h5]:font-bold [&_h5]:text-white [&_h6]:text-sm [&_h6]:font-bold [&_h6]:text-white/70 [&_h6]:uppercase"
         style={{ minHeight, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         onClick={e => {
           const target = e.target as HTMLElement

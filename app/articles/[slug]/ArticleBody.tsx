@@ -8,7 +8,7 @@ function sanitizeHtml(html: string): string {
     const DOMPurify = require('dompurify')
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: [
-        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'ul', 'ol', 'li',
+        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 's', 'small', 'ul', 'ol', 'li',
         'blockquote', 'code', 'pre', 'a', 'img', 'div', 'span', 'h1', 'h2', 'h3',
         'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'colgroup', 'col',
       ],
