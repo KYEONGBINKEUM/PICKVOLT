@@ -2,6 +2,7 @@
 node_modules
 .next
 .env.local
+scripts/.env
 *.log
 scraper.py
 product_scraper.py
