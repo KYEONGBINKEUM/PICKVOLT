@@ -1,83 +1,59 @@
-import { createClient } from '@supabase/supabase-js'
-import ArticleHeader from '@/components/articles/ArticleHeader'
-import HomeHero, { type HomeArticle } from './HomeHero'
-import HomeCategorySection from './HomeCategorySection'
-import HomePopularTop5 from './HomePopularTop5'
+import Link from 'next/link'
 
-export const revalidate = 60
+const REGIONS = [
+  { name: '서울', slug: 'seoul', emoji: '🏙️' },
+  { name: '부산', slug: 'busan', emoji: '🌊' },
+  { name: '제주', slug: 'jeju', emoji: '🍊' },
+  { name: '경주', slug: 'gyeongju', emoji: '🏛️' },
+  { name: '강릉', slug: 'gangneung', emoji: '🌊' },
+  { name: '전주', slug: 'jeonju', emoji: '🥢' },
+]
 
-const HOME_CATEGORY_SECTIONS = ['tech', 'ai'] as const
-const HOME_ARTICLE_COLS = 'id, slug, title, summary, category, thumbnail_url, published_at'
-
-function makeSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
-}
-
-async function getHomeData() {
-  try {
-    const supabase = makeSupabase()
-
-    const [latestRes, popularRes, ...categoryResList] = await Promise.all([
-      supabase.from('articles').select(HOME_ARTICLE_COLS).eq('status', 'public').order('published_at', { ascending: false }).limit(6),
-      supabase.from('articles').select(HOME_ARTICLE_COLS).eq('status', 'public').order('view_count', { ascending: false }).limit(5),
-      ...HOME_CATEGORY_SECTIONS.map((cat) =>
-        supabase.from('articles').select(HOME_ARTICLE_COLS).eq('status', 'public').eq('category', cat).order('published_at', { ascending: false }).limit(4)
-      ),
-    ])
-
-    const latest = (latestRes.data ?? []) as HomeArticle[]
-    const popular = (popularRes.data ?? []) as HomeArticle[]
-    const categorySections = HOME_CATEGORY_SECTIONS.map((cat, i) => ({
-      category: cat,
-      items: (categoryResList[i]?.data ?? []) as HomeArticle[],
-    }))
-
-    return { hero: latest[0] ?? null, recent: latest.slice(1, 6), popular, categorySections }
-  } catch {
-    return { hero: null, recent: [], popular: [], categorySections: [] }
-  }
-}
-
-/* InfeedAd — uncomment when AdSense is approved
-function InfeedAd() {
+export default function HomePage() {
   return (
-    <div style={{ maxWidth: 1260, margin: '0 auto', padding: '14px 20px' }}>
-      <div style={{ background: '#1A1A1A', border: '1px dashed #2A2A2A', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-        <div style={{ width: 110, height: 76, flexShrink: 0, background: '#2A2A2A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 11, color: '#777777' }}>광고 이미지</span>
+    <div className="min-h-screen">
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-24 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            진짜 여행자의 가이드
+          </h1>
+          <p className="text-xl md:text-2xl text-blue-100 mb-8">
+            직접 가본 곳, 직접 먹어본 곳만 소개합니다
+          </p>
+          <Link
+            href="/travel"
+            className="bg-white text-blue-600 font-semibold px-8 py-3 rounded-full hover:bg-blue-50 transition"
+          >
+            여행지 둘러보기
+          </Link>
         </div>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: '#BBBBBB', marginBottom: 4 }}>광고</p>
-          <p style={{ fontSize: 15, fontWeight: 600, color: '#EDEDED', marginBottom: 3 }}>인피드 광고 슬롯 — 카드와 동일한 시각 언어로 표시</p>
-          <p style={{ fontSize: 14, color: '#777777' }}>브랜드 또는 제품명 설명 문구가 여기에 들어갑니다.</p>
-          <p style={{ fontSize: 12, color: '#16A34A', marginTop: 2 }}>ad.example.com</p>
+      </section>
+
+      {/* 지역별 탐색 */}
+      <section className="max-w-6xl mx-auto px-4 py-16">
+        <h2 className="text-2xl font-bold mb-8">지역별 여행</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {REGIONS.map((region) => (
+            <Link
+              key={region.slug}
+              href={`/region/${region.slug}`}
+              className="flex flex-col items-center p-6 bg-gray-50 rounded-2xl hover:bg-blue-50 hover:text-blue-600 transition group"
+            >
+              <span className="text-4xl mb-2">{region.emoji}</span>
+              <span className="font-semibold">{region.name}</span>
+            </Link>
+          ))}
         </div>
-      </div>
+      </section>
+
+      {/* 최신 글 */}
+      <section className="max-w-6xl mx-auto px-4 py-8 pb-24">
+        <h2 className="text-2xl font-bold mb-8">최신 여행 정보</h2>
+        <div className="text-gray-500 text-center py-16">
+          첫 번째 글을 준비 중입니다 ✈️
+        </div>
+      </section>
     </div>
-  )
-}
-*/
-
-export default async function HomePage() {
-  const { hero, recent, popular, categorySections } = await getHomeData()
-
-  return (
-    <main style={{ background: '#0E0E0E', minHeight: '100vh' }}>
-      <ArticleHeader />
-
-      {hero && <HomeHero hero={hero} recent={recent} />}
-
-      {/* <InfeedAd /> */}
-
-      {categorySections.map((sec) => (
-        <HomeCategorySection key={sec.category} category={sec.category} items={sec.items} />
-      ))}
-
-      {/* <div style={{ marginTop: 6 }}><InfeedAd /></div> */}
-
-      <HomePopularTop5 items={popular} />
-
-      <div style={{ height: 60 }} />
-    </main>
   )
 }

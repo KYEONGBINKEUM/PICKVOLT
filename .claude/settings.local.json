@@ -73,7 +73,9 @@
       "Bash(open /Users/keumkyeongbin/00.test/index.html)",
       "Bash(vercel whoami *)",
       "Bash(/Users/keumkyeongbin/.hermes/node/bin/vercel --yes)",
-      "Bash(xargs -I{} echo {})"
+      "Bash(xargs -I{} echo {})",
+      "Bash(curl -s \"https://www.pickvolt.com/\" -o /tmp_pv.html)",
+      "Bash(grep -o '<footer[^>]*>.\\\\{0,400\\\\}' /tmp_pv.html)"
     ]
   }
 }

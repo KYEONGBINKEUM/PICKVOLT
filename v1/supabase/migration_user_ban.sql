@@ -1,4 +1,0 @@
--- profiles 테이블에 밴/정지 컬럼 추가
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ DEFAULT NULL;
