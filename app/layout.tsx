@@ -8,11 +8,11 @@ const BASE_URL = 'https://pickvolt.com'
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'PICKVOLT — 국내여행 가이드, 진짜 여행의 기준',
-    template: '%s | PICKVOLT 여행 가이드',
+    default: 'PICKVOLT — 여행 장소 추천, 호텔 추천, 여행 소식',
+    template: '%s | PICKVOLT',
   },
-  description: '서울, 부산, 제주, 경주, 강릉, 전주 등 국내 여행지 맛집·숙소·코스 추천. 직접 가보고 경험한 솔직한 여행 정보만 씁니다.',
-  keywords: ['국내여행', '여행 가이드', '서울여행', '부산여행', '제주여행', '맛집 추천', '여행 코스', '숙소 추천'],
+  description: '국내외 여행 장소 추천, 호텔 추천, 최신 여행 소식을 전달합니다. 직접 경험한 솔직한 여행 정보만 씁니다.',
+  keywords: ['여행 장소 추천', '호텔 추천', '여행 소식', '국내여행', '서울여행', '부산여행', '제주여행', '숙소 추천'],
   authors: [{ name: 'PICKVOLT' }],
   creator: 'PICKVOLT',
   openGraph: {
