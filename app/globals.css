@@ -1,16 +1,160 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design Tokens ─────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas:        #FBFBFA;
+  --surface:       #FFFFFF;
+  --ink:           #111111;
+  --ink-2:         #787774;
+  --ink-3:         #B5B3AF;
+  --border:        #EAEAEA;
+  --border-strong: rgba(0,0,0,0.10);
+  --accent:        #3B9FDE;
+
+  /* Pastel accents */
+  --pastel-blue-bg:   #E1F3FE;
+  --pastel-blue-text: #1F6C9F;
+  --pastel-green-bg:  #EDF3EC;
+  --pastel-green-text:#346538;
+  --pastel-yellow-bg: #FBF3DB;
+  --pastel-yellow-text:#956400;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Base ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: 'Pretendard', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
 }
+
+/* ── Typography ─────────────────────────────────────────────── */
+.font-editorial {
+  font-family: 'Instrument Serif', 'Pretendard', serif;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.font-mono-ui {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Cascadia Code', monospace;
+  font-size: 0.8125rem;
+}
+
+/* ── Scroll-entry animations ─────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 600ms var(--ease-out-expo),
+              transform 600ms var(--ease-out-expo);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered children */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 600ms var(--ease-out-expo),
+              transform 600ms var(--ease-out-expo);
+}
+.reveal-stagger.visible > *:nth-child(1) { opacity:1; transform:translateY(0); transition-delay: 0ms; }
+.reveal-stagger.visible > *:nth-child(2) { opacity:1; transform:translateY(0); transition-delay: 80ms; }
+.reveal-stagger.visible > *:nth-child(3) { opacity:1; transform:translateY(0); transition-delay: 160ms; }
+.reveal-stagger.visible > *:nth-child(4) { opacity:1; transform:translateY(0); transition-delay: 240ms; }
+.reveal-stagger.visible > *:nth-child(5) { opacity:1; transform:translateY(0); transition-delay: 320ms; }
+.reveal-stagger.visible > *:nth-child(6) { opacity:1; transform:translateY(0); transition-delay: 400ms; }
+
+/* ── Card lift ───────────────────────────────────────────────── */
+.card-lift {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card-lift:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+
+/* ── Ambient blob (fixed, pointer-events:none) ───────────────── */
+@keyframes blob-drift {
+  0%   { transform: translate(0,   0)   scale(1); }
+  33%  { transform: translate(40px,-30px) scale(1.04); }
+  66%  { transform: translate(-20px,20px) scale(0.97); }
+  100% { transform: translate(0,   0)   scale(1); }
+}
+.ambient-blob {
+  position: fixed;
+  top: -20vh;
+  right: -10vw;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,159,222,0.04) 0%, transparent 70%);
+  animation: blob-drift 28s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+
+/* ── Bento border util ───────────────────────────────────────── */
+.bento-border {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* ── Nav link ────────────────────────────────────────────────── */
+.nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+.nav-link:hover {
+  color: var(--ink);
+}
+
+/* ── CTA button ──────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  background: #111111;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background 180ms ease, transform 100ms ease;
+}
+.btn-primary:hover  { background: #333333; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-ghost {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--border);
+  transition: color 180ms ease;
+}
+.btn-ghost:hover { color: var(--ink); }

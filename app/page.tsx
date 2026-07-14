@@ -1,214 +1,290 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useEffect, useRef } from 'react'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: '국내 여행 장소 추천, 호텔 추천, 여행 소식',
-  description: '국내외 여행 장소 추천, 호텔 추천, 최신 여행 소식을 전달합니다. 직접 경험한 솔직한 여행 정보만 씁니다.',
-  alternates: { canonical: 'https://pickvolt.com' },
+/* ── Intersection Observer reveal ────────────────────────────── */
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { el.classList.add('visible'); obs.disconnect() } },
+      { threshold: 0.10 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+  return ref
 }
 
+/* ── Data ────────────────────────────────────────────────────── */
 const CATEGORIES = [
   {
-    title: '여행 장소 추천',
-    desc: '국내 주요 여행지별 놓치면 안 될 명소와 숨겨진 스팟을 소개합니다.',
-    href: '/travel',
-    img: 'https://picsum.photos/seed/travel-place-scenery/900/600',
     tag: 'SPOT',
+    tagBg: 'var(--pastel-blue-bg)',
+    tagColor: 'var(--pastel-blue-text)',
+    title: '여행 장소 추천',
+    desc: '국내 주요 여행지, 숨겨진 스팟, 시즌별 명소를 직접 조사해 엄선합니다.',
+    href: '/travel',
+    img: 'https://picsum.photos/seed/travel-spot-korea/900/600',
   },
   {
-    title: '호텔 추천',
-    desc: '가성비부터 럭셔리까지, 지역별 최적의 숙소를 직접 비교해 추천합니다.',
-    href: '/travel?category=hotel',
-    img: 'https://picsum.photos/seed/hotel-luxury-room/900/600',
     tag: 'HOTEL',
+    tagBg: 'var(--pastel-green-bg)',
+    tagColor: 'var(--pastel-green-text)',
+    title: '호텔 추천',
+    desc: '가성비부터 럭셔리까지, 지역별 숙소를 비교합니다.',
+    href: '/travel?category=hotel',
+    img: 'https://picsum.photos/seed/hotel-korea-room/900/600',
   },
   {
-    title: '여행 소식',
-    desc: '새로 열린 관광지, 시즌별 축제, 항공·숙박 할인 소식을 빠르게 전달합니다.',
-    href: '/travel?category=news',
-    img: 'https://picsum.photos/seed/travel-news-festival/900/600',
     tag: 'NEWS',
+    tagBg: 'var(--pastel-yellow-bg)',
+    tagColor: 'var(--pastel-yellow-text)',
+    title: '여행 소식',
+    desc: '새 관광지, 시즌 축제, 항공·숙박 할인 정보를 빠르게 전달합니다.',
+    href: '/travel?category=news',
+    img: 'https://picsum.photos/seed/travel-news-korea/900/600',
   },
 ]
 
 const REGIONS = [
-  { name: '서울', slug: 'seoul', desc: '도심 속 골목 여행', img: 'https://picsum.photos/seed/urban-seoul/800/600' },
-  { name: '부산', slug: 'busan', desc: '바다와 야경의 도시', img: 'https://picsum.photos/seed/coastal-busan/800/600' },
-  { name: '제주', slug: 'jeju', desc: '사계절 다른 섬 여행', img: 'https://picsum.photos/seed/jeju-island/800/600' },
-  { name: '경주', slug: 'gyeongju', desc: '천년 역사 문화 여행', img: 'https://picsum.photos/seed/gyeongju-temple/800/600' },
-  { name: '강릉', slug: 'gangneung', desc: '동해와 커피 향', img: 'https://picsum.photos/seed/gangneung-ocean/800/600' },
-  { name: '전주', slug: 'jeonju', desc: '한옥과 맛의 수도', img: 'https://picsum.photos/seed/jeonju-hanok/800/600' },
+  { name: '서울',  slug: 'seoul',     meta: 'Urban · Street',   img: 'https://picsum.photos/seed/seoul-street-scene/800/600' },
+  { name: '부산',  slug: 'busan',     meta: 'Coast · Night',    img: 'https://picsum.photos/seed/busan-coast-view/800/600' },
+  { name: '제주',  slug: 'jeju',      meta: 'Island · Nature',  img: 'https://picsum.photos/seed/jeju-nature-view/800/600' },
+  { name: '경주',  slug: 'gyeongju', meta: 'Heritage · Temple', img: 'https://picsum.photos/seed/gyeongju-temple-view/800/600' },
+  { name: '강릉',  slug: 'gangneung', meta: 'Sea · Coffee',     img: 'https://picsum.photos/seed/gangneung-sea-view/800/600' },
+  { name: '전주',  slug: 'jeonju',   meta: 'Hanok · Food',     img: 'https://picsum.photos/seed/jeonju-hanok-view/800/600' },
 ]
 
-const LATEST_POSTS = [
+/* 최신 글 — The New Yorker 스타일 피드 (대표 1 + 보조 2) */
+const FEATURED_POST = {
+  tag: '호텔 추천', tagBg: 'var(--pastel-green-bg)', tagColor: 'var(--pastel-green-text)',
+  title: '제주 성산일출봉 주변 호텔 추천 TOP 5',
+  region: '제주', regionSlug: 'jeju',
+  slug: 'jeju-seongsan-hotel-top5',
+  img: 'https://picsum.photos/seed/jeju-hotel-sea-view/1200/800',
+  date: '2026-07-09', dateDisplay: '2026.07.09',
+  excerpt: '성산일출봉 일출을 객실 창문 너머로 볼 수 있는 숙소 5곳. 풀빌라부터 가성비 펜션까지 직접 비교했습니다.',
+}
+
+const SIDE_POSTS = [
   {
-    title: '제주 성산일출봉 주변 호텔 추천 TOP 5',
-    category: '호텔 추천',
-    region: '제주',
-    regionSlug: 'jeju',
-    slug: 'jeju-seongsan-hotel-top5',
-    img: 'https://picsum.photos/seed/jeju-hotel-ocean/800/500',
-    date: '2026-07-09',
-    dateDisplay: '2026.07.09',
-    excerpt: '성산일출봉 일출을 창문 너머로 볼 수 있는 숙소 5곳. 가성비부터 풀빌라까지 비교 정리.',
-  },
-  {
+    tag: '여행 소식', tagBg: 'var(--pastel-yellow-bg)', tagColor: 'var(--pastel-yellow-text)',
     title: '2026 부산 불꽃 축제 일정과 명당 자리 총정리',
-    category: '여행 소식',
-    region: '부산',
-    regionSlug: 'busan',
+    region: '부산', regionSlug: 'busan',
     slug: 'busan-fireworks-2026',
     img: 'https://picsum.photos/seed/busan-fireworks-night/800/500',
-    date: '2026-07-08',
-    dateDisplay: '2026.07.08',
-    excerpt: '2026 부산 불꽃 축제 날짜, 시간, 무료로 볼 수 있는 명당 위치 5곳을 정리했습니다.',
+    date: '2026-07-08', dateDisplay: '2026.07.08',
+    excerpt: '날짜, 시간, 무료로 볼 수 있는 명당 위치 5곳을 정리했습니다.',
   },
   {
+    tag: '장소 추천', tagBg: 'var(--pastel-blue-bg)', tagColor: 'var(--pastel-blue-text)',
     title: '서울 근교 당일치기 드라이브 여행지 7곳',
-    category: '여행 장소 추천',
-    region: '서울',
-    regionSlug: 'seoul',
+    region: '서울', regionSlug: 'seoul',
     slug: 'seoul-daytrip-driving',
     img: 'https://picsum.photos/seed/seoul-daytrip-nature/800/500',
-    date: '2026-07-07',
-    dateDisplay: '2026.07.07',
-    excerpt: '서울에서 1~2시간 이내, 차 끌고 떠나기 좋은 당일치기 여행지 7곳을 모았습니다.',
+    date: '2026-07-07', dateDisplay: '2026.07.07',
+    excerpt: '서울에서 1~2시간 이내, 차 끌고 떠나기 좋은 당일치기 여행지 7곳.',
   },
 ]
 
-export default function HomePage() {
+/* ── Reusable Tag badge ───────────────────────────────────────── */
+function Tag({ label, bg, color }: { label: string; bg: string; color: string }) {
   return (
-    <div className="bg-white">
+    <span
+      className="inline-block text-[10px] font-semibold tracking-[0.14em] uppercase"
+      style={{ background: bg, color, padding: '3px 9px', borderRadius: '9999px' }}
+    >
+      {label}
+    </span>
+  )
+}
 
-      {/* ── HERO ─────────────────────────────────────────── */}
-      <section
-        aria-label="메인 소개"
-        className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-12 lg:gap-8 items-center"
-      >
-        <div className="flex flex-col gap-7">
-          <p className="text-[12px] font-semibold tracking-[0.22em] uppercase text-[#3B9FDE]">
-            국내 여행 미디어
-          </p>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-[#1A2535] leading-[1.05]">
-            진짜<br />
-            여행의<br />
-            기준
-          </h1>
-          <p className="text-[16px] text-[#6A8AA8] leading-relaxed max-w-[36ch]">
-            여행 장소 추천부터 호텔 비교, 최신 여행 소식까지.
-            직접 경험한 정보만 골라 전달합니다.
-          </p>
-          <div className="flex items-center gap-5 pt-1">
-            <Link
-              href="/travel"
-              className="inline-flex items-center bg-[#3B9FDE] text-white text-[16px] font-semibold px-7 py-3 rounded-sm hover:bg-[#2d8fce] transition-colors duration-200"
+/* ── Page ────────────────────────────────────────────────────── */
+export default function HomePage() {
+  /* Each section gets its own reveal ref */
+  const heroRef    = useReveal<HTMLElement>()
+  const catRef     = useReveal<HTMLElement>()
+  const regionRef  = useReveal<HTMLElement>()
+  const latestRef  = useReveal<HTMLElement>()
+  const aboutRef   = useReveal<HTMLElement>()
+
+  return (
+    <div className="relative overflow-x-hidden">
+      {/* Ambient blob — fixed layer, pointer-events none */}
+      <div className="ambient-blob" aria-hidden="true" />
+
+      {/* ══ HERO — Lonely Planet 에디토리얼 커버 스타일 ══════════ */}
+      <section ref={heroRef} className="reveal max-w-5xl mx-auto px-6 pt-24 pb-28">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-12 lg:gap-16 items-end">
+
+          {/* Left copy */}
+          <div className="flex flex-col gap-8">
+            <Tag label="국내 여행 미디어" bg="var(--pastel-blue-bg)" color="var(--pastel-blue-text)" />
+
+            {/* 에디토리얼 serif 대형 헤드라인 */}
+            <h1
+              className="font-editorial"
+              style={{ fontSize: 'clamp(52px,8vw,88px)', color: 'var(--ink)', letterSpacing: '-0.03em', lineHeight: 1.04 }}
             >
-              여행 정보 보기
-            </Link>
-            <Link href="/about" className="text-[16px] font-medium text-[#6A8AA8] hover:text-[#1A2535] transition-colors duration-200">
-              소개 보기
-            </Link>
-          </div>
-        </div>
+              진짜<br />
+              여행의<br />
+              기준
+            </h1>
 
-        <div className="relative">
-          <div className="relative h-[420px] lg:h-[480px] overflow-hidden rounded-sm">
+            <p style={{ fontSize: '17px', lineHeight: '1.7', color: 'var(--ink-2)', maxWidth: '38ch' }}>
+              여행 장소 추천, 호텔 비교, 최신 여행 소식.<br />
+              직접 경험하고 조사한 정보만 씁니다.
+            </p>
+
+            <div className="flex items-center gap-6 pt-2">
+              <Link href="/travel" className="btn-primary">여행 정보 보기</Link>
+              <Link href="/about" className="btn-ghost">소개 보기</Link>
+            </div>
+          </div>
+
+          {/* Right — hero image card */}
+          <div className="relative bento-border overflow-hidden" style={{ height: 'clamp(320px,45vw,500px)' }}>
             <Image
-              src="https://picsum.photos/seed/korea-travel-main/900/700"
+              src="https://picsum.photos/seed/korea-travel-hero-main/900/700"
               alt="대한민국 여행"
               fill
               className="object-cover"
               priority
-              sizes="(max-width: 1024px) 100vw, 50vw"
+              sizes="(max-width:1024px) 100vw, 420px"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#1A2535]/40 to-transparent" />
-          </div>
-          <div className="absolute bottom-5 left-5 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-sm shadow-sm">
-            <p className="text-[11px] tracking-[0.16em] uppercase text-[#3B9FDE] font-semibold mb-1">지금 인기</p>
-            <p className="text-[16px] font-semibold text-[#1A2535]">제주 성산 호텔 TOP 5</p>
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,17,0.55) 0%, transparent 55%)' }} />
+            {/* Floating card — 한국형 신뢰 배지 */}
+            <div
+              className="absolute bottom-5 left-5 right-5"
+              style={{
+                background: 'rgba(255,255,255,0.94)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <p className="font-mono-ui tracking-[0.16em] uppercase mb-1" style={{ color: 'var(--pastel-blue-text)', fontSize: '10px' }}>
+                지금 인기
+              </p>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)' }}>제주 성산 호텔 TOP 5</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── CATEGORIES ───────────────────────────────────── */}
-      <section
-        aria-label="콘텐츠 카테고리"
-        className="max-w-6xl mx-auto px-6 py-16 border-t border-gray-100"
-      >
-        <h2 className="text-[30px] font-bold text-[#1A2535] tracking-tight mb-10">
-          무엇을 찾고 계신가요?
-        </h2>
+      {/* Divider */}
+      <div className="max-w-5xl mx-auto px-6">
+        <hr style={{ borderColor: 'var(--border)' }} />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {CATEGORIES.map((cat) => (
-            <Link
-              key={cat.href}
-              href={cat.href}
-              className="group relative overflow-hidden rounded-sm block"
-            >
-              <div className="relative h-[240px]">
+      {/* ══ CATEGORIES — 비대칭 벤토 그리드 ══════════════════════ */}
+      <section ref={catRef} className="reveal max-w-5xl mx-auto px-6 py-24">
+        <div className="flex items-baseline justify-between mb-12">
+          <h2
+            className="font-bold tracking-tight"
+            style={{ fontSize: '30px', color: 'var(--ink)', letterSpacing: '-0.02em' }}
+          >
+            무엇을 찾고 계신가요?
+          </h2>
+          <Link href="/travel" className="btn-ghost" style={{ fontSize: '14px' }}>전체 보기</Link>
+        </div>
+
+        {/* lg: wide left + 2 stacked right */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Wide card */}
+          <Link href={CATEGORIES[0].href} className="group card-lift bento-border overflow-hidden block md:row-span-2">
+            <div className="relative" style={{ height: 'clamp(200px,30vw,340px)' }}>
+              <Image
+                src={CATEGORIES[0].img}
+                alt={CATEGORIES[0].title}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                sizes="(max-width:768px) 100vw, 50vw"
+              />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,17,0.70) 0%, transparent 50%)' }} />
+            </div>
+            <div className="p-7">
+              <Tag label={CATEGORIES[0].tag} bg={CATEGORIES[0].tagBg} color={CATEGORIES[0].tagColor} />
+              <h3 className="font-bold mt-3 mb-2" style={{ fontSize: '20px', color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+                {CATEGORIES[0].title}
+              </h3>
+              <p style={{ fontSize: '15px', lineHeight: '1.65', color: 'var(--ink-2)' }}>{CATEGORIES[0].desc}</p>
+            </div>
+          </Link>
+
+          {/* Two stacked cards */}
+          {CATEGORIES.slice(1).map((cat) => (
+            <Link key={cat.href} href={cat.href} className="group card-lift bento-border overflow-hidden block">
+              <div className="relative" style={{ height: '150px' }}>
                 <Image
                   src={cat.img}
                   alt={cat.title}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                  sizes="(max-width:768px) 100vw, 50vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1A2535]/80 via-[#1A2535]/30 to-transparent" />
-                <div className="absolute top-4 left-4">
-                  <span className="text-[11px] font-semibold tracking-[0.14em] uppercase text-white/80 bg-[#3B9FDE] px-2.5 py-1 rounded-sm">
-                    {cat.tag}
-                  </span>
-                </div>
-                <div className="absolute bottom-0 left-0 p-5">
-                  <h3 className="text-white font-bold text-[20px] leading-tight mb-2">
-                    {cat.title}
-                  </h3>
-                  <p className="text-white/70 text-[16px] leading-snug">
-                    {cat.desc}
-                  </p>
-                </div>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,17,0.65) 0%, transparent 55%)' }} />
+              </div>
+              <div className="p-6">
+                <Tag label={cat.tag} bg={cat.tagBg} color={cat.tagColor} />
+                <h3 className="font-bold mt-3 mb-1" style={{ fontSize: '20px', color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+                  {cat.title}
+                </h3>
+                <p style={{ fontSize: '15px', lineHeight: '1.6', color: 'var(--ink-2)' }}>{cat.desc}</p>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* ── REGIONS ──────────────────────────────────────── */}
-      <section
-        aria-label="지역별 여행 장소"
-        className="max-w-6xl mx-auto px-6 py-16 border-t border-gray-100"
-      >
-        <div className="flex items-end justify-between mb-10">
-          <h2 className="text-[30px] font-bold text-[#1A2535] tracking-tight">지역별 여행 장소</h2>
-          <Link href="/travel" className="text-[16px] text-[#6A8AA8] hover:text-[#3B9FDE] transition-colors font-medium">
-            전체 보기
-          </Link>
+      {/* Divider */}
+      <div className="max-w-5xl mx-auto px-6">
+        <hr style={{ borderColor: 'var(--border)' }} />
+      </div>
+
+      {/* ══ REGIONS — 6-grid 지역 카드 ════════════════════════════ */}
+      <section ref={regionRef} className="reveal-stagger max-w-5xl mx-auto px-6 py-24">
+        <div className="flex items-baseline justify-between mb-12">
+          <h2
+            className="font-bold tracking-tight"
+            style={{ fontSize: '30px', color: 'var(--ink)', letterSpacing: '-0.02em' }}
+          >
+            지역별 여행 장소
+          </h2>
+          <Link href="/travel" className="btn-ghost" style={{ fontSize: '14px' }}>전체 보기</Link>
         </div>
 
-        <ul className="grid grid-cols-2 md:grid-cols-3 gap-4 list-none">
+        <ul className="grid grid-cols-2 md:grid-cols-3 gap-4 list-none p-0 m-0">
           {REGIONS.map((region) => (
             <li key={region.slug}>
               <Link
                 href={`/region/${region.slug}`}
                 title={`${region.name} 여행 장소 추천`}
-                className="group relative overflow-hidden rounded-sm aspect-[4/3] flex"
+                className="group card-lift bento-border overflow-hidden block aspect-[4/3]"
               >
                 <div className="relative w-full h-full">
                   <Image
                     src={region.img}
-                    alt={`${region.name} 여행 장소`}
+                    alt={`${region.name} 여행`}
                     fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                    sizes="(max-width:768px) 50vw, 33vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1A2535]/70 via-[#1A2535]/20 to-transparent" />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,17,0.68) 0%, transparent 52%)' }} />
                   <div className="absolute bottom-0 left-0 p-5">
-                    <h3 className="text-white font-bold text-[20px] leading-none mb-1.5">
+                    <h3 className="font-bold leading-none mb-1.5" style={{ fontSize: '20px', color: '#fff' }}>
                       {region.name}
                     </h3>
-                    <p className="text-white/65 text-[16px] font-medium">{region.desc}</p>
+                    <p className="font-mono-ui tracking-[0.08em] uppercase" style={{ color: 'rgba(255,255,255,0.52)', fontSize: '10px' }}>
+                      {region.meta}
+                    </p>
                   </div>
                 </div>
               </Link>
@@ -217,73 +293,129 @@ export default function HomePage() {
         </ul>
       </section>
 
-      {/* ── LATEST POSTS ─────────────────────────────────── */}
-      <section
-        aria-label="최신 여행 정보"
-        className="max-w-6xl mx-auto px-6 py-16 border-t border-gray-100"
-      >
-        <div className="flex items-end justify-between mb-10">
-          <h2 className="text-[30px] font-bold text-[#1A2535] tracking-tight">최신 여행 정보</h2>
-          <Link href="/travel" className="text-[16px] text-[#6A8AA8] hover:text-[#3B9FDE] transition-colors font-medium">
-            전체 보기
-          </Link>
+      {/* Divider */}
+      <div className="max-w-5xl mx-auto px-6">
+        <hr style={{ borderColor: 'var(--border)' }} />
+      </div>
+
+      {/* ══ LATEST — The New Yorker 스타일: 대표 1 + 보조 2 사이드 ══ */}
+      <section ref={latestRef} className="reveal max-w-5xl mx-auto px-6 py-24">
+        <div className="flex items-baseline justify-between mb-12">
+          <h2
+            className="font-bold tracking-tight"
+            style={{ fontSize: '30px', color: 'var(--ink)', letterSpacing: '-0.02em' }}
+          >
+            최신 여행 정보
+          </h2>
+          <Link href="/travel" className="btn-ghost" style={{ fontSize: '14px' }}>전체 보기</Link>
         </div>
 
-        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 list-none">
-          {LATEST_POSTS.map((post) => (
-            <li key={post.slug}>
-              <article>
-                <div className="group">
-                  <Link href={`/travel/${post.slug}`} className="block">
-                    <div className="relative aspect-[16/10] overflow-hidden rounded-sm mb-4">
-                      <Image
-                        src={post.img}
-                        alt={post.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                      />
-                    </div>
-                  </Link>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-white bg-[#3B9FDE] px-2 py-0.5 rounded-sm">
-                      {post.category}
-                    </span>
-                    <Link href={`/region/${post.regionSlug}`} className="text-[14px] text-[#A8BED4] hover:text-[#3B9FDE] transition-colors">
-                      {post.region}
-                    </Link>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 lg:gap-12">
+          {/* Featured — cover image + full excerpt */}
+          <article className="group">
+            <Link href={`/travel/${FEATURED_POST.slug}`} className="block">
+              <div
+                className="relative overflow-hidden mb-6"
+                style={{ aspectRatio: '16/9', borderRadius: '10px', border: '1px solid var(--border)' }}
+              >
+                <Image
+                  src={FEATURED_POST.img}
+                  alt={FEATURED_POST.title}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  sizes="(max-width:1024px) 100vw, 60vw"
+                />
+              </div>
+            </Link>
+            <div className="flex items-center gap-2 mb-3">
+              <Tag label={FEATURED_POST.tag} bg={FEATURED_POST.tagBg} color={FEATURED_POST.tagColor} />
+              <Link href={`/region/${FEATURED_POST.regionSlug}`} className="font-mono-ui" style={{ color: 'var(--ink-3)', fontSize: '11px' }}>
+                {FEATURED_POST.region}
+              </Link>
+            </div>
+            <Link href={`/travel/${FEATURED_POST.slug}`} className="block">
+              <h3
+                className="font-semibold leading-snug mb-3 transition-colors duration-200 group-hover:text-[#3B9FDE]"
+                style={{ fontSize: '22px', color: 'var(--ink)', letterSpacing: '-0.015em' }}
+              >
+                {FEATURED_POST.title}
+              </h3>
+              <p style={{ fontSize: '16px', lineHeight: '1.7', color: 'var(--ink-2)' }}>
+                {FEATURED_POST.excerpt}
+              </p>
+            </Link>
+            <time dateTime={FEATURED_POST.date} className="font-mono-ui mt-4 block" style={{ color: 'var(--ink-3)', fontSize: '11px' }}>
+              {FEATURED_POST.dateDisplay}
+            </time>
+          </article>
+
+          {/* Side list — New Yorker 보조 스트림 */}
+          <aside className="flex flex-col gap-0">
+            {SIDE_POSTS.map((post, i) => (
+              <article key={post.slug} className="group">
+                {i > 0 && <hr style={{ borderColor: 'var(--border)', margin: '20px 0' }} />}
+                <Link href={`/travel/${post.slug}`} className="block">
+                  <div
+                    className="relative overflow-hidden mb-4"
+                    style={{ aspectRatio: '16/9', borderRadius: '8px', border: '1px solid var(--border)' }}
+                  >
+                    <Image
+                      src={post.img}
+                      alt={post.title}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                      sizes="320px"
+                    />
                   </div>
-                  <Link href={`/travel/${post.slug}`} className="block">
-                    <h3 className="text-[20px] font-semibold text-[#1A2535] leading-snug group-hover:text-[#3B9FDE] transition-colors mb-2">
-                      {post.title}
-                    </h3>
-                    <p className="text-[16px] text-[#6A8AA8] leading-relaxed line-clamp-2 mb-3">
-                      {post.excerpt}
-                    </p>
+                </Link>
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag label={post.tag} bg={post.tagBg} color={post.tagColor} />
+                  <Link href={`/region/${post.regionSlug}`} className="font-mono-ui" style={{ color: 'var(--ink-3)', fontSize: '11px' }}>
+                    {post.region}
                   </Link>
-                  <time dateTime={post.date} className="text-[14px] text-[#A8BED4]">
-                    {post.dateDisplay}
-                  </time>
                 </div>
+                <Link href={`/travel/${post.slug}`} className="block">
+                  <h3
+                    className="font-semibold leading-snug mb-2 transition-colors duration-200 group-hover:text-[#3B9FDE]"
+                    style={{ fontSize: '17px', color: 'var(--ink)', letterSpacing: '-0.01em' }}
+                  >
+                    {post.title}
+                  </h3>
+                  <p style={{ fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-2)' }}>{post.excerpt}</p>
+                </Link>
+                <time dateTime={post.date} className="font-mono-ui mt-3 block" style={{ color: 'var(--ink-3)', fontSize: '11px' }}>
+                  {post.dateDisplay}
+                </time>
               </article>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </aside>
+        </div>
       </section>
 
-      {/* ── ABOUT STRIP ──────────────────────────────────── */}
-      <section aria-label="사이트 소개" className="border-t border-gray-100 bg-[#F8FAFE]">
-        <div className="max-w-6xl mx-auto px-6 py-14 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-center">
+      {/* Divider */}
+      <div className="max-w-5xl mx-auto px-6">
+        <hr style={{ borderColor: 'var(--border)' }} />
+      </div>
+
+      {/* ══ ABOUT STRIP ═══════════════════════════════════════════ */}
+      <section ref={aboutRef} className="reveal max-w-5xl mx-auto px-6 py-24">
+        <div
+          className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-center bento-border p-10"
+          style={{ background: 'var(--surface)' }}
+        >
           <div>
-            <h2 className="text-[20px] font-bold text-[#1A2535] mb-2">
-              광고·협찬 없는 솔직한 여행 정보
+            <p className="font-mono-ui tracking-[0.16em] uppercase mb-3" style={{ color: 'var(--pastel-blue-text)', fontSize: '10px' }}>
+              About
+            </p>
+            <h2 className="font-bold mb-2" style={{ fontSize: '20px', color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+              광고·협찬과 무관한 솔직한 여행 정보
             </h2>
-            <p className="text-[16px] text-[#6A8AA8] leading-relaxed max-w-[52ch]">
+            <p style={{ fontSize: '15px', lineHeight: '1.7', color: 'var(--ink-2)', maxWidth: '52ch' }}>
               PICKVOLT는 여행 장소 추천, 호텔 비교, 여행 소식을 직접 경험하고 조사한 정보로만 전달합니다.
             </p>
           </div>
-          <Link href="/about" className="inline-flex items-center text-[16px] font-semibold text-[#3B9FDE] hover:underline underline-offset-4 shrink-0">
-            PICKVOLT 소개 보기
+          <Link href="/about" className="btn-primary shrink-0">
+            PICKVOLT 소개
           </Link>
         </div>
       </section>
